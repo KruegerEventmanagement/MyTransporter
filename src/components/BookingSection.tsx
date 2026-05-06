@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { Car, ChevronLeft, ChevronRight, Clock, Mail, Phone, CreditCard, User, LogIn, AlertTriangle, Ban } from "lucide-react";
+import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check } from "lucide-react";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
 import { DocumentScanner } from "./DocumentScanner";
 
@@ -67,7 +67,9 @@ export function BookingSection() {
     ? PRICING[selectedPlan].price + DEPOSIT
     : selectedPlan !== null ? DEPOSIT : null;
 
-  const stepTitles = ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen"];
+  const [paid, setPaid] = useState(false);
+
+  const stepTitles = ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen", "Losfahren"];
 
   return (
     <section id="booking" className="py-6 px-4">
@@ -211,30 +213,6 @@ export function BookingSection() {
               </div>
             </div>
 
-            {/* Penalties & rules */}
-            <div className="mt-6 p-5 rounded-2xl border border-destructive/20 bg-destructive/5">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p className="font-medium text-foreground">Wichtige Hinweise & Gebühren</p>
-                  <ul className="space-y-1 list-disc list-inside">
-                    <li>Verspätete Rückgabe: <span className="font-medium text-foreground">25 € Gebühr pro angefangene Stunde</span></li>
-                    <li>Rauchen im Fahrzeug: <span className="font-medium text-foreground">100 € Gebühr</span></li>
-                    <li>Tank muss <span className="font-medium text-foreground">komplett vollgetankt</span> zurückgegeben werden</li>
-                    <li>Nur Fahrer <span className="font-medium text-foreground">ab 25 Jahren</span></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* No smoking warning */}
-            <div className="mt-4 p-4 rounded-xl bg-destructive/10 border border-destructive/30">
-              <div className="flex items-center gap-3">
-                <Ban className="w-5 h-5 text-destructive shrink-0" />
-                <p className="text-sm font-medium text-destructive">Im Fahrzeug herrscht absolutes Rauchverbot!</p>
-              </div>
-            </div>
-
             <div className="mt-10 flex justify-between">
               <button
                 onClick={() => setStep(0)}
@@ -311,14 +289,6 @@ export function BookingSection() {
               </div>
             )}
 
-            {/* No smoking reminder */}
-            <div className="mt-4 p-3 rounded-xl bg-destructive/10 border border-destructive/30">
-              <div className="flex items-center gap-2">
-                <Ban className="w-4 h-4 text-destructive shrink-0" />
-                <p className="text-xs font-medium text-destructive">Absolutes Rauchverbot im Fahrzeug · Verstoß: 100 € Strafe</p>
-              </div>
-            </div>
-
             <div className="mt-10 flex justify-between">
               <button
                 onClick={() => setStep(1)}
@@ -394,6 +364,7 @@ export function BookingSection() {
                     {/* Document scan section with camera + AI */}
                     <div className="mt-8 space-y-3">
                       <h4 className="font-medium text-foreground mb-4">Dokumente verifizieren</h4>
+                      <p className="text-xs text-muted-foreground mb-3 bg-secondary px-3 py-2 rounded-lg">Nur für Fahrer ab 25 Jahren</p>
                       <DocumentScanner
                         documentType="license"
                         isComplete={licenseScanned}
@@ -523,18 +494,67 @@ export function BookingSection() {
             )}
 
             <button
+              onClick={() => { setPaid(true); setStep(5); }}
               className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
             >
               Jetzt bezahlen
             </button>
 
-            <div className="mt-8 flex justify-start">
-              <button
-                onClick={() => setStep(3)}
-                className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
-              >
-                <ChevronLeft className="w-5 h-5" /> Zurück
-              </button>
+            {!paid && (
+              <div className="mt-8 flex justify-start">
+                <button
+                  onClick={() => setStep(3)}
+                  className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
+                >
+                  <ChevronLeft className="w-5 h-5" /> Zurück
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 5: Gute Fahrt */}
+        {step === 5 && (
+          <div className="mt-12 max-w-lg mx-auto animate-fade-in-up">
+            <div className="text-center mb-10">
+              <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6">
+                <Check className="w-10 h-10 text-foreground" />
+              </div>
+              <h3 className="text-3xl font-bold text-foreground">Gute Fahrt! 🚛</h3>
+              <p className="mt-3 text-muted-foreground text-lg">Jetzt geht's los – dein Transporter wartet auf dich.</p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-4 rounded-2xl bg-secondary">
+                <p className="text-sm font-medium text-foreground mb-2">Wichtige Hinweise</p>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li>• Verspätete Rückgabe: <span className="font-medium text-foreground">25 € Gebühr pro angefangene Stunde</span></li>
+                  <li>• Rauchen im Fahrzeug: <span className="font-medium text-foreground">100 € Gebühr</span></li>
+                  <li>• Schäden am Fahrzeug werden in voller Höhe berechnet</li>
+                  <li>• Tank muss <span className="font-medium text-foreground">komplett vollgetankt</span> zurückgegeben werden</li>
+                  <li>• Tankbeleg muss eingereicht werden</li>
+                  <li>• Absolutes Rauchverbot im Fahrzeug</li>
+                  <li>• Nur Fahrer ab 25 Jahren</li>
+                  <li>• Rückgabe zwischen 08:00 und 22:00 Uhr</li>
+                </ul>
+              </div>
+
+              {date && startHour !== null && selectedPlan !== null && (
+                <div className="p-4 rounded-2xl bg-secondary">
+                  <p className="text-sm font-medium text-foreground mb-2">Deine Buchung</p>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p>Datum: <span className="text-foreground">{format(date, "PPP", { locale: de })}</span></p>
+                    <p>Startzeit: <span className="text-foreground">{startHour}:00 Uhr</span></p>
+                    <p>Tarif: <span className="text-foreground">{PRICING[selectedPlan].label}</span></p>
+                    <p>Fahrzeug: <span className="text-foreground">{VEHICLE.name}</span></p>
+                    <p>Kennzeichen: <span className="text-foreground">{VEHICLE.plate}</span></p>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-xs text-center text-muted-foreground mt-6">
+                Bei Fragen erreichst du uns jederzeit. Viel Erfolg!
+              </p>
             </div>
           </div>
         )}
