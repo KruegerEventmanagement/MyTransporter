@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { HeroSection } from "@/components/HeroSection";
 import { BookingSection } from "@/components/BookingSection";
+import { Navbar } from "@/components/Navbar";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -14,7 +15,8 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background pt-12">
+      <Navbar />
       <HeroSection />
       <BookingSection />
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
