@@ -1,26 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { HeroSection } from "@/components/HeroSection";
+import { BookingSection } from "@/components/BookingSection";
+import { InfoSection } from "@/components/InfoSection";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "MyTransporter – Transporter mieten ab 100€" },
+      { name: "description", content: "Miete deinen Transporter flexibel und günstig. Ab 100€ für 6 Stunden. Einfach online buchen." },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. For sites with multiple pages (About, Services, Contact, etc.),
-// create separate route files (about.tsx, services.tsx, contact.tsx) — don't put all pages in this file.
-function PlaceholderIndex() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
-}
-
 function Index() {
-  return <PlaceholderIndex />;
+  return (
+    <main className="min-h-screen bg-background">
+      <HeroSection />
+      <BookingSection />
+      <InfoSection />
+      <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
+        <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
+        <p className="mt-1">Mindestalter 25 Jahre · Kaution 200 € · Tank nachtanken</p>
+      </footer>
+    </main>
+  );
 }
