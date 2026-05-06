@@ -87,18 +87,17 @@ export function BookingSection() {
         </h1>
 
         {/* Step indicator */}
-        <div className="mt-8 flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
+        <div className="mt-8 flex items-center justify-center gap-3 sm:gap-4">
           {stepTitles.map((title, i) => (
-            <div key={title} className="flex items-center gap-1 sm:gap-2">
+            <div key={title} className="flex flex-col items-center gap-1">
               <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-all flex-shrink-0 ${
                 i <= step ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground"
               }`}>
                 {i + 1}
               </div>
-              <span className={`hidden md:inline text-sm ${i <= step ? "text-foreground" : "text-muted-foreground"}`}>
+              <span className={`hidden md:block text-xs text-center ${i <= step ? "text-foreground" : "text-muted-foreground"}`}>
                 {title}
               </span>
-              {i < stepTitles.length - 1 && <div className="w-4 sm:w-8 h-px bg-border" />}
             </div>
           ))}
         </div>
