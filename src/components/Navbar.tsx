@@ -41,7 +41,7 @@ export function Navbar() {
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-5xl mx-auto px-4 h-12 flex items-center justify-end gap-3">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 h-12 flex items-center justify-end gap-2 sm:gap-3">
           {!isLoggedIn ? (
             <>
               <button
