@@ -41,7 +41,7 @@ export function Navbar() {
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-5xl mx-auto px-4 h-12 flex items-center justify-end gap-3">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 h-12 flex items-center justify-end gap-2 sm:gap-3">
           {!isLoggedIn ? (
             <>
               <button
@@ -52,7 +52,7 @@ export function Navbar() {
               </button>
               <button
                 onClick={() => setShowModal("register")}
-                className="text-xs font-medium px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors"
+                className="text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors whitespace-nowrap"
               >
                 Registrieren
               </button>

@@ -80,17 +80,17 @@ export function BookingSection() {
   const stepTitles = ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen", "Fahrt"];
 
   return (
-    <section id="booking" className="py-6 px-4">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl md:text-5xl font-bold text-center text-foreground animate-fade-in-up">
+    <section id="booking" className="py-6 px-3 sm:px-4 overflow-x-hidden">
+      <div className="max-w-4xl mx-auto w-full">
+        <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center text-foreground animate-fade-in-up">
           Buche deinen Transporter
         </h1>
 
         {/* Step indicator */}
-        <div className="mt-8 flex items-center justify-center gap-2">
+        <div className="mt-8 flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
           {stepTitles.map((title, i) => (
-            <div key={title} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+            <div key={title} className="flex items-center gap-1 sm:gap-2">
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-all flex-shrink-0 ${
                 i <= step ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground"
               }`}>
                 {i + 1}
@@ -98,7 +98,7 @@ export function BookingSection() {
               <span className={`hidden md:inline text-sm ${i <= step ? "text-foreground" : "text-muted-foreground"}`}>
                 {title}
               </span>
-              {i < stepTitles.length - 1 && <div className="w-8 h-px bg-border" />}
+              {i < stepTitles.length - 1 && <div className="w-4 sm:w-8 h-px bg-border" />}
             </div>
           ))}
         </div>
