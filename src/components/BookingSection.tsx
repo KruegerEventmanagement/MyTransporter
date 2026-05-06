@@ -67,9 +67,9 @@ export function BookingSection() {
   const stepTitles = ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen"];
 
   return (
-    <section id="booking" className="py-8 px-4">
+    <section id="booking" className="py-6 px-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl md:text-6xl font-bold text-center text-foreground animate-fade-in-up">
+        <h1 className="text-3xl md:text-5xl font-bold text-center text-foreground animate-fade-in-up">
           Buche deinen Transporter
         </h1>
 
@@ -102,7 +102,7 @@ export function BookingSection() {
                 onSelect={setDate}
                 locale={de}
                 disabled={(d) => d < new Date()}
-                className="rounded-2xl border border-border p-6 shadow-sm pointer-events-auto text-lg [--cell-size:3rem]"
+                className="rounded-3xl border border-border p-8 shadow-lg pointer-events-auto text-lg [--cell-size:3.5rem]"
               />
 
               {date && (
