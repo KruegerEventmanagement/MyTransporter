@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { Car, ChevronLeft, ChevronRight, Clock, Shield, Mail, Phone, CreditCard, User, ScanLine, LogIn, AlertTriangle, Ban } from "lucide-react";
+import { Car, ChevronLeft, ChevronRight, Clock, Mail, Phone, CreditCard, User, LogIn, AlertTriangle, Ban } from "lucide-react";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
+import { DocumentScanner } from "./DocumentScanner";
 
 const PRICING = [
   { id: "6h", hours: 6, price: 100, label: "6 Stunden", returnRule: "Rückgabe bis spätestens 22:00 Uhr" },
@@ -34,6 +35,8 @@ export function BookingSection() {
   const [showLogin, setShowLogin] = useState(false);
   const [regForm, setRegForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [docsScanned, setDocsScanned] = useState(false);
+  const [licenseScanned, setLicenseScanned] = useState(false);
+  const [idScanned, setIdScanned] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
 
   const canProceedStep0 = date !== undefined && startHour !== null;
@@ -388,45 +391,25 @@ export function BookingSection() {
                       </div>
                     </div>
 
-                    {/* Document scan section */}
-                    <div className="mt-8">
+                    {/* Document scan section with camera + AI */}
+                    <div className="mt-8 space-y-3">
                       <h4 className="font-medium text-foreground mb-4">Dokumente verifizieren</h4>
-                      <div className="space-y-3">
-                        <div className="p-4 rounded-2xl border border-border bg-card flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                            <Shield className="w-5 h-5 text-accent" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-foreground">Führerschein scannen</p>
-                            <p className="text-sm text-muted-foreground">Vorder- und Rückseite fotografieren</p>
-                          </div>
-                          <button
-                            onClick={() => setDocsScanned(true)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                              docsScanned ? "bg-green-100 text-green-700" : "bg-accent text-accent-foreground"
-                            }`}
-                          >
-                            {docsScanned ? "✓ Gescannt" : "Scannen"}
-                          </button>
-                        </div>
-                        <div className="p-4 rounded-2xl border border-border bg-card flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                            <ScanLine className="w-5 h-5 text-accent" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-foreground">Personalausweis scannen</p>
-                            <p className="text-sm text-muted-foreground">Zur Identitätsprüfung</p>
-                          </div>
-                          <button
-                            onClick={() => setDocsScanned(true)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                              docsScanned ? "bg-green-100 text-green-700" : "bg-accent text-accent-foreground"
-                            }`}
-                          >
-                            {docsScanned ? "✓ Gescannt" : "Scannen"}
-                          </button>
-                        </div>
-                      </div>
+                      <DocumentScanner
+                        documentType="license"
+                        isComplete={licenseScanned}
+                        onComplete={() => {
+                          setLicenseScanned(true);
+                          if (idScanned) setDocsScanned(true);
+                        }}
+                      />
+                      <DocumentScanner
+                        documentType="id"
+                        isComplete={idScanned}
+                        onComplete={() => {
+                          setIdScanned(true);
+                          if (licenseScanned) setDocsScanned(true);
+                        }}
+                      />
                     </div>
 
                     <button

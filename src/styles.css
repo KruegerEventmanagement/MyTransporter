@@ -176,3 +176,14 @@
 .animate-delay-400 { animation-delay: 400ms; }
 .animate-delay-600 { animation-delay: 600ms; }
 .animate-delay-800 { animation-delay: 800ms; }
+
+@keyframes scan-line {
+  0% { top: 0.5rem; }
+  50% { top: calc(100% - 0.5rem); }
+  100% { top: 0.5rem; }
+}
+
+.animate-scan-line {
+  animation: scan-line 1.5s ease-in-out infinite;
+  position: absolute;
+}
