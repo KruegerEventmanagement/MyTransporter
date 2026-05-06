@@ -27,9 +27,9 @@ export function ActiveDriveScreen({
   const [elapsedStr, setElapsedStr] = useState("00:00:00");
   const [truckOffset, setTruckOffset] = useState(0);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
-  const trackIntervalRef = useRef<ReturnType<typeof setInterval>>();
+  const mapInstanceRef = useRef<any | null>(null);
+  const markerRef = useRef<any | null>(null);
+  const trackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Elapsed time counter
   useEffect(() => {
