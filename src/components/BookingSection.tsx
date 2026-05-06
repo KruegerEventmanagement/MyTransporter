@@ -2,9 +2,13 @@ import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check } from "lucide-react";
+import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key } from "lucide-react";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
 import { DocumentScanner } from "./DocumentScanner";
+import { PreDriveFlow } from "./PreDriveFlow";
+import { ActiveDriveScreen } from "./ActiveDriveScreen";
+import { ReturnFlow } from "./ReturnFlow";
+import { supabase } from "@/integrations/supabase/client";
 
 const PRICING = [
   { id: "6h", hours: 6, price: 100, label: "6 Stunden", returnRule: "Rückgabe bis spätestens 22:00 Uhr" },
@@ -68,8 +72,12 @@ export function BookingSection() {
     : selectedPlan !== null ? DEPOSIT : null;
 
   const [paid, setPaid] = useState(false);
+  const [bookingId, setBookingId] = useState<string | null>(null);
+  const [pickupCode, setPickupCode] = useState<string | null>(null);
+  const [startKm, setStartKm] = useState<number>(0);
+  const [drivePhase, setDrivePhase] = useState<"pre" | "active" | "return" | "done" | null>(null);
 
-  const stepTitles = ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen", "Losfahren"];
+  const stepTitles = ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen", "Fahrt"];
 
   return (
     <section id="booking" className="py-6 px-4">
@@ -494,7 +502,35 @@ export function BookingSection() {
             )}
 
             <button
-              onClick={() => { setPaid(true); setStep(5); }}
+              onClick={async () => {
+                setPaid(true);
+                // Generate pickup code
+                const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+                // Create booking in DB
+                const { data: userData } = await supabase.auth.getUser();
+                if (userData?.user) {
+                  const { data: booking } = await supabase.from("bookings").insert({
+                    user_id: userData.user.id,
+                    plan_id: PRICING[selectedPlan!].id,
+                    plan_label: PRICING[selectedPlan!].label,
+                    plan_price: PRICING[selectedPlan!].price,
+                    start_date: format(date!, "yyyy-MM-dd"),
+                    start_hour: startHour!,
+                    pickup_code: code,
+                    status: "paid",
+                  }).select().single();
+                  if (booking) {
+                    setBookingId(booking.id);
+                    setPickupCode(code);
+                  }
+                } else {
+                  // Demo mode without auth
+                  setBookingId("demo-" + Date.now());
+                  setPickupCode(code);
+                }
+                setStep(5);
+                setDrivePhase("pre");
+              }}
               className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
             >
               Jetzt bezahlen
@@ -515,47 +551,55 @@ export function BookingSection() {
 
         {/* Step 5: Gute Fahrt */}
         {step === 5 && (
-          <div className="mt-12 max-w-lg mx-auto animate-fade-in-up">
-            <div className="text-center mb-10">
-              <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6">
-                <Check className="w-10 h-10 text-foreground" />
-              </div>
-              <h3 className="text-3xl font-bold text-foreground">Gute Fahrt! 🚛</h3>
-              <p className="mt-3 text-muted-foreground text-lg">Jetzt geht's los – dein Transporter wartet auf dich.</p>
-            </div>
+          <div className="mt-12">
+            {drivePhase === "pre" && bookingId && pickupCode && (
+              <PreDriveFlow
+                bookingId={bookingId}
+                pickupCode={pickupCode}
+                onComplete={() => {
+                  // Fetch start KM from DB or use local
+                  setDrivePhase("active");
+                  setStartKm(42850);
+                }}
+              />
+            )}
 
-            <div className="space-y-3">
-              <div className="p-4 rounded-2xl bg-secondary">
-                <p className="text-sm font-medium text-foreground mb-2">Wichtige Hinweise</p>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>• Verspätete Rückgabe: <span className="font-medium text-foreground">25 € Gebühr pro angefangene Stunde</span></li>
-                  <li>• Rauchen im Fahrzeug: <span className="font-medium text-foreground">100 € Gebühr</span></li>
-                  <li>• Schäden am Fahrzeug werden in voller Höhe berechnet</li>
-                  <li>• Tank muss <span className="font-medium text-foreground">komplett vollgetankt</span> zurückgegeben werden</li>
-                  <li>• Tankbeleg muss eingereicht werden</li>
-                  <li>• Absolutes Rauchverbot im Fahrzeug</li>
-                  <li>• Nur Fahrer ab 25 Jahren</li>
-                  <li>• Rückgabe zwischen 08:00 und 22:00 Uhr</li>
-                </ul>
-              </div>
+            {drivePhase === "active" && bookingId && date && startHour !== null && (
+              <ActiveDriveScreen
+                bookingId={bookingId}
+                startDate={date}
+                startHour={startHour}
+                startKm={startKm}
+                vehicleName={VEHICLE.name}
+                vehiclePlate={VEHICLE.plate}
+                onReturn={() => setDrivePhase("return")}
+              />
+            )}
 
-              {date && startHour !== null && selectedPlan !== null && (
-                <div className="p-4 rounded-2xl bg-secondary">
-                  <p className="text-sm font-medium text-foreground mb-2">Deine Buchung</p>
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    <p>Datum: <span className="text-foreground">{format(date, "PPP", { locale: de })}</span></p>
-                    <p>Startzeit: <span className="text-foreground">{startHour}:00 Uhr</span></p>
-                    <p>Tarif: <span className="text-foreground">{PRICING[selectedPlan].label}</span></p>
-                    <p>Fahrzeug: <span className="text-foreground">{VEHICLE.name}</span></p>
-                    <p>Kennzeichen: <span className="text-foreground">{VEHICLE.plate}</span></p>
-                  </div>
+            {drivePhase === "return" && bookingId && (
+              <ReturnFlow
+                bookingId={bookingId}
+                onComplete={(returnCode) => {
+                  setDrivePhase("done");
+                }}
+              />
+            )}
+
+            {drivePhase === "done" && (
+              <div className="max-w-lg mx-auto animate-fade-in-up text-center">
+                <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6">
+                  <Check className="w-10 h-10 text-foreground" />
                 </div>
-              )}
-
-              <p className="text-xs text-center text-muted-foreground mt-6">
-                Bei Fragen erreichst du uns jederzeit. Viel Erfolg!
-              </p>
-            </div>
+                <h3 className="text-3xl font-bold text-foreground mb-2">Fahrt beendet ✅</h3>
+                <p className="text-muted-foreground text-lg mb-8">
+                  Die Transaktion ist abgeschlossen. Vielen Dank für deine Buchung!
+                </p>
+                <div className="p-4 rounded-2xl bg-secondary text-sm text-muted-foreground">
+                  <p>Deine Kaution wird nach Prüfung des Fahrzeugs zurückerstattet.</p>
+                  <p className="mt-1">Bei Fragen: info@mytransporter.de</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
