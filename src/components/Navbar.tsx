@@ -52,7 +52,7 @@ export function Navbar() {
               </button>
               <button
                 onClick={() => setShowModal("register")}
-                className="text-xs font-medium px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors"
+                className="text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors whitespace-nowrap"
               >
                 Registrieren
               </button>
