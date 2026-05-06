@@ -466,8 +466,8 @@ export function BookingSection() {
             ) : (
               <>
                 <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                    <User className="w-8 h-8 text-green-700" />
+                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
+                    <User className="w-8 h-8 text-foreground" />
                   </div>
                   <h3 className="text-xl font-bold text-foreground">Profil verifiziert</h3>
                   <p className="mt-2 text-muted-foreground">Dein Konto ist bereit. Du kannst jetzt bezahlen.</p>
