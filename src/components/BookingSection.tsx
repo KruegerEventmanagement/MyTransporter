@@ -87,7 +87,7 @@ export function BookingSection() {
         </h1>
 
         {/* Step indicator */}
-        <div className="mt-8 flex items-center justify-center gap-3 sm:gap-4">
+        <div className="mt-8 grid grid-cols-6 w-full max-w-lg mx-auto">
           {stepTitles.map((title, i) => (
             <div key={title} className="flex flex-col items-center gap-1">
               <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-all flex-shrink-0 ${
