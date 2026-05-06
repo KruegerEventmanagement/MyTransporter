@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { HeroSection } from "@/components/HeroSection";
 import { BookingSection } from "@/components/BookingSection";
 import { Navbar } from "@/components/Navbar";
@@ -21,7 +22,12 @@ function Index() {
       <BookingSection />
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
         <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
-        <p className="mt-1">Mindestalter 25 Jahre · Kaution 200 € · Tank nachtanken</p>
+        <div className="mt-3 flex flex-wrap justify-center gap-4">
+          <Link to="/impressum" className="hover:text-foreground transition-colors">Impressum</Link>
+          <Link to="/agb" className="hover:text-foreground transition-colors">AGB</Link>
+          <Link to="/datenschutz" className="hover:text-foreground transition-colors">Datenschutz</Link>
+          <Link to="/kontakt" className="hover:text-foreground transition-colors">Kontakt</Link>
+        </div>
       </footer>
     </main>
   );
