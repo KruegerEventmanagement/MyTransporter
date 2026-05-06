@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { MapPin, Clock, Fuel, Gauge, AlertTriangle, Navigation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -24,7 +24,7 @@ export function ActiveDriveScreen({
   onReturn,
 }: ActiveDriveScreenProps) {
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
-  const [elapsed, setElapsed] = useState("00:00:00");
+  const [elapsedStr, setElapsedStr] = useState("00:00:00");
   const [truckOffset, setTruckOffset] = useState(0);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -33,14 +33,14 @@ export function ActiveDriveScreen({
 
   // Elapsed time counter
   useEffect(() => {
-    const startTime = new Date(startDate);
-    startTime.setHours(startHour, 0, 0, 0);
+    const st = new Date(startDate.getTime());
+    st.setHours(startHour, 0, 0, 0);
     const interval = setInterval(() => {
-      const diff = Date.now() - startTime.getTime();
+      const diff = Date.now() - st.getTime();
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
-      setElapsed(
+      setElapsedStr(
         `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
       );
     }, 1000);
@@ -177,7 +177,7 @@ export function ActiveDriveScreen({
             <Clock className="w-4 h-4 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">Fahrtzeit</span>
           </div>
-          <p className="text-xl font-mono font-bold text-foreground">{elapsed}</p>
+          <p className="text-xl font-mono font-bold text-foreground">{elapsedStr}</p>
         </div>
         <div className="p-4 rounded-2xl bg-secondary">
           <div className="flex items-center gap-2 mb-1">
