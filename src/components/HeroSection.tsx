@@ -16,13 +16,10 @@ export function HeroSection() {
         <img
           src={logoImage}
           alt="MyTransporter Logo"
-          className="w-48 md:w-64 mb-6 animate-fade-in drop-shadow-lg"
-          width={800}
-          height={512}
+          className="w-72 md:w-96 lg:w-[500px] mb-6 animate-fade-in drop-shadow-lg"
+          width={1200}
+          height={400}
         />
-        <p className="text-muted-foreground text-lg tracking-wide animate-fade-in-up animate-delay-200">
-          Premium Transporter · Flexibel · Digital
-        </p>
       </div>
     </section>
   );
