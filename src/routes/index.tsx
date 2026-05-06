@@ -19,15 +19,9 @@ function Index() {
       <HeroSection />
       <BookingSection />
       <InfoSection />
-      <footer className="relative py-16 text-center text-sm text-muted-foreground border-t border-border">
-        <div className="absolute inset-0 opacity-[0.02]" style={{
-          backgroundImage: `linear-gradient(oklch(0.3 0 0) 1px, transparent 1px), linear-gradient(90deg, oklch(0.3 0 0) 1px, transparent 1px)`,
-          backgroundSize: '40px 40px'
-        }} />
-        <div className="relative">
-          <p className="text-foreground font-medium tracking-wide">© 2026 MyTransporter</p>
-          <p className="mt-2 text-muted-foreground">Mindestalter 25 Jahre · Kaution 200 € · Tank nachtanken</p>
-        </div>
+      <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
+        <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
+        <p className="mt-1">Mindestalter 25 Jahre · Kaution 200 € · Tank nachtanken</p>
       </footer>
     </main>
   );
