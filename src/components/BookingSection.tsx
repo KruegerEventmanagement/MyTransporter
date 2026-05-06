@@ -459,10 +459,6 @@ export function BookingSection() {
               </>
             )}
 
-            <p className="mt-8 text-center text-xs text-muted-foreground">
-              Mindestalter: 25 Jahre · Alle Schritte müssen abgeschlossen werden
-            </p>
-
             <div className="mt-6 flex justify-start">
               <button
                 onClick={() => setStep(2)}
