@@ -2,19 +2,23 @@ import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { Car, Camera, Clock, AlertTriangle } from "lucide-react";
 
 const PRICING = [
   { hours: 6, price: 100, label: "6 Stunden" },
   { hours: 24, price: 150, label: "24 Stunden" },
 ];
 
+const KM_PRICE = 0.9;
 const DEPOSIT = 200;
 
 export function BookingSection() {
   const [date, setDate] = useState<Date | undefined>();
   const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
 
-  const total = selectedPlan !== null ? PRICING[selectedPlan].price + DEPOSIT : null;
+  const total = selectedPlan !== null && selectedPlan < PRICING.length
+    ? PRICING[selectedPlan].price + DEPOSIT
+    : null;
 
   return (
     <section id="booking" className="py-24 px-4">
@@ -70,6 +74,18 @@ export function BookingSection() {
               ))}
             </div>
 
+            {/* Kilometer pricing info */}
+            <div className="mt-6 p-5 rounded-2xl border-2 border-accent/30 bg-accent/5">
+              <div className="flex items-center gap-3 mb-3">
+                <Car className="w-5 h-5 text-accent" />
+                <p className="text-lg font-medium text-foreground">+ Kilometerkosten</p>
+              </div>
+              <p className="text-2xl font-bold text-foreground mb-2">0,90 € <span className="text-sm font-normal text-muted-foreground">pro Kilometer</span></p>
+              <p className="text-sm text-muted-foreground">
+                Die Kilometer werden automatisch per Foto des Kilometerstands berechnet (Start & Ende).
+              </p>
+            </div>
+
             {/* Deposit info */}
             <div className="mt-6 p-4 rounded-xl bg-secondary">
               <div className="flex items-center justify-between">
@@ -82,11 +98,14 @@ export function BookingSection() {
             {total !== null && (
               <div className="mt-6 p-6 rounded-2xl bg-primary text-primary-foreground">
                 <div className="flex items-center justify-between">
-                  <p className="text-lg">Gesamtbetrag</p>
+                  <p className="text-lg">Grundbetrag</p>
                   <p className="text-3xl font-bold">{total} €</p>
                 </div>
                 <p className="text-sm opacity-80 mt-1">
-                  inkl. {selectedPlan !== null && PRICING[selectedPlan].price} € Miete + {DEPOSIT} € Kaution
+                  inkl. {selectedPlan !== null && selectedPlan < PRICING.length && PRICING[selectedPlan].price} € Miete + {DEPOSIT} € Kaution
+                </p>
+                <p className="text-sm opacity-80 mt-1">
+                  + Kilometerkosten (0,90 €/km) werden beim Checkout berechnet
                 </p>
               </div>
             )}
@@ -98,6 +117,41 @@ export function BookingSection() {
             >
               Jetzt buchen & bezahlen
             </button>
+          </div>
+        </div>
+
+        {/* Checkout-Ablauf */}
+        <div className="mt-20 max-w-3xl mx-auto">
+          <h3 className="text-2xl font-bold text-center text-foreground mb-10">So funktioniert der Checkout</h3>
+          <div className="grid sm:grid-cols-2 gap-6">
+            <div className="p-6 rounded-2xl border border-border bg-card">
+              <Camera className="w-8 h-8 text-accent mb-4" />
+              <h4 className="font-medium text-foreground mb-2">Kilometerstand fotografieren</h4>
+              <p className="text-sm text-muted-foreground">
+                Fotografiere den Kilometerstand vor Fahrtantritt und bei Abgabe. Unsere KI erkennt den Stand automatisch und berechnet die gefahrenen Kilometer.
+              </p>
+            </div>
+            <div className="p-6 rounded-2xl border border-border bg-card">
+              <Car className="w-8 h-8 text-accent mb-4" />
+              <h4 className="font-medium text-foreground mb-2">Kilometerpreis berechnen</h4>
+              <p className="text-sm text-muted-foreground">
+                Die KI berechnet die Differenz und multipliziert mit 0,90 €/km. Erst nach Berechnung kannst du auschecken.
+              </p>
+            </div>
+            <div className="p-6 rounded-2xl border border-border bg-card">
+              <Clock className="w-8 h-8 text-accent mb-4" />
+              <h4 className="font-medium text-foreground mb-2">Zeit läuft bis zum Checkout</h4>
+              <p className="text-sm text-muted-foreground">
+                Solange du nicht ausgecheckt hast, läuft die Mietzeit weiter. Nach 3 Stunden wirst du gefragt, ob du noch fährst.
+              </p>
+            </div>
+            <div className="p-6 rounded-2xl border border-border bg-card">
+              <AlertTriangle className="w-8 h-8 text-accent mb-4" />
+              <h4 className="font-medium text-foreground mb-2">Mindestbetrag</h4>
+              <p className="text-sm text-muted-foreground">
+                Wenn du nach 3 Stunden nicht mehr fährst aber nicht ausgecheckt hast, wird eine Pauschale von mindestens 100 € berechnet.
+              </p>
+            </div>
           </div>
         </div>
       </div>
