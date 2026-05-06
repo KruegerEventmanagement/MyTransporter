@@ -213,13 +213,12 @@ export function BookingSection() {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
                 <div className="space-y-2 text-sm text-muted-foreground">
-                  <p className="font-medium text-foreground">Wichtige Hinweise & Strafen</p>
+                  <p className="font-medium text-foreground">Wichtige Hinweise & Gebühren</p>
                   <ul className="space-y-1 list-disc list-inside">
-                    <li>Verspätete Rückgabe: <span className="font-medium text-foreground">25 € pro angefangene Stunde</span></li>
-                    <li>Rauchen im Fahrzeug: <span className="font-medium text-foreground">100 € Strafe</span></li>
-                    <li>Schäden am Fahrzeug werden in voller Höhe berechnet</li>
+                    <li>Verspätete Rückgabe: <span className="font-medium text-foreground">25 € Gebühr pro angefangene Stunde</span></li>
+                    <li>Rauchen im Fahrzeug: <span className="font-medium text-foreground">100 € Gebühr</span></li>
                     <li>Tank muss <span className="font-medium text-foreground">komplett vollgetankt</span> zurückgegeben werden</li>
-                    <li>Tankbeleg muss eingereicht werden</li>
+                    <li>Nur Fahrer <span className="font-medium text-foreground">ab 25 Jahren</span></li>
                   </ul>
                 </div>
               </div>
