@@ -14,16 +14,199 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bookings: {
+        Row: {
+          created_at: string
+          deposit: number
+          end_km: number | null
+          id: string
+          pickup_code: string
+          plan_id: string
+          plan_label: string
+          plan_price: number
+          remarks: string | null
+          return_code: string | null
+          start_date: string
+          start_hour: number
+          start_km: number | null
+          status: string
+          tank_level_end: string | null
+          tank_level_start: string | null
+          updated_at: string
+          user_id: string
+          vehicle_name: string
+          vehicle_plate: string
+        }
+        Insert: {
+          created_at?: string
+          deposit?: number
+          end_km?: number | null
+          id?: string
+          pickup_code: string
+          plan_id: string
+          plan_label: string
+          plan_price?: number
+          remarks?: string | null
+          return_code?: string | null
+          start_date: string
+          start_hour: number
+          start_km?: number | null
+          status?: string
+          tank_level_end?: string | null
+          tank_level_start?: string | null
+          updated_at?: string
+          user_id: string
+          vehicle_name?: string
+          vehicle_plate?: string
+        }
+        Update: {
+          created_at?: string
+          deposit?: number
+          end_km?: number | null
+          id?: string
+          pickup_code?: string
+          plan_id?: string
+          plan_label?: string
+          plan_price?: number
+          remarks?: string | null
+          return_code?: string | null
+          start_date?: string
+          start_hour?: number
+          start_km?: number | null
+          status?: string
+          tank_level_end?: string | null
+          tank_level_start?: string | null
+          updated_at?: string
+          user_id?: string
+          vehicle_name?: string
+          vehicle_plate?: string
+        }
+        Relationships: []
+      }
+      gps_tracks: {
+        Row: {
+          booking_id: string
+          id: string
+          latitude: number
+          longitude: number
+          recorded_at: string
+        }
+        Insert: {
+          booking_id: string
+          id?: string
+          latitude: number
+          longitude: number
+          recorded_at?: string
+        }
+        Update: {
+          booking_id?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          recorded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gps_tracks_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          phone: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          phone?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+        }
+        Relationships: []
+      }
+      trip_photos: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          photo_type: string
+          photo_url: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          photo_type: string
+          photo_url: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          photo_type?: string
+          photo_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_photos_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +333,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
