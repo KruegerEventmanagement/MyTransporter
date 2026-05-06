@@ -394,8 +394,8 @@ export function BookingSection() {
                       <h4 className="font-medium text-foreground mb-4">Dokumente verifizieren</h4>
                       <div className="space-y-3">
                         <div className="p-4 rounded-2xl border border-border bg-card flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                            <Shield className="w-5 h-5 text-accent" />
+                          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                            <Shield className="w-5 h-5 text-foreground" />
                           </div>
                           <div className="flex-1">
                             <p className="font-medium text-foreground">Führerschein scannen</p>
