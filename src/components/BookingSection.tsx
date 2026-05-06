@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { Car, ChevronLeft, ChevronRight, Clock, Shield, Mail, Phone, CreditCard, User, ScanLine, LogIn } from "lucide-react";
+import { Car, ChevronLeft, ChevronRight, Clock, Shield, Mail, Phone, CreditCard, User, ScanLine, LogIn, AlertTriangle, Ban } from "lucide-react";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
 
 const PRICING = [
@@ -14,7 +14,7 @@ const PRICING = [
 const DEPOSIT = 200;
 const KM_PRICE = 0.9;
 
-const HOURS = Array.from({ length: 15 }, (_, i) => i + 8); // 8:00 - 22:00
+const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8:00 - 20:00 (letzte Buchung 20 Uhr)
 
 const VEHICLE = {
   name: "Fiat Ducato L4H2",
@@ -39,17 +39,23 @@ export function BookingSection() {
   const canProceedStep0 = date !== undefined && startHour !== null;
   const canProceedStep1 = selectedPlan !== null;
 
-  // Validate return time for 6h plan
+  // Filter available plans based on start hour
+  const availablePlans = PRICING.filter((plan) => {
+    if (startHour === null) return true;
+    if (plan.id === "6h") return startHour + 6 <= 22;
+    return true;
+  });
+
+  // Return info for selected plan
   const getReturnInfo = () => {
     if (selectedPlan === null || startHour === null) return null;
     const plan = PRICING[selectedPlan];
     if (plan.id === "6h") {
       const returnHour = startHour + 6;
-      if (returnHour > 22) return { valid: false, msg: "Rückgabe wäre nach 22:00 Uhr – bitte frühere Startzeit wählen." };
-      return { valid: true, msg: `Rückgabe bis ${returnHour}:00 Uhr` };
+      return { valid: true, msg: `Rückgabe bis ${returnHour}:00 Uhr am selben Tag` };
     }
     if (plan.id === "24h") {
-      return { valid: true, msg: "Rückgabe am nächsten Tag zwischen 08:00 und 22:00 Uhr" };
+      return { valid: true, msg: `Rückgabe am nächsten Tag bis ${startHour}:00 Uhr (zwischen 08:00–22:00)` };
     }
     return { valid: true, msg: "Rückgabe zwischen 08:00 und 22:00 Uhr" };
   };
@@ -141,7 +147,9 @@ export function BookingSection() {
             <p className="text-center text-muted-foreground text-lg mb-8">Wähle deinen Tarif</p>
 
             <div className="space-y-4">
-              {PRICING.map((plan, idx) => (
+              {availablePlans.map((plan) => {
+                const idx = PRICING.findIndex((p) => p.id === plan.id);
+                return (
                 <button
                   key={plan.id}
                   onClick={() => setSelectedPlan(idx)}
@@ -163,7 +171,8 @@ export function BookingSection() {
                     )}
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
 
             {/* Return time validation */}
@@ -195,6 +204,30 @@ export function BookingSection() {
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">Kaution (wird zurückerstattet)</p>
                 <p className="font-medium text-foreground">{DEPOSIT} €</p>
+              </div>
+            </div>
+
+            {/* Penalties & rules */}
+            <div className="mt-6 p-5 rounded-2xl border border-destructive/20 bg-destructive/5">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground">Wichtige Hinweise & Strafen</p>
+                  <ul className="space-y-1 list-disc list-inside">
+                    <li>Verspätete Rückgabe: <span className="font-medium text-foreground">50 € pro angefangene Stunde</span></li>
+                    <li>Rauchen im Fahrzeug: <span className="font-medium text-foreground">500 € Reinigungspauschale</span></li>
+                    <li>Schäden am Fahrzeug werden in voller Höhe berechnet</li>
+                    <li>Tank muss nachgetankt werden (Beleg erforderlich)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* No smoking warning */}
+            <div className="mt-4 p-4 rounded-xl bg-destructive/10 border border-destructive/30">
+              <div className="flex items-center gap-3">
+                <Ban className="w-5 h-5 text-destructive shrink-0" />
+                <p className="text-sm font-medium text-destructive">Im Fahrzeug herrscht absolutes Rauchverbot!</p>
               </div>
             </div>
 
