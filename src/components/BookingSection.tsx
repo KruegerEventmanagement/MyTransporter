@@ -214,10 +214,11 @@ export function BookingSection() {
                 <div className="space-y-2 text-sm text-muted-foreground">
                   <p className="font-medium text-foreground">Wichtige Hinweise & Strafen</p>
                   <ul className="space-y-1 list-disc list-inside">
-                    <li>Verspätete Rückgabe: <span className="font-medium text-foreground">50 € pro angefangene Stunde</span></li>
-                    <li>Rauchen im Fahrzeug: <span className="font-medium text-foreground">500 € Reinigungspauschale</span></li>
+                    <li>Verspätete Rückgabe: <span className="font-medium text-foreground">25 € pro angefangene Stunde</span></li>
+                    <li>Rauchen im Fahrzeug: <span className="font-medium text-foreground">100 € Strafe</span></li>
                     <li>Schäden am Fahrzeug werden in voller Höhe berechnet</li>
-                    <li>Tank muss nachgetankt werden (Beleg erforderlich)</li>
+                    <li>Tank muss <span className="font-medium text-foreground">komplett vollgetankt</span> zurückgegeben werden</li>
+                    <li>Tankbeleg muss eingereicht werden</li>
                   </ul>
                 </div>
               </div>
@@ -311,7 +312,7 @@ export function BookingSection() {
             <div className="mt-4 p-3 rounded-xl bg-destructive/10 border border-destructive/30">
               <div className="flex items-center gap-2">
                 <Ban className="w-4 h-4 text-destructive shrink-0" />
-                <p className="text-xs font-medium text-destructive">Absolutes Rauchverbot im Fahrzeug · Verstoß: 500 € Strafe</p>
+                <p className="text-xs font-medium text-destructive">Absolutes Rauchverbot im Fahrzeug · Verstoß: 100 € Strafe</p>
               </div>
             </div>
 
