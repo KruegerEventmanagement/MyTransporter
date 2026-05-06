@@ -307,6 +307,14 @@ export function BookingSection() {
               </div>
             )}
 
+            {/* No smoking reminder */}
+            <div className="mt-4 p-3 rounded-xl bg-destructive/10 border border-destructive/30">
+              <div className="flex items-center gap-2">
+                <Ban className="w-4 h-4 text-destructive shrink-0" />
+                <p className="text-xs font-medium text-destructive">Absolutes Rauchverbot im Fahrzeug · Verstoß: 500 € Strafe</p>
+              </div>
+            </div>
+
             <div className="mt-10 flex justify-between">
               <button
                 onClick={() => setStep(1)}
