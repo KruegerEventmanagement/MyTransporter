@@ -194,6 +194,7 @@ export function BookingSection() {
                   <Car className="w-4 h-4 text-accent" />
                   <p className="text-sm text-muted-foreground">
                     Kilometer werden per Foto des Kilometerstands (Start & Ende) von unserer KI berechnet. Mindestbetrag: 100 €.
+                    Vorab werden pauschal 50 € berechnet. Fährst du weniger, wird dir die Differenz erstattet. Fährst du mehr, zahlst du den Restbetrag nach.
                   </p>
                 </div>
               </div>
