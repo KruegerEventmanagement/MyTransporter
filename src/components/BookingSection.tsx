@@ -189,9 +189,9 @@ export function BookingSection() {
 
             {/* Kilometer extra info */}
             {selectedPlan === 2 && (
-              <div className="mt-4 p-4 rounded-xl bg-accent/5 border border-accent/20">
+              <div className="mt-4 p-4 rounded-xl bg-secondary border border-border">
                 <div className="flex items-center gap-2">
-                  <Car className="w-4 h-4 text-accent" />
+                  <Car className="w-4 h-4 text-foreground" />
                   <p className="text-sm text-muted-foreground">
                     Kilometer werden per Foto des Kilometerstands (Start & Ende) von unserer KI berechnet. Mindestbetrag: 100 €.
                     Vorab werden pauschal 50 € berechnet. Fährst du weniger, wird dir die Differenz erstattet. Fährst du mehr, zahlst du den Restbetrag nach.
@@ -394,8 +394,8 @@ export function BookingSection() {
                       <h4 className="font-medium text-foreground mb-4">Dokumente verifizieren</h4>
                       <div className="space-y-3">
                         <div className="p-4 rounded-2xl border border-border bg-card flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                            <Shield className="w-5 h-5 text-accent" />
+                          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                            <Shield className="w-5 h-5 text-foreground" />
                           </div>
                           <div className="flex-1">
                             <p className="font-medium text-foreground">Führerschein scannen</p>
@@ -404,15 +404,15 @@ export function BookingSection() {
                           <button
                             onClick={() => setDocsScanned(true)}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                              docsScanned ? "bg-green-100 text-green-700" : "bg-accent text-accent-foreground"
+                              docsScanned ? "bg-secondary text-foreground" : "bg-accent text-accent-foreground"
                             }`}
                           >
                             {docsScanned ? "✓ Gescannt" : "Scannen"}
                           </button>
                         </div>
                         <div className="p-4 rounded-2xl border border-border bg-card flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                            <ScanLine className="w-5 h-5 text-accent" />
+                          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                            <ScanLine className="w-5 h-5 text-foreground" />
                           </div>
                           <div className="flex-1">
                             <p className="font-medium text-foreground">Personalausweis scannen</p>
@@ -421,7 +421,7 @@ export function BookingSection() {
                           <button
                             onClick={() => setDocsScanned(true)}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                              docsScanned ? "bg-green-100 text-green-700" : "bg-accent text-accent-foreground"
+                              docsScanned ? "bg-secondary text-foreground" : "bg-accent text-accent-foreground"
                             }`}
                           >
                             {docsScanned ? "✓ Gescannt" : "Scannen"}
@@ -484,8 +484,8 @@ export function BookingSection() {
             ) : (
               <>
                 <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                    <User className="w-8 h-8 text-green-700" />
+                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
+                    <User className="w-8 h-8 text-foreground" />
                   </div>
                   <h3 className="text-xl font-bold text-foreground">Profil verifiziert</h3>
                   <p className="mt-2 text-muted-foreground">Dein Konto ist bereit. Du kannst jetzt bezahlen.</p>
@@ -517,8 +517,8 @@ export function BookingSection() {
         {/* Step 4: Payment */}
         {step === 4 && (
           <div className="mt-12 max-w-lg mx-auto animate-fade-in-up text-center">
-            <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-6">
-              <CreditCard className="w-8 h-8 text-accent" />
+            <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6">
+              <CreditCard className="w-8 h-8 text-foreground" />
             </div>
             <h3 className="text-2xl font-bold text-foreground">Bezahlung</h3>
             <p className="mt-2 text-muted-foreground">
