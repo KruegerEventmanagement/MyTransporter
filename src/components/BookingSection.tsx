@@ -189,9 +189,9 @@ export function BookingSection() {
 
             {/* Kilometer extra info */}
             {selectedPlan === 2 && (
-              <div className="mt-4 p-4 rounded-xl bg-accent/5 border border-accent/20">
+              <div className="mt-4 p-4 rounded-xl bg-secondary border border-border">
                 <div className="flex items-center gap-2">
-                  <Car className="w-4 h-4 text-accent" />
+                  <Car className="w-4 h-4 text-foreground" />
                   <p className="text-sm text-muted-foreground">
                     Kilometer werden per Foto des Kilometerstands (Start & Ende) von unserer KI berechnet. Mindestbetrag: 100 €.
                     Vorab werden pauschal 50 € berechnet. Fährst du weniger, wird dir die Differenz erstattet. Fährst du mehr, zahlst du den Restbetrag nach.
@@ -517,8 +517,8 @@ export function BookingSection() {
         {/* Step 4: Payment */}
         {step === 4 && (
           <div className="mt-12 max-w-lg mx-auto animate-fade-in-up text-center">
-            <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-6">
-              <CreditCard className="w-8 h-8 text-accent" />
+            <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6">
+              <CreditCard className="w-8 h-8 text-foreground" />
             </div>
             <h3 className="text-2xl font-bold text-foreground">Bezahlung</h3>
             <p className="mt-2 text-muted-foreground">
