@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { Car, ChevronLeft, ChevronRight, Clock, Shield, Mail, Phone, CreditCard } from "lucide-react";
+import { Car, ChevronLeft, ChevronRight, Clock, Shield, Mail, Phone, CreditCard, User, ScanLine, LogIn } from "lucide-react";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
 
 const PRICING = [
@@ -30,6 +30,11 @@ export function BookingSection() {
   const [date, setDate] = useState<Date | undefined>();
   const [startHour, setStartHour] = useState<number | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [regForm, setRegForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
+  const [docsScanned, setDocsScanned] = useState(false);
+  const [profileComplete, setProfileComplete] = useState(false);
 
   const canProceedStep0 = date !== undefined && startHour !== null;
   const canProceedStep1 = selectedPlan !== null;
@@ -53,7 +58,7 @@ export function BookingSection() {
     ? PRICING[selectedPlan].price + DEPOSIT
     : selectedPlan !== null ? DEPOSIT : null;
 
-  const stepTitles = ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Check-in & Buchen"];
+  const stepTitles = ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen"];
 
   return (
     <section id="booking" className="py-8 px-4">
@@ -286,73 +291,224 @@ export function BookingSection() {
           </div>
         )}
 
-        {/* Step 3: Check-in */}
+        {/* Step 3: Registration / Login */}
         {step === 3 && (
           <div className="mt-12 max-w-lg mx-auto animate-fade-in-up">
-            <p className="text-center text-muted-foreground text-lg mb-8">Bitte bestätige deine Identität</p>
+            {!profileComplete ? (
+              <>
+                {!showLogin ? (
+                  <>
+                    <p className="text-center text-muted-foreground text-lg mb-8">Erstelle dein Konto oder melde dich an</p>
 
-            <div className="space-y-4">
-              <div className="p-5 rounded-2xl border border-border bg-card flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                  <Mail className="w-5 h-5 text-accent" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">E-Mail bestätigen</p>
-                  <p className="text-sm text-muted-foreground">Verifiziere deine E-Mail-Adresse</p>
-                </div>
-                <div className="w-6 h-6 rounded-full border-2 border-border" />
-              </div>
+                    {/* Registration form */}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-foreground">Vorname</label>
+                          <input
+                            type="text"
+                            value={regForm.firstName}
+                            onChange={(e) => setRegForm({ ...regForm, firstName: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                            placeholder="Max"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-foreground">Nachname</label>
+                          <input
+                            type="text"
+                            value={regForm.lastName}
+                            onChange={(e) => setRegForm({ ...regForm, lastName: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                            placeholder="Mustermann"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground">E-Mail</label>
+                        <input
+                          type="email"
+                          value={regForm.email}
+                          onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                          placeholder="max@beispiel.de"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground">Telefonnummer</label>
+                        <input
+                          type="tel"
+                          value={regForm.phone}
+                          onChange={(e) => setRegForm({ ...regForm, phone: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                          placeholder="+49 170 1234567"
+                        />
+                      </div>
+                    </div>
 
-              <div className="p-5 rounded-2xl border border-border bg-card flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                  <Phone className="w-5 h-5 text-accent" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">Telefonnummer bestätigen</p>
-                  <p className="text-sm text-muted-foreground">SMS-Verifizierung</p>
-                </div>
-                <div className="w-6 h-6 rounded-full border-2 border-border" />
-              </div>
+                    {/* Document scan section */}
+                    <div className="mt-8">
+                      <h4 className="font-medium text-foreground mb-4">Dokumente verifizieren</h4>
+                      <div className="space-y-3">
+                        <div className="p-4 rounded-2xl border border-border bg-card flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                            <Shield className="w-5 h-5 text-accent" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-foreground">Führerschein scannen</p>
+                            <p className="text-sm text-muted-foreground">Vorder- und Rückseite fotografieren</p>
+                          </div>
+                          <button
+                            onClick={() => setDocsScanned(true)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                              docsScanned ? "bg-green-100 text-green-700" : "bg-accent text-accent-foreground"
+                            }`}
+                          >
+                            {docsScanned ? "✓ Gescannt" : "Scannen"}
+                          </button>
+                        </div>
+                        <div className="p-4 rounded-2xl border border-border bg-card flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                            <ScanLine className="w-5 h-5 text-accent" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-foreground">Personalausweis scannen</p>
+                            <p className="text-sm text-muted-foreground">Zur Identitätsprüfung</p>
+                          </div>
+                          <button
+                            onClick={() => setDocsScanned(true)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                              docsScanned ? "bg-green-100 text-green-700" : "bg-accent text-accent-foreground"
+                            }`}
+                          >
+                            {docsScanned ? "✓ Gescannt" : "Scannen"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
 
-              <div className="p-5 rounded-2xl border border-border bg-card flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-accent" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">Führerschein zeigen</p>
-                  <p className="text-sm text-muted-foreground">Foto deines Führerscheins hochladen</p>
-                </div>
-                <div className="w-6 h-6 rounded-full border-2 border-border" />
-              </div>
+                    <button
+                      disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !docsScanned}
+                      onClick={() => setProfileComplete(true)}
+                      className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Profil erstellen
+                    </button>
 
-              <div className="p-5 rounded-2xl border border-border bg-card flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-accent" />
+                    <button
+                      onClick={() => setShowLogin(true)}
+                      className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Bereits registriert? <span className="font-medium underline">Jetzt einloggen</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-center text-muted-foreground text-lg mb-8">Willkommen zurück</p>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium text-foreground">E-Mail</label>
+                        <input
+                          type="email"
+                          className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                          placeholder="max@beispiel.de"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground">Passwort</label>
+                        <input
+                          type="password"
+                          className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                          placeholder="••••••••"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setProfileComplete(true)}
+                      className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
+                    >
+                      Einloggen
+                    </button>
+                    <button
+                      onClick={() => setShowLogin(false)}
+                      className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Noch kein Konto? <span className="font-medium underline">Jetzt registrieren</span>
+                    </button>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                    <User className="w-8 h-8 text-green-700" />
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground">Profil verifiziert</h3>
+                  <p className="mt-2 text-muted-foreground">Dein Konto ist bereit. Du kannst jetzt bezahlen.</p>
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">Zahlung via Stripe</p>
-                  <p className="text-sm text-muted-foreground">Sichere Bezahlung nach Verifizierung</p>
-                </div>
-                <div className="w-6 h-6 rounded-full border-2 border-border" />
-              </div>
-            </div>
+                <button
+                  onClick={() => setStep(4)}
+                  className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
+                >
+                  Weiter zur Zahlung <ChevronRight className="w-5 h-5 inline" />
+                </button>
+              </>
+            )}
 
-            <p className="mt-6 text-center text-xs text-muted-foreground">
+            <p className="mt-8 text-center text-xs text-muted-foreground">
               Mindestalter: 25 Jahre · Alle Schritte müssen abgeschlossen werden
             </p>
 
-            <div className="mt-10 flex justify-between">
+            <div className="mt-6 flex justify-start">
               <button
                 onClick={() => setStep(2)}
                 className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
               >
                 <ChevronLeft className="w-5 h-5" /> Zurück
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Payment */}
+        {step === 4 && (
+          <div className="mt-12 max-w-lg mx-auto animate-fade-in-up text-center">
+            <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-6">
+              <CreditCard className="w-8 h-8 text-accent" />
+            </div>
+            <h3 className="text-2xl font-bold text-foreground">Bezahlung</h3>
+            <p className="mt-2 text-muted-foreground">
+              Schließe deine Buchung ab und bezahle sicher.
+            </p>
+
+            {total !== null && (
+              <div className="mt-8 p-6 rounded-2xl bg-primary text-primary-foreground">
+                <div className="flex items-center justify-between">
+                  <p className="text-lg">Zu zahlen</p>
+                  <p className="text-3xl font-bold">{total} €</p>
+                </div>
+                <p className="text-sm opacity-80 mt-1">
+                  {PRICING[selectedPlan!].price > 0
+                    ? `${PRICING[selectedPlan!].price} € Miete + ${DEPOSIT} € Kaution`
+                    : `${DEPOSIT} € Kaution · Kilometerkosten werden nach Fahrt berechnet`
+                  }
+                </p>
+              </div>
+            )}
+
+            <button
+              className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
+            >
+              Jetzt bezahlen
+            </button>
+
+            <div className="mt-8 flex justify-start">
               <button
-                disabled
-                className="inline-flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-accent-foreground font-medium opacity-40 cursor-not-allowed"
+                onClick={() => setStep(3)}
+                className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
               >
-                Zur Zahlung
+                <ChevronLeft className="w-5 h-5" /> Zurück
               </button>
             </div>
           </div>
