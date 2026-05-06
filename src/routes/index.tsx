@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { HeroSection } from "@/components/HeroSection";
 import { BookingSection } from "@/components/BookingSection";
-import { InfoSection } from "@/components/InfoSection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,7 +17,6 @@ function Index() {
     <main className="min-h-screen bg-background">
       <HeroSection />
       <BookingSection />
-      <InfoSection />
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
         <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
         <p className="mt-1">Mindestalter 25 Jahre · Kaution 200 € · Tank nachtanken</p>
