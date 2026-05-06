@@ -103,15 +103,15 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
         disabled={phase === "verified"}
         className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all ${
           phase === "verified"
-            ? "border-green-200 bg-green-50"
+            ? "border-border bg-secondary"
             : "border-border bg-card hover:border-accent/50 hover:shadow-sm"
         }`}
       >
         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-          phase === "verified" ? "bg-green-100" : "bg-accent/10"
+          phase === "verified" ? "bg-muted" : "bg-accent/10"
         }`}>
           {phase === "verified" ? (
-            <CheckCircle className="w-5 h-5 text-green-600" />
+            <CheckCircle className="w-5 h-5 text-foreground" />
           ) : (
             <Camera className="w-5 h-5 text-accent" />
           )}
@@ -230,13 +230,13 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
           <p className="text-white/40 text-xs mt-3">{Math.min(Math.round(verifyProgress), 100)}%</p>
 
           <div className="mt-8 space-y-2 text-sm text-white/50">
-            <p className={verifyProgress > 20 ? "text-green-400" : ""}>
+            <p className={verifyProgress > 20 ? "text-white" : ""}>
               {verifyProgress > 20 ? "✓" : "○"} Dokument erkannt
             </p>
-            <p className={verifyProgress > 50 ? "text-green-400" : ""}>
+            <p className={verifyProgress > 50 ? "text-white" : ""}>
               {verifyProgress > 50 ? "✓" : "○"} Sicherheitsmerkmale prüfen
             </p>
-            <p className={verifyProgress > 80 ? "text-green-400" : ""}>
+            <p className={verifyProgress > 80 ? "text-white" : ""}>
               {verifyProgress > 80 ? "✓" : "○"} Echtheit bestätigt
             </p>
           </div>
