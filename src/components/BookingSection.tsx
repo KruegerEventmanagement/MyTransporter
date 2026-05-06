@@ -80,9 +80,9 @@ export function BookingSection() {
   const stepTitles = ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen", "Fahrt"];
 
   return (
-    <section id="booking" className="py-6 px-4">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl md:text-5xl font-bold text-center text-foreground animate-fade-in-up">
+    <section id="booking" className="py-6 px-3 sm:px-4 overflow-x-hidden">
+      <div className="max-w-4xl mx-auto w-full">
+        <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center text-foreground animate-fade-in-up">
           Buche deinen Transporter
         </h1>
 
