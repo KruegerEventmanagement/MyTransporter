@@ -118,6 +118,10 @@ export function BookingSection() {
         if (session.user.email_confirmed_at || session.user.confirmed_at) {
           localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
         }
+      } else {
+        // Logout → Registrierungsschritt wieder anzeigen
+        setIsLoggedIn(false);
+        setProfileComplete(false);
       }
     });
     supabase.auth.getSession().then(({ data }) => {
