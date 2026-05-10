@@ -3,7 +3,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key, Eye, EyeOff } from "lucide-react";
-import { StripeBookingCheckout } from "./StripeBookingCheckout";
+import { createBookingCheckout } from "@/lib/payments.functions";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
 import { DocumentScanner } from "./DocumentScanner";
@@ -865,7 +865,7 @@ export function BookingSection() {
 
             {!showCheckout && !paid && planKey && (
               <button
-                onClick={() => {
+                onClick={async () => {
                   // Pending Booking für /checkout/return persistieren
                   if (typeof window !== "undefined" && date && startHour !== null && selectedPlan !== null) {
                     localStorage.setItem(
@@ -884,6 +884,22 @@ export function BookingSection() {
                     );
                   }
                   setShowCheckout(true);
+                  try {
+                    const origin = window.location.origin;
+                    const url = await createBookingCheckout({
+                      data: {
+                        plan: planKey,
+                        customerEmail: regForm.email || undefined,
+                        successUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+                        cancelUrl: `${origin}/?checkout=cancelled`,
+                      },
+                    });
+                    window.location.href = url;
+                  } catch (e) {
+                    console.error(e);
+                    setShowCheckout(false);
+                    alert("Zahlung konnte nicht gestartet werden. Bitte erneut versuchen.");
+                  }
                 }}
                 className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
               >
@@ -893,43 +909,9 @@ export function BookingSection() {
 
             {showCheckout && !paid && planKey && (
               <div className="mt-8 text-left">
-                <StripeBookingCheckout
-                  plan={planKey}
-                  customerEmail={regForm.email || undefined}
-                  returnUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/checkout/return?session_id={CHECKOUT_SESSION_ID}`}
-                />
-                <button
-                  onClick={async () => {
-                    // Nach erfolgreicher Test-Zahlung: Buchung in DB anlegen + zur Fahrt weiter
-                    setPaid(true);
-                    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-                    const { data: userData } = await supabase.auth.getUser();
-                    if (userData?.user) {
-                      const { data: booking } = await supabase.from("bookings").insert({
-                        user_id: userData.user.id,
-                        plan_id: PRICING[selectedPlan!].id,
-                        plan_label: PRICING[selectedPlan!].label,
-                        plan_price: PRICING[selectedPlan!].price,
-                        start_date: format(date!, "yyyy-MM-dd"),
-                        start_hour: startHour!,
-                        pickup_code: code,
-                        status: "paid",
-                      }).select().single();
-                      if (booking) {
-                        setBookingId(booking.id);
-                        setPickupCode(code);
-                      }
-                    } else {
-                      setBookingId("demo-" + Date.now());
-                      setPickupCode(code);
-                    }
-                    setStep(5);
-                    setDrivePhase("pre");
-                  }}
-                  className="mt-6 w-full rounded-full bg-secondary py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
-                >
-                  Zahlung abgeschlossen → weiter zur Fahrt
-                </button>
+                <div className="rounded-2xl bg-secondary p-6 text-center text-muted-foreground">
+                  Du wirst zu Stripe weitergeleitet...
+                </div>
               </div>
             )}
 

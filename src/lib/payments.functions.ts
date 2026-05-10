@@ -1,45 +1,22 @@
 import { createServerFn } from "@tanstack/react-start";
-import { type StripeEnv, createStripeClient } from "@/lib/stripe.server";
+import Stripe from "stripe";
 
 type PlanKey = "rent_6h" | "rent_24h" | "rent_km";
 
-const PLAN_TO_PRICE: Record<PlanKey, string | null> = {
-  rent_6h: "rent_6h_price",
-  rent_24h: "rent_24h_price",
-  rent_km: "rent_km_prepay_price",
+const PLAN_PRICING: Record<PlanKey, { rent: number; label: string }> = {
+  rent_6h: { rent: 100_00, label: "Transporter-Miete · 6 Stunden" },
+  rent_24h: { rent: 150_00, label: "Transporter-Miete · 24 Stunden" },
+  rent_km: { rent: 0, label: "Transporter-Miete · Nur Kilometer (0,90 €/km)" },
 };
+const DEPOSIT_CENTS = 200_00;
 
-async function resolveOrCreateCustomer(
-  stripe: ReturnType<typeof createStripeClient>,
-  options: { email?: string; userId?: string },
-): Promise<string> {
-  if (options.userId && !/^[a-zA-Z0-9_-]+$/.test(options.userId)) {
-    throw new Error("Invalid userId");
-  }
-  if (options.userId) {
-    const found = await stripe.customers.search({
-      query: `metadata['userId']:'${options.userId}'`,
-      limit: 1,
-    });
-    if (found.data.length) return found.data[0].id;
-  }
-  if (options.email) {
-    const existing = await stripe.customers.list({ email: options.email, limit: 1 });
-    if (existing.data.length) {
-      const customer = existing.data[0];
-      if (options.userId && customer.metadata?.userId !== options.userId) {
-        await stripe.customers.update(customer.id, {
-          metadata: { ...customer.metadata, userId: options.userId },
-        });
-      }
-      return customer.id;
-    }
-  }
-  const created = await stripe.customers.create({
-    ...(options.email && { email: options.email }),
-    ...(options.userId && { metadata: { userId: options.userId } }),
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY ist nicht konfiguriert");
+  return new Stripe(key, {
+    apiVersion: "2026-03-25.dahlia",
+    httpClient: Stripe.createFetchHttpClient(),
   });
-  return created.id;
 }
 
 export const createBookingCheckout = createServerFn({ method: "POST" })
@@ -47,8 +24,8 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     plan: PlanKey;
     customerEmail?: string;
     userId?: string;
-    returnUrl: string;
-    environment: StripeEnv;
+    successUrl: string;
+    cancelUrl: string;
   }) => {
     if (!["rent_6h", "rent_24h", "rent_km"].includes(data.plan)) {
       throw new Error("Invalid plan");
@@ -56,35 +33,45 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data }) => {
-    const stripe = createStripeClient(data.environment);
+    const stripe = getStripe();
+    const plan = PLAN_PRICING[data.plan];
 
-    const rentLookup = PLAN_TO_PRICE[data.plan];
-    const lookupKeys = [rentLookup!, "deposit_price"];
-    const prices = await stripe.prices.list({ lookup_keys: lookupKeys });
-    const rentPrice = prices.data.find((p) => p.lookup_key === rentLookup);
-    const depositPrice = prices.data.find((p) => p.lookup_key === "deposit_price");
-    if (!rentPrice || !depositPrice) throw new Error("Price not found");
-
-    const customerId = (data.customerEmail || data.userId)
-      ? await resolveOrCreateCustomer(stripe, {
-          email: data.customerEmail,
-          userId: data.userId,
-        })
-      : undefined;
-
-    const session = await stripe.checkout.sessions.create({
-      line_items: [
-        { price: rentPrice.id, quantity: 1 },
-        { price: depositPrice.id, quantity: 1 },
-      ],
-      mode: "payment",
-      ui_mode: "embedded_page",
-      return_url: data.returnUrl,
-      ...(customerId && { customer: customerId }),
-      ...(data.userId && {
-        metadata: { userId: data.userId, plan: data.plan },
-      }),
+    const line_items: Array<{
+      price_data: {
+        currency: string;
+        product_data: { name: string };
+        unit_amount: number;
+      };
+      quantity: number;
+    }> = [];
+    if (plan.rent > 0) {
+      line_items.push({
+        price_data: {
+          currency: "eur",
+          product_data: { name: plan.label },
+          unit_amount: plan.rent,
+        },
+        quantity: 1,
+      });
+    }
+    line_items.push({
+      price_data: {
+        currency: "eur",
+        product_data: { name: "Kaution (wird nach Rückgabe erstattet)" },
+        unit_amount: DEPOSIT_CENTS,
+      },
+      quantity: 1,
     });
 
-    return session.client_secret;
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items,
+      success_url: data.successUrl,
+      cancel_url: data.cancelUrl,
+      ...(data.customerEmail && { customer_email: data.customerEmail }),
+      ...(data.userId && { metadata: { userId: data.userId, plan: data.plan } }),
+    });
+
+    if (!session.url) throw new Error("Stripe hat keine Checkout-URL zurückgegeben");
+    return session.url;
   });
