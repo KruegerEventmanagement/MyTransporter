@@ -65,6 +65,7 @@ export function BookingSection() {
   const [licenseScanned, setLicenseScanned] = useState(false);
   const [idScanned, setIdScanned] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
+  const registrationComplete = isLoggedIn || profileComplete;
 
   // Tick clock every second while a confirmation is pending so the cooldown updates live
   useEffect(() => {
@@ -103,10 +104,11 @@ export function BookingSection() {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setIsLoggedIn(true);
+        setProfileComplete(true);
         setSignupEmailSent(null);
+        setShowLogin(false);
+        setStep((currentStep) => (currentStep === 3 ? 4 : currentStep));
         if (session.user.email_confirmed_at || session.user.confirmed_at) {
-          setProfileComplete(true);
-          setShowLogin(false);
           localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
         }
       }
@@ -114,9 +116,10 @@ export function BookingSection() {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) {
         setIsLoggedIn(true);
+        setProfileComplete(true);
+        setShowLogin(false);
+        setStep((currentStep) => (currentStep === 3 ? 4 : currentStep));
         if (data.session.user.email_confirmed_at || data.session.user.confirmed_at) {
-          setProfileComplete(true);
-          setShowLogin(false);
           localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
         }
       }
@@ -125,10 +128,10 @@ export function BookingSection() {
   }, []);
 
   useEffect(() => {
-    if (profileComplete && step === 3) {
+    if (registrationComplete && step === 3) {
       setStep(4);
     }
-  }, [profileComplete, step]);
+  }, [registrationComplete, step]);
 
   const handleSignUp = async () => {
     setAuthError(null);
@@ -254,11 +257,11 @@ export function BookingSection() {
   const [drivePhase, setDrivePhase] = useState<"pre" | "active" | "return" | "done" | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
 
-  const stepTitles = profileComplete
+  const stepTitles = registrationComplete
     ? ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Bezahlen", "Fahrt"]
     : ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen", "Fahrt"];
   // Wenn Registrierung übersprungen wird, mappen wir step 4/5 auf Stepper-Position 3/4
-  const stepperIndex = profileComplete && step >= 3 ? step - 1 : step;
+  const stepperIndex = registrationComplete && step >= 3 ? step - 1 : step;
 
   const planKey: "rent_6h" | "rent_24h" | "rent_km" | null =
     selectedPlan === null
