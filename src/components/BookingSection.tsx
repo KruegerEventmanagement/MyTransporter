@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key } from "lucide-react";
+import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key, Eye, EyeOff } from "lucide-react";
 import { StripeBookingCheckout } from "./StripeBookingCheckout";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
@@ -41,6 +41,9 @@ export function BookingSection() {
   const [showLogin, setShowLogin] = useState(false);
   const [regForm, setRegForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [regPassword, setRegPassword] = useState("");
+  const [regPasswordConfirm, setRegPasswordConfirm] = useState("");
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
@@ -72,6 +75,14 @@ export function BookingSection() {
 
   const handleSignUp = async () => {
     setAuthError(null);
+    if (regPassword !== regPasswordConfirm) {
+      setAuthError("Die Passwörter stimmen nicht überein.");
+      return;
+    }
+    if (regPassword.length < 6) {
+      setAuthError("Passwort muss mindestens 6 Zeichen lang sein.");
+      return;
+    }
     setAuthLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email: regForm.email,
@@ -455,13 +466,43 @@ export function BookingSection() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-foreground">Passwort</label>
-                        <input
-                          type="password"
-                          value={regPassword}
-                          onChange={(e) => setRegPassword(e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                          placeholder="Mindestens 6 Zeichen"
-                        />
+                        <div className="relative mt-1">
+                          <input
+                            type={showRegPassword ? "text" : "password"}
+                            value={regPassword}
+                            onChange={(e) => setRegPassword(e.target.value)}
+                            className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-12 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                            placeholder="Mindestens 6 Zeichen"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowRegPassword((v) => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            aria-label={showRegPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+                          >
+                            {showRegPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground">Passwort wiederholen</label>
+                        <div className="relative mt-1">
+                          <input
+                            type={showRegPassword ? "text" : "password"}
+                            value={regPasswordConfirm}
+                            onChange={(e) => setRegPasswordConfirm(e.target.value)}
+                            className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-12 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                            placeholder="Passwort erneut eingeben"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowRegPassword((v) => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            aria-label={showRegPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+                          >
+                            {showRegPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -519,7 +560,7 @@ export function BookingSection() {
                           <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
                         )}
                         <button
-                          disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !docsScanned || authLoading}
+                          disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !regPasswordConfirm || !docsScanned || authLoading}
                           onClick={handleSignUp}
                           className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
                         >
@@ -551,13 +592,23 @@ export function BookingSection() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-foreground">Passwort</label>
-                        <input
-                          type="password"
-                          value={loginForm.password}
-                          onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                          className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                          placeholder="••••••••"
-                        />
+                        <div className="relative mt-1">
+                          <input
+                            type={showLoginPassword ? "text" : "password"}
+                            value={loginForm.password}
+                            onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                            className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-12 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                            placeholder="••••••••"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowLoginPassword((v) => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            aria-label={showLoginPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+                          >
+                            {showLoginPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
                     {authError && (
