@@ -499,13 +499,34 @@ export function BookingSection() {
                       </button>
                     </div>
 
-                    <button
-                      disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !docsScanned}
-                      onClick={() => setProfileComplete(true)}
-                      className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Profil erstellen
-                    </button>
+                    {signupEmailSent ? (
+                      <div className="mt-8 rounded-2xl border border-border bg-secondary p-6 text-center">
+                        <p className="font-medium text-foreground mb-2">📧 Bestätigungs-E-Mail gesendet</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Wir haben dir eine E-Mail an <strong>{signupEmailSent}</strong> geschickt.
+                          Bitte klicke auf den Link, um dein Konto zu bestätigen. Danach kannst du dich einloggen.
+                        </p>
+                        <button
+                          onClick={() => { setShowLogin(true); setSignupEmailSent(null); }}
+                          className="w-full rounded-full bg-accent py-3 text-accent-foreground font-medium"
+                        >
+                          Jetzt einloggen
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {authError && (
+                          <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
+                        )}
+                        <button
+                          disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !docsScanned || authLoading}
+                          onClick={handleSignUp}
+                          className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {authLoading ? "Wird erstellt..." : "Profil erstellen"}
+                        </button>
+                      </>
+                    )}
 
                     <button
                       onClick={() => setShowLogin(true)}
@@ -522,6 +543,8 @@ export function BookingSection() {
                         <label className="text-sm font-medium text-foreground">E-Mail</label>
                         <input
                           type="email"
+                          value={loginForm.email}
+                          onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                           className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                           placeholder="max@beispiel.de"
                         />
@@ -530,16 +553,22 @@ export function BookingSection() {
                         <label className="text-sm font-medium text-foreground">Passwort</label>
                         <input
                           type="password"
+                          value={loginForm.password}
+                          onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                           className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                           placeholder="••••••••"
                         />
                       </div>
                     </div>
+                    {authError && (
+                      <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
+                    )}
                     <button
-                      onClick={() => setProfileComplete(true)}
-                      className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
+                      onClick={handleLogin}
+                      disabled={!loginForm.email || !loginForm.password || authLoading}
+                      className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      Einloggen
+                      {authLoading ? "Wird geprüft..." : "Einloggen"}
                     </button>
                     <button
                       onClick={() => setShowLogin(false)}
