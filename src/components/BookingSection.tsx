@@ -95,7 +95,7 @@ export function BookingSection() {
               }`}>
                 {i + 1}
               </div>
-              <span className={`hidden md:block text-xs text-center ${i <= step ? "text-foreground" : "text-muted-foreground"}`}>
+              <span className={`block text-[10px] sm:text-xs text-center leading-tight px-0.5 ${i <= step ? "text-foreground" : "text-muted-foreground"}`}>
                 {title}
               </span>
             </div>
