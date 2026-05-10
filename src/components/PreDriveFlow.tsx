@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { Camera, Check, ChevronRight, MessageSquare, Key, Plus, X, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
+import { notifyAdmin } from "@/lib/admin-notify";
 
 const PHOTO_SIDES = [
   { id: "pre_front", label: "Vorne", icon: "⬆️", variant: "front" as SilhouetteVariant },
@@ -126,6 +127,12 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
         status: "active",
       })
       .eq("id", bookingId);
+    notifyAdmin({
+      type: "trip_started",
+      title: "Fahrt gestartet",
+      body: `Buchung ${bookingId.slice(0, 8)} · Start-KM ${startKm}`,
+      bookingId,
+    });
     onComplete();
   };
 
