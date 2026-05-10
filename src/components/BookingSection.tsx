@@ -3,6 +3,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key } from "lucide-react";
+import { StripeBookingCheckout } from "./StripeBookingCheckout";
+import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
 import { DocumentScanner } from "./DocumentScanner";
 import { PreDriveFlow } from "./PreDriveFlow";
@@ -76,11 +78,22 @@ export function BookingSection() {
   const [pickupCode, setPickupCode] = useState<string | null>(null);
   const [startKm, setStartKm] = useState<number>(0);
   const [drivePhase, setDrivePhase] = useState<"pre" | "active" | "return" | "done" | null>(null);
+  const [showCheckout, setShowCheckout] = useState(false);
 
   const stepTitles = ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen", "Fahrt"];
 
+  const planKey: "rent_6h" | "rent_24h" | "rent_km" | null =
+    selectedPlan === null
+      ? null
+      : PRICING[selectedPlan].id === "6h"
+      ? "rent_6h"
+      : PRICING[selectedPlan].id === "24h"
+      ? "rent_24h"
+      : "rent_km";
+
   return (
     <section id="booking" className="py-6 px-3 sm:px-4 overflow-x-hidden">
+      {step === 4 && <PaymentTestModeBanner />}
       <div className="max-w-4xl mx-auto w-full">
         <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center text-foreground animate-fade-in-up">
           Buche deinen Transporter
@@ -496,45 +509,61 @@ export function BookingSection() {
               </div>
             )}
 
-            <button
-              onClick={async () => {
-                setPaid(true);
-                // Generate pickup code
-                const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-                // Create booking in DB
-                const { data: userData } = await supabase.auth.getUser();
-                if (userData?.user) {
-                  const { data: booking } = await supabase.from("bookings").insert({
-                    user_id: userData.user.id,
-                    plan_id: PRICING[selectedPlan!].id,
-                    plan_label: PRICING[selectedPlan!].label,
-                    plan_price: PRICING[selectedPlan!].price,
-                    start_date: format(date!, "yyyy-MM-dd"),
-                    start_hour: startHour!,
-                    pickup_code: code,
-                    status: "paid",
-                  }).select().single();
-                  if (booking) {
-                    setBookingId(booking.id);
-                    setPickupCode(code);
-                  }
-                } else {
-                  // Demo mode without auth
-                  setBookingId("demo-" + Date.now());
-                  setPickupCode(code);
-                }
-                setStep(5);
-                setDrivePhase("pre");
-              }}
-              className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
-            >
-              Jetzt bezahlen
-            </button>
+            {!showCheckout && !paid && planKey && (
+              <button
+                onClick={() => setShowCheckout(true)}
+                className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
+              >
+                Sicher bezahlen
+              </button>
+            )}
+
+            {showCheckout && !paid && planKey && (
+              <div className="mt-8 text-left">
+                <StripeBookingCheckout
+                  plan={planKey}
+                  customerEmail={regForm.email || undefined}
+                  returnUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/checkout/return?session_id={CHECKOUT_SESSION_ID}`}
+                />
+                <button
+                  onClick={async () => {
+                    // Nach erfolgreicher Test-Zahlung: Buchung in DB anlegen + zur Fahrt weiter
+                    setPaid(true);
+                    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+                    const { data: userData } = await supabase.auth.getUser();
+                    if (userData?.user) {
+                      const { data: booking } = await supabase.from("bookings").insert({
+                        user_id: userData.user.id,
+                        plan_id: PRICING[selectedPlan!].id,
+                        plan_label: PRICING[selectedPlan!].label,
+                        plan_price: PRICING[selectedPlan!].price,
+                        start_date: format(date!, "yyyy-MM-dd"),
+                        start_hour: startHour!,
+                        pickup_code: code,
+                        status: "paid",
+                      }).select().single();
+                      if (booking) {
+                        setBookingId(booking.id);
+                        setPickupCode(code);
+                      }
+                    } else {
+                      setBookingId("demo-" + Date.now());
+                      setPickupCode(code);
+                    }
+                    setStep(5);
+                    setDrivePhase("pre");
+                  }}
+                  className="mt-6 w-full rounded-full bg-secondary py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
+                >
+                  Zahlung abgeschlossen → weiter zur Fahrt
+                </button>
+              </div>
+            )}
 
             {!paid && (
               <div className="mt-8 flex justify-start">
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={() => { setShowCheckout(false); setStep(3); }}
                   className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
                 >
                   <ChevronLeft className="w-5 h-5" /> Zurück
