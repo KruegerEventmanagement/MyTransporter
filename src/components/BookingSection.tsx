@@ -466,13 +466,43 @@ export function BookingSection() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-foreground">Passwort</label>
-                        <input
-                          type="password"
-                          value={regPassword}
-                          onChange={(e) => setRegPassword(e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                          placeholder="Mindestens 6 Zeichen"
-                        />
+                        <div className="relative mt-1">
+                          <input
+                            type={showRegPassword ? "text" : "password"}
+                            value={regPassword}
+                            onChange={(e) => setRegPassword(e.target.value)}
+                            className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-12 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                            placeholder="Mindestens 6 Zeichen"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowRegPassword((v) => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            aria-label={showRegPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+                          >
+                            {showRegPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground">Passwort wiederholen</label>
+                        <div className="relative mt-1">
+                          <input
+                            type={showRegPassword ? "text" : "password"}
+                            value={regPasswordConfirm}
+                            onChange={(e) => setRegPasswordConfirm(e.target.value)}
+                            className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-12 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                            placeholder="Passwort erneut eingeben"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowRegPassword((v) => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            aria-label={showRegPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+                          >
+                            {showRegPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -530,7 +560,7 @@ export function BookingSection() {
                           <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
                         )}
                         <button
-                          disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !docsScanned || authLoading}
+                          disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !regPasswordConfirm || !docsScanned || authLoading}
                           onClick={handleSignUp}
                           className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
                         >
@@ -562,13 +592,23 @@ export function BookingSection() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-foreground">Passwort</label>
-                        <input
-                          type="password"
-                          value={loginForm.password}
-                          onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                          className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                          placeholder="••••••••"
-                        />
+                        <div className="relative mt-1">
+                          <input
+                            type={showLoginPassword ? "text" : "password"}
+                            value={loginForm.password}
+                            onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                            className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-12 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                            placeholder="••••••••"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowLoginPassword((v) => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            aria-label={showLoginPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+                          >
+                            {showLoginPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
                     {authError && (
