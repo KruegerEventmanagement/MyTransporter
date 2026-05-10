@@ -209,24 +209,6 @@ export function BookingSection() {
     localStorage.setItem(RESEND_LAST_SENT_KEY, String(now));
   };
 
-  const _unused_handleLogin = async () => {
-    setAuthError(null);
-    setAuthLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: loginForm.email,
-      password: loginForm.password,
-    });
-    setAuthLoading(false);
-    if (error) {
-      setAuthError(error.message);
-      return;
-    }
-    if (data.user) {
-      setIsLoggedIn(true);
-      setProfileComplete(true);
-    }
-  };
-
   const canProceedStep0 = date !== undefined && startHour !== null;
   const canProceedStep1 = selectedPlan !== null;
 
