@@ -210,58 +210,38 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
           {/* Schäden */}
           <div className="mb-6">
             <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" /> Schäden am Fahrzeug?
+              <AlertTriangle className="w-4 h-4" /> Schäden am Fahrzeug
             </p>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <button
-                onClick={() => {
-                  setHasDamage(false);
-                  setDamagePhotos([]);
-                }}
-                className={`py-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                  hasDamage === false ? "border-foreground bg-secondary" : "border-border"
-                }`}
-              >
-                Nein, keine Schäden
-              </button>
-              <button
-                onClick={() => setHasDamage(true)}
-                className={`py-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                  hasDamage === true ? "border-foreground bg-secondary" : "border-border"
-                }`}
-              >
-                Ja, Schäden vorhanden
-              </button>
+            <p className="text-xs text-muted-foreground mb-3">Optional – bis zu 4 Fotos</p>
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: 4 }).map((_, idx) => {
+                const url = damagePhotos[idx];
+                if (url) {
+                  return (
+                    <div key={idx} className="relative">
+                      <img src={url} alt={`Schaden ${idx + 1}`} className="w-full h-20 object-cover rounded-lg border border-border" />
+                      <button
+                        onClick={() => setDamagePhotos((prev) => prev.filter((_, i) => i !== idx))}
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center"
+                        aria-label="Foto entfernen"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                }
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => openCamera({ kind: "damage" })}
+                    disabled={uploading || idx > damagePhotos.length}
+                    className="h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center text-muted-foreground hover:border-accent/50 transition-all disabled:opacity-40"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                );
+              })}
             </div>
-
-            {hasDamage === true && (
-              <div className="grid grid-cols-3 gap-2">
-                {damagePhotos.map((url, idx) => (
-                  <div key={idx} className="relative">
-                    <img src={url} alt={`Schaden ${idx + 1}`} className="w-full h-20 object-cover rounded-lg border border-border" />
-                    <button
-                      onClick={() => setDamagePhotos((prev) => prev.filter((_, i) => i !== idx))}
-                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center"
-                      aria-label="Foto entfernen"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  onClick={() => openCamera({ kind: "damage" })}
-                  disabled={uploading}
-                  className="h-20 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground hover:border-accent/50 transition-all"
-                >
-                  <Plus className="w-5 h-5" />
-                  <span className="text-[10px] mt-1">Schaden hinzufügen</span>
-                </button>
-              </div>
-            )}
-
-            {hasDamage === true && damagePhotos.length === 0 && (
-              <p className="text-xs text-muted-foreground mt-2">Bitte mindestens ein Foto vom Schaden aufnehmen.</p>
-            )}
           </div>
 
           {/* Kilometerstand */}
