@@ -486,20 +486,44 @@ function CustomerDetail({
   const [photos, setPhotos] = useState<TripPhoto[]>([]);
   const [gps, setGps] = useState<GpsPoint[]>([]);
   const [openBooking, setOpenBooking] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<UserDocument[]>([]);
+  const [docUrls, setDocUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const ids = customer.bookings.map((b) => b.id);
-    if (ids.length === 0) return;
     Promise.all([
-      supabase.from("trip_photos").select("*").in("booking_id", ids).order("created_at"),
+      ids.length
+        ? supabase.from("trip_photos").select("*").in("booking_id", ids).order("created_at")
+        : Promise.resolve({ data: [] as TripPhoto[] }),
+      ids.length
+        ? supabase
+            .from("gps_tracks")
+            .select("latitude, longitude, recorded_at, booking_id")
+            .in("booking_id", ids)
+            .order("recorded_at")
+        : Promise.resolve({ data: [] as GpsPoint[] }),
       supabase
-        .from("gps_tracks")
-        .select("latitude, longitude, recorded_at, booking_id")
-        .in("booking_id", ids)
-        .order("recorded_at"),
-    ]).then(([p, g]) => {
+        .from("user_documents")
+        .select("*")
+        .eq("user_id", customer.id)
+        .order("created_at"),
+    ]).then(async ([p, g, d]) => {
       if (p.data) setPhotos(p.data as TripPhoto[]);
       if (g.data) setGps(g.data as GpsPoint[]);
+      if (d.data) {
+        const docs = d.data as UserDocument[];
+        setDocuments(docs);
+        // Sign URLs for private bucket
+        const entries = await Promise.all(
+          docs.map(async (doc) => {
+            const { data: signed } = await supabase.storage
+              .from("user-documents")
+              .createSignedUrl(doc.photo_url, 3600);
+            return [doc.id, signed?.signedUrl ?? ""] as const;
+          })
+        );
+        setDocUrls(Object.fromEntries(entries));
+      }
     });
   }, [customer.id]);
 
@@ -510,6 +534,13 @@ function CustomerDetail({
 
   const totalRentals = customer.bookings.length;
   const totalSpent = customer.bookings.reduce((s, b) => s + Number(b.plan_price || 0), 0);
+
+  const docLabels: Record<string, string> = {
+    id_front: "Personalausweis · Vorderseite",
+    id_back: "Personalausweis · Rückseite",
+    license_front: "Führerschein · Vorderseite",
+    license_back: "Führerschein · Rückseite",
+  };
 
   return (
     <main className="min-h-screen bg-background">
@@ -525,13 +556,71 @@ function CustomerDetail({
           <div className="min-w-0">
             <h1 className="text-lg font-bold truncate">{name}</h1>
             <p className="text-xs text-muted-foreground truncate">
-              {customer.profile?.email} · {customer.profile?.phone || "keine Nummer"}
+              Kunden-ID {customer.id.slice(0, 8)}
             </p>
           </div>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        <section className="rounded-2xl bg-card border border-border p-4 space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+            Kontakt
+          </h2>
+          <a
+            href={`mailto:${customer.profile?.email ?? ""}`}
+            className="flex items-center gap-2 text-sm hover:underline"
+          >
+            <Mail className="w-4 h-4 text-muted-foreground" />
+            {customer.profile?.email || "—"}
+          </a>
+          <a
+            href={`tel:${customer.profile?.phone ?? ""}`}
+            className="flex items-center gap-2 text-sm hover:underline"
+          >
+            <Phone className="w-4 h-4 text-muted-foreground" />
+            {customer.profile?.phone || "Keine Telefonnummer"}
+          </a>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold mb-2 uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+            <IdCard className="w-4 h-4" /> Ausweis & Führerschein
+          </h2>
+          {documents.length === 0 ? (
+            <p className="text-xs text-muted-foreground p-4 rounded-2xl bg-secondary">
+              Keine Dokumente hochgeladen.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {documents.map((doc) => (
+                <a
+                  key={doc.id}
+                  href={docUrls[doc.id] || "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="relative block rounded-xl overflow-hidden border border-border bg-secondary"
+                >
+                  {docUrls[doc.id] ? (
+                    <img
+                      src={docUrls[doc.id]}
+                      alt={doc.doc_type}
+                      className="w-full aspect-[1.586/1] object-cover"
+                    />
+                  ) : (
+                    <div className="w-full aspect-[1.586/1] flex items-center justify-center text-xs text-muted-foreground">
+                      Lädt…
+                    </div>
+                  )}
+                  <span className="absolute bottom-1 left-1 right-1 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded truncate">
+                    {docLabels[doc.doc_type] ?? doc.doc_type}
+                  </span>
+                </a>
+              ))}
+            </div>
+          )}
+        </section>
+
         <div className="grid grid-cols-2 gap-3">
           <div className="p-4 rounded-2xl bg-secondary">
             <p className="text-xs text-muted-foreground">Buchungen gesamt</p>
