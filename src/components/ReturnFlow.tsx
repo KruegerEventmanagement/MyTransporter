@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Camera, Check, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
@@ -15,6 +15,7 @@ const PHOTO_SIDES = [
 ] as const;
 
 const POST_INTERIOR_ID = "post_interior";
+const POST_ODOMETER_ID = "post_odometer";
 
 interface ReturnFlowProps {
   bookingId: string;
@@ -28,17 +29,35 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [interiorPhoto, setInteriorPhoto] = useState<string | null>(null);
   const [damagePhotos, setDamagePhotos] = useState<string[]>([]);
+  const [odometerPhoto, setOdometerPhoto] = useState<string | null>(null);
   const [endKm, setEndKm] = useState("");
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [returnCode, setReturnCode] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [currentTarget, setCurrentTarget] = useState<
     | { kind: "side"; id: string }
     | { kind: "interior" }
     | { kind: "damage" }
+    | { kind: "odometer" }
     | { kind: "receipt" }
     | null
   >(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!mounted || !userData.user) return;
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userData.user.id)
+        .eq("role", "admin");
+      if (mounted) setIsAdmin(!!data && data.length > 0);
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const allSidesTaken = PHOTO_SIDES.every((s) => photos[s.id]);
   const interiorTaken = !!interiorPhoto;
@@ -54,6 +73,7 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
     PHOTO_SIDES.forEach((s) => (next[s.id] = placeholder));
     setPhotos(next);
     setInteriorPhoto(placeholder);
+    setOdometerPhoto(placeholder);
     if (!endKm) setEndKm("42920");
   };
 
@@ -69,6 +89,8 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
             ? POST_INTERIOR_ID
             : currentTarget.kind === "damage"
             ? "post_damage"
+            : currentTarget.kind === "odometer"
+            ? POST_ODOMETER_ID
             : "tank_receipt";
         const path = `${bookingId}/${tag}_${Date.now()}.jpg`;
         const { error } = await supabase.storage.from("trip-photos").upload(path, file);
@@ -85,6 +107,8 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
           setInteriorPhoto(urlData.publicUrl);
         } else if (currentTarget.kind === "damage") {
           setDamagePhotos((prev) => [...prev, urlData.publicUrl]);
+        } else if (currentTarget.kind === "odometer") {
+          setOdometerPhoto(urlData.publicUrl);
         } else {
           setReceiptUrl(urlData.publicUrl);
         }
@@ -103,6 +127,7 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
     if (!currentTarget) return "front";
     if (currentTarget.kind === "interior") return "interior";
     if (currentTarget.kind === "damage") return "damage";
+    if (currentTarget.kind === "odometer") return "damage";
     if (currentTarget.kind === "receipt") return "receipt";
     const side = PHOTO_SIDES.find((s) => s.id === currentTarget.id);
     return side?.variant ?? "front";
@@ -111,6 +136,7 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
     if (!currentTarget) return "";
     if (currentTarget.kind === "interior") return "Innenraum aufnehmen";
     if (currentTarget.kind === "damage") return "Schaden aufnehmen";
+    if (currentTarget.kind === "odometer") return "Tacho / Kilometerstand fotografieren";
     if (currentTarget.kind === "receipt") return "Tankbeleg scannen";
     const side = PHOTO_SIDES.find((s) => s.id === currentTarget.id);
     return side?.label ?? "Foto aufnehmen";
@@ -273,6 +299,14 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
   if (returnStep === "km") {
     return (
       <div className="max-w-lg mx-auto animate-fade-in-up">
+        <CameraCapture
+          open={cameraOpen}
+          title={cameraTitle}
+          hint={cameraHint}
+          variant={cameraVariant}
+          onClose={() => setCurrentTarget(null)}
+          onCapture={(file) => handleCapture(file)}
+        />
         <h3 className="text-xl font-bold text-foreground mb-2">Kilometerstand (Ende)</h3>
         <p className="text-sm text-muted-foreground mb-6">Trage den aktuellen Kilometerstand ein.</p>
         <input
@@ -282,8 +316,34 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
           placeholder="z.B. 42920"
           className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent mb-6"
         />
+
+        <p className="text-xs text-muted-foreground mb-2">
+          Pflicht: Foto vom Tacho mit aktuellem Kilometerstand.
+        </p>
         <button
-          disabled={!endKm}
+          onClick={() => setCurrentTarget({ kind: "odometer" })}
+          disabled={uploading}
+          className={`w-full mb-6 p-4 rounded-2xl border-2 text-center transition-all ${
+            odometerPhoto ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
+          }`}
+        >
+          {odometerPhoto ? (
+            <div className="relative">
+              <img src={odometerPhoto} alt="Tacho" className="w-full h-32 object-cover rounded-lg" />
+              <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-foreground flex items-center justify-center">
+                <Check className="w-3 h-3 text-background" />
+              </div>
+            </div>
+          ) : (
+            <div className="h-20 flex flex-col items-center justify-center gap-1">
+              <Camera className="w-7 h-7 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Foto vom Tacho aufnehmen</span>
+            </div>
+          )}
+        </button>
+
+        <button
+          disabled={!endKm || !odometerPhoto}
           onClick={handleSubmitKm}
           className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -309,6 +369,22 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
         <p className="text-sm text-muted-foreground mb-6">
           Lege den Tankbeleg gut sichtbar in den Rahmen – das Foto wird automatisch wie ein Scan in S/W aufbereitet.
         </p>
+
+        {isAdmin && (
+          <button
+            onClick={() => {
+              const placeholder =
+                "data:image/svg+xml;utf8," +
+                encodeURIComponent(
+                  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 280'><rect width='200' height='280' fill='%23ffffff'/><text x='50%' y='40%' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='14' fill='%23000'>TEST-TANKBELEG</text><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='12' fill='%23000'>Admin-Modus</text></svg>`
+                );
+              setReceiptUrl(placeholder);
+            }}
+            className="w-full mb-4 rounded-full border border-dashed border-foreground py-2 text-xs font-medium text-foreground hover:bg-secondary"
+          >
+            🧪 Admin-Testmodus: Tankbeleg fiktiv eingeben
+          </button>
+        )}
 
         {receiptUrl ? (
           <div className="mb-6">
