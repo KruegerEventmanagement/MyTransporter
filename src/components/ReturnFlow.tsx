@@ -1,13 +1,20 @@
-import { useState, useRef, useCallback } from "react";
-import { Camera, Check, ChevronRight, Key, Upload } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Camera, Check, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
 
-const RETURN_PHOTOS = [
-  { id: "post_front", label: "Vorderseite", icon: "🚛" },
-  { id: "post_back", label: "Rückseite", icon: "🔙" },
-  { id: "post_left", label: "Linke Seite", icon: "⬅️" },
-  { id: "post_right", label: "Rechte Seite", icon: "➡️" },
+const PHOTO_SIDES = [
+  { id: "post_front", label: "Vorne", icon: "⬆️", variant: "front" as SilhouetteVariant },
+  { id: "post_front_right", label: "Vorne rechts", icon: "↗️", variant: "three-quarter-front-right" as SilhouetteVariant },
+  { id: "post_right", label: "Rechte Seite", icon: "➡️", variant: "side-right" as SilhouetteVariant },
+  { id: "post_back_right", label: "Hinten rechts", icon: "↘️", variant: "three-quarter-back-right" as SilhouetteVariant },
+  { id: "post_back", label: "Hinten", icon: "⬇️", variant: "back" as SilhouetteVariant },
+  { id: "post_back_left", label: "Hinten links", icon: "↙️", variant: "three-quarter-back-left" as SilhouetteVariant },
+  { id: "post_left", label: "Linke Seite", icon: "⬅️", variant: "side-left" as SilhouetteVariant },
+  { id: "post_front_left", label: "Vorne links", icon: "↖️", variant: "three-quarter-front-left" as SilhouetteVariant },
 ] as const;
+
+const POST_INTERIOR_ID = "post_interior";
 
 interface ReturnFlowProps {
   bookingId: string;
@@ -19,67 +26,99 @@ type ReturnStep = "photos" | "km" | "receipt" | "code" | "done";
 export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
   const [returnStep, setReturnStep] = useState<ReturnStep>("photos");
   const [photos, setPhotos] = useState<Record<string, string>>({});
+  const [interiorPhoto, setInteriorPhoto] = useState<string | null>(null);
+  const [damagePhotos, setDamagePhotos] = useState<string[]>([]);
   const [endKm, setEndKm] = useState("");
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [returnCode, setReturnCode] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [currentSide, setCurrentSide] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const receiptInputRef = useRef<HTMLInputElement>(null);
+  const [currentTarget, setCurrentTarget] = useState<
+    | { kind: "side"; id: string }
+    | { kind: "interior" }
+    | { kind: "damage" }
+    | { kind: "receipt" }
+    | null
+  >(null);
 
-  const allPhotosTaken = RETURN_PHOTOS.every((s) => photos[s.id]);
+  const allSidesTaken = PHOTO_SIDES.every((s) => photos[s.id]);
+  const interiorTaken = !!interiorPhoto;
+  const photosReady = allSidesTaken && interiorTaken;
+
+  const fillTestPhotos = () => {
+    const placeholder =
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(
+        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='%23e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%23333'>TEST</text></svg>`
+      );
+    const next: Record<string, string> = {};
+    PHOTO_SIDES.forEach((s) => (next[s.id] = placeholder));
+    setPhotos(next);
+    setInteriorPhoto(placeholder);
+    if (!endKm) setEndKm("42920");
+  };
 
   const handleCapture = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file || !currentSide) return;
-
+    async (file: File) => {
+      if (!file || !currentTarget) return;
       setUploading(true);
       try {
-        const path = `${bookingId}/${currentSide}_${Date.now()}.jpg`;
+        const tag =
+          currentTarget.kind === "side"
+            ? currentTarget.id
+            : currentTarget.kind === "interior"
+            ? POST_INTERIOR_ID
+            : currentTarget.kind === "damage"
+            ? "post_damage"
+            : "tank_receipt";
+        const path = `${bookingId}/${tag}_${Date.now()}.jpg`;
         const { error } = await supabase.storage.from("trip-photos").upload(path, file);
         if (error) throw error;
-
         const { data: urlData } = supabase.storage.from("trip-photos").getPublicUrl(path);
         await supabase.from("trip_photos").insert({
           booking_id: bookingId,
           photo_url: urlData.publicUrl,
-          photo_type: currentSide,
+          photo_type: tag,
         });
-        setPhotos((prev) => ({ ...prev, [currentSide]: urlData.publicUrl }));
+        if (currentTarget.kind === "side") {
+          setPhotos((prev) => ({ ...prev, [currentTarget.id]: urlData.publicUrl }));
+        } else if (currentTarget.kind === "interior") {
+          setInteriorPhoto(urlData.publicUrl);
+        } else if (currentTarget.kind === "damage") {
+          setDamagePhotos((prev) => [...prev, urlData.publicUrl]);
+        } else {
+          setReceiptUrl(urlData.publicUrl);
+        }
       } catch (err) {
         console.error("Upload error:", err);
       } finally {
         setUploading(false);
-        setCurrentSide(null);
+        setCurrentTarget(null);
       }
     },
-    [bookingId, currentSide]
+    [bookingId, currentTarget]
   );
 
-  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      const path = `${bookingId}/tank_receipt_${Date.now()}.jpg`;
-      const { error } = await supabase.storage.from("trip-photos").upload(path, file);
-      if (error) throw error;
-
-      const { data: urlData } = supabase.storage.from("trip-photos").getPublicUrl(path);
-      await supabase.from("trip_photos").insert({
-        booking_id: bookingId,
-        photo_url: urlData.publicUrl,
-        photo_type: "tank_receipt",
-      });
-      setReceiptUrl(urlData.publicUrl);
-    } catch (err) {
-      console.error("Receipt upload error:", err);
-    } finally {
-      setUploading(false);
-    }
-  };
+  const cameraOpen = currentTarget !== null;
+  const cameraVariant: SilhouetteVariant = (() => {
+    if (!currentTarget) return "front";
+    if (currentTarget.kind === "interior") return "interior";
+    if (currentTarget.kind === "damage") return "damage";
+    if (currentTarget.kind === "receipt") return "receipt";
+    const side = PHOTO_SIDES.find((s) => s.id === currentTarget.id);
+    return side?.variant ?? "front";
+  })();
+  const cameraTitle: string = (() => {
+    if (!currentTarget) return "";
+    if (currentTarget.kind === "interior") return "Innenraum aufnehmen";
+    if (currentTarget.kind === "damage") return "Schaden aufnehmen";
+    if (currentTarget.kind === "receipt") return "Tankbeleg scannen";
+    const side = PHOTO_SIDES.find((s) => s.id === currentTarget.id);
+    return side?.label ?? "Foto aufnehmen";
+  })();
+  const cameraHint =
+    currentTarget?.kind === "receipt"
+      ? "Beleg in den Rahmen legen – wird automatisch gescannt"
+      : "Richte das Fahrzeug an der Vorlage aus";
 
   const handleSubmitKm = async () => {
     await supabase
@@ -102,15 +141,33 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
   if (returnStep === "photos") {
     return (
       <div className="max-w-lg mx-auto animate-fade-in-up">
-        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCapture} />
-        <h3 className="text-xl font-bold text-foreground mb-2">Rückgabe-Fotos</h3>
-        <p className="text-sm text-muted-foreground mb-6">Fotografiere das Fahrzeug von allen 4 Seiten.</p>
+        <CameraCapture
+          open={cameraOpen}
+          title={cameraTitle}
+          hint={cameraHint}
+          variant={cameraVariant}
+          scanMode={currentTarget?.kind === "receipt"}
+          onClose={() => setCurrentTarget(null)}
+          onCapture={(file) => handleCapture(file)}
+        />
+
+        <h3 className="text-xl font-bold text-foreground mb-2">Fahrzeug-Rückgabe dokumentieren</h3>
+        <p className="text-sm text-muted-foreground mb-6">
+          Fotografiere das Fahrzeug von allen 8 Seiten und den Innenraum, bevor du den Schlüssel abgibst.
+        </p>
+
+        <button
+          onClick={fillTestPhotos}
+          className="w-full mb-4 rounded-full border border-dashed border-foreground py-2 text-xs font-medium text-foreground hover:bg-secondary"
+        >
+          🧪 Testmodus: alle Fotos überspringen
+        </button>
 
         <div className="grid grid-cols-2 gap-3 mb-6">
-          {RETURN_PHOTOS.map((side) => (
+          {PHOTO_SIDES.map((side) => (
             <button
               key={side.id}
-              onClick={() => { setCurrentSide(side.id); fileInputRef.current?.click(); }}
+              onClick={() => setCurrentTarget({ kind: "side", id: side.id })}
               disabled={!!photos[side.id] || uploading}
               className={`p-4 rounded-2xl border-2 text-center transition-all ${
                 photos[side.id] ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
@@ -133,13 +190,82 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
           ))}
         </div>
 
+        {/* Innenraum */}
+        <div className="mb-6">
+          <p className="text-sm font-medium text-foreground mb-2">Innenraum & Sauberkeit</p>
+          <button
+            onClick={() => setCurrentTarget({ kind: "interior" })}
+            disabled={uploading}
+            className={`w-full p-4 rounded-2xl border-2 text-center transition-all ${
+              interiorPhoto ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
+            }`}
+          >
+            {interiorPhoto ? (
+              <div className="relative">
+                <img src={interiorPhoto} alt="Innenraum" className="w-full h-32 object-cover rounded-lg mb-2" />
+                <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-foreground flex items-center justify-center">
+                  <Check className="w-3 h-3 text-background" />
+                </div>
+              </div>
+            ) : (
+              <div className="h-24 flex flex-col items-center justify-center gap-1">
+                <Camera className="w-8 h-8 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Foto vom Innenraum aufnehmen</span>
+              </div>
+            )}
+          </button>
+        </div>
+
+        {/* Schäden */}
+        <div className="mb-6">
+          <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" /> Schäden?
+          </p>
+          <p className="text-xs text-muted-foreground mb-3">Optional – bis zu 4 Fotos von neuen Schäden</p>
+          <div className="grid grid-cols-4 gap-2">
+            {Array.from({ length: 4 }).map((_, idx) => {
+              const url = damagePhotos[idx];
+              if (url) {
+                return (
+                  <div key={idx} className="relative">
+                    <img src={url} alt={`Schaden ${idx + 1}`} className="w-full h-20 object-cover rounded-lg border border-border" />
+                    <button
+                      onClick={() => setDamagePhotos((prev) => prev.filter((_, i) => i !== idx))}
+                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center"
+                      aria-label="Foto entfernen"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentTarget({ kind: "damage" })}
+                  disabled={uploading || idx > damagePhotos.length}
+                  className="h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center text-muted-foreground hover:border-accent/50 transition-all disabled:opacity-40"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <button
-          disabled={!allPhotosTaken}
+          disabled={!photosReady}
           onClick={() => setReturnStep("km")}
           className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Weiter <ChevronRight className="w-5 h-5 inline" />
         </button>
+
+        {!photosReady && (
+          <p className="text-xs text-muted-foreground text-center mt-3">
+            Bitte alle 8 Außenfotos und das Innenraum-Foto aufnehmen
+          </p>
+        )}
       </div>
     );
   }
@@ -170,23 +296,44 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
   if (returnStep === "receipt") {
     return (
       <div className="max-w-lg mx-auto animate-fade-in-up">
-        <input ref={receiptInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleReceiptUpload} />
-        <h3 className="text-xl font-bold text-foreground mb-2">Tankbeleg</h3>
-        <p className="text-sm text-muted-foreground mb-6">Scanne oder fotografiere den Tankbeleg.</p>
+        <CameraCapture
+          open={cameraOpen}
+          title={cameraTitle}
+          hint={cameraHint}
+          variant={cameraVariant}
+          scanMode={currentTarget?.kind === "receipt"}
+          onClose={() => setCurrentTarget(null)}
+          onCapture={(file) => handleCapture(file)}
+        />
+        <h3 className="text-xl font-bold text-foreground mb-2">Tankbeleg scannen</h3>
+        <p className="text-sm text-muted-foreground mb-6">
+          Lege den Tankbeleg gut sichtbar in den Rahmen – das Foto wird automatisch wie ein Scan in S/W aufbereitet.
+        </p>
 
         {receiptUrl ? (
           <div className="mb-6">
-            <img src={receiptUrl} alt="Tankbeleg" className="w-full h-48 object-cover rounded-2xl border border-border" />
-            <p className="text-sm text-foreground mt-2 flex items-center gap-1"><Check className="w-4 h-4" /> Tankbeleg hochgeladen</p>
+            <div className="relative">
+              <img src={receiptUrl} alt="Tankbeleg" className="w-full max-h-[60vh] object-contain rounded-2xl border border-border bg-secondary" />
+              <div className="absolute top-2 right-2 px-2 py-1 rounded-full bg-foreground text-background text-[10px] font-semibold flex items-center gap-1">
+                <ScanLine className="w-3 h-3" /> Gescannt
+              </div>
+            </div>
+            <button
+              onClick={() => { setReceiptUrl(null); setCurrentTarget({ kind: "receipt" }); }}
+              className="mt-3 w-full rounded-full border border-foreground py-2.5 text-sm font-medium hover:bg-secondary"
+            >
+              Erneut scannen
+            </button>
           </div>
         ) : (
           <button
-            onClick={() => receiptInputRef.current?.click()}
+            onClick={() => setCurrentTarget({ kind: "receipt" })}
             disabled={uploading}
             className="w-full p-8 rounded-2xl border-2 border-dashed border-border hover:border-accent/50 text-center mb-6 transition-all"
           >
-            <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Tankbeleg fotografieren</p>
+            <ScanLine className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm font-medium text-foreground">Tankbeleg scannen</p>
+            <p className="text-[11px] text-muted-foreground mt-1">CamScanner-Modus aktiv</p>
           </button>
         )}
 
