@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import { InstallBanner } from "@/components/InstallBanner";
 
 function NotFoundComponent() {
   return (
@@ -90,6 +91,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "manifest", href: "/manifest.json" },
+      { rel: "apple-touch-icon", href: "/icons/icon-192.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -117,6 +120,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <InstallBanner />
       <Outlet />
     </QueryClientProvider>
   );
