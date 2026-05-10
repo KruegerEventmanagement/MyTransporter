@@ -36,7 +36,14 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     const stripe = getStripe();
     const plan = PLAN_PRICING[data.plan];
 
-    const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+    const line_items: Array<{
+      price_data: {
+        currency: string;
+        product_data: { name: string };
+        unit_amount: number;
+      };
+      quantity: number;
+    }> = [];
     if (plan.rent > 0) {
       line_items.push({
         price_data: {
