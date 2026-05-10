@@ -3,6 +3,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key } from "lucide-react";
+import { StripeBookingCheckout } from "./StripeBookingCheckout";
+import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
 import { DocumentScanner } from "./DocumentScanner";
 import { PreDriveFlow } from "./PreDriveFlow";
@@ -76,8 +78,20 @@ export function BookingSection() {
   const [pickupCode, setPickupCode] = useState<string | null>(null);
   const [startKm, setStartKm] = useState<number>(0);
   const [drivePhase, setDrivePhase] = useState<"pre" | "active" | "return" | "done" | null>(null);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | undefined>();
+  const [userId, setUserId] = useState<string | undefined>();
 
   const stepTitles = ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen", "Fahrt"];
+
+  const planKey: "rent_6h" | "rent_24h" | "rent_km" | null =
+    selectedPlan === null
+      ? null
+      : PRICING[selectedPlan].id === "6h"
+      ? "rent_6h"
+      : PRICING[selectedPlan].id === "24h"
+      ? "rent_24h"
+      : "rent_km";
 
   return (
     <section id="booking" className="py-6 px-3 sm:px-4 overflow-x-hidden">
