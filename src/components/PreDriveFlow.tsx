@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
-import { Camera, Check, ChevronRight, MessageSquare, Key, Plus, X, AlertTriangle } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { Camera, Check, ChevronRight, MessageSquare, Key, Plus, X, AlertTriangle, ChevronLeft } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
 import { notifyAdmin } from "@/lib/admin-notify";
@@ -37,6 +38,31 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
     | { kind: "damage" }
     | null
   >(null);
+
+  // Bereits hochgeladene Fotos für diese Buchung laden
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data } = await supabase
+        .from("trip_photos")
+        .select("photo_type, photo_url, created_at")
+        .eq("booking_id", bookingId)
+        .order("created_at", { ascending: true });
+      if (!mounted || !data) return;
+      const sides: Record<string, string> = {};
+      const damages: string[] = [];
+      let interior: string | null = null;
+      for (const row of data as { photo_type: string; photo_url: string }[]) {
+        if (row.photo_type === INTERIOR_ID) interior = row.photo_url;
+        else if (row.photo_type === "pre_damage") damages.push(row.photo_url);
+        else if (row.photo_type.startsWith("pre_")) sides[row.photo_type] = row.photo_url;
+      }
+      if (Object.keys(sides).length) setPhotos((prev) => ({ ...sides, ...prev }));
+      if (interior) setInteriorPhoto((prev) => prev ?? interior);
+      if (damages.length) setDamagePhotos((prev) => (prev.length ? prev : damages));
+    })();
+    return () => { mounted = false; };
+  }, [bookingId]);
 
   const allSidesTaken = PHOTO_SIDES.every((s) => photos[s.id]);
   const interiorTaken = !!interiorPhoto;
@@ -138,6 +164,15 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
 
   return (
     <div className="max-w-lg mx-auto animate-fade-in-up">
+      <div className="mb-4">
+        <Link
+          to="/profil"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" /> Zurück zum Profil
+        </Link>
+      </div>
+
       <CameraCapture
         open={cameraOpen}
         title={cameraTitle}
