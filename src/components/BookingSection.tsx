@@ -244,7 +244,11 @@ export function BookingSection() {
   const [drivePhase, setDrivePhase] = useState<"pre" | "active" | "return" | "done" | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
 
-  const stepTitles = ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen", "Fahrt"];
+  const stepTitles = profileComplete
+    ? ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Bezahlen", "Fahrt"]
+    : ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen", "Fahrt"];
+  // Wenn Registrierung übersprungen wird, mappen wir step 4/5 auf Stepper-Position 3/4
+  const stepperIndex = profileComplete && step >= 3 ? step - 1 : step;
 
   const planKey: "rent_6h" | "rent_24h" | "rent_km" | null =
     selectedPlan === null
@@ -264,15 +268,15 @@ export function BookingSection() {
         </h1>
 
         {/* Step indicator */}
-        <div className="mt-8 grid grid-cols-6 w-full max-w-lg mx-auto">
+        <div className={`mt-8 grid w-full max-w-lg mx-auto ${profileComplete ? "grid-cols-5" : "grid-cols-6"}`}>
           {stepTitles.map((title, i) => (
             <div key={title} className="flex flex-col items-center gap-1">
               <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-all flex-shrink-0 ${
-                i <= step ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground"
+                i <= stepperIndex ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground"
               }`}>
                 {i + 1}
               </div>
-              <span className={`block text-[10px] sm:text-xs text-center leading-tight px-0.5 ${i <= step ? "text-foreground" : "text-muted-foreground"}`}>
+              <span className={`block text-[10px] sm:text-xs text-center leading-tight px-0.5 ${i <= stepperIndex ? "text-foreground" : "text-muted-foreground"}`}>
                 {title}
               </span>
             </div>
