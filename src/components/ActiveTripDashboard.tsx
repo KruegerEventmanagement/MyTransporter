@@ -62,10 +62,15 @@ export function ActiveTripDashboard({
 
   // Timer
   useEffect(() => {
-    const st = new Date(startDate.getTime());
-    st.setHours(startHour, 0, 0, 0);
+    // Tatsächlicher Fahrtstart: erste Mal, wenn dieses Panel geöffnet wird
+    const key = `mt_trip_started_${bookingId}`;
+    let startedAtMs = parseInt(localStorage.getItem(key) || "0", 10);
+    if (!startedAtMs) {
+      startedAtMs = Date.now();
+      localStorage.setItem(key, String(startedAtMs));
+    }
     const tick = () => {
-      const diff = Math.max(0, Date.now() - st.getTime());
+      const diff = Math.max(0, Date.now() - startedAtMs);
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
@@ -76,7 +81,7 @@ export function ActiveTripDashboard({
     tick();
     const i = setInterval(tick, 1000);
     return () => clearInterval(i);
-  }, [startDate, startHour]);
+  }, [bookingId]);
 
   // GPS
   const recordPosition = useCallback(
