@@ -156,10 +156,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
             {PHOTO_SIDES.map((side) => (
               <button
                 key={side.id}
-                onClick={() => {
-                  setCurrentSide(side.id);
-                  fileInputRef.current?.click();
-                }}
+                onClick={() => openCamera({ kind: "side", id: side.id })}
                 disabled={!!photos[side.id] || uploading}
                 className={`p-4 rounded-2xl border-2 text-center transition-all ${
                   photos[side.id]
@@ -182,6 +179,89 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
                 <p className="text-sm font-medium text-foreground">{side.icon} {side.label}</p>
               </button>
             ))}
+          </div>
+
+          {/* Innenraum / Sauberkeit */}
+          <div className="mb-6">
+            <p className="text-sm font-medium text-foreground mb-2">Innenraum & Sauberkeit</p>
+            <button
+              onClick={() => openCamera({ kind: "interior" })}
+              disabled={uploading}
+              className={`w-full p-4 rounded-2xl border-2 text-center transition-all ${
+                interiorPhoto ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
+              }`}
+            >
+              {interiorPhoto ? (
+                <div className="relative">
+                  <img src={interiorPhoto} alt="Innenraum" className="w-full h-32 object-cover rounded-lg mb-2" />
+                  <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-foreground flex items-center justify-center">
+                    <Check className="w-3 h-3 text-background" />
+                  </div>
+                </div>
+              ) : (
+                <div className="h-24 flex flex-col items-center justify-center gap-1">
+                  <Camera className="w-8 h-8 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Foto vom Innenraum aufnehmen</span>
+                </div>
+              )}
+            </button>
+          </div>
+
+          {/* Schäden */}
+          <div className="mb-6">
+            <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" /> Schäden am Fahrzeug?
+            </p>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <button
+                onClick={() => {
+                  setHasDamage(false);
+                  setDamagePhotos([]);
+                }}
+                className={`py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                  hasDamage === false ? "border-foreground bg-secondary" : "border-border"
+                }`}
+              >
+                Nein, keine Schäden
+              </button>
+              <button
+                onClick={() => setHasDamage(true)}
+                className={`py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                  hasDamage === true ? "border-foreground bg-secondary" : "border-border"
+                }`}
+              >
+                Ja, Schäden vorhanden
+              </button>
+            </div>
+
+            {hasDamage === true && (
+              <div className="grid grid-cols-3 gap-2">
+                {damagePhotos.map((url, idx) => (
+                  <div key={idx} className="relative">
+                    <img src={url} alt={`Schaden ${idx + 1}`} className="w-full h-20 object-cover rounded-lg border border-border" />
+                    <button
+                      onClick={() => setDamagePhotos((prev) => prev.filter((_, i) => i !== idx))}
+                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center"
+                      aria-label="Foto entfernen"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => openCamera({ kind: "damage" })}
+                  disabled={uploading}
+                  className="h-20 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground hover:border-accent/50 transition-all"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span className="text-[10px] mt-1">Schaden hinzufügen</span>
+                </button>
+              </div>
+            )}
+
+            {hasDamage === true && damagePhotos.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-2">Bitte mindestens ein Foto vom Schaden aufnehmen.</p>
+            )}
           </div>
 
           {/* Kilometerstand */}
@@ -211,16 +291,16 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
           </div>
 
           <button
-            disabled={!allPhotosTaken || !startKm}
+            disabled={!readyToStart || !startKm}
             onClick={handleStartDrive}
             className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Fahrt starten 🚛
           </button>
 
-          {!allPhotosTaken && (
+          {!readyToStart && (
             <p className="text-xs text-muted-foreground text-center mt-3">
-              Bitte fotografiere alle 4 Seiten des Fahrzeugs
+              Bitte alle 8 Außenfotos, das Innenraum-Foto und die Schadensangabe ausfüllen
             </p>
           )}
         </>
