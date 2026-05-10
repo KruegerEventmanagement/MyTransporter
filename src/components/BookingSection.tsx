@@ -894,7 +894,16 @@ export function BookingSection() {
                         cancelUrl: `${origin}/?checkout=cancelled`,
                       },
                     });
-                    window.location.href = url;
+                    // Aus dem Lovable-Preview-iframe ausbrechen, sonst blockt Stripe (X-Frame-Options).
+                    if (window.top && window.top !== window.self) {
+                      try {
+                        window.top.location.href = url;
+                      } catch {
+                        window.open(url, "_blank", "noopener,noreferrer");
+                      }
+                    } else {
+                      window.location.href = url;
+                    }
                   } catch (e) {
                     console.error(e);
                     setShowCheckout(false);
