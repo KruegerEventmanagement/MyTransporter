@@ -3,7 +3,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key, Eye, EyeOff } from "lucide-react";
-import { StripeBookingCheckout } from "./StripeBookingCheckout";
+import { createBookingCheckout } from "@/lib/payments.functions";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
 import { DocumentScanner } from "./DocumentScanner";
