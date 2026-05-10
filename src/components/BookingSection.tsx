@@ -95,6 +95,7 @@ export function BookingSection() {
 
   return (
     <section id="booking" className="py-6 px-3 sm:px-4 overflow-x-hidden">
+      {step === 4 && <PaymentTestModeBanner />}
       <div className="max-w-4xl mx-auto w-full">
         <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center text-foreground animate-fade-in-up">
           Buche deinen Transporter
