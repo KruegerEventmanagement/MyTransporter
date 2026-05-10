@@ -106,6 +106,7 @@ export function BookingSection() {
         setSignupEmailSent(null);
         if (session.user.email_confirmed_at || session.user.confirmed_at) {
           setProfileComplete(true);
+          setShowLogin(false);
           localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
         }
       }
@@ -113,14 +114,21 @@ export function BookingSection() {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) {
         setIsLoggedIn(true);
-        if (data.session.user.email_confirmed_at) {
+        if (data.session.user.email_confirmed_at || data.session.user.confirmed_at) {
           setProfileComplete(true);
+          setShowLogin(false);
           localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
         }
       }
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (profileComplete && step === 3) {
+      setStep(4);
+    }
+  }, [profileComplete, step]);
 
   const handleSignUp = async () => {
     setAuthError(null);
@@ -187,6 +195,8 @@ export function BookingSection() {
     if (data.user) {
       setIsLoggedIn(true);
       setProfileComplete(true);
+      setShowLogin(false);
+      setStep(4);
     }
   };
 
