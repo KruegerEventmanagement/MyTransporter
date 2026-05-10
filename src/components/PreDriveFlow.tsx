@@ -175,6 +175,13 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
             Fotografiere das Fahrzeug von allen 4 Seiten, bevor du losfährst.
           </p>
 
+          <button
+            onClick={fillTestPhotos}
+            className="w-full mb-4 rounded-full border border-dashed border-foreground py-2 text-xs font-medium text-foreground hover:bg-secondary"
+          >
+            🧪 Testmodus: alle Fotos überspringen
+          </button>
+
           <div className="grid grid-cols-2 gap-3 mb-6">
             {PHOTO_SIDES.map((side) => (
               <button
