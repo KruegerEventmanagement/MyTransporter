@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { User, X, ChevronRight, Eye, EyeOff, Route as RouteIcon } from "lucide-react";
+import { User, X, ChevronRight, Eye, EyeOff, Route as RouteIcon, Shield } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,6 +10,7 @@ export function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,14 +19,25 @@ export function Navbar() {
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "" });
 
   useEffect(() => {
-    const apply = (user: { email?: string | null; user_metadata?: Record<string, unknown> } | null) => {
+    const apply = async (user: { id?: string; email?: string | null; user_metadata?: Record<string, unknown> } | null) => {
       if (user) {
         setIsLoggedIn(true);
         const meta = (user.user_metadata ?? {}) as { first_name?: string };
         setUserName(meta.first_name || (user.email?.split("@")[0] ?? "Konto"));
+        if (user.id) {
+          const { data } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id)
+            .eq("role", "admin");
+          setIsAdmin(!!data && data.length > 0);
+        } else {
+          setIsAdmin(false);
+        }
       } else {
         setIsLoggedIn(false);
         setUserName("");
+        setIsAdmin(false);
       }
     };
     supabase.auth.getSession().then(({ data }) => apply(data.session?.user ?? null));
@@ -134,6 +146,16 @@ export function Navbar() {
                     <RouteIcon className="w-3.5 h-3.5" />
                     Mein Profil & Fahrten
                   </Link>
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-secondary rounded-lg transition-colors"
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      Admin-Bereich
+                    </Link>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-3 py-2 text-xs text-destructive hover:bg-destructive/5 rounded-lg transition-colors"
