@@ -523,7 +523,26 @@ export function BookingSection() {
 
             {!showCheckout && !paid && planKey && (
               <button
-                onClick={() => setShowCheckout(true)}
+                onClick={() => {
+                  // Pending Booking für /checkout/return persistieren
+                  if (typeof window !== "undefined" && date && startHour !== null && selectedPlan !== null) {
+                    localStorage.setItem(
+                      "mt_pending_booking",
+                      JSON.stringify({
+                        planId: PRICING[selectedPlan].id,
+                        planLabel: PRICING[selectedPlan].label,
+                        planPrice: PRICING[selectedPlan].price,
+                        startDate: format(date, "yyyy-MM-dd"),
+                        startHour,
+                        email: regForm.email,
+                        firstName: regForm.firstName,
+                        lastName: regForm.lastName,
+                        phone: regForm.phone,
+                      })
+                    );
+                  }
+                  setShowCheckout(true);
+                }}
                 className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
               >
                 Sicher bezahlen
