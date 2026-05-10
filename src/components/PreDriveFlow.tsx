@@ -1,13 +1,19 @@
 import { useState, useRef, useCallback } from "react";
-import { Camera, Check, ChevronRight, MessageSquare, Key } from "lucide-react";
+import { Camera, Check, ChevronRight, MessageSquare, Key, Plus, X, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const PHOTO_SIDES = [
-  { id: "pre_front", label: "Vorderseite", icon: "🚛" },
-  { id: "pre_back", label: "Rückseite", icon: "🔙" },
-  { id: "pre_left", label: "Linke Seite", icon: "⬅️" },
+  { id: "pre_front", label: "Vorne", icon: "⬆️" },
+  { id: "pre_front_right", label: "Vorne rechts", icon: "↗️" },
   { id: "pre_right", label: "Rechte Seite", icon: "➡️" },
+  { id: "pre_back_right", label: "Hinten rechts", icon: "↘️" },
+  { id: "pre_back", label: "Hinten", icon: "⬇️" },
+  { id: "pre_back_left", label: "Hinten links", icon: "↙️" },
+  { id: "pre_left", label: "Linke Seite", icon: "⬅️" },
+  { id: "pre_front_left", label: "Vorne links", icon: "↖️" },
 ] as const;
+
+const INTERIOR_ID = "pre_interior";
 
 interface PreDriveFlowProps {
   bookingId: string;
