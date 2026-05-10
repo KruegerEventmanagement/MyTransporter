@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key } from "lucide-react";
+import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key, Eye, EyeOff } from "lucide-react";
 import { StripeBookingCheckout } from "./StripeBookingCheckout";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
@@ -41,6 +41,9 @@ export function BookingSection() {
   const [showLogin, setShowLogin] = useState(false);
   const [regForm, setRegForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [regPassword, setRegPassword] = useState("");
+  const [regPasswordConfirm, setRegPasswordConfirm] = useState("");
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
@@ -72,6 +75,14 @@ export function BookingSection() {
 
   const handleSignUp = async () => {
     setAuthError(null);
+    if (regPassword !== regPasswordConfirm) {
+      setAuthError("Die Passwörter stimmen nicht überein.");
+      return;
+    }
+    if (regPassword.length < 6) {
+      setAuthError("Passwort muss mindestens 6 Zeichen lang sein.");
+      return;
+    }
     setAuthLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email: regForm.email,
