@@ -185,7 +185,41 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
   );
 }
 
-function BookingRow({ booking: b }: { booking: Booking }) {
+function computeCancellationFee(b: Booking): { hours: number; fee: number; startsAt: Date } {
+  const startsAt = new Date(`${b.start_date}T${String(b.start_hour).padStart(2, "0")}:00:00`);
+  const diffMs = startsAt.getTime() - Date.now();
+  const hours = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60)));
+  const fee = hours; // 1 € pro Stunde
+  return { hours, fee, startsAt };
+}
+
+function BookingRow({ booking: b, onCancelled }: { booking: Booking; onCancelled: () => void | Promise<void> }) {
+  const [confirming, setConfirming] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const cancellable = b.status === "paid" && b.start_km === null;
+  const { hours, fee, startsAt } = useMemo(() => computeCancellationFee(b), [b]);
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    setError(null);
+    const note = `Storniert am ${format(new Date(), "dd.MM.yyyy HH:mm", { locale: de })} · Gebühr ${fee.toFixed(2)} € (${hours} h vor Abfahrt)`;
+    const { error: err } = await supabase
+      .from("bookings")
+      .update({
+        status: "cancelled",
+        remarks: b.remarks ? `${b.remarks}\n${note}` : note,
+      })
+      .eq("id", b.id);
+    setCancelling(false);
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    setConfirming(false);
+    await onCancelled();
+  };
+
   const km = b.start_km !== null && b.end_km !== null ? Math.max(0, b.end_km - b.start_km) : null;
   const dateLabel = (() => {
     try {
@@ -240,6 +274,46 @@ function BookingRow({ booking: b }: { booking: Booking }) {
           Zur Fahrt
         </Link>
       )}
+
+      {cancellable && !confirming && (
+        <button
+          onClick={() => setConfirming(true)}
+          className="mt-3 w-full rounded-full border border-border bg-background py-2 text-xs font-bold text-foreground hover:bg-secondary flex items-center justify-center gap-1.5"
+        >
+          <X className="w-3.5 h-3.5" /> Fahrt stornieren
+        </button>
+      )}
+
+      {cancellable && confirming && (
+        <div className="mt-3 rounded-2xl bg-secondary p-3 space-y-2">
+          <p className="text-xs font-bold text-foreground">Stornierung bestätigen</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Abfahrt am {format(startsAt, "dd.MM.yyyy 'um' HH:mm", { locale: de })} Uhr ·{" "}
+            <span className="text-foreground font-medium">{hours} Stunden</span> bis Abfahrt.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Stornogebühr: <span className="text-foreground font-bold">{fee.toFixed(2)} €</span>{" "}
+            (1 € pro Stunde bis Abfahrt)
+          </p>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={() => setConfirming(false)}
+              disabled={cancelling}
+              className="flex-1 rounded-full bg-background border border-border py-2 text-xs font-bold disabled:opacity-50"
+            >
+              Doch nicht
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="flex-1 rounded-full bg-foreground text-background py-2 text-xs font-bold disabled:opacity-50"
+            >
+              {cancelling ? "Storniere…" : "Stornieren"}
+            </button>
+          </div>
+        </div>
+      )}
     </li>
   );
 }
@@ -262,6 +336,7 @@ function StatusBadge({ status }: { status: string }) {
     active: { label: "Unterwegs", cls: "bg-foreground text-background" },
     returning: { label: "Rückgabe", cls: "bg-secondary text-foreground border border-foreground" },
     completed: { label: "Abgeschlossen", cls: "bg-secondary text-muted-foreground" },
+    cancelled: { label: "Storniert", cls: "bg-secondary text-muted-foreground line-through" },
   };
   const m = map[status] ?? { label: status, cls: "bg-muted text-muted-foreground" };
   return <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${m.cls}`}>{m.label}</span>;
