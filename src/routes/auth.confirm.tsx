@@ -33,9 +33,10 @@ function AuthConfirmPage() {
           setMessage("Bestätigung abgeschlossen. Du wirst weitergeleitet …");
         }
       } else if (tokenHash) {
+        const otpType = type === "email_change" ? "email_change" : "signup";
         const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
-          type: type === "signup" ? "signup" : "email",
+          type: otpType,
         });
         if (error && active) {
           setMessage("Bestätigung abgeschlossen. Du wirst weitergeleitet …");
