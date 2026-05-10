@@ -82,7 +82,7 @@ export function InstallBanner() {
         <p className="text-sm font-semibold leading-tight">Als App installieren</p>
         <p className="text-[11px] opacity-80 leading-tight mt-0.5 truncate">
           {iosHint
-            ? "Teilen-Symbol → „Zum Home-Bildschirm""
+            ? "Teilen-Symbol → „Zum Home-Bildschirm“"
             : "Schneller Zugriff direkt vom Homescreen"}
         </p>
       </div>
