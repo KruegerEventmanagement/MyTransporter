@@ -1,16 +1,17 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Camera, Check, ChevronRight, MessageSquare, Key, Plus, X, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
 
 const PHOTO_SIDES = [
-  { id: "pre_front", label: "Vorne", icon: "⬆️" },
-  { id: "pre_front_right", label: "Vorne rechts", icon: "↗️" },
-  { id: "pre_right", label: "Rechte Seite", icon: "➡️" },
-  { id: "pre_back_right", label: "Hinten rechts", icon: "↘️" },
-  { id: "pre_back", label: "Hinten", icon: "⬇️" },
-  { id: "pre_back_left", label: "Hinten links", icon: "↙️" },
-  { id: "pre_left", label: "Linke Seite", icon: "⬅️" },
-  { id: "pre_front_left", label: "Vorne links", icon: "↖️" },
+  { id: "pre_front", label: "Vorne", icon: "⬆️", variant: "front" as SilhouetteVariant },
+  { id: "pre_front_right", label: "Vorne rechts", icon: "↗️", variant: "three-quarter-front-right" as SilhouetteVariant },
+  { id: "pre_right", label: "Rechte Seite", icon: "➡️", variant: "side-right" as SilhouetteVariant },
+  { id: "pre_back_right", label: "Hinten rechts", icon: "↘️", variant: "three-quarter-back-right" as SilhouetteVariant },
+  { id: "pre_back", label: "Hinten", icon: "⬇️", variant: "back" as SilhouetteVariant },
+  { id: "pre_back_left", label: "Hinten links", icon: "↙️", variant: "three-quarter-back-left" as SilhouetteVariant },
+  { id: "pre_left", label: "Linke Seite", icon: "⬅️", variant: "side-left" as SilhouetteVariant },
+  { id: "pre_front_left", label: "Vorne links", icon: "↖️", variant: "three-quarter-front-left" as SilhouetteVariant },
 ] as const;
 
 const INTERIOR_ID = "pre_interior";
@@ -29,7 +30,6 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
   const [startKm, setStartKm] = useState("");
   const [codeShown, setCodeShown] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentTarget, setCurrentTarget] = useState<
     | { kind: "side"; id: string }
     | { kind: "interior" }
@@ -42,8 +42,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
   const readyToStart = allSidesTaken && interiorTaken;
 
   const handleCapture = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
+    async (file: File) => {
       if (!file || !currentTarget) return;
 
       setUploading(true);
@@ -79,7 +78,6 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
       } finally {
         setUploading(false);
         setCurrentTarget(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
       }
     },
     [bookingId, currentTarget]
@@ -87,9 +85,23 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
 
   const openCamera = (target: NonNullable<typeof currentTarget>) => {
     setCurrentTarget(target);
-    // small timeout so state is set before click; not strictly necessary
-    requestAnimationFrame(() => fileInputRef.current?.click());
   };
+
+  const cameraOpen = currentTarget !== null;
+  const cameraVariant: SilhouetteVariant = (() => {
+    if (!currentTarget) return "front";
+    if (currentTarget.kind === "interior") return "interior";
+    if (currentTarget.kind === "damage") return "damage";
+    const side = PHOTO_SIDES.find((s) => s.id === currentTarget.id);
+    return side?.variant ?? "front";
+  })();
+  const cameraTitle: string = (() => {
+    if (!currentTarget) return "";
+    if (currentTarget.kind === "interior") return "Innenraum aufnehmen";
+    if (currentTarget.kind === "damage") return "Schaden aufnehmen";
+    const side = PHOTO_SIDES.find((s) => s.id === currentTarget.id);
+    return side?.label ?? "Foto aufnehmen";
+  })();
 
   const handleStartDrive = async () => {
     if (!startKm) return;
