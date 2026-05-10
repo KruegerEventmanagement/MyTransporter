@@ -17,7 +17,8 @@ export type SilhouetteVariant =
   | "three-quarter-back-left"
   | "three-quarter-front-left"
   | "interior"
-  | "damage";
+  | "damage"
+  | "receipt";
 
 interface CameraCaptureProps {
   open: boolean;
@@ -26,6 +27,8 @@ interface CameraCaptureProps {
   variant: SilhouetteVariant;
   onClose: () => void;
   onCapture: (file: File) => void;
+  /** Wenn true, wird das Foto wie ein Scanner verarbeitet (S/W, hoher Kontrast). */
+  scanMode?: boolean;
 }
 
 function getOverlay(variant: SilhouetteVariant): { src: string; flip: boolean } | null {
@@ -54,7 +57,7 @@ function getOverlay(variant: SilhouetteVariant): { src: string; flip: boolean } 
   }
 }
 
-export function CameraCapture({ open, title, hint, variant, onClose, onCapture }: CameraCaptureProps) {
+export function CameraCapture({ open, title, hint, variant, onClose, onCapture, scanMode = false }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +118,28 @@ export function CameraCapture({ open, title, hint, variant, onClose, onCapture }
     canvas.height = h;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.drawImage(video, 0, 0, w, h);
+    if (scanMode) {
+      // CamScanner-Look: S/W, hoher Kontrast, leicht heller
+      // @ts-expect-error filter wird in modernen Browsern unterstützt
+      ctx.filter = "grayscale(1) contrast(1.6) brightness(1.15)";
+      ctx.drawImage(video, 0, 0, w, h);
+      // Zusätzlich: leichten Weißabgleich/Schwellwert anwenden
+      try {
+        const img = ctx.getImageData(0, 0, w, h);
+        const d = img.data;
+        for (let i = 0; i < d.length; i += 4) {
+          // bereits grau -> Kontrast-Push
+          const v = d[i];
+          const adj = v < 110 ? Math.max(0, v - 20) : Math.min(255, v + 25);
+          d[i] = d[i + 1] = d[i + 2] = adj;
+        }
+        ctx.putImageData(img, 0, 0);
+      } catch {
+        // ignore
+      }
+    } else {
+      ctx.drawImage(video, 0, 0, w, h);
+    }
     canvas.toBlob(
       (blob) => {
         if (!blob) return;
@@ -166,7 +190,17 @@ export function CameraCapture({ open, title, hint, variant, onClose, onCapture }
         {/* Silhouette overlay (Carmera-Stil) */}
         {(() => {
           const overlay = getOverlay(variant);
-          if (!overlay) return null;
+          if (!overlay) {
+            // Beleg-Modus: Dokumenten-Rahmen
+            if (variant === "receipt") {
+              return (
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-6">
+                  <div className="w-[78%] max-w-[420px] aspect-[3/4] border-2 border-white/80 rounded-md shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]" />
+                </div>
+              );
+            }
+            return null;
+          }
           return (
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-6">
               <img
