@@ -23,23 +23,40 @@ interface PreDriveFlowProps {
 
 export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlowProps) {
   const [photos, setPhotos] = useState<Record<string, string>>({});
+  const [interiorPhoto, setInteriorPhoto] = useState<string | null>(null);
+  const [hasDamage, setHasDamage] = useState<boolean | null>(null);
+  const [damagePhotos, setDamagePhotos] = useState<string[]>([]);
   const [remarks, setRemarks] = useState("");
   const [startKm, setStartKm] = useState("");
   const [codeShown, setCodeShown] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [currentSide, setCurrentSide] = useState<string | null>(null);
+  const [currentTarget, setCurrentTarget] = useState<
+    | { kind: "side"; id: string }
+    | { kind: "interior" }
+    | { kind: "damage" }
+    | null
+  >(null);
 
-  const allPhotosTaken = PHOTO_SIDES.every((s) => photos[s.id]);
+  const allSidesTaken = PHOTO_SIDES.every((s) => photos[s.id]);
+  const interiorTaken = !!interiorPhoto;
+  const damageAnswered = hasDamage === false || (hasDamage === true && damagePhotos.length > 0);
+  const readyToStart = allSidesTaken && interiorTaken && damageAnswered;
 
   const handleCapture = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (!file || !currentSide) return;
+      if (!file || !currentTarget) return;
 
       setUploading(true);
       try {
-        const path = `${bookingId}/${currentSide}_${Date.now()}.jpg`;
+        const tag =
+          currentTarget.kind === "side"
+            ? currentTarget.id
+            : currentTarget.kind === "interior"
+            ? INTERIOR_ID
+            : "pre_damage";
+        const path = `${bookingId}/${tag}_${Date.now()}.jpg`;
         const { error } = await supabase.storage.from("trip-photos").upload(path, file);
         if (error) throw error;
 
@@ -49,19 +66,32 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
         await supabase.from("trip_photos").insert({
           booking_id: bookingId,
           photo_url: urlData.publicUrl,
-          photo_type: currentSide,
+          photo_type: tag,
         });
 
-        setPhotos((prev) => ({ ...prev, [currentSide]: urlData.publicUrl }));
+        if (currentTarget.kind === "side") {
+          setPhotos((prev) => ({ ...prev, [currentTarget.id]: urlData.publicUrl }));
+        } else if (currentTarget.kind === "interior") {
+          setInteriorPhoto(urlData.publicUrl);
+        } else {
+          setDamagePhotos((prev) => [...prev, urlData.publicUrl]);
+        }
       } catch (err) {
         console.error("Upload error:", err);
       } finally {
         setUploading(false);
-        setCurrentSide(null);
+        setCurrentTarget(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
       }
     },
-    [bookingId, currentSide]
+    [bookingId, currentTarget]
   );
+
+  const openCamera = (target: NonNullable<typeof currentTarget>) => {
+    setCurrentTarget(target);
+    // small timeout so state is set before click; not strictly necessary
+    requestAnimationFrame(() => fileInputRef.current?.click());
+  };
 
   const handleStartDrive = async () => {
     if (!startKm) return;
