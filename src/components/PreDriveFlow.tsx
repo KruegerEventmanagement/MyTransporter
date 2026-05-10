@@ -17,6 +17,7 @@ const PHOTO_SIDES = [
 ] as const;
 
 const INTERIOR_ID = "pre_interior";
+const ODOMETER_ID = "pre_odometer";
 
 interface PreDriveFlowProps {
   bookingId: string;
@@ -28,6 +29,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [interiorPhoto, setInteriorPhoto] = useState<string | null>(null);
   const [damagePhotos, setDamagePhotos] = useState<string[]>([]);
+  const [odometerPhoto, setOdometerPhoto] = useState<string | null>(null);
   const [remarks, setRemarks] = useState("");
   const [startKm, setStartKm] = useState("");
   const [codeShown, setCodeShown] = useState(false);
@@ -36,6 +38,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
     | { kind: "side"; id: string }
     | { kind: "interior" }
     | { kind: "damage" }
+    | { kind: "odometer" }
     | null
   >(null);
 
@@ -54,6 +57,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
       let interior: string | null = null;
       for (const row of data as { photo_type: string; photo_url: string }[]) {
         if (row.photo_type === INTERIOR_ID) interior = row.photo_url;
+        else if (row.photo_type === ODOMETER_ID) setOdometerPhoto((prev) => prev ?? row.photo_url);
         else if (row.photo_type === "pre_damage") damages.push(row.photo_url);
         else if (row.photo_type.startsWith("pre_")) sides[row.photo_type] = row.photo_url;
       }
@@ -66,7 +70,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
 
   const allSidesTaken = PHOTO_SIDES.every((s) => photos[s.id]);
   const interiorTaken = !!interiorPhoto;
-  const readyToStart = allSidesTaken && interiorTaken;
+  const readyToStart = allSidesTaken && interiorTaken && !!odometerPhoto;
 
   const fillTestPhotos = () => {
     const placeholder =
@@ -78,6 +82,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
     PHOTO_SIDES.forEach((s) => (next[s.id] = placeholder));
     setPhotos(next);
     setInteriorPhoto(placeholder);
+    setOdometerPhoto(placeholder);
     if (!startKm) setStartKm("42850");
   };
 
@@ -92,6 +97,8 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
             ? currentTarget.id
             : currentTarget.kind === "interior"
             ? INTERIOR_ID
+            : currentTarget.kind === "odometer"
+            ? ODOMETER_ID
             : "pre_damage";
         const path = `${bookingId}/${tag}_${Date.now()}.jpg`;
         const { error } = await supabase.storage.from("trip-photos").upload(path, file);
@@ -110,6 +117,8 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
           setPhotos((prev) => ({ ...prev, [currentTarget.id]: urlData.publicUrl }));
         } else if (currentTarget.kind === "interior") {
           setInteriorPhoto(urlData.publicUrl);
+        } else if (currentTarget.kind === "odometer") {
+          setOdometerPhoto(urlData.publicUrl);
         } else {
           setDamagePhotos((prev) => [...prev, urlData.publicUrl]);
         }
@@ -132,6 +141,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
     if (!currentTarget) return "front";
     if (currentTarget.kind === "interior") return "interior";
     if (currentTarget.kind === "damage") return "damage";
+    if (currentTarget.kind === "odometer") return "damage";
     const side = PHOTO_SIDES.find((s) => s.id === currentTarget.id);
     return side?.variant ?? "front";
   })();
@@ -139,6 +149,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
     if (!currentTarget) return "";
     if (currentTarget.kind === "interior") return "Innenraum aufnehmen";
     if (currentTarget.kind === "damage") return "Schaden aufnehmen";
+    if (currentTarget.kind === "odometer") return "Tacho / Kilometerstand fotografieren";
     const side = PHOTO_SIDES.find((s) => s.id === currentTarget.id);
     return side?.label ?? "Foto aufnehmen";
   })();
@@ -326,6 +337,30 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
               placeholder="z.B. 42850"
               className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
             />
+            <p className="text-xs text-muted-foreground mt-2 mb-2">
+              Pflicht: Foto vom Tacho mit aktuellem Kilometerstand.
+            </p>
+            <button
+              onClick={() => openCamera({ kind: "odometer" })}
+              disabled={uploading}
+              className={`w-full p-4 rounded-2xl border-2 text-center transition-all ${
+                odometerPhoto ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
+              }`}
+            >
+              {odometerPhoto ? (
+                <div className="relative">
+                  <img src={odometerPhoto} alt="Tacho" className="w-full h-32 object-cover rounded-lg" />
+                  <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-foreground flex items-center justify-center">
+                    <Check className="w-3 h-3 text-background" />
+                  </div>
+                </div>
+              ) : (
+                <div className="h-20 flex flex-col items-center justify-center gap-1">
+                  <Camera className="w-7 h-7 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Foto vom Tacho aufnehmen</span>
+                </div>
+              )}
+            </button>
           </div>
 
           {/* Remarks */}
