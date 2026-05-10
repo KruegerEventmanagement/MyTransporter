@@ -164,9 +164,11 @@ export function ActiveTripDashboard({
         const loader = new Loader({
           apiKey: GOOGLE_MAPS_API_KEY,
           version: "weekly",
-          libraries: ["places", "routes"],
         });
-        const google = await loader.load();
+        await loader.importLibrary("maps");
+        await loader.importLibrary("places");
+        await loader.importLibrary("routes");
+        await loader.importLibrary("marker");
 
         const map = new google.maps.Map(mapRef.current!, {
           center: { lat: 52.52, lng: 13.405 },
