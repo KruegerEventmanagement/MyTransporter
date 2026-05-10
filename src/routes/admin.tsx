@@ -9,6 +9,9 @@ import {
   Image as ImageIcon,
   LogOut,
   MapPin,
+  Mail,
+  Phone,
+  IdCard,
   Search,
   User,
   Users,
@@ -57,6 +60,12 @@ interface TripPhoto {
   photo_url: string;
   photo_type: string;
   booking_id: string;
+  created_at: string;
+}
+interface UserDocument {
+  id: string;
+  doc_type: string;
+  photo_url: string;
   created_at: string;
 }
 interface GpsPoint {
