@@ -453,6 +453,16 @@ export function BookingSection() {
                           placeholder="+49 170 1234567"
                         />
                       </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground">Passwort</label>
+                        <input
+                          type="password"
+                          value={regPassword}
+                          onChange={(e) => setRegPassword(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                          placeholder="Mindestens 6 Zeichen"
+                        />
+                      </div>
                     </div>
 
                     {/* Document scan section with camera + AI */}
