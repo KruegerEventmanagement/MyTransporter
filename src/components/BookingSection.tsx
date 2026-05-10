@@ -34,6 +34,8 @@ const VEHICLE = {
 
 const AUTH_CONFIRM_URL = "https://www.mytransporter.org/auth/confirm";
 const AUTH_BOOKING_DRAFT_KEY = "mt_auth_booking_draft";
+const RESEND_COOLDOWN_SECONDS = 60;
+const RESEND_LAST_SENT_KEY = "mt_resend_last_sent";
 
 export function BookingSection() {
   const [step, setStep] = useState(0);
@@ -51,10 +53,25 @@ export function BookingSection() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [signupEmailSent, setSignupEmailSent] = useState<string | null>(null);
+  const [resendLastSent, setResendLastSent] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const v = localStorage.getItem(RESEND_LAST_SENT_KEY);
+    return v ? parseInt(v, 10) : null;
+  });
+  const [resendNow, setResendNow] = useState(Date.now());
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
   const [docsScanned, setDocsScanned] = useState(false);
   const [licenseScanned, setLicenseScanned] = useState(false);
   const [idScanned, setIdScanned] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
+
+  // Tick clock every second while a confirmation is pending so the cooldown updates live
+  useEffect(() => {
+    if (!signupEmailSent) return;
+    const id = setInterval(() => setResendNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [signupEmailSent]);
 
   // Subscribe to auth changes — wenn User per Magic Link / Bestätigung zurückkommt
   useEffect(() => {
@@ -145,6 +162,9 @@ export function BookingSection() {
       // E-Mail-Bestätigung erforderlich
       setSignupEmailSent(regForm.email);
       setLoginForm({ email: regForm.email, password: "" });
+      const now = Date.now();
+      setResendLastSent(now);
+      localStorage.setItem(RESEND_LAST_SENT_KEY, String(now));
     } else if (data.session) {
       // Auto-confirm aktiv
       setIsLoggedIn(true);
