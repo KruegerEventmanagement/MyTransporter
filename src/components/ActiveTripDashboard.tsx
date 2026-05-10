@@ -3,7 +3,7 @@ import { MapPin, Clock, Gauge, Locate, ChevronUp, ChevronDown, AlertTriangle, Na
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { Loader } from "@googlemaps/js-api-loader";
+import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAidsYmswSyYosN9yKXswFF3RtJxk8pclc";
 
@@ -161,14 +161,13 @@ export function ActiveTripDashboard({
     if (!mapRef.current || mapInstance.current) return;
     const init = async () => {
       try {
-        const loader = new Loader({
-          apiKey: GOOGLE_MAPS_API_KEY,
-          version: "weekly",
-        });
-        await loader.importLibrary("maps");
-        await loader.importLibrary("places");
-        await loader.importLibrary("routes");
-        await loader.importLibrary("marker");
+        setOptions({ key: GOOGLE_MAPS_API_KEY, v: "weekly" });
+        await Promise.all([
+          importLibrary("maps"),
+          importLibrary("places"),
+          importLibrary("routes"),
+          importLibrary("marker"),
+        ]);
 
         const map = new google.maps.Map(mapRef.current!, {
           center: { lat: 52.52, lng: 13.405 },
