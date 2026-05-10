@@ -96,7 +96,7 @@ export function BookingSection() {
       } catch {
         localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
       }
-      setStep(3);
+      setStep(4);
       document.getElementById("booking")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
