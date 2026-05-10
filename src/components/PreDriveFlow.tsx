@@ -118,13 +118,13 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
 
   return (
     <div className="max-w-lg mx-auto animate-fade-in-up">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handleCapture}
+      <CameraCapture
+        open={cameraOpen}
+        title={cameraTitle}
+        hint="Richte das Fahrzeug an der Vorlage aus"
+        variant={cameraVariant}
+        onClose={() => setCurrentTarget(null)}
+        onCapture={(file) => handleCapture(file)}
       />
 
       {/* Step 1: Pickup Code */}
