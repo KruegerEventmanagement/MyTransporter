@@ -1,3 +1,4 @@
+/// <reference types="google.maps" />
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MapPin, Clock, Gauge, Locate, ChevronUp, ChevronDown, AlertTriangle, Navigation, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
