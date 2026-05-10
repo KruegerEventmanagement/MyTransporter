@@ -34,6 +34,8 @@ const VEHICLE = {
 
 const AUTH_CONFIRM_URL = "https://www.mytransporter.org/auth/confirm";
 const AUTH_BOOKING_DRAFT_KEY = "mt_auth_booking_draft";
+const RESEND_COOLDOWN_SECONDS = 60;
+const RESEND_LAST_SENT_KEY = "mt_resend_last_sent";
 
 export function BookingSection() {
   const [step, setStep] = useState(0);
@@ -51,10 +53,25 @@ export function BookingSection() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [signupEmailSent, setSignupEmailSent] = useState<string | null>(null);
+  const [resendLastSent, setResendLastSent] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const v = localStorage.getItem(RESEND_LAST_SENT_KEY);
+    return v ? parseInt(v, 10) : null;
+  });
+  const [resendNow, setResendNow] = useState(Date.now());
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
   const [docsScanned, setDocsScanned] = useState(false);
   const [licenseScanned, setLicenseScanned] = useState(false);
   const [idScanned, setIdScanned] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
+
+  // Tick clock every second while a confirmation is pending so the cooldown updates live
+  useEffect(() => {
+    if (!signupEmailSent) return;
+    const id = setInterval(() => setResendNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [signupEmailSent]);
 
   // Subscribe to auth changes — wenn User per Magic Link / Bestätigung zurückkommt
   useEffect(() => {
@@ -145,6 +162,9 @@ export function BookingSection() {
       // E-Mail-Bestätigung erforderlich
       setSignupEmailSent(regForm.email);
       setLoginForm({ email: regForm.email, password: "" });
+      const now = Date.now();
+      setResendLastSent(now);
+      localStorage.setItem(RESEND_LAST_SENT_KEY, String(now));
     } else if (data.session) {
       // Auto-confirm aktiv
       setIsLoggedIn(true);
@@ -168,6 +188,25 @@ export function BookingSection() {
       setIsLoggedIn(true);
       setProfileComplete(true);
     }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!signupEmailSent) return;
+    setResendError(null);
+    setResendLoading(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: signupEmailSent,
+      options: { emailRedirectTo: AUTH_CONFIRM_URL },
+    });
+    setResendLoading(false);
+    if (error) {
+      setResendError(error.message);
+      return;
+    }
+    const now = Date.now();
+    setResendLastSent(now);
+    localStorage.setItem(RESEND_LAST_SENT_KEY, String(now));
   };
 
   const canProceedStep0 = date !== undefined && startHour !== null;
@@ -587,6 +626,40 @@ export function BookingSection() {
                           Wir haben dir eine E-Mail an <strong>{signupEmailSent}</strong> geschickt.
                           Bitte klicke auf den Link, um dein Konto zu bestätigen. Danach kannst du dich einloggen.
                         </p>
+                        {resendLastSent && (
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Zuletzt gesendet:{" "}
+                            {new Date(resendLastSent).toLocaleString("de-DE", {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            })}
+                          </p>
+                        )}
+                        {(() => {
+                          const remaining = resendLastSent
+                            ? Math.max(0, RESEND_COOLDOWN_SECONDS - Math.floor((resendNow - resendLastSent) / 1000))
+                            : 0;
+                          const disabled = resendLoading || remaining > 0;
+                          return (
+                            <>
+                              <button
+                                type="button"
+                                onClick={handleResendConfirmation}
+                                disabled={disabled}
+                                className="w-full rounded-full border border-border bg-background py-3 text-foreground font-medium transition-all hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed mb-3"
+                              >
+                                {resendLoading
+                                  ? "Wird gesendet..."
+                                  : remaining > 0
+                                  ? `Erneut senden in ${remaining}s`
+                                  : "Bestätigungsmail erneut senden"}
+                              </button>
+                              {resendError && (
+                                <p className="text-xs text-destructive mb-3">{resendError}</p>
+                              )}
+                            </>
+                          );
+                        })()}
                         <button
                           onClick={() => { setShowLogin(true); setSignupEmailSent(null); }}
                           className="w-full rounded-full bg-accent py-3 text-accent-foreground font-medium"
