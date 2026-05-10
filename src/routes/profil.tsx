@@ -1,0 +1,256 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { ChevronLeft, Car, Wallet, Route as RouteIcon, Calendar, Hash, MapPin } from "lucide-react";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
+
+export const Route = createFileRoute("/profil")({
+  head: () => ({ meta: [{ title: "MyTransporter · Profil" }] }),
+  component: ProfilePage,
+});
+
+interface Booking {
+  id: string;
+  vehicle_name: string;
+  vehicle_plate: string;
+  plan_label: string;
+  plan_price: number;
+  deposit: number;
+  deposit_status: string;
+  start_date: string;
+  start_hour: number;
+  start_km: number | null;
+  end_km: number | null;
+  pickup_code: string;
+  status: string;
+  created_at: string;
+}
+
+interface Profile {
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+function ProfilePage() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate({ to: "/" });
+        return;
+      }
+      const [p, b] = await Promise.all([
+        supabase.from("profiles").select("first_name, last_name, email, phone").eq("id", user.id).maybeSingle(),
+        supabase.from("bookings").select("*").eq("user_id", user.id).order("start_date", { ascending: false }),
+      ]);
+      if (!mounted) return;
+      if (p.data) setProfile(p.data as Profile);
+      if (b.data) setBookings(b.data as Booking[]);
+      setLoading(false);
+    })();
+    return () => { mounted = false; };
+  }, [navigate]);
+
+  const stats = useMemo(() => {
+    const completedOrPaid = bookings.filter((b) => b.status !== "paid" || b.start_km !== null);
+    const totalSpent = bookings.reduce((sum, b) => sum + Number(b.plan_price ?? 0), 0);
+    const totalKm = bookings.reduce((sum, b) => {
+      if (b.start_km !== null && b.end_km !== null) return sum + Math.max(0, b.end_km - b.start_km);
+      return sum;
+    }, 0);
+    const active = bookings.find((b) => b.status === "active" || b.status === "returning");
+    const vehicles = new Set(bookings.map((b) => b.vehicle_plate));
+    return {
+      totalTrips: bookings.length,
+      completed: completedOrPaid.length,
+      totalSpent,
+      totalKm,
+      activeBooking: active,
+      vehicleCount: vehicles.size,
+    };
+  }, [bookings]);
+
+  const displayName =
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.email || "Mein Konto";
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground text-sm">Laden…</p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-background pb-12">
+      <header className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b border-border">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
+          <Link
+            to="/"
+            className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80"
+            aria-label="Zurück"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-base font-bold truncate">{displayName}</h1>
+            <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-3xl mx-auto px-4 mt-6 space-y-6">
+        {/* Statistiken */}
+        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard icon={<RouteIcon className="w-4 h-4" />} label="Fahrten" value={String(stats.totalTrips)} />
+          <StatCard icon={<Wallet className="w-4 h-4" />} label="Ausgegeben" value={`${stats.totalSpent.toFixed(2)} €`} />
+          <StatCard icon={<MapPin className="w-4 h-4" />} label="Kilometer" value={`${stats.totalKm} km`} />
+          <StatCard icon={<Car className="w-4 h-4" />} label="Fahrzeuge" value={String(stats.vehicleCount)} />
+        </section>
+
+        {/* Aktive Buchung */}
+        {stats.activeBooking && (
+          <Link
+            to="/trip/$bookingId"
+            params={{ bookingId: stats.activeBooking.id }}
+            className="block rounded-2xl bg-foreground text-background p-4"
+          >
+            <p className="text-[10px] uppercase tracking-wider opacity-70 mb-1">Aktive Fahrt</p>
+            <p className="font-bold text-lg">{stats.activeBooking.vehicle_name}</p>
+            <p className="text-xs opacity-80 mt-0.5">
+              {stats.activeBooking.vehicle_plate} · {stats.activeBooking.plan_label}
+            </p>
+            <p className="text-xs opacity-70 mt-2">Tippen, um zur Fahrt zu wechseln →</p>
+          </Link>
+        )}
+
+        {/* Buchungs-Historie */}
+        <section>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1">
+            Meine Fahrten
+          </h2>
+          {bookings.length === 0 ? (
+            <div className="rounded-2xl bg-card border border-border p-8 text-center">
+              <p className="text-sm text-muted-foreground">Du hast noch keine Buchungen.</p>
+              <Link
+                to="/"
+                className="mt-4 inline-block rounded-full bg-foreground text-background px-5 py-2.5 text-sm font-medium"
+              >
+                Jetzt buchen
+              </Link>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {bookings.map((b) => (
+                <BookingRow key={b.id} booking={b} />
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-card border border-border p-3">
+      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+        {icon}
+        <span className="text-[10px] uppercase tracking-wider font-medium">{label}</span>
+      </div>
+      <p className="text-lg font-bold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function BookingRow({ booking: b }: { booking: Booking }) {
+  const km = b.start_km !== null && b.end_km !== null ? Math.max(0, b.end_km - b.start_km) : null;
+  const dateLabel = (() => {
+    try {
+      return format(new Date(b.start_date), "dd. MMM yyyy", { locale: de });
+    } catch {
+      return b.start_date;
+    }
+  })();
+
+  return (
+    <li className="rounded-2xl bg-card border border-border p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-foreground">{b.vehicle_name}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{b.vehicle_plate}</p>
+        </div>
+        <StatusBadge status={b.status} />
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+        <InfoLine icon={<Hash className="w-3 h-3" />} label="Buchung">
+          <span className="font-mono text-[11px]">{b.id.slice(0, 8).toUpperCase()}</span>
+        </InfoLine>
+        <InfoLine icon={<Calendar className="w-3 h-3" />} label="Datum">
+          {dateLabel} · {String(b.start_hour).padStart(2, "0")}:00
+        </InfoLine>
+        <InfoLine icon={<Wallet className="w-3 h-3" />} label="Preis">
+          {Number(b.plan_price).toFixed(2)} € <span className="text-muted-foreground">({b.plan_label})</span>
+        </InfoLine>
+        <InfoLine icon={<RouteIcon className="w-3 h-3" />} label="Kilometer">
+          {km !== null ? `${km} km` : "–"}
+        </InfoLine>
+      </div>
+
+      {b.deposit > 0 && (
+        <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">Kaution</span>
+          <span className={b.deposit_status === "released" ? "text-foreground" : "text-muted-foreground"}>
+            {Number(b.deposit).toFixed(2)} €
+            {" · "}
+            {b.deposit_status === "released" ? "Ausgezahlt" : "Einbehalten"}
+          </span>
+        </div>
+      )}
+
+      {(b.status === "active" || b.status === "returning") && (
+        <Link
+          to="/trip/$bookingId"
+          params={{ bookingId: b.id }}
+          className="mt-3 block text-center rounded-full bg-foreground text-background py-2 text-xs font-bold"
+        >
+          Zur Fahrt
+        </Link>
+      )}
+    </li>
+  );
+}
+
+function InfoLine({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center gap-1 text-muted-foreground">
+        {icon}
+        <span className="text-[10px] uppercase tracking-wider">{label}</span>
+      </div>
+      <div className="text-foreground truncate">{children}</div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    paid: { label: "Bezahlt", cls: "bg-secondary text-foreground" },
+    active: { label: "Unterwegs", cls: "bg-foreground text-background" },
+    returning: { label: "Rückgabe", cls: "bg-secondary text-foreground border border-foreground" },
+    completed: { label: "Abgeschlossen", cls: "bg-secondary text-muted-foreground" },
+  };
+  const m = map[status] ?? { label: status, cls: "bg-muted text-muted-foreground" };
+  return <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${m.cls}`}>{m.label}</span>;
+}

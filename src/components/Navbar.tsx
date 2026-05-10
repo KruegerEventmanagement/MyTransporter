@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { User, X, ChevronRight, Eye, EyeOff } from "lucide-react";
+import { User, X, ChevronRight, Eye, EyeOff, Route as RouteIcon } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
 const AUTH_CONFIRM_URL = `${typeof window !== "undefined" ? window.location.origin : ""}/`;
@@ -125,6 +126,14 @@ export function Navbar() {
                 <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-xl shadow-lg p-2 animate-fade-in">
                   <p className="px-3 py-2 text-xs text-muted-foreground">Angemeldet als <span className="font-medium text-foreground">{userName}</span></p>
                   <hr className="border-border my-1" />
+                  <Link
+                    to="/profil"
+                    onClick={() => setShowProfileMenu(false)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-secondary rounded-lg transition-colors"
+                  >
+                    <RouteIcon className="w-3.5 h-3.5" />
+                    Mein Profil & Fahrten
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-3 py-2 text-xs text-destructive hover:bg-destructive/5 rounded-lg transition-colors"
