@@ -74,6 +74,13 @@ export function BookingSection() {
     return () => clearInterval(id);
   }, [signupEmailSent]);
 
+  // Listener: Klick aufs Logo bringt User zurück zu Schritt 1 (Datum & Uhrzeit)
+  useEffect(() => {
+    const handler = () => setStep(0);
+    window.addEventListener("mt:go-to-booking-start", handler);
+    return () => window.removeEventListener("mt:go-to-booking-start", handler);
+  }, []);
+
   // Subscribe to auth changes — wenn User per Magic Link / Bestätigung zurückkommt
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
