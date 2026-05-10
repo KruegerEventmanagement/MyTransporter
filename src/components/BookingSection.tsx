@@ -32,6 +32,9 @@ const VEHICLE = {
   length: "6,36 m",
 };
 
+const AUTH_CONFIRM_URL = "https://mytransporter.org/auth/confirm";
+const AUTH_BOOKING_DRAFT_KEY = "mt_auth_booking_draft";
+
 export function BookingSection() {
   const [step, setStep] = useState(0);
   const [date, setDate] = useState<Date | undefined>();
@@ -55,19 +58,48 @@ export function BookingSection() {
 
   // Subscribe to auth changes — wenn User per Magic Link / Bestätigung zurückkommt
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const returnedFromEmailConfirmation = searchParams.get("email_confirmed") === "1";
+
+    if (returnedFromEmailConfirmation) {
+      setShowLogin(false);
+      setSignupEmailSent(null);
+      try {
+        const savedDraft = localStorage.getItem(AUTH_BOOKING_DRAFT_KEY);
+        if (savedDraft) {
+          const draft = JSON.parse(savedDraft) as {
+            date?: string;
+            startHour?: number | null;
+            selectedPlan?: number | null;
+          };
+          if (draft.date) setDate(new Date(draft.date));
+          if (typeof draft.startHour === "number") setStartHour(draft.startHour);
+          if (typeof draft.selectedPlan === "number") setSelectedPlan(draft.selectedPlan);
+        }
+      } catch {
+        localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
+      }
+      setStep(3);
+      document.getElementById("booking")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setIsLoggedIn(true);
         setSignupEmailSent(null);
         if (session.user.email_confirmed_at || session.user.confirmed_at) {
           setProfileComplete(true);
+          localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
         }
       }
     });
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) {
         setIsLoggedIn(true);
-        if (data.session.user.email_confirmed_at) setProfileComplete(true);
+        if (data.session.user.email_confirmed_at) {
+          setProfileComplete(true);
+          localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
+        }
       }
     });
     return () => sub.subscription.unsubscribe();
@@ -84,11 +116,19 @@ export function BookingSection() {
       return;
     }
     setAuthLoading(true);
+    localStorage.setItem(
+      AUTH_BOOKING_DRAFT_KEY,
+      JSON.stringify({
+        date: date?.toISOString(),
+        startHour,
+        selectedPlan,
+      }),
+    );
     const { data, error } = await supabase.auth.signUp({
       email: regForm.email,
       password: regPassword,
       options: {
-        emailRedirectTo: window.location.origin + window.location.pathname,
+        emailRedirectTo: AUTH_CONFIRM_URL,
         data: {
           first_name: regForm.firstName,
           last_name: regForm.lastName,

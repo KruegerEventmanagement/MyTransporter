@@ -17,6 +17,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TripBookingIdRouteImport } from './routes/trip.$bookingId'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
 
 const KontaktRoute = KontaktRouteImport.update({
   id: '/kontakt',
@@ -58,6 +59,11 @@ const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   path: '/checkout/return',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthConfirmRoute = AuthConfirmRouteImport.update({
+  id: '/auth/confirm',
+  path: '/auth/confirm',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/datenschutz': typeof DatenschutzRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
+  '/auth/confirm': typeof AuthConfirmRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/datenschutz': typeof DatenschutzRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
+  '/auth/confirm': typeof AuthConfirmRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/datenschutz': typeof DatenschutzRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
+  '/auth/confirm': typeof AuthConfirmRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/datenschutz'
     | '/impressum'
     | '/kontakt'
+    | '/auth/confirm'
     | '/checkout/return'
     | '/trip/$bookingId'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/datenschutz'
     | '/impressum'
     | '/kontakt'
+    | '/auth/confirm'
     | '/checkout/return'
     | '/trip/$bookingId'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/datenschutz'
     | '/impressum'
     | '/kontakt'
+    | '/auth/confirm'
     | '/checkout/return'
     | '/trip/$bookingId'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   DatenschutzRoute: typeof DatenschutzRoute
   ImpressumRoute: typeof ImpressumRoute
   KontaktRoute: typeof KontaktRoute
+  AuthConfirmRoute: typeof AuthConfirmRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   TripBookingIdRoute: typeof TripBookingIdRoute
 }
@@ -192,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/confirm': {
+      id: '/auth/confirm'
+      path: '/auth/confirm'
+      fullPath: '/auth/confirm'
+      preLoaderRoute: typeof AuthConfirmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   DatenschutzRoute: DatenschutzRoute,
   ImpressumRoute: ImpressumRoute,
   KontaktRoute: KontaktRoute,
+  AuthConfirmRoute: AuthConfirmRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   TripBookingIdRoute: TripBookingIdRoute,
 }
