@@ -1,6 +1,6 @@
 /// <reference types="google.maps" />
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Clock, Gauge, Locate, ChevronUp, ChevronDown, AlertTriangle, Navigation, Search, X } from "lucide-react";
+import { MapPin, Clock, Gauge, Locate, ChevronUp, ChevronDown, AlertTriangle, Navigation, Search, X, Route as RouteIcon, Flag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -55,6 +55,11 @@ export function ActiveTripDashboard({
   const [destination, setDestination] = useState<{ lat: number; lng: number; label: string } | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
+  const [routeAlternatives, setRouteAlternatives] = useState<Array<{ distance: string; duration: string; durationValue: number; distanceValue: number }>>([]);
+  const [selectedRouteIdx, setSelectedRouteIdx] = useState(0);
+  const [navMode, setNavMode] = useState(false);
+  const [arrivalTime, setArrivalTime] = useState<Date | null>(null);
+  const lastDirectionsResult = useRef<google.maps.DirectionsResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
@@ -196,6 +201,7 @@ export function ActiveTripDashboard({
         directionsRendererRef.current = new google.maps.DirectionsRenderer({
           map,
           suppressMarkers: false,
+          routeIndex: 0,
           polylineOptions: { strokeColor: "#000", strokeWeight: 5, strokeOpacity: 0.8 },
         });
 
@@ -270,16 +276,33 @@ export function ActiveTripDashboard({
           origin,
           destination: new google.maps.LatLng(dest.lat, dest.lng),
           travelMode: google.maps.TravelMode.DRIVING,
+          provideRouteAlternatives: true,
         },
         (result, status) => {
           if (status === google.maps.DirectionsStatus.OK && result) {
+            lastDirectionsResult.current = result;
             directionsRendererRef.current!.setDirections(result);
+            directionsRendererRef.current!.setRouteIndex(0);
+            setSelectedRouteIdx(0);
+            const alts = result.routes.map((r) => {
+              const l = r.legs[0];
+              return {
+                distance: l?.distance?.text || "",
+                duration: l?.duration?.text || "",
+                durationValue: l?.duration?.value || 0,
+                distanceValue: l?.distance?.value || 0,
+              };
+            });
+            // sortiert: schnellste zuerst
+            alts.sort((a, b) => a.durationValue - b.durationValue);
+            setRouteAlternatives(alts);
             const leg = result.routes[0]?.legs[0];
             if (leg) {
               setRouteInfo({
                 distance: leg.distance?.text || "",
                 duration: leg.duration?.text || "",
               });
+              setArrivalTime(new Date(Date.now() + (leg.duration?.value || 0) * 1000));
             }
           } else {
             setSearchError("Route konnte nicht berechnet werden.");
@@ -289,11 +312,42 @@ export function ActiveTripDashboard({
     }
   };
 
+  const selectRoute = (idx: number) => {
+    if (!directionsRendererRef.current || !lastDirectionsResult.current) return;
+    setSelectedRouteIdx(idx);
+    directionsRendererRef.current.setRouteIndex(idx);
+    const leg = lastDirectionsResult.current.routes[idx]?.legs[0];
+    if (leg) {
+      setRouteInfo({
+        distance: leg.distance?.text || "",
+        duration: leg.duration?.text || "",
+      });
+      setArrivalTime(new Date(Date.now() + (leg.duration?.value || 0) * 1000));
+    }
+  };
+
+  const startNavigation = () => {
+    setNavMode(true);
+    setSheetExpanded(false);
+    if (mapInstance.current && position) {
+      mapInstance.current.panTo({ lat: position.lat, lng: position.lng });
+      mapInstance.current.setZoom(16);
+    }
+  };
+
+  const stopNavigation = () => {
+    setNavMode(false);
+    setSheetExpanded(true);
+  };
+
   const clearDestination = () => {
     setDestination(null);
     setDestinationQuery("");
     setRouteInfo(null);
     setSearchError(null);
+    setRouteAlternatives([]);
+    setArrivalTime(null);
+    setNavMode(false);
     if (directionsRendererRef.current) {
       directionsRendererRef.current.set("directions", null);
     }
