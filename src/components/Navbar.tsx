@@ -1,41 +1,94 @@
-import { useState } from "react";
-import { LogIn, User, X, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { User, X, ChevronRight, Eye, EyeOff } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+const AUTH_CONFIRM_URL = `${typeof window !== "undefined" ? window.location.origin : ""}/`;
 
 export function Navbar() {
   const [showModal, setShowModal] = useState<"login" | "register" | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [stayLoggedIn, setStayLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "" });
 
-  const handleLogin = () => {
-    if (form.email && form.password) {
-      setIsLoggedIn(true);
-      setUserName(form.email.split("@")[0]);
-      if (stayLoggedIn) {
-        localStorage.setItem("mt_stay_logged_in", "true");
+  useEffect(() => {
+    const apply = (user: { email?: string | null; user_metadata?: Record<string, unknown> } | null) => {
+      if (user) {
+        setIsLoggedIn(true);
+        const meta = (user.user_metadata ?? {}) as { first_name?: string };
+        setUserName(meta.first_name || (user.email?.split("@")[0] ?? "Konto"));
+      } else {
+        setIsLoggedIn(false);
+        setUserName("");
       }
-      setShowModal(null);
-      setForm({ firstName: "", lastName: "", email: "", phone: "", password: "" });
+    };
+    supabase.auth.getSession().then(({ data }) => apply(data.session?.user ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => apply(session?.user ?? null));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const closeModal = () => {
+    setShowModal(null);
+    setError(null);
+    setInfo(null);
+    setForm({ firstName: "", lastName: "", email: "", phone: "", password: "" });
+  };
+
+  const handleLogin = async () => {
+    setError(null);
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: form.email,
+      password: form.password,
+    });
+    setLoading(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    closeModal();
+  };
+
+  const handleRegister = async () => {
+    setError(null);
+    setInfo(null);
+    if (form.password.length < 6) {
+      setError("Passwort muss mindestens 6 Zeichen lang sein.");
+      return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: {
+        emailRedirectTo: AUTH_CONFIRM_URL,
+        data: {
+          first_name: form.firstName,
+          last_name: form.lastName,
+          phone: form.phone,
+        },
+      },
+    });
+    setLoading(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    if (data.user && !data.session) {
+      setInfo("Bitte bestätige deine E-Mail-Adresse. Wir haben dir einen Link geschickt.");
+    } else {
+      closeModal();
     }
   };
 
-  const handleRegister = () => {
-    if (form.firstName && form.lastName && form.email && form.password) {
-      setIsLoggedIn(true);
-      setUserName(form.firstName);
-      setShowModal(null);
-      setForm({ firstName: "", lastName: "", email: "", phone: "", password: "" });
-    }
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUserName("");
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setShowProfileMenu(false);
-    localStorage.removeItem("mt_stay_logged_in");
   };
 
   return (
@@ -45,13 +98,13 @@ export function Navbar() {
           {!isLoggedIn ? (
             <>
               <button
-                onClick={() => setShowModal("login")}
+                onClick={() => { setShowModal("login"); setError(null); setInfo(null); }}
                 className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 Login
               </button>
               <button
-                onClick={() => setShowModal("register")}
+                onClick={() => { setShowModal("register"); setError(null); setInfo(null); }}
                 className="text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors whitespace-nowrap"
               >
                 Registrieren
@@ -85,12 +138,11 @@ export function Navbar() {
         </div>
       </nav>
 
-      {/* Modal Overlay */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-card rounded-3xl border border-border shadow-2xl w-full max-w-sm p-6 animate-fade-in-up relative">
             <button
-              onClick={() => setShowModal(null)}
+              onClick={closeModal}
               className="absolute top-4 right-4 w-8 h-8 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
             >
               <X className="w-4 h-4 text-muted-foreground" />
@@ -138,40 +190,41 @@ export function Navbar() {
                   className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               )}
-              <input
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="Passwort"
-                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="Passwort"
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
 
-              {showModal === "login" && (
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={stayLoggedIn}
-                    onChange={(e) => setStayLoggedIn(e.target.checked)}
-                    className="w-4 h-4 rounded border-border text-accent focus:ring-accent"
-                  />
-                  <span className="text-xs text-muted-foreground">Angemeldet bleiben</span>
-                </label>
-              )}
+              {error && <p className="text-xs text-destructive">{error}</p>}
+              {info && <p className="text-xs text-foreground bg-secondary p-2 rounded-lg">{info}</p>}
 
               <button
                 onClick={showModal === "login" ? handleLogin : handleRegister}
-                className="w-full rounded-xl bg-accent py-2.5 text-accent-foreground font-medium text-sm transition-all hover:bg-accent/90 flex items-center justify-center gap-1"
+                disabled={loading || !form.email || !form.password || (showModal === "register" && (!form.firstName || !form.lastName))}
+                className="w-full rounded-xl bg-accent py-2.5 text-accent-foreground font-medium text-sm transition-all hover:bg-accent/90 flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {showModal === "login" ? "Einloggen" : "Registrieren"}
+                {loading ? "Bitte warten…" : showModal === "login" ? "Einloggen" : "Registrieren"}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             <p className="mt-4 text-center text-xs text-muted-foreground">
               {showModal === "login" ? (
-                <>Noch kein Konto? <button onClick={() => setShowModal("register")} className="font-medium text-accent hover:underline">Registrieren</button></>
+                <>Noch kein Konto? <button onClick={() => { setShowModal("register"); setError(null); setInfo(null); }} className="font-medium text-accent hover:underline">Registrieren</button></>
               ) : (
-                <>Bereits registriert? <button onClick={() => setShowModal("login")} className="font-medium text-accent hover:underline">Einloggen</button></>
+                <>Bereits registriert? <button onClick={() => { setShowModal("login"); setError(null); setInfo(null); }} className="font-medium text-accent hover:underline">Einloggen</button></>
               )}
             </p>
           </div>
