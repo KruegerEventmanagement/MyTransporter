@@ -24,7 +24,6 @@ interface PreDriveFlowProps {
 export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlowProps) {
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [interiorPhoto, setInteriorPhoto] = useState<string | null>(null);
-  const [hasDamage, setHasDamage] = useState<boolean | null>(null);
   const [damagePhotos, setDamagePhotos] = useState<string[]>([]);
   const [remarks, setRemarks] = useState("");
   const [startKm, setStartKm] = useState("");
@@ -40,8 +39,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
 
   const allSidesTaken = PHOTO_SIDES.every((s) => photos[s.id]);
   const interiorTaken = !!interiorPhoto;
-  const damageAnswered = hasDamage === false || (hasDamage === true && damagePhotos.length > 0);
-  const readyToStart = allSidesTaken && interiorTaken && damageAnswered;
+  const readyToStart = allSidesTaken && interiorTaken;
 
   const handleCapture = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
