@@ -281,7 +281,7 @@ export function BookingSection() {
         </h1>
 
         {/* Step indicator */}
-        <div className={`mt-8 grid w-full max-w-lg mx-auto ${profileComplete ? "grid-cols-5" : "grid-cols-6"}`}>
+        <div className={`mt-8 grid w-full max-w-lg mx-auto ${registrationComplete ? "grid-cols-5" : "grid-cols-6"}`}>
           {stepTitles.map((title, i) => (
             <div key={title} className="flex flex-col items-center gap-1">
               <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-all flex-shrink-0 ${
@@ -498,7 +498,7 @@ export function BookingSection() {
                 <ChevronLeft className="w-5 h-5" /> Zurück
               </button>
               <button
-                onClick={() => setStep(profileComplete ? 4 : 3)}
+                onClick={() => setStep(registrationComplete ? 4 : 3)}
                 className="inline-flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg"
               >
                 Buchen & bezahlen <ChevronRight className="w-5 h-5" />
@@ -510,7 +510,7 @@ export function BookingSection() {
         {/* Step 3: Registration / Login */}
         {step === 3 && (
           <div className="mt-12 max-w-lg mx-auto animate-fade-in-up">
-            {!profileComplete ? (
+            {!registrationComplete ? (
               <>
                 {!showLogin ? (
                   <>
@@ -888,7 +888,7 @@ export function BookingSection() {
             {!paid && (
               <div className="mt-8 flex justify-start">
                 <button
-                  onClick={() => { setShowCheckout(false); setStep(profileComplete ? 2 : 3); }}
+                  onClick={() => { setShowCheckout(false); setStep(registrationComplete ? 2 : 3); }}
                   className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
                 >
                   <ChevronLeft className="w-5 h-5" /> Zurück
