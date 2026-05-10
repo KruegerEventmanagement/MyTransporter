@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -40,10 +40,84 @@ export function BookingSection() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [regForm, setRegForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
+  const [regPassword, setRegPassword] = useState("");
+  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [signupEmailSent, setSignupEmailSent] = useState<string | null>(null);
   const [docsScanned, setDocsScanned] = useState(false);
   const [licenseScanned, setLicenseScanned] = useState(false);
   const [idScanned, setIdScanned] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
+
+  // Subscribe to auth changes — wenn User per Magic Link / Bestätigung zurückkommt
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setIsLoggedIn(true);
+        setSignupEmailSent(null);
+        if (session.user.email_confirmed_at || session.user.confirmed_at) {
+          setProfileComplete(true);
+        }
+      }
+    });
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) {
+        setIsLoggedIn(true);
+        if (data.session.user.email_confirmed_at) setProfileComplete(true);
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const handleSignUp = async () => {
+    setAuthError(null);
+    setAuthLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email: regForm.email,
+      password: regPassword,
+      options: {
+        emailRedirectTo: window.location.origin + window.location.pathname,
+        data: {
+          first_name: regForm.firstName,
+          last_name: regForm.lastName,
+          phone: regForm.phone,
+        },
+      },
+    });
+    setAuthLoading(false);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    if (data.user && !data.session) {
+      // E-Mail-Bestätigung erforderlich
+      setSignupEmailSent(regForm.email);
+      setLoginForm({ email: regForm.email, password: "" });
+    } else if (data.session) {
+      // Auto-confirm aktiv
+      setIsLoggedIn(true);
+      setProfileComplete(true);
+    }
+  };
+
+  const handleLogin = async () => {
+    setAuthError(null);
+    setAuthLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginForm.email,
+      password: loginForm.password,
+    });
+    setAuthLoading(false);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    if (data.user) {
+      setIsLoggedIn(true);
+      setProfileComplete(true);
+    }
+  };
 
   const canProceedStep0 = date !== undefined && startHour !== null;
   const canProceedStep1 = selectedPlan !== null;
