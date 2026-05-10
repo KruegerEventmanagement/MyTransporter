@@ -2,6 +2,7 @@ import logoImage from "@/assets/logo.png";
 
 export function HeroSection() {
   const handleLogoClick = () => {
+    window.dispatchEvent(new CustomEvent("mt:go-to-booking-start"));
     const el = document.getElementById("booking");
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
