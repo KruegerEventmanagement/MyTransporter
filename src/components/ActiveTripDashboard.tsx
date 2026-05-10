@@ -1,8 +1,28 @@
+/// <reference types="google.maps" />
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Clock, Gauge, Locate, ChevronUp, ChevronDown, AlertTriangle, Navigation, Search, ExternalLink, X } from "lucide-react";
+import { MapPin, Clock, Gauge, Locate, ChevronUp, ChevronDown, AlertTriangle, Navigation, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
+
+const GOOGLE_MAPS_API_KEY = "AIzaSyAidsYmswSyYosN9yKXswFF3RtJxk8pclc";
+
+// Monochromer Karten-Style passend zur Marke
+const MONOCHROME_STYLE: google.maps.MapTypeStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
+  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
+  { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+  { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#e0e0e0" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadada" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9c9c9" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
+];
 
 interface Props {
   bookingId: string;
@@ -33,13 +53,15 @@ export function ActiveTripDashboard({
   const [gpsAsked, setGpsAsked] = useState(false);
   const [destinationQuery, setDestinationQuery] = useState("");
   const [destination, setDestination] = useState<{ lat: number; lng: number; label: string } | null>(null);
-  const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<any>(null);
-  const markerRef = useRef<any>(null);
-  const destMarkerRef = useRef<any>(null);
-  const routeLineRef = useRef<any>(null);
+  const mapInstance = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+  const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const trackInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Plan-Dauer aus Label/ID parsen (z.B. "6 Stunden", "1 Tag", "24h")
@@ -135,133 +157,146 @@ export function ActiveTripDashboard({
     };
   }, [recordPosition, gpsAsked]);
 
-  // Map init
+  // Google Maps init
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
     const init = async () => {
-      const L = await import("leaflet");
-      await import("leaflet/dist/leaflet.css");
+      try {
+        setOptions({ key: GOOGLE_MAPS_API_KEY, v: "weekly" });
+        await Promise.all([
+          importLibrary("maps"),
+          importLibrary("places"),
+          importLibrary("routes"),
+          importLibrary("marker"),
+        ]);
 
-      const map = L.map(mapRef.current!, {
-        center: [52.52, 13.405],
-        zoom: 14,
-        zoomControl: false,
-        attributionControl: false,
-      });
+        const map = new google.maps.Map(mapRef.current!, {
+          center: { lat: 52.52, lng: 13.405 },
+          zoom: 14,
+          disableDefaultUI: true,
+          gestureHandling: "greedy",
+          styles: MONOCHROME_STYLE,
+          clickableIcons: false,
+        });
 
-      // Monochrome tiles (CartoDB Positron - schwarz/weiß/grau passt zur Markenidentität)
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-        subdomains: "abcd",
-        maxZoom: 19,
-      }).addTo(map);
+        markerRef.current = new google.maps.Marker({
+          position: { lat: 52.52, lng: 13.405 },
+          map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: "#000",
+            fillOpacity: 1,
+            strokeColor: "#fff",
+            strokeWeight: 3,
+          },
+        });
 
-      const icon = L.divIcon({
-        html: `<div style="
-          width:36px;height:36px;border-radius:50%;
-          background:#000;color:#fff;display:flex;align-items:center;justify-content:center;
-          font-size:18px;box-shadow:0 0 0 4px rgba(0,0,0,0.15),0 4px 12px rgba(0,0,0,0.3);
-          border:2px solid #fff;">🚛</div>`,
-        className: "",
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-      });
-      markerRef.current = L.marker([52.52, 13.405], { icon }).addTo(map);
-      mapInstance.current = map;
-    };
-    init();
-    return () => {
-      if (mapInstance.current) {
-        mapInstance.current.remove();
-        mapInstance.current = null;
+        directionsServiceRef.current = new google.maps.DirectionsService();
+        directionsRendererRef.current = new google.maps.DirectionsRenderer({
+          map,
+          suppressMarkers: false,
+          polylineOptions: { strokeColor: "#000", strokeWeight: 5, strokeOpacity: 0.8 },
+        });
+
+        // Autocomplete an Eingabefeld binden
+        if (inputRef.current) {
+          autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
+            fields: ["geometry", "formatted_address", "name"],
+            componentRestrictions: { country: ["de", "at", "ch"] },
+          });
+          autocompleteRef.current.addListener("place_changed", () => {
+            const place = autocompleteRef.current?.getPlace();
+            if (!place?.geometry?.location) {
+              setSearchError("Ort konnte nicht gefunden werden.");
+              return;
+            }
+            const lat = place.geometry.location.lat();
+            const lng = place.geometry.location.lng();
+            const label = place.formatted_address || place.name || "";
+            applyDestination({ lat, lng, label });
+          });
+        }
+
+        mapInstance.current = map;
+      } catch (err) {
+        console.error("Google Maps load error:", err);
+        setSearchError("Karte konnte nicht geladen werden.");
       }
     };
+    init();
+    // Google Maps wird vom Browser entsorgt, kein remove() nötig
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update marker
   useEffect(() => {
     if (!position || !mapInstance.current || !markerRef.current) return;
-    markerRef.current.setLatLng([position.lat, position.lng]);
-    mapInstance.current.setView([position.lat, position.lng], 15);
+    markerRef.current.setPosition({ lat: position.lat, lng: position.lng });
+    if (!destination) {
+      mapInstance.current.panTo({ lat: position.lat, lng: position.lng });
+    }
   }, [position]);
 
   const recenter = () => {
     if (position && mapInstance.current) {
-      mapInstance.current.setView([position.lat, position.lng], 16);
+      mapInstance.current.panTo({ lat: position.lat, lng: position.lng });
+      mapInstance.current.setZoom(16);
     }
   };
 
-  // Ziel-Suche via Nominatim (OpenStreetMap, kein API-Key nötig)
-  const handleSearchDestination = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!destinationQuery.trim()) return;
-    setSearching(true);
+  // Ziel setzen + Route zeichnen via Google Directions API
+  const applyDestination = (dest: { lat: number; lng: number; label: string }) => {
+    setDestination(dest);
+    setDestinationQuery(dest.label);
     setSearchError(null);
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(destinationQuery)}`;
-      const res = await fetch(url, { headers: { "Accept-Language": "de" } });
-      const data: Array<{ lat: string; lon: string; display_name: string }> = await res.json();
-      if (!data.length) {
-        setSearchError("Kein Ort gefunden. Bitte genauer eingeben.");
+
+    if (
+      directionsServiceRef.current &&
+      directionsRendererRef.current &&
+      mapInstance.current
+    ) {
+      const origin = position
+        ? new google.maps.LatLng(position.lat, position.lng)
+        : null;
+      if (!origin) {
+        // Kein Standort -> nur zentrieren
+        mapInstance.current.panTo({ lat: dest.lat, lng: dest.lng });
+        mapInstance.current.setZoom(14);
         return;
       }
-      const d = data[0];
-      const dest = { lat: parseFloat(d.lat), lng: parseFloat(d.lon), label: d.display_name };
-      setDestination(dest);
-
-      if (mapInstance.current) {
-        const L = await import("leaflet");
-        if (destMarkerRef.current) destMarkerRef.current.remove();
-        const destIcon = L.divIcon({
-          html: `<div style="width:32px;height:32px;border-radius:50% 50% 50% 0;background:#000;border:2px solid #fff;transform:rotate(-45deg);box-shadow:0 4px 12px rgba(0,0,0,0.3);"></div>`,
-          className: "",
-          iconSize: [32, 32],
-          iconAnchor: [16, 32],
-        });
-        destMarkerRef.current = L.marker([dest.lat, dest.lng], { icon: destIcon }).addTo(mapInstance.current);
-
-        if (routeLineRef.current) routeLineRef.current.remove();
-        if (position) {
-          routeLineRef.current = L.polyline(
-            [[position.lat, position.lng], [dest.lat, dest.lng]],
-            { color: "#000", weight: 3, dashArray: "8 6", opacity: 0.7 }
-          ).addTo(mapInstance.current);
-          mapInstance.current.fitBounds(
-            [[position.lat, position.lng], [dest.lat, dest.lng]],
-            { padding: [60, 60] }
-          );
-        } else {
-          mapInstance.current.setView([dest.lat, dest.lng], 14);
+      directionsServiceRef.current.route(
+        {
+          origin,
+          destination: new google.maps.LatLng(dest.lat, dest.lng),
+          travelMode: google.maps.TravelMode.DRIVING,
+        },
+        (result, status) => {
+          if (status === google.maps.DirectionsStatus.OK && result) {
+            directionsRendererRef.current!.setDirections(result);
+            const leg = result.routes[0]?.legs[0];
+            if (leg) {
+              setRouteInfo({
+                distance: leg.distance?.text || "",
+                duration: leg.duration?.text || "",
+              });
+            }
+          } else {
+            setSearchError("Route konnte nicht berechnet werden.");
+          }
         }
-      }
-    } catch (err) {
-      console.error("Geocode error:", err);
-      setSearchError("Suche fehlgeschlagen. Bitte erneut versuchen.");
-    } finally {
-      setSearching(false);
+      );
     }
   };
 
   const clearDestination = () => {
     setDestination(null);
     setDestinationQuery("");
-    if (destMarkerRef.current) {
-      destMarkerRef.current.remove();
-      destMarkerRef.current = null;
+    setRouteInfo(null);
+    setSearchError(null);
+    if (directionsRendererRef.current) {
+      directionsRendererRef.current.set("directions", null);
     }
-    if (routeLineRef.current) {
-      routeLineRef.current.remove();
-      routeLineRef.current = null;
-    }
-  };
-
-  const openInGoogleMaps = () => {
-    if (!destination) return;
-    const origin = position ? `${position.lat},${position.lng}` : "";
-    const dest = `${destination.lat},${destination.lng}`;
-    const url = origin
-      ? `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=driving`
-      : `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`;
-    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -411,25 +446,17 @@ export function ActiveTripDashboard({
                 <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
                   <Navigation className="w-3.5 h-3.5" /> Navigation
                 </p>
-                <form onSubmit={handleSearchDestination} className="flex gap-2">
-                  <div className="flex-1 relative">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={destinationQuery}
-                      onChange={(e) => setDestinationQuery(e.target.value)}
-                      placeholder="Zieladresse eingeben..."
-                      className="w-full rounded-full bg-secondary pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={searching || !destinationQuery.trim()}
-                    className="rounded-full bg-foreground text-background px-4 py-2.5 text-sm font-medium disabled:opacity-40"
-                  >
-                    {searching ? "..." : "OK"}
-                  </button>
-                </form>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={destinationQuery}
+                    onChange={(e) => setDestinationQuery(e.target.value)}
+                    placeholder="Zieladresse eingeben..."
+                    className="w-full rounded-full bg-secondary pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                  />
+                </div>
                 {searchError && (
                   <p className="text-xs text-muted-foreground mt-2">{searchError}</p>
                 )}
@@ -448,13 +475,18 @@ export function ActiveTripDashboard({
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <button
-                      onClick={openInGoogleMaps}
-                      className="w-full rounded-full bg-foreground text-background py-2 text-xs font-semibold flex items-center justify-center gap-1.5"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Route in Google Maps öffnen
-                    </button>
+                    {routeInfo && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="p-2 rounded-xl bg-background text-center">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Distanz</p>
+                          <p className="text-sm font-bold">{routeInfo.distance}</p>
+                        </div>
+                        <div className="p-2 rounded-xl bg-background text-center">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fahrzeit</p>
+                          <p className="text-sm font-bold">{routeInfo.duration}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
