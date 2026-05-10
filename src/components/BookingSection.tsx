@@ -32,7 +32,7 @@ const VEHICLE = {
   length: "6,36 m",
 };
 
-const AUTH_CONFIRM_URL = "https://mytransporter.org/auth/confirm";
+const AUTH_CONFIRM_URL = "https://www.mytransporter.org/auth/confirm";
 const AUTH_BOOKING_DRAFT_KEY = "mt_auth_booking_draft";
 
 export function BookingSection() {

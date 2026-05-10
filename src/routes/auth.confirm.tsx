@@ -3,6 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+const RETURN_URL = "https://www.mytransporter.org/?email_confirmed=1#booking";
+
 export const Route = createFileRoute("/auth/confirm")({
   head: () => ({
     meta: [
@@ -22,9 +24,20 @@ function AuthConfirmPage() {
     const finishConfirmation = async () => {
       const url = new URL(window.location.href);
       const code = url.searchParams.get("code");
+      const tokenHash = url.searchParams.get("token_hash");
+      const type = url.searchParams.get("type");
 
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error && active) {
+          setMessage("Bestätigung abgeschlossen. Du wirst weitergeleitet …");
+        }
+      } else if (tokenHash) {
+        const otpType = type === "email_change" ? "email_change" : "signup";
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: otpType,
+        });
         if (error && active) {
           setMessage("Bestätigung abgeschlossen. Du wirst weitergeleitet …");
         }
@@ -37,7 +50,7 @@ function AuthConfirmPage() {
       setMessage("E-Mail bestätigt. Du wirst zurück zur Buchung geleitet …");
       window.history.replaceState(null, "", "/auth/confirm");
       window.setTimeout(() => {
-        window.location.replace("/?email_confirmed=1#booking");
+        window.location.replace(RETURN_URL);
       }, 600);
     };
 
