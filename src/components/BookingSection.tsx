@@ -65,6 +65,7 @@ export function BookingSection() {
   const [licenseScanned, setLicenseScanned] = useState(false);
   const [idScanned, setIdScanned] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
+  const registrationComplete = isLoggedIn || profileComplete;
 
   // Tick clock every second while a confirmation is pending so the cooldown updates live
   useEffect(() => {
@@ -103,10 +104,11 @@ export function BookingSection() {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setIsLoggedIn(true);
+        setProfileComplete(true);
         setSignupEmailSent(null);
+        setShowLogin(false);
+        setStep((currentStep) => (currentStep === 3 ? 4 : currentStep));
         if (session.user.email_confirmed_at || session.user.confirmed_at) {
-          setProfileComplete(true);
-          setShowLogin(false);
           localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
         }
       }
@@ -114,9 +116,10 @@ export function BookingSection() {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) {
         setIsLoggedIn(true);
+        setProfileComplete(true);
+        setShowLogin(false);
+        setStep((currentStep) => (currentStep === 3 ? 4 : currentStep));
         if (data.session.user.email_confirmed_at || data.session.user.confirmed_at) {
-          setProfileComplete(true);
-          setShowLogin(false);
           localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
         }
       }
@@ -125,10 +128,10 @@ export function BookingSection() {
   }, []);
 
   useEffect(() => {
-    if (profileComplete && step === 3) {
+    if (registrationComplete && step === 3) {
       setStep(4);
     }
-  }, [profileComplete, step]);
+  }, [registrationComplete, step]);
 
   const handleSignUp = async () => {
     setAuthError(null);
@@ -254,11 +257,11 @@ export function BookingSection() {
   const [drivePhase, setDrivePhase] = useState<"pre" | "active" | "return" | "done" | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
 
-  const stepTitles = profileComplete
+  const stepTitles = registrationComplete
     ? ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Bezahlen", "Fahrt"]
     : ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen", "Fahrt"];
   // Wenn Registrierung übersprungen wird, mappen wir step 4/5 auf Stepper-Position 3/4
-  const stepperIndex = profileComplete && step >= 3 ? step - 1 : step;
+  const stepperIndex = registrationComplete && step >= 3 ? step - 1 : step;
 
   const planKey: "rent_6h" | "rent_24h" | "rent_km" | null =
     selectedPlan === null
@@ -278,7 +281,7 @@ export function BookingSection() {
         </h1>
 
         {/* Step indicator */}
-        <div className={`mt-8 grid w-full max-w-lg mx-auto ${profileComplete ? "grid-cols-5" : "grid-cols-6"}`}>
+        <div className={`mt-8 grid w-full max-w-lg mx-auto ${registrationComplete ? "grid-cols-5" : "grid-cols-6"}`}>
           {stepTitles.map((title, i) => (
             <div key={title} className="flex flex-col items-center gap-1">
               <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-all flex-shrink-0 ${
@@ -495,7 +498,7 @@ export function BookingSection() {
                 <ChevronLeft className="w-5 h-5" /> Zurück
               </button>
               <button
-                onClick={() => setStep(profileComplete ? 4 : 3)}
+                onClick={() => setStep(registrationComplete ? 4 : 3)}
                 className="inline-flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg"
               >
                 Buchen & bezahlen <ChevronRight className="w-5 h-5" />
@@ -507,7 +510,7 @@ export function BookingSection() {
         {/* Step 3: Registration / Login */}
         {step === 3 && (
           <div className="mt-12 max-w-lg mx-auto animate-fade-in-up">
-            {!profileComplete ? (
+            {!registrationComplete ? (
               <>
                 {!showLogin ? (
                   <>
@@ -885,7 +888,7 @@ export function BookingSection() {
             {!paid && (
               <div className="mt-8 flex justify-start">
                 <button
-                  onClick={() => { setShowCheckout(false); setStep(profileComplete ? 2 : 3); }}
+                  onClick={() => { setShowCheckout(false); setStep(registrationComplete ? 2 : 3); }}
                   className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
                 >
                   <ChevronLeft className="w-5 h-5" /> Zurück
