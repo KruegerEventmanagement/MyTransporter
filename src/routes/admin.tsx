@@ -776,3 +776,50 @@ function Stat({ label, value }: { label: string; value: React.ReactNode }) {
     </div>
   );
 }
+
+const PHOTO_TYPE_LABELS: Record<string, string> = {
+  front: "Front",
+  back: "Heck",
+  left: "Links",
+  right: "Rechts",
+  interior: "Innenraum",
+  pre_damage: "Schaden (vorher)",
+  post_front: "Front",
+  post_back: "Heck",
+  post_left: "Links",
+  post_right: "Rechts",
+  post_interior: "Innenraum",
+  post_damage: "Schaden (nachher)",
+  tank_receipt: "Tankbeleg",
+};
+
+function PhotoGroup({ title, photos }: { title: string; photos: TripPhoto[] }) {
+  if (photos.length === 0) return null;
+  return (
+    <div>
+      <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+        <ImageIcon className="w-4 h-4" /> {title} ({photos.length})
+      </p>
+      <div className="grid grid-cols-3 gap-2">
+        {photos.map((ph) => (
+          <a
+            key={ph.id}
+            href={ph.photo_url}
+            target="_blank"
+            rel="noreferrer"
+            className="relative block"
+          >
+            <img
+              src={ph.photo_url}
+              alt={ph.photo_type}
+              className="w-full aspect-square object-cover rounded-lg border border-border"
+            />
+            <span className="absolute bottom-1 left-1 right-1 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded truncate">
+              {PHOTO_TYPE_LABELS[ph.photo_type] ?? ph.photo_type}
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
