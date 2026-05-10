@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, Car, Wallet, Route as RouteIcon, Calendar, Hash, MapPin } from "lucide-react";
+import { ChevronLeft, Car, Wallet, Route as RouteIcon, Calendar, Hash, MapPin, X } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -25,6 +25,7 @@ interface Booking {
   pickup_code: string;
   status: string;
   created_at: string;
+  remarks?: string | null;
 }
 
 interface Profile {
@@ -39,6 +40,17 @@ function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+
+  const loadBookings = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from("bookings")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("start_date", { ascending: false });
+    if (data) setBookings(data as Booking[]);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -151,7 +163,7 @@ function ProfilePage() {
           ) : (
             <ul className="space-y-2">
               {bookings.map((b) => (
-                <BookingRow key={b.id} booking={b} />
+                <BookingRow key={b.id} booking={b} onCancelled={loadBookings} />
               ))}
             </ul>
           )}
