@@ -75,13 +75,11 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
             .from("user-documents")
             .upload(path, blob, { contentType: "image/jpeg", upsert: true });
           if (!upErr) {
-            const { data: urlData } = supabase.storage
-              .from("user-documents")
-              .getPublicUrl(path);
+            // Store the storage path; signed URLs are generated on demand
             await supabase.from("user_documents").insert({
               user_id: user.id,
               doc_type: docType,
-              photo_url: urlData.publicUrl,
+              photo_url: path,
             });
           }
         }
