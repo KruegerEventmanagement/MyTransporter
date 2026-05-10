@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -40,10 +40,84 @@ export function BookingSection() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [regForm, setRegForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
+  const [regPassword, setRegPassword] = useState("");
+  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [signupEmailSent, setSignupEmailSent] = useState<string | null>(null);
   const [docsScanned, setDocsScanned] = useState(false);
   const [licenseScanned, setLicenseScanned] = useState(false);
   const [idScanned, setIdScanned] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
+
+  // Subscribe to auth changes — wenn User per Magic Link / Bestätigung zurückkommt
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setIsLoggedIn(true);
+        setSignupEmailSent(null);
+        if (session.user.email_confirmed_at || session.user.confirmed_at) {
+          setProfileComplete(true);
+        }
+      }
+    });
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) {
+        setIsLoggedIn(true);
+        if (data.session.user.email_confirmed_at) setProfileComplete(true);
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const handleSignUp = async () => {
+    setAuthError(null);
+    setAuthLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email: regForm.email,
+      password: regPassword,
+      options: {
+        emailRedirectTo: window.location.origin + window.location.pathname,
+        data: {
+          first_name: regForm.firstName,
+          last_name: regForm.lastName,
+          phone: regForm.phone,
+        },
+      },
+    });
+    setAuthLoading(false);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    if (data.user && !data.session) {
+      // E-Mail-Bestätigung erforderlich
+      setSignupEmailSent(regForm.email);
+      setLoginForm({ email: regForm.email, password: "" });
+    } else if (data.session) {
+      // Auto-confirm aktiv
+      setIsLoggedIn(true);
+      setProfileComplete(true);
+    }
+  };
+
+  const handleLogin = async () => {
+    setAuthError(null);
+    setAuthLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginForm.email,
+      password: loginForm.password,
+    });
+    setAuthLoading(false);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    if (data.user) {
+      setIsLoggedIn(true);
+      setProfileComplete(true);
+    }
+  };
 
   const canProceedStep0 = date !== undefined && startHour !== null;
   const canProceedStep1 = selectedPlan !== null;
@@ -379,6 +453,16 @@ export function BookingSection() {
                           placeholder="+49 170 1234567"
                         />
                       </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground">Passwort</label>
+                        <input
+                          type="password"
+                          value={regPassword}
+                          onChange={(e) => setRegPassword(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                          placeholder="Mindestens 6 Zeichen"
+                        />
+                      </div>
                     </div>
 
                     {/* Document scan section with camera + AI */}
@@ -415,13 +499,34 @@ export function BookingSection() {
                       </button>
                     </div>
 
-                    <button
-                      disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !docsScanned}
-                      onClick={() => setProfileComplete(true)}
-                      className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Profil erstellen
-                    </button>
+                    {signupEmailSent ? (
+                      <div className="mt-8 rounded-2xl border border-border bg-secondary p-6 text-center">
+                        <p className="font-medium text-foreground mb-2">📧 Bestätigungs-E-Mail gesendet</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Wir haben dir eine E-Mail an <strong>{signupEmailSent}</strong> geschickt.
+                          Bitte klicke auf den Link, um dein Konto zu bestätigen. Danach kannst du dich einloggen.
+                        </p>
+                        <button
+                          onClick={() => { setShowLogin(true); setSignupEmailSent(null); }}
+                          className="w-full rounded-full bg-accent py-3 text-accent-foreground font-medium"
+                        >
+                          Jetzt einloggen
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {authError && (
+                          <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
+                        )}
+                        <button
+                          disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !docsScanned || authLoading}
+                          onClick={handleSignUp}
+                          className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {authLoading ? "Wird erstellt..." : "Profil erstellen"}
+                        </button>
+                      </>
+                    )}
 
                     <button
                       onClick={() => setShowLogin(true)}
@@ -438,6 +543,8 @@ export function BookingSection() {
                         <label className="text-sm font-medium text-foreground">E-Mail</label>
                         <input
                           type="email"
+                          value={loginForm.email}
+                          onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                           className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                           placeholder="max@beispiel.de"
                         />
@@ -446,16 +553,22 @@ export function BookingSection() {
                         <label className="text-sm font-medium text-foreground">Passwort</label>
                         <input
                           type="password"
+                          value={loginForm.password}
+                          onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                           className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                           placeholder="••••••••"
                         />
                       </div>
                     </div>
+                    {authError && (
+                      <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
+                    )}
                     <button
-                      onClick={() => setProfileComplete(true)}
-                      className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
+                      onClick={handleLogin}
+                      disabled={!loginForm.email || !loginForm.password || authLoading}
+                      className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      Einloggen
+                      {authLoading ? "Wird geprüft..." : "Einloggen"}
                     </button>
                     <button
                       onClick={() => setShowLogin(false)}
