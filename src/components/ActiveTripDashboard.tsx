@@ -69,6 +69,7 @@ export function ActiveTripDashboard({
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const trackInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Plan-Dauer aus Label/ID parsen (z.B. "6 Stunden", "1 Tag", "24h")
@@ -200,6 +201,7 @@ export function ActiveTripDashboard({
         });
 
         directionsServiceRef.current = new google.maps.DirectionsService();
+        geocoderRef.current = new google.maps.Geocoder();
         directionsRendererRef.current = new google.maps.DirectionsRenderer({
           map,
           suppressMarkers: false,
@@ -551,17 +553,44 @@ export function ActiveTripDashboard({
                 <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
                   <Navigation className="w-3.5 h-3.5" /> Navigation
                 </p>
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={destinationQuery}
-                    onChange={(e) => setDestinationQuery(e.target.value)}
-                    placeholder="Zieladresse eingeben..."
-                    className="w-full rounded-full bg-secondary pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
-                  />
-                </div>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const q = destinationQuery.trim();
+                    if (!q || !geocoderRef.current) return;
+                    geocoderRef.current.geocode({ address: q }, (results, status) => {
+                      if (status === "OK" && results && results[0]) {
+                        const r = results[0];
+                        applyDestination({
+                          lat: r.geometry.location.lat(),
+                          lng: r.geometry.location.lng(),
+                          label: r.formatted_address,
+                        });
+                      } else {
+                        setSearchError("Adresse nicht gefunden.");
+                      }
+                    });
+                  }}
+                  className="flex gap-2"
+                >
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={destinationQuery}
+                      onChange={(e) => setDestinationQuery(e.target.value)}
+                      placeholder="Zieladresse eingeben..."
+                      className="w-full rounded-full bg-secondary pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="rounded-full bg-foreground text-background px-4 text-sm font-semibold"
+                  >
+                    Suchen
+                  </button>
+                </form>
                 {searchError && (
                   <p className="text-xs text-muted-foreground mt-2">{searchError}</p>
                 )}
@@ -618,14 +647,14 @@ export function ActiveTripDashboard({
                         ))}
                       </div>
                     )}
-                    {routeInfo && (
-                      <button
-                        onClick={startNavigation}
-                        className="mt-3 w-full rounded-full bg-foreground text-background py-3 font-semibold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] transition-all"
-                      >
-                        <Flag className="w-4 h-4" /> Route starten
-                      </button>
-                    )}
+                    <button
+                      onClick={startNavigation}
+                      disabled={!routeInfo}
+                      className="mt-3 w-full rounded-full bg-foreground text-background py-3 font-semibold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100"
+                    >
+                      <Flag className="w-4 h-4" />
+                      {routeInfo ? "Route starten" : "Route wird berechnet…"}
+                    </button>
                   </div>
                 )}
               </div>
