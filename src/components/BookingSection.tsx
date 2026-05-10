@@ -401,6 +401,18 @@ export function BookingSection() {
                           if (licenseScanned) setDocsScanned(true);
                         }}
                       />
+                      {/* Test-Hilfe: Dokumente überspringen */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLicenseScanned(true);
+                          setIdScanned(true);
+                          setDocsScanned(true);
+                        }}
+                        className="w-full text-xs text-muted-foreground underline hover:text-foreground transition-colors py-2"
+                      >
+                        🧪 Test-Modus: Dokumente als verifiziert markieren
+                      </button>
                     </div>
 
                     <button
