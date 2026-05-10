@@ -9,6 +9,9 @@ import {
   Image as ImageIcon,
   LogOut,
   MapPin,
+  Mail,
+  Phone,
+  IdCard,
   Search,
   User,
   Users,
@@ -57,6 +60,12 @@ interface TripPhoto {
   photo_url: string;
   photo_type: string;
   booking_id: string;
+  created_at: string;
+}
+interface UserDocument {
+  id: string;
+  doc_type: string;
+  photo_url: string;
   created_at: string;
 }
 interface GpsPoint {
@@ -477,20 +486,44 @@ function CustomerDetail({
   const [photos, setPhotos] = useState<TripPhoto[]>([]);
   const [gps, setGps] = useState<GpsPoint[]>([]);
   const [openBooking, setOpenBooking] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<UserDocument[]>([]);
+  const [docUrls, setDocUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const ids = customer.bookings.map((b) => b.id);
-    if (ids.length === 0) return;
     Promise.all([
-      supabase.from("trip_photos").select("*").in("booking_id", ids).order("created_at"),
+      ids.length
+        ? supabase.from("trip_photos").select("*").in("booking_id", ids).order("created_at")
+        : Promise.resolve({ data: [] as TripPhoto[] }),
+      ids.length
+        ? supabase
+            .from("gps_tracks")
+            .select("latitude, longitude, recorded_at, booking_id")
+            .in("booking_id", ids)
+            .order("recorded_at")
+        : Promise.resolve({ data: [] as GpsPoint[] }),
       supabase
-        .from("gps_tracks")
-        .select("latitude, longitude, recorded_at, booking_id")
-        .in("booking_id", ids)
-        .order("recorded_at"),
-    ]).then(([p, g]) => {
+        .from("user_documents")
+        .select("*")
+        .eq("user_id", customer.id)
+        .order("created_at"),
+    ]).then(async ([p, g, d]) => {
       if (p.data) setPhotos(p.data as TripPhoto[]);
       if (g.data) setGps(g.data as GpsPoint[]);
+      if (d.data) {
+        const docs = d.data as UserDocument[];
+        setDocuments(docs);
+        // Sign URLs for private bucket
+        const entries = await Promise.all(
+          docs.map(async (doc) => {
+            const { data: signed } = await supabase.storage
+              .from("user-documents")
+              .createSignedUrl(doc.photo_url, 3600);
+            return [doc.id, signed?.signedUrl ?? ""] as const;
+          })
+        );
+        setDocUrls(Object.fromEntries(entries));
+      }
     });
   }, [customer.id]);
 
@@ -501,6 +534,13 @@ function CustomerDetail({
 
   const totalRentals = customer.bookings.length;
   const totalSpent = customer.bookings.reduce((s, b) => s + Number(b.plan_price || 0), 0);
+
+  const docLabels: Record<string, string> = {
+    id_front: "Personalausweis · Vorderseite",
+    id_back: "Personalausweis · Rückseite",
+    license_front: "Führerschein · Vorderseite",
+    license_back: "Führerschein · Rückseite",
+  };
 
   return (
     <main className="min-h-screen bg-background">
@@ -516,13 +556,71 @@ function CustomerDetail({
           <div className="min-w-0">
             <h1 className="text-lg font-bold truncate">{name}</h1>
             <p className="text-xs text-muted-foreground truncate">
-              {customer.profile?.email} · {customer.profile?.phone || "keine Nummer"}
+              Kunden-ID {customer.id.slice(0, 8)}
             </p>
           </div>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        <section className="rounded-2xl bg-card border border-border p-4 space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+            Kontakt
+          </h2>
+          <a
+            href={`mailto:${customer.profile?.email ?? ""}`}
+            className="flex items-center gap-2 text-sm hover:underline"
+          >
+            <Mail className="w-4 h-4 text-muted-foreground" />
+            {customer.profile?.email || "—"}
+          </a>
+          <a
+            href={`tel:${customer.profile?.phone ?? ""}`}
+            className="flex items-center gap-2 text-sm hover:underline"
+          >
+            <Phone className="w-4 h-4 text-muted-foreground" />
+            {customer.profile?.phone || "Keine Telefonnummer"}
+          </a>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold mb-2 uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+            <IdCard className="w-4 h-4" /> Ausweis & Führerschein
+          </h2>
+          {documents.length === 0 ? (
+            <p className="text-xs text-muted-foreground p-4 rounded-2xl bg-secondary">
+              Keine Dokumente hochgeladen.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {documents.map((doc) => (
+                <a
+                  key={doc.id}
+                  href={docUrls[doc.id] || "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="relative block rounded-xl overflow-hidden border border-border bg-secondary"
+                >
+                  {docUrls[doc.id] ? (
+                    <img
+                      src={docUrls[doc.id]}
+                      alt={doc.doc_type}
+                      className="w-full aspect-[1.586/1] object-cover"
+                    />
+                  ) : (
+                    <div className="w-full aspect-[1.586/1] flex items-center justify-center text-xs text-muted-foreground">
+                      Lädt…
+                    </div>
+                  )}
+                  <span className="absolute bottom-1 left-1 right-1 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded truncate">
+                    {docLabels[doc.doc_type] ?? doc.doc_type}
+                  </span>
+                </a>
+              ))}
+            </div>
+          )}
+        </section>
+
         <div className="grid grid-cols-2 gap-3">
           <div className="p-4 rounded-2xl bg-secondary">
             <p className="text-xs text-muted-foreground">Buchungen gesamt</p>
@@ -615,30 +713,23 @@ function CustomerDetail({
                       )}
 
                       {bphotos.length > 0 && (
-                        <div>
-                          <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                            <ImageIcon className="w-4 h-4" /> Fotos ({bphotos.length})
-                          </p>
-                          <div className="grid grid-cols-3 gap-2">
-                            {bphotos.map((ph) => (
-                              <a
-                                key={ph.id}
-                                href={ph.photo_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="relative block"
-                              >
-                                <img
-                                  src={ph.photo_url}
-                                  alt={ph.photo_type}
-                                  className="w-full aspect-square object-cover rounded-lg border border-border"
-                                />
-                                <span className="absolute bottom-1 left-1 right-1 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded truncate">
-                                  {ph.photo_type}
-                                </span>
-                              </a>
-                            ))}
-                          </div>
+                        <div className="space-y-4">
+                          <PhotoGroup
+                            title="Fahrzeug vor der Fahrt"
+                            photos={bphotos.filter(
+                              (p) =>
+                                !p.photo_type.startsWith("post_") &&
+                                p.photo_type !== "tank_receipt"
+                            )}
+                          />
+                          <PhotoGroup
+                            title="Fahrzeug nach der Fahrt"
+                            photos={bphotos.filter((p) => p.photo_type.startsWith("post_"))}
+                          />
+                          <PhotoGroup
+                            title="Tankbeleg"
+                            photos={bphotos.filter((p) => p.photo_type === "tank_receipt")}
+                          />
                         </div>
                       )}
 
@@ -682,6 +773,53 @@ function Stat({ label, value }: { label: string; value: React.ReactNode }) {
     <div className="p-3 rounded-xl bg-secondary">
       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
       <p className="font-semibold">{value}</p>
+    </div>
+  );
+}
+
+const PHOTO_TYPE_LABELS: Record<string, string> = {
+  front: "Front",
+  back: "Heck",
+  left: "Links",
+  right: "Rechts",
+  interior: "Innenraum",
+  pre_damage: "Schaden (vorher)",
+  post_front: "Front",
+  post_back: "Heck",
+  post_left: "Links",
+  post_right: "Rechts",
+  post_interior: "Innenraum",
+  post_damage: "Schaden (nachher)",
+  tank_receipt: "Tankbeleg",
+};
+
+function PhotoGroup({ title, photos }: { title: string; photos: TripPhoto[] }) {
+  if (photos.length === 0) return null;
+  return (
+    <div>
+      <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+        <ImageIcon className="w-4 h-4" /> {title} ({photos.length})
+      </p>
+      <div className="grid grid-cols-3 gap-2">
+        {photos.map((ph) => (
+          <a
+            key={ph.id}
+            href={ph.photo_url}
+            target="_blank"
+            rel="noreferrer"
+            className="relative block"
+          >
+            <img
+              src={ph.photo_url}
+              alt={ph.photo_type}
+              className="w-full aspect-square object-cover rounded-lg border border-border"
+            />
+            <span className="absolute bottom-1 left-1 right-1 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded truncate">
+              {PHOTO_TYPE_LABELS[ph.photo_type] ?? ph.photo_type}
+            </span>
+          </a>
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Camera, X, RotateCcw, CheckCircle, Loader2, AlertTriangle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 type ScanSide = "front" | "back";
 type ScanPhase = "idle" | "camera" | "scanning" | "verifying" | "verified" | "error";
@@ -53,15 +54,45 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
     return () => stopCamera();
   }, [stopCamera]);
 
-  const captureAndVerify = useCallback(() => {
-    // Simulate capture
+  const captureAndVerify = useCallback(async () => {
     setPhase("scanning");
+    try {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (video && canvas && video.videoWidth > 0) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const blob: Blob | null = await new Promise((resolve) =>
+          canvas.toBlob((b) => resolve(b), "image/jpeg", 0.85)
+        );
+        const { data: { user } } = await supabase.auth.getUser();
+        if (blob && user) {
+          const docType = `${documentType}_${side}`; // e.g. license_front
+          const path = `${user.id}/${docType}_${Date.now()}.jpg`;
+          const { error: upErr } = await supabase.storage
+            .from("user-documents")
+            .upload(path, blob, { contentType: "image/jpeg", upsert: true });
+          if (!upErr) {
+            // Store the storage path; signed URLs are generated on demand
+            await supabase.from("user_documents").insert({
+              user_id: user.id,
+              doc_type: docType,
+              photo_url: path,
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Document upload error:", err);
+    }
     setTimeout(() => {
       stopCamera();
       setPhase("verifying");
       setVerifyProgress(0);
-    }, 800);
-  }, [stopCamera]);
+    }, 400);
+  }, [stopCamera, documentType, side]);
 
   // AI verification progress simulation
   useEffect(() => {
