@@ -14,10 +14,46 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          body: string | null
+          booking_id: string | null
+          created_at: string
+          id: string
+          read: boolean
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          title: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           created_at: string
           deposit: number
+          deposit_released_at: string | null
+          deposit_released_by: string | null
+          deposit_status: string
           end_km: number | null
           id: string
           pickup_code: string
@@ -40,6 +76,9 @@ export type Database = {
         Insert: {
           created_at?: string
           deposit?: number
+          deposit_released_at?: string | null
+          deposit_released_by?: string | null
+          deposit_status?: string
           end_km?: number | null
           id?: string
           pickup_code: string
@@ -62,6 +101,9 @@ export type Database = {
         Update: {
           created_at?: string
           deposit?: number
+          deposit_released_at?: string | null
+          deposit_released_by?: string | null
+          deposit_status?: string
           end_km?: number | null
           id?: string
           pickup_code?: string
