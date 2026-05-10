@@ -274,7 +274,7 @@ function AdminDashboard() {
           <div>
             <h1 className="text-xl font-bold">MyTransporter · Admin</h1>
             <p className="text-xs text-muted-foreground">
-              {customers.length} Kunden · {bookings.length} Buchungen
+              {profiles.length} Registrierungen · {customers.length} Kunden · {bookings.length} Buchungen
             </p>
           </div>
           <button
