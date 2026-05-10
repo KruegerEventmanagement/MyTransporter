@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Camera as CameraIcon, RefreshCw } from "lucide-react";
+import silhouetteFront from "@/assets/silhouette-front.png";
+import silhouetteBack from "@/assets/silhouette-back.png";
+import silhouetteSide from "@/assets/silhouette-side.png";
+import silhouetteTqFront from "@/assets/silhouette-tq-front.png";
+import silhouetteTqBack from "@/assets/silhouette-tq-back.png";
+import silhouetteInterior from "@/assets/silhouette-interior.png";
 
 export type SilhouetteVariant =
   | "front"
@@ -22,113 +28,29 @@ interface CameraCaptureProps {
   onCapture: (file: File) => void;
 }
 
-function Silhouette({ variant }: { variant: SilhouetteVariant }) {
-  // Stroke-only outlines, white with soft glow, centered in viewBox 400x300
-  const common = {
-    fill: "none",
-    stroke: "white",
-    strokeWidth: 2.5,
-    strokeLinejoin: "round" as const,
-    strokeLinecap: "round" as const,
-    vectorEffect: "non-scaling-stroke" as const,
-  };
-
+function getOverlay(variant: SilhouetteVariant): { src: string; flip: boolean } | null {
   switch (variant) {
     case "front":
+      return { src: silhouetteFront, flip: false };
     case "back":
-      // Boxy van seen straight on
-      return (
-        <g {...common}>
-          {/* Outer body */}
-          <path d="M110 70 Q110 60 120 60 H280 Q290 60 290 70 V230 Q290 240 280 240 H120 Q110 240 110 230 Z" />
-          {/* Roof line */}
-          <path d="M125 60 V52 Q125 48 130 48 H270 Q275 48 275 52 V60" />
-          {/* Windshield */}
-          <path d="M130 75 H270 V120 H130 Z" />
-          {/* Headlights */}
-          <rect x="125" y="135" width="35" height="22" rx="3" />
-          <rect x="240" y="135" width="35" height="22" rx="3" />
-          {/* Grille */}
-          <path d="M170 145 H230 M170 155 H230" />
-          {/* Bumper */}
-          <path d="M115 200 H285" />
-          {/* Plate */}
-          <rect x="170" y="210" width="60" height="18" rx="2" />
-        </g>
-      );
+      return { src: silhouetteBack, flip: false };
+    case "side-right":
+      return { src: silhouetteSide, flip: false };
     case "side-left":
-    case "side-right": {
-      const flip = variant === "side-left";
-      return (
-        <g {...common} transform={flip ? "translate(400 0) scale(-1 1)" : undefined}>
-          {/* Body profile */}
-          <path d="M40 200 V120 Q40 110 50 110 H110 L140 70 H300 Q320 70 320 90 V200 Z" />
-          {/* Cabin window */}
-          <path d="M150 80 H190 V108 H145 Z" />
-          {/* Cargo windows hint (dashed) */}
-          <path d="M200 90 H300 V108 H200 Z" strokeDasharray="6 4" />
-          {/* Wheels */}
-          <circle cx="95" cy="210" r="22" />
-          <circle cx="270" cy="210" r="22" />
-          <circle cx="95" cy="210" r="8" />
-          <circle cx="270" cy="210" r="8" />
-          {/* Door split */}
-          <path d="M195 110 V200" strokeDasharray="4 4" />
-        </g>
-      );
-    }
+      return { src: silhouetteSide, flip: true };
     case "three-quarter-front-right":
-    case "three-quarter-back-right":
+      return { src: silhouetteTqFront, flip: false };
     case "three-quarter-front-left":
-    case "three-quarter-back-left": {
-      const flipX =
-        variant === "three-quarter-front-left" || variant === "three-quarter-back-left";
-      return (
-        <g {...common} transform={flipX ? "translate(400 0) scale(-1 1)" : undefined}>
-          {/* Side panel */}
-          <path d="M50 200 V130 Q50 122 58 122 H110 L135 80 H230 Q245 80 245 95 V200 Z" />
-          {/* Front face (perspective) */}
-          <path d="M245 95 L320 120 V210 L245 200 Z" />
-          <path d="M245 200 L320 210" />
-          {/* Windshield perspective */}
-          <path d="M252 100 L312 122 V152 L252 138 Z" />
-          {/* Side window */}
-          <path d="M145 90 H180 V112 H140 Z" />
-          {/* Cargo window hint */}
-          <path d="M188 92 H238 V112 H188 Z" strokeDasharray="6 4" />
-          {/* Wheels */}
-          <circle cx="100" cy="210" r="20" />
-          <circle cx="220" cy="210" r="20" />
-          <circle cx="298" cy="218" r="14" />
-          {/* Headlight on front face */}
-          <path d="M260 165 L300 178 V190 L260 182 Z" />
-        </g>
-      );
-    }
+      return { src: silhouetteTqFront, flip: true };
+    case "three-quarter-back-right":
+      return { src: silhouetteTqBack, flip: true };
+    case "three-quarter-back-left":
+      return { src: silhouetteTqBack, flip: false };
     case "interior":
-      return (
-        <g {...common} strokeDasharray="6 5">
-          {/* Dashboard arc */}
-          <path d="M40 230 Q200 130 360 230" />
-          {/* Steering wheel hint */}
-          <circle cx="130" cy="200" r="38" />
-          <circle cx="130" cy="200" r="8" fill="white" />
-          {/* Windshield top */}
-          <path d="M40 90 Q200 60 360 90" />
-          {/* Center console */}
-          <path d="M180 230 H220 V270 H180 Z" />
-        </g>
-      );
+      return { src: silhouetteInterior, flip: false };
     case "damage":
     default:
-      return (
-        <g {...common}>
-          {/* Targeting reticle */}
-          <circle cx="200" cy="150" r="80" strokeDasharray="4 6" />
-          <path d="M200 50 V100 M200 200 V250 M100 150 H150 M250 150 H300" />
-          <circle cx="200" cy="150" r="4" fill="white" />
-        </g>
-      );
+      return null;
   }
 }
 
@@ -241,35 +163,24 @@ export function CameraCapture({ open, title, hint, variant, onClose, onCapture }
           className="absolute inset-0 w-full h-full object-cover"
         />
 
-        {/* Blurred outer mask + clear focus area in the middle */}
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Darken edges with radial gradient */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(ellipse 70% 55% at center, transparent 0%, transparent 55%, rgba(0,0,0,0.55) 100%)",
-              backdropFilter: "blur(0px)",
-            }}
-          />
-        </div>
-
-        {/* Silhouette overlay */}
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-6">
-          <svg
-            viewBox="0 0 400 300"
-            className="w-[88%] max-w-[520px] opacity-80"
-            style={{ filter: "drop-shadow(0 0 6px rgba(0,0,0,0.6))" }}
-            preserveAspectRatio="xMidYMid meet"
-          >
-            <Silhouette variant={variant} />
-          </svg>
-        </div>
-
-        {/* Helper line */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-black/50 text-white text-[11px] backdrop-blur-sm">
-          Fahrzeug in der Vorlage ausrichten
-        </div>
+        {/* Silhouette overlay (Carmera-Stil) */}
+        {(() => {
+          const overlay = getOverlay(variant);
+          if (!overlay) return null;
+          return (
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-6">
+              <img
+                src={overlay.src}
+                alt=""
+                className="w-[92%] max-w-[640px] h-auto opacity-40"
+                style={{
+                  filter: "invert(1) drop-shadow(0 0 8px rgba(0,0,0,0.8))",
+                  transform: overlay.flip ? "scaleX(-1)" : undefined,
+                }}
+              />
+            </div>
+          );
+        })()}
 
         {error && (
           <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 p-4 rounded-2xl bg-black/80 text-white text-sm text-center">
