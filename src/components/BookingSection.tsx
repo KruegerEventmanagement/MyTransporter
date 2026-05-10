@@ -327,21 +327,58 @@ export function BookingSection() {
                   <p className="text-sm font-medium text-foreground mb-3">
                     Startzeit am {format(date, "PPP", { locale: de })}
                   </p>
-                  <div className="grid grid-cols-5 gap-2">
-                    {HOURS.map((h) => (
-                      <button
-                        key={h}
-                        onClick={() => setStartHour(h)}
-                        className={`py-2 px-3 rounded-xl text-sm font-medium transition-all ${
-                          startHour === h
-                            ? "bg-accent text-accent-foreground shadow-md"
-                            : "bg-secondary text-foreground hover:bg-accent/20"
-                        }`}
-                      >
-                        {h}:00
-                      </button>
-                    ))}
-                  </div>
+                  {(() => {
+                    const now = new Date();
+                    const isToday =
+                      date.getFullYear() === now.getFullYear() &&
+                      date.getMonth() === now.getMonth() &&
+                      date.getDate() === now.getDate();
+                    const currentHour = now.getHours();
+                    const canStartNow = isToday && currentHour >= 8 && currentHour < 22;
+                    const visibleHours = isToday
+                      ? HOURS.filter((h) => h > currentHour)
+                      : HOURS;
+                    return (
+                      <>
+                        {canStartNow && (
+                          <button
+                            onClick={() => setStartHour(currentHour)}
+                            className={`mb-3 w-full py-3 px-4 rounded-xl text-sm font-bold transition-all ${
+                              startHour === currentHour
+                                ? "bg-accent text-accent-foreground shadow-md"
+                                : "bg-foreground text-background hover:opacity-90"
+                            }`}
+                          >
+                            ⚡ Jetzt sofort starten ({String(currentHour).padStart(2, "0")}:
+                            {String(now.getMinutes()).padStart(2, "0")} Uhr)
+                          </button>
+                        )}
+                        {visibleHours.length > 0 ? (
+                          <div className="grid grid-cols-5 gap-2">
+                            {visibleHours.map((h) => (
+                              <button
+                                key={h}
+                                onClick={() => setStartHour(h)}
+                                className={`py-2 px-3 rounded-xl text-sm font-medium transition-all ${
+                                  startHour === h
+                                    ? "bg-accent text-accent-foreground shadow-md"
+                                    : "bg-secondary text-foreground hover:bg-accent/20"
+                                }`}
+                              >
+                                {h}:00
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          !canStartNow && (
+                            <p className="text-xs text-muted-foreground text-center py-4">
+                              Heute keine Startzeit mehr verfügbar – bitte einen anderen Tag wählen.
+                            </p>
+                          )
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>
