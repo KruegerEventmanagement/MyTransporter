@@ -190,6 +190,43 @@ export function BookingSection() {
     }
   };
 
+  const handleResendConfirmation = async () => {
+    if (!signupEmailSent) return;
+    setResendError(null);
+    setResendLoading(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: signupEmailSent,
+      options: { emailRedirectTo: AUTH_CONFIRM_URL },
+    });
+    setResendLoading(false);
+    if (error) {
+      setResendError(error.message);
+      return;
+    }
+    const now = Date.now();
+    setResendLastSent(now);
+    localStorage.setItem(RESEND_LAST_SENT_KEY, String(now));
+  };
+
+  const _unused_handleLogin = async () => {
+    setAuthError(null);
+    setAuthLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginForm.email,
+      password: loginForm.password,
+    });
+    setAuthLoading(false);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    if (data.user) {
+      setIsLoggedIn(true);
+      setProfileComplete(true);
+    }
+  };
+
   const canProceedStep0 = date !== undefined && startHour !== null;
   const canProceedStep1 = selectedPlan !== null;
 
