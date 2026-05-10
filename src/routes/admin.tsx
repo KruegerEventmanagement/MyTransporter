@@ -713,30 +713,23 @@ function CustomerDetail({
                       )}
 
                       {bphotos.length > 0 && (
-                        <div>
-                          <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                            <ImageIcon className="w-4 h-4" /> Fotos ({bphotos.length})
-                          </p>
-                          <div className="grid grid-cols-3 gap-2">
-                            {bphotos.map((ph) => (
-                              <a
-                                key={ph.id}
-                                href={ph.photo_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="relative block"
-                              >
-                                <img
-                                  src={ph.photo_url}
-                                  alt={ph.photo_type}
-                                  className="w-full aspect-square object-cover rounded-lg border border-border"
-                                />
-                                <span className="absolute bottom-1 left-1 right-1 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded truncate">
-                                  {ph.photo_type}
-                                </span>
-                              </a>
-                            ))}
-                          </div>
+                        <div className="space-y-4">
+                          <PhotoGroup
+                            title="Fahrzeug vor der Fahrt"
+                            photos={bphotos.filter(
+                              (p) =>
+                                !p.photo_type.startsWith("post_") &&
+                                p.photo_type !== "tank_receipt"
+                            )}
+                          />
+                          <PhotoGroup
+                            title="Fahrzeug nach der Fahrt"
+                            photos={bphotos.filter((p) => p.photo_type.startsWith("post_"))}
+                          />
+                          <PhotoGroup
+                            title="Tankbeleg"
+                            photos={bphotos.filter((p) => p.photo_type === "tank_receipt")}
+                          />
                         </div>
                       )}
 
