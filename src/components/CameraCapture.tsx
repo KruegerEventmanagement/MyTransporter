@@ -120,7 +120,6 @@ export function CameraCapture({ open, title, hint, variant, onClose, onCapture, 
     if (!ctx) return;
     if (scanMode) {
       // CamScanner-Look: S/W, hoher Kontrast, leicht heller
-      // @ts-expect-error filter wird in modernen Browsern unterstützt
       ctx.filter = "grayscale(1) contrast(1.6) brightness(1.15)";
       ctx.drawImage(video, 0, 0, w, h);
       // Zusätzlich: leichten Weißabgleich/Schwellwert anwenden
