@@ -41,6 +41,19 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
   const interiorTaken = !!interiorPhoto;
   const readyToStart = allSidesTaken && interiorTaken;
 
+  const fillTestPhotos = () => {
+    const placeholder =
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(
+        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='%23e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%23333'>TEST</text></svg>`
+      );
+    const next: Record<string, string> = {};
+    PHOTO_SIDES.forEach((s) => (next[s.id] = placeholder));
+    setPhotos(next);
+    setInteriorPhoto(placeholder);
+    if (!startKm) setStartKm("42850");
+  };
+
   const handleCapture = useCallback(
     async (file: File) => {
       if (!file || !currentTarget) return;
@@ -161,6 +174,13 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
           <p className="text-sm text-muted-foreground mb-6">
             Fotografiere das Fahrzeug von allen 4 Seiten, bevor du losfährst.
           </p>
+
+          <button
+            onClick={fillTestPhotos}
+            className="w-full mb-4 rounded-full border border-dashed border-foreground py-2 text-xs font-medium text-foreground hover:bg-secondary"
+          >
+            🧪 Testmodus: alle Fotos überspringen
+          </button>
 
           <div className="grid grid-cols-2 gap-3 mb-6">
             {PHOTO_SIDES.map((side) => (
