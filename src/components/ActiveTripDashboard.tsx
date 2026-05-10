@@ -60,6 +60,8 @@ export function ActiveTripDashboard({
   const [navMode, setNavMode] = useState(false);
   const [arrivalTime, setArrivalTime] = useState<Date | null>(null);
   const lastDirectionsResult = useRef<google.maps.DirectionsResult | null>(null);
+  const positionRef = useRef<{ lat: number; lng: number } | null>(null);
+  const destinationRef = useRef<{ lat: number; lng: number; label: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
@@ -238,9 +240,14 @@ export function ActiveTripDashboard({
   // Update marker
   useEffect(() => {
     if (!position || !mapInstance.current || !markerRef.current) return;
+    positionRef.current = position;
     markerRef.current.setPosition({ lat: position.lat, lng: position.lng });
     if (!destination) {
       mapInstance.current.panTo({ lat: position.lat, lng: position.lng });
+    }
+    // Wenn Ziel gesetzt aber noch keine Route -> jetzt berechnen
+    if (destinationRef.current && !lastDirectionsResult.current) {
+      computeRoute(destinationRef.current);
     }
   }, [position]);
 
@@ -252,28 +259,22 @@ export function ActiveTripDashboard({
   };
 
   // Ziel setzen + Route zeichnen via Google Directions API
-  const applyDestination = (dest: { lat: number; lng: number; label: string }) => {
-    setDestination(dest);
-    setDestinationQuery(dest.label);
-    setSearchError(null);
-
+  const computeRoute = (dest: { lat: number; lng: number; label: string }) => {
     if (
-      directionsServiceRef.current &&
-      directionsRendererRef.current &&
-      mapInstance.current
-    ) {
-      const origin = position
-        ? new google.maps.LatLng(position.lat, position.lng)
-        : null;
-      if (!origin) {
-        // Kein Standort -> nur zentrieren
-        mapInstance.current.panTo({ lat: dest.lat, lng: dest.lng });
-        mapInstance.current.setZoom(14);
-        return;
-      }
-      directionsServiceRef.current.route(
+      !directionsServiceRef.current ||
+      !directionsRendererRef.current ||
+      !mapInstance.current
+    )
+      return;
+    const pos = positionRef.current;
+    if (!pos) {
+      mapInstance.current.panTo({ lat: dest.lat, lng: dest.lng });
+      mapInstance.current.setZoom(14);
+      return;
+    }
+    directionsServiceRef.current.route(
         {
-          origin,
+          origin: new google.maps.LatLng(pos.lat, pos.lng),
           destination: new google.maps.LatLng(dest.lat, dest.lng),
           travelMode: google.maps.TravelMode.DRIVING,
           provideRouteAlternatives: true,
@@ -293,7 +294,6 @@ export function ActiveTripDashboard({
                 distanceValue: l?.distance?.value || 0,
               };
             });
-            // sortiert: schnellste zuerst
             alts.sort((a, b) => a.durationValue - b.durationValue);
             setRouteAlternatives(alts);
             const leg = result.routes[0]?.legs[0];
@@ -309,7 +309,18 @@ export function ActiveTripDashboard({
           }
         }
       );
-    }
+  };
+
+  const applyDestination = (dest: { lat: number; lng: number; label: string }) => {
+    setDestination(dest);
+    destinationRef.current = dest;
+    setDestinationQuery(dest.label);
+    setSearchError(null);
+    lastDirectionsResult.current = null;
+    setRouteInfo(null);
+    setRouteAlternatives([]);
+    setArrivalTime(null);
+    computeRoute(dest);
   };
 
   const selectRoute = (idx: number) => {
@@ -342,12 +353,14 @@ export function ActiveTripDashboard({
 
   const clearDestination = () => {
     setDestination(null);
+    destinationRef.current = null;
     setDestinationQuery("");
     setRouteInfo(null);
     setSearchError(null);
     setRouteAlternatives([]);
     setArrivalTime(null);
     setNavMode(false);
+    lastDirectionsResult.current = null;
     if (directionsRendererRef.current) {
       directionsRendererRef.current.set("directions", null);
     }
