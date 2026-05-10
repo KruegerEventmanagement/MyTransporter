@@ -626,6 +626,40 @@ export function BookingSection() {
                           Wir haben dir eine E-Mail an <strong>{signupEmailSent}</strong> geschickt.
                           Bitte klicke auf den Link, um dein Konto zu bestätigen. Danach kannst du dich einloggen.
                         </p>
+                        {resendLastSent && (
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Zuletzt gesendet:{" "}
+                            {new Date(resendLastSent).toLocaleString("de-DE", {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            })}
+                          </p>
+                        )}
+                        {(() => {
+                          const remaining = resendLastSent
+                            ? Math.max(0, RESEND_COOLDOWN_SECONDS - Math.floor((resendNow - resendLastSent) / 1000))
+                            : 0;
+                          const disabled = resendLoading || remaining > 0;
+                          return (
+                            <>
+                              <button
+                                type="button"
+                                onClick={handleResendConfirmation}
+                                disabled={disabled}
+                                className="w-full rounded-full border border-border bg-background py-3 text-foreground font-medium transition-all hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed mb-3"
+                              >
+                                {resendLoading
+                                  ? "Wird gesendet..."
+                                  : remaining > 0
+                                  ? `Erneut senden in ${remaining}s`
+                                  : "Bestätigungsmail erneut senden"}
+                              </button>
+                              {resendError && (
+                                <p className="text-xs text-destructive mb-3">{resendError}</p>
+                              )}
+                            </>
+                          );
+                        })()}
                         <button
                           onClick={() => { setShowLogin(true); setSignupEmailSent(null); }}
                           className="w-full rounded-full bg-accent py-3 text-accent-foreground font-medium"
