@@ -545,13 +545,13 @@ export function BookingSection() {
             <div className="mt-10 flex justify-between">
               <button
                 onClick={() => setStep(1)}
-                className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
               >
                 <ChevronLeft className="w-5 h-5" /> Zurück
               </button>
               <button
                 onClick={() => setStep(registrationComplete ? 4 : 3)}
-                className="inline-flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg"
               >
                 Buchen & bezahlen <ChevronRight className="w-5 h-5" />
               </button>
