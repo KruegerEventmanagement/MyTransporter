@@ -36,6 +36,8 @@ function CheckoutReturn() {
           planPrice: number;
           startDate: string;
           startHour: number;
+          vehicleName?: string;
+          vehiclePlate?: string;
         };
 
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -54,6 +56,8 @@ function CheckoutReturn() {
               start_hour: pending.startHour,
               pickup_code: code,
               status: "paid",
+              ...(pending.vehicleName ? { vehicle_name: pending.vehicleName } : {}),
+              ...(pending.vehiclePlate ? { vehicle_plate: pending.vehiclePlate } : {}),
             })
             .select()
             .single();
