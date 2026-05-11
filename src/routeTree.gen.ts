@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProfilRouteImport } from './routes/profil'
 import { Route as KontaktRouteImport } from './routes/kontakt'
 import { Route as ImpressumRouteImport } from './routes/impressum'
+import { Route as FaqRouteImport } from './routes/faq'
 import { Route as DatenschutzRouteImport } from './routes/datenschutz'
 import { Route as AgbRouteImport } from './routes/agb'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -33,6 +34,11 @@ const KontaktRoute = KontaktRouteImport.update({
 const ImpressumRoute = ImpressumRouteImport.update({
   id: '/impressum',
   path: '/impressum',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DatenschutzRoute = DatenschutzRouteImport.update({
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/agb': typeof AgbRoute
   '/datenschutz': typeof DatenschutzRoute
+  '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
   '/profil': typeof ProfilRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/agb': typeof AgbRoute
   '/datenschutz': typeof DatenschutzRoute
+  '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
   '/profil': typeof ProfilRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/agb': typeof AgbRoute
   '/datenschutz': typeof DatenschutzRoute
+  '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
   '/profil': typeof ProfilRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/agb'
     | '/datenschutz'
+    | '/faq'
     | '/impressum'
     | '/kontakt'
     | '/profil'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/agb'
     | '/datenschutz'
+    | '/faq'
     | '/impressum'
     | '/kontakt'
     | '/profil'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/agb'
     | '/datenschutz'
+    | '/faq'
     | '/impressum'
     | '/kontakt'
     | '/profil'
@@ -152,6 +164,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AgbRoute: typeof AgbRoute
   DatenschutzRoute: typeof DatenschutzRoute
+  FaqRoute: typeof FaqRoute
   ImpressumRoute: typeof ImpressumRoute
   KontaktRoute: typeof KontaktRoute
   ProfilRoute: typeof ProfilRoute
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/impressum'
       fullPath: '/impressum'
       preLoaderRoute: typeof ImpressumRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/datenschutz': {
@@ -240,6 +260,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AgbRoute: AgbRoute,
   DatenschutzRoute: DatenschutzRoute,
+  FaqRoute: FaqRoute,
   ImpressumRoute: ImpressumRoute,
   KontaktRoute: KontaktRoute,
   ProfilRoute: ProfilRoute,
