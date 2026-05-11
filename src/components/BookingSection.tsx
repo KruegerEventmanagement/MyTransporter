@@ -318,7 +318,11 @@ export function BookingSection() {
                 selected={date}
                 onSelect={setDate}
                 locale={de}
-                disabled={(d) => d < new Date()}
+                disabled={(d) => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  return d < today;
+                }}
                 className="rounded-3xl border border-border p-8 shadow-lg pointer-events-auto text-lg [--cell-size:3.5rem]"
               />
 
