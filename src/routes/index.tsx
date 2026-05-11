@@ -23,7 +23,6 @@ export const Route = createFileRoute("/")({
           "Günstige Transporter-Vermietung in Leonberg, Stuttgart, Böblingen, Sindelfingen und Ludwigsburg. Online buchen ab 100 € – ideal für Umzug, Möbeltransport und kurzfristige Fahrten.",
       },
       { property: "og:locale", content: "de_DE" },
-      { rel: "canonical", href: "https://www.mytransporter.org/" } as never,
     ],
     links: [{ rel: "canonical", href: "https://www.mytransporter.org/" }],
     scripts: [
