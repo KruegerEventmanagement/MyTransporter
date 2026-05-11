@@ -81,6 +81,36 @@ export function BookingSection() {
   const [licenseScanned, setLicenseScanned] = useState(false);
   const [idScanned, setIdScanned] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
+  const [vehicles, setVehicles] = useState<DbVehicle[]>([]);
+  const [vehicleIdx, setVehicleIdx] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    supabase
+      .from("vehicles")
+      .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active")
+      .eq("is_active", true)
+      .order("created_at", { ascending: true })
+      .then(({ data }) => {
+        if (alive && data) setVehicles(data as DbVehicle[]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const currentVehicle = vehicles[vehicleIdx];
+  const displayVehicle = currentVehicle
+    ? {
+        name: currentVehicle.name || `${currentVehicle.brand ?? ""} ${currentVehicle.model ?? ""}`.trim() || "Fahrzeug",
+        plate: currentVehicle.plate || "—",
+        photo: currentVehicle.photo_urls?.[0] ?? fiatDucato,
+        fuel: currentVehicle.fuel_type ?? VEHICLE.fuel,
+        payload: currentVehicle.payload_kg ? `${currentVehicle.payload_kg.toLocaleString("de-DE")} kg` : VEHICLE.payload,
+        seats: currentVehicle.seats,
+        power: currentVehicle.power_kw,
+      }
+    : { name: VEHICLE.name, plate: VEHICLE.plate, photo: fiatDucato, fuel: VEHICLE.fuel, payload: VEHICLE.payload, seats: null as number | null, power: null as number | null };
   const registrationComplete = isLoggedIn || profileComplete;
 
   // Tick clock every second while a confirmation is pending so the cooldown updates live
