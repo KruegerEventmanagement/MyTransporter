@@ -978,6 +978,8 @@ export function BookingSection() {
                         firstName: regForm.firstName,
                         lastName: regForm.lastName,
                         phone: regForm.phone,
+                        vehicleName: displayVehicle.name,
+                        vehiclePlate: displayVehicle.plate,
                       })
                     );
                   }
@@ -1056,8 +1058,8 @@ export function BookingSection() {
                 startDate={date}
                 startHour={startHour}
                 startKm={startKm}
-                vehicleName={VEHICLE.name}
-                vehiclePlate={VEHICLE.plate}
+                vehicleName={displayVehicle.name}
+                vehiclePlate={displayVehicle.plate}
                 onReturn={() => setDrivePhase("return")}
               />
             )}
