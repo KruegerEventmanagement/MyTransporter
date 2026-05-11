@@ -255,6 +255,8 @@ function AdminDashboard() {
           setNotifications((prev) => [n, ...prev]);
           if (lastNotificationId.current !== n.id) {
             lastNotificationId.current = n.id;
+            // Großes Popup für jede neue Benachrichtigung – iPad-tauglich
+            setAlertNotification(n);
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
               try {
                 new Notification("MyTransporter · " + n.title, {
