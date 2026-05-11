@@ -764,6 +764,7 @@ function CustomerDetail({
                             {format(new Date(bgps[0].recorded_at), "HH:mm")} bis{" "}
                             {format(new Date(bgps[bgps.length - 1].recorded_at), "HH:mm")}
                           </p>
+                          <RouteMap points={bgps} />
                           <a
                             href={`https://www.google.com/maps/dir/${bgps
                               .filter((_, i) => i % Math.max(1, Math.floor(bgps.length / 20)) === 0)
@@ -777,6 +778,15 @@ function CustomerDetail({
                           </a>
                         </div>
                       )}
+
+                      {bgps.length > 0 && (
+                        <div className="p-3 rounded-xl bg-secondary text-xs text-muted-foreground">
+                          Fahrt gestartet um{" "}
+                          <span className="font-semibold text-foreground">
+                            {format(new Date(bgps[0].recorded_at), "dd.MM.yyyy HH:mm:ss", { locale: de })}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </li>
@@ -787,6 +797,42 @@ function CustomerDetail({
       </div>
     </main>
   );
+}
+
+function RouteMap({ points }: { points: GpsPoint[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  useEffect(() => {
+    if (!ref.current || points.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const L = await import("leaflet");
+      await import("leaflet/dist/leaflet.css");
+      if (cancelled || !ref.current) return;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      const latlngs = points.map((p) => [p.latitude, p.longitude]) as [number, number][];
+      const map = L.map(ref.current, { zoomControl: true });
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap",
+      }).addTo(map);
+      const poly = L.polyline(latlngs, { color: "#000", weight: 4 }).addTo(map);
+      L.marker(latlngs[0]).addTo(map).bindTooltip("Start");
+      L.marker(latlngs[latlngs.length - 1]).addTo(map).bindTooltip("Ende");
+      map.fitBounds(poly.getBounds(), { padding: [20, 20] });
+      mapRef.current = map;
+    })();
+    return () => {
+      cancelled = true;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [points]);
+  return <div ref={ref} className="mt-2 h-56 w-full rounded-lg overflow-hidden border border-border" />;
 }
 
 function Stat({ label, value }: { label: string; value: React.ReactNode }) {
