@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Bell,
+  BellRing,
   Car,
   Check,
   ChevronLeft,
@@ -15,6 +16,8 @@ import {
   Search,
   User,
   Users,
+  Volume2,
+  VolumeX,
   Wallet,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -98,6 +101,11 @@ function AdminDashboard() {
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [initialBookingId, setInitialBookingId] = useState<string | null>(null);
   const lastNotificationId = useRef<string | null>(null);
+  const [alertNotification, setAlertNotification] = useState<AdminNotification | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const beepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const checkAdmin = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -118,6 +126,91 @@ function AdminDashboard() {
   useEffect(() => {
     checkAdmin();
   }, []);
+
+  // Wake-Lock anfragen, sobald Admin eingeloggt ist – iPad-Bildschirm bleibt an.
+  useEffect(() => {
+    if (!isAdmin) return;
+    const requestWakeLock = async () => {
+      try {
+        const nav = navigator as Navigator & { wakeLock?: { request: (t: string) => Promise<WakeLockSentinel> } };
+        if (nav.wakeLock?.request) {
+          wakeLockRef.current = await nav.wakeLock.request("screen");
+        }
+      } catch {
+        // ignore
+      }
+    };
+    requestWakeLock();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") requestWakeLock();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      wakeLockRef.current?.release().catch(() => {});
+      wakeLockRef.current = null;
+    };
+  }, [isAdmin]);
+
+  const playBeep = () => {
+    try {
+      if (!audioCtxRef.current) {
+        const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+        audioCtxRef.current = new Ctx();
+      }
+      const ctx = audioCtxRef.current!;
+      if (ctx.state === "suspended") ctx.resume();
+      const now = ctx.currentTime;
+      [0, 0.18, 0.36].forEach((offset) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0, now + offset);
+        gain.gain.linearRampToValueAtTime(0.35, now + offset + 0.02);
+        gain.gain.linearRampToValueAtTime(0, now + offset + 0.14);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.16);
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const startBeepLoop = () => {
+    if (beepIntervalRef.current) return;
+    playBeep();
+    beepIntervalRef.current = setInterval(playBeep, 1500);
+  };
+
+  const stopBeepLoop = () => {
+    if (beepIntervalRef.current) {
+      clearInterval(beepIntervalRef.current);
+      beepIntervalRef.current = null;
+    }
+  };
+
+  const enableSound = async () => {
+    try {
+      const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+      audioCtxRef.current = new Ctx();
+      await audioCtxRef.current.resume();
+      // kurzer Ping zur Bestätigung
+      playBeep();
+      setSoundEnabled(true);
+    } catch {
+      setSoundEnabled(false);
+    }
+  };
+
+  // Beep läuft, solange ein Alert-Popup offen ist.
+  useEffect(() => {
+    if (alertNotification && soundEnabled) startBeepLoop();
+    else stopBeepLoop();
+    return () => stopBeepLoop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alertNotification, soundEnabled]);
 
   const loadAll = async () => {
     const [b, p, n] = await Promise.all([
