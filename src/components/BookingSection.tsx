@@ -32,6 +32,22 @@ const VEHICLE = {
   length: "6,36 m",
 };
 
+type DbVehicle = {
+  id: string;
+  name: string;
+  plate: string;
+  brand: string | null;
+  model: string | null;
+  fuel_type: string | null;
+  max_weight_kg: number | null;
+  empty_weight_kg: number | null;
+  payload_kg: number | null;
+  power_kw: number | null;
+  seats: number | null;
+  photo_urls: string[];
+  is_active: boolean;
+};
+
 const AUTH_CONFIRM_URL = "https://www.mytransporter.org/auth/confirm";
 const AUTH_BOOKING_DRAFT_KEY = "mt_auth_booking_draft";
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -65,6 +81,36 @@ export function BookingSection() {
   const [licenseScanned, setLicenseScanned] = useState(false);
   const [idScanned, setIdScanned] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
+  const [vehicles, setVehicles] = useState<DbVehicle[]>([]);
+  const [vehicleIdx, setVehicleIdx] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    supabase
+      .from("vehicles")
+      .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active")
+      .eq("is_active", true)
+      .order("created_at", { ascending: true })
+      .then(({ data }) => {
+        if (alive && data) setVehicles(data as DbVehicle[]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const currentVehicle = vehicles[vehicleIdx];
+  const displayVehicle = currentVehicle
+    ? {
+        name: currentVehicle.name || `${currentVehicle.brand ?? ""} ${currentVehicle.model ?? ""}`.trim() || "Fahrzeug",
+        plate: currentVehicle.plate || "—",
+        photo: currentVehicle.photo_urls?.[0] ?? fiatDucato,
+        fuel: currentVehicle.fuel_type ?? VEHICLE.fuel,
+        payload: currentVehicle.payload_kg ? `${currentVehicle.payload_kg.toLocaleString("de-DE")} kg` : VEHICLE.payload,
+        seats: currentVehicle.seats,
+        power: currentVehicle.power_kw,
+      }
+    : { name: VEHICLE.name, plate: VEHICLE.plate, photo: fiatDucato, fuel: VEHICLE.fuel, payload: VEHICLE.payload, seats: null as number | null, power: null as number | null };
   const registrationComplete = isLoggedIn || profileComplete;
 
   // Tick clock every second while a confirmation is pending so the cooldown updates live
@@ -487,43 +533,91 @@ export function BookingSection() {
         {/* Step 2: Vehicle */}
         {step === 2 && (
           <div className="mt-12 max-w-2xl mx-auto animate-fade-in-up">
-            <p className="text-center text-muted-foreground text-lg mb-8">Dein Fahrzeug</p>
+            <p className="text-center text-muted-foreground text-lg mb-2">Dein Fahrzeug</p>
+            {vehicles.length > 1 && (
+              <p className="text-center text-xs text-muted-foreground mb-6">
+                {vehicleIdx + 1} / {vehicles.length} – wische oder nutze die Pfeile
+              </p>
+            )}
 
-            <div className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
-              <img
-                src={fiatDucato}
-                alt="Fiat Ducato L4H2"
-                className="w-full h-64 object-cover"
-                width={1024}
-                height={576}
-                loading="lazy"
-              />
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-2xl font-bold text-foreground">{VEHICLE.name}</h3>
-                  <span className="px-4 py-1.5 rounded-full bg-secondary text-sm font-mono font-medium text-foreground">
-                    {VEHICLE.plate}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Kilometerstand</p>
-                    <p className="font-medium text-foreground">{VEHICLE.km.toLocaleString("de-DE")} km</p>
+            <div className="relative">
+              {vehicles.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setVehicleIdx((i) => (i - 1 + vehicles.length) % vehicles.length)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/90 border border-border shadow flex items-center justify-center hover:bg-background"
+                    aria-label="Vorheriges Fahrzeug"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVehicleIdx((i) => (i + 1) % vehicles.length)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/90 border border-border shadow flex items-center justify-center hover:bg-background"
+                    aria-label="Nächstes Fahrzeug"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+
+              <div className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
+                <img
+                  src={displayVehicle.photo}
+                  alt={displayVehicle.name}
+                  className="w-full h-64 object-cover"
+                  width={1024}
+                  height={576}
+                  loading="lazy"
+                />
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-2xl font-bold text-foreground">{displayVehicle.name}</h3>
+                    <span className="px-4 py-1.5 rounded-full bg-secondary text-sm font-mono font-medium text-foreground">
+                      {displayVehicle.plate}
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Kraftstoff</p>
-                    <p className="font-medium text-foreground">{VEHICLE.fuel}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Nutzlast</p>
-                    <p className="font-medium text-foreground">{VEHICLE.payload}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Länge</p>
-                    <p className="font-medium text-foreground">{VEHICLE.length}</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Kraftstoff</p>
+                      <p className="font-medium text-foreground">{displayVehicle.fuel}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Nutzlast</p>
+                      <p className="font-medium text-foreground">{displayVehicle.payload}</p>
+                    </div>
+                    {displayVehicle.power && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Leistung</p>
+                        <p className="font-medium text-foreground">{displayVehicle.power} kW</p>
+                      </div>
+                    )}
+                    {displayVehicle.seats && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Sitzplätze</p>
+                        <p className="font-medium text-foreground">{displayVehicle.seats}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+
+              {vehicles.length > 1 && (
+                <div className="flex justify-center gap-1.5 mt-4">
+                  {vehicles.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setVehicleIdx(i)}
+                      aria-label={`Fahrzeug ${i + 1}`}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        i === vehicleIdx ? "bg-foreground w-6" : "bg-border"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Summary */}
@@ -884,6 +978,8 @@ export function BookingSection() {
                         firstName: regForm.firstName,
                         lastName: regForm.lastName,
                         phone: regForm.phone,
+                        vehicleName: displayVehicle.name,
+                        vehiclePlate: displayVehicle.plate,
                       })
                     );
                   }
@@ -962,8 +1058,8 @@ export function BookingSection() {
                 startDate={date}
                 startHour={startHour}
                 startKm={startKm}
-                vehicleName={VEHICLE.name}
-                vehiclePlate={VEHICLE.plate}
+                vehicleName={displayVehicle.name}
+                vehiclePlate={displayVehicle.plate}
                 onReturn={() => setDrivePhase("return")}
               />
             )}
