@@ -96,6 +96,7 @@ function AdminDashboard() {
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [search, setSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
+  const [initialBookingId, setInitialBookingId] = useState<string | null>(null);
   const lastNotificationId = useRef<string | null>(null);
 
   const checkAdmin = async () => {
@@ -269,7 +270,11 @@ function AdminDashboard() {
     return (
       <CustomerDetail
         customer={customer}
-        onBack={() => setSelectedCustomer(null)}
+        initialBookingId={initialBookingId}
+        onBack={() => {
+          setSelectedCustomer(null);
+          setInitialBookingId(null);
+        }}
         onReleaseDeposit={releaseDeposit}
         onConfirmReturn={confirmReturn}
       />
@@ -382,17 +387,22 @@ function AdminDashboard() {
               const p = profilesById[b.user_id];
               const name = [p?.first_name, p?.last_name].filter(Boolean).join(" ") || p?.email || "—";
               return (
-                <li
-                  key={b.id}
-                  className="p-4 rounded-2xl bg-card border border-border flex items-center justify-between"
-                >
-                  <div className="min-w-0">
-                    <p className="font-semibold truncate">{name}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {b.vehicle_plate} · {b.plan_label} · {b.start_date} {b.start_hour}:00
-                    </p>
-                  </div>
-                  <StatusBadge status={b.status} />
+                <li key={b.id}>
+                  <button
+                    onClick={() => {
+                      setInitialBookingId(b.id);
+                      setSelectedCustomer(b.user_id);
+                    }}
+                    className="w-full text-left p-4 rounded-2xl bg-card border border-border flex items-center justify-between hover:bg-secondary/40 transition-all"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {b.vehicle_plate} · {b.plan_label} · {b.start_date} {b.start_hour}:00
+                      </p>
+                    </div>
+                    <StatusBadge status={b.status} />
+                  </button>
                 </li>
               );
             })}
@@ -483,18 +493,20 @@ function StatusBadge({ status }: { status: string }) {
 
 function CustomerDetail({
   customer,
+  initialBookingId,
   onBack,
   onReleaseDeposit,
   onConfirmReturn,
 }: {
   customer: { id: string; profile: Profile | undefined; bookings: Booking[] };
+  initialBookingId?: string | null;
   onBack: () => void;
   onReleaseDeposit: (id: string) => Promise<void>;
   onConfirmReturn: (id: string) => Promise<void>;
 }) {
   const [photos, setPhotos] = useState<TripPhoto[]>([]);
   const [gps, setGps] = useState<GpsPoint[]>([]);
-  const [openBooking, setOpenBooking] = useState<string | null>(null);
+  const [openBooking, setOpenBooking] = useState<string | null>(initialBookingId ?? null);
   const [documents, setDocuments] = useState<UserDocument[]>([]);
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
 
