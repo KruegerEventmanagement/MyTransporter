@@ -130,7 +130,56 @@ function FaqPage() {
             . Wir helfen dir gerne weiter – persönlich, schnell und unkompliziert.
           </p>
         </section>
+
+        <section className="mt-16">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-8 text-center">
+            Deine Transporter-Vermietung für Leonberg, Stuttgart & Umgebung
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-6">
+            {SEO_BLOCKS.map((b) => (
+              <article key={b.h} className="p-6 rounded-2xl bg-card border border-border">
+                <h3 className="text-lg font-semibold text-foreground mb-2">{b.h}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{b.p}</p>
+              </article>
+            ))}
+          </div>
+          <p className="mt-8 text-center text-sm text-muted-foreground">
+            Einsatzregion: Leonberg · Stuttgart · Böblingen · Sindelfingen · Ludwigsburg
+            und gesamtes Baden-Württemberg.
+          </p>
+        </section>
       </div>
     </main>
   );
 }
+
+const SEO_BLOCKS = [
+  {
+    h: "Transporter mieten in Leonberg",
+    p: "MyTransporter ist deine lokale Transporter-Vermietung in Leonberg. Direkt in der Römerstraße 36 holst du deinen Fiat Ducato L4H2 ab – ideal für Umzüge, Möbeltransporte oder spontane Fahrten in der Region. Buchung online in unter 2 Minuten, transparente Preise ab 100 €.",
+  },
+  {
+    h: "Transporter mieten in Stuttgart & Umgebung",
+    p: "Auch für Kunden aus Stuttgart, Böblingen, Sindelfingen und Ludwigsburg sind wir die schnelle Alternative zu großen Mietwagen-Konzernen. Statt langer Schlangen am Schalter bekommst du den Transporter ohne Umweg – persönlich übergeben, vollgetankt und einsatzbereit.",
+  },
+  {
+    h: "Umzugswagen mieten – günstig & flexibel",
+    p: "Mit 6,36 m Länge, 1.200 kg Nutzlast und Hochdach ist unser Transporter ein vollwertiger Umzugswagen. Du transportierst den Inhalt einer 2- bis 3-Zimmer-Wohnung in einer Tour. Perfekt für deinen Umzug in Leonberg, Stuttgart oder bundesweit.",
+  },
+  {
+    h: "Möbeltransport, Baumarkt & Kleinanzeigen",
+    p: "Ob Couch von Kleinanzeigen abholen, Baumaterial aus dem Baumarkt transportieren oder neue Möbel von IKEA holen – mit unserem Transporter bleibst du flexibel, ohne ein Auto zu besitzen.",
+  },
+  {
+    h: "Kurzfristig buchen – auch heute noch",
+    p: "Spontane Pläne? Kein Problem. Solange ein freier Slot zwischen 08:00 und 22:00 Uhr verfügbar ist, kannst du noch am selben Tag buchen, abholen und losfahren.",
+  },
+  {
+    h: "Preise & Kaution – alles transparent",
+    p: "6 Stunden für 100 €, 24 Stunden für 150 € oder reine Kilometer-Abrechnung zu 0,90 € / km. Die Kaution beträgt 200 € und wird nach unbeschädigter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
+  },
+  {
+    h: "Ablauf der Vermietung",
+    p: "1. Online buchen und Verifizierung mit Führerschein & Ausweis. 2. Schlüssel in Leonberg abholen. 3. Fahrzeug-Check per App. 4. Losfahren. 5. Rückgabe, Tankbeleg hochladen – fertig. So einfach mietet man heute einen Transporter.",
+  },
+];
