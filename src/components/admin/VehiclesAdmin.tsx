@@ -336,28 +336,16 @@ function VehicleEditor({
             onChange={(e) => set("first_registration", e.target.value || null)}
           />
         </Field>
-        <Field label="C.1.1 · Halter (Name)"><input className={inp} {...txtField("owner_name")} /></Field>
+        <Field label="C.1.1 · Halter"><input className={inp} {...txtField("owner_name")} /></Field>
         <Field label="D.1 · Marke"><input className={inp} {...txtField("brand")} /></Field>
-        <Field label="D.2 · Typ / Variante / Version"><input className={inp} {...txtField("type_variant_version")} /></Field>
-        <Field label="D.3 · Handelsbezeichnung"><input className={inp} {...txtField("model")} /></Field>
+        <Field label="D.3 · Handelsbezeichnung / Modell"><input className={inp} {...txtField("model")} /></Field>
         <Field label="E · Fahrzeug-Identifizierungsnr. (FIN)"><input className={inp} {...txtField("vin")} /></Field>
         <Field label="F.1 · Zul. Gesamtmasse (kg)"><input className={inp} {...numField("max_weight_kg")} /></Field>
-        <Field label="G · Masse im fahrbereiten Zustand (kg)"><input className={inp} {...numField("empty_weight_kg")} /></Field>
-        <Field label="J · Fahrzeugklasse"><input className={inp} {...txtField("vehicle_class")} /></Field>
-        <Field label="J.1 · Aufbau"><input className={inp} {...txtField("body_type")} /></Field>
-        <Field label="L · Anzahl der Achsen"><input className={inp} {...numField("axles")} /></Field>
-        <Field label="O.1 · Anhängelast gebremst (kg)"><input className={inp} {...numField("trailer_load_braked_kg")} /></Field>
-        <Field label="O.2 · Anhängelast ungebremst (kg)"><input className={inp} {...numField("trailer_load_unbraked_kg")} /></Field>
-        <Field label="P.1 · Hubraum (ccm)"><input className={inp} {...numField("displacement_ccm")} /></Field>
         <Field label="P.2 · Nennleistung (kW)"><input className={inp} {...numField("power_kw")} /></Field>
         <Field label="P.3 · Kraftstoffart"><input className={inp} {...txtField("fuel_type")} /></Field>
         <Field label="R · Farbe"><input className={inp} {...txtField("color")} /></Field>
         <Field label="S.1 · Sitzplätze"><input className={inp} {...numField("seats")} /></Field>
-        <Field label="2.1 · HSN (Herstellerschlüssel)"><input className={inp} {...txtField("hsn")} /></Field>
-        <Field label="2.2 · TSN (Typschlüssel)"><input className={inp} {...txtField("tsn")} /></Field>
-        <Field label="Hersteller (Klartext)"><input className={inp} {...txtField("manufacturer")} /></Field>
         <Field label="Nutzlast (kg)"><input className={inp} {...numField("payload_kg")} /></Field>
-        <Field label="Reifengröße"><input className={inp} {...txtField("tire_size")} /></Field>
       </Section>
 
       <Section title="Notizen">
