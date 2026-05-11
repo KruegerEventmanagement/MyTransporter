@@ -561,6 +561,7 @@ function AdminDashboard() {
         )}
       </div>
     </main>
+  {/* placeholder */}
   );
 }
 
