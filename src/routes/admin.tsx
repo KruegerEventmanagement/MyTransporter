@@ -566,6 +566,8 @@ function AdminDashboard() {
             )}
           </>
         )}
+
+        {tab === "vehicles" && <VehiclesAdmin />}
       </div>
     </main>
       {alertNotification && (
