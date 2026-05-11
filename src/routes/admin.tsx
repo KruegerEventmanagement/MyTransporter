@@ -23,6 +23,7 @@ import {
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { AdminLogin } from "@/components/admin/AdminLogin";
+import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -88,7 +89,7 @@ interface AdminNotification {
   created_at: string;
 }
 
-type Tab = "customers" | "bookings" | "notifications";
+type Tab = "customers" | "bookings" | "vehicles" | "notifications";
 
 function AdminDashboard() {
   const [authReady, setAuthReady] = useState(false);
@@ -423,6 +424,9 @@ function AdminDashboard() {
           </TabButton>
           <TabButton active={tab === "bookings"} onClick={() => setTab("bookings")}>
             <Car className="w-4 h-4" /> Buchungen
+          </TabButton>
+          <TabButton active={tab === "vehicles"} onClick={() => setTab("vehicles")}>
+            <Car className="w-4 h-4" /> Fahrzeuge
           </TabButton>
           <TabButton active={tab === "notifications"} onClick={() => setTab("notifications")}>
             <Bell className="w-4 h-4" /> Push
