@@ -63,7 +63,7 @@ function CheckoutReturn() {
           }
           bookingId = booking.id;
           notifyAdmin({
-            type: "trip_started",
+            type: "booking_created",
             title: "Neue Buchung",
             body: `${pending.planLabel} · Start ${pending.startDate} ${String(pending.startHour).padStart(2, "0")}:00 · Code ${code}`,
             bookingId,
