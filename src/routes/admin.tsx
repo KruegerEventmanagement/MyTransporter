@@ -395,12 +395,24 @@ function AdminDashboard() {
               </p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="rounded-full bg-secondary px-3 py-2 text-xs font-medium flex items-center gap-1.5"
-          >
-            <LogOut className="w-3.5 h-3.5" /> Abmelden
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => (soundEnabled ? setSoundEnabled(false) : enableSound())}
+              className={`rounded-full px-3 py-2 text-xs font-medium flex items-center gap-1.5 ${
+                soundEnabled ? "bg-foreground text-background" : "bg-secondary"
+              }`}
+              title="iPad-Modus: Signal-Ton bei neuen Benachrichtigungen"
+            >
+              {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+              {soundEnabled ? "Signal an" : "Signal aus"}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="rounded-full bg-secondary px-3 py-2 text-xs font-medium flex items-center gap-1.5"
+            >
+              <LogOut className="w-3.5 h-3.5" /> Abmelden
+            </button>
+          </div>
         </div>
         <nav className="max-w-5xl mx-auto px-4 flex gap-1">
           <TabButton active={tab === "customers"} onClick={() => setTab("customers")}>
