@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { notifyAdmin } from "@/lib/admin-notify";
 
 export const Route = createFileRoute("/checkout/return")({
   validateSearch: (search: Record<string, unknown>): { session_id?: string } => ({
@@ -61,6 +62,13 @@ function CheckoutReturn() {
             return;
           }
           bookingId = booking.id;
+          notifyAdmin({
+            type: "trip_started",
+            title: "Neue Buchung",
+            body: `${pending.planLabel} · Start ${pending.startDate} ${String(pending.startHour).padStart(2, "0")}:00 · Code ${code}`,
+            bookingId,
+            userId: userData.user.id,
+          });
         } else {
           // Demo-Fallback ohne Auth
           bookingId = "demo-" + Date.now();
