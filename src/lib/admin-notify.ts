@@ -5,7 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
  * darf den eigentlichen User-Flow nie blockieren.
  */
 export async function notifyAdmin(args: {
-  type: "trip_started" | "trip_returning" | "photo_uploaded" | "tank_receipt";
+  type:
+    | "booking_created"
+    | "trip_started"
+    | "trip_returning"
+    | "photo_uploaded"
+    | "tank_receipt";
   title: string;
   body?: string;
   bookingId?: string;

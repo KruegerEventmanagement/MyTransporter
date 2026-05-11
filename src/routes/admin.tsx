@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Bell,
+  BellRing,
   Car,
   Check,
   ChevronLeft,
@@ -15,6 +16,8 @@ import {
   Search,
   User,
   Users,
+  Volume2,
+  VolumeX,
   Wallet,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -98,6 +101,11 @@ function AdminDashboard() {
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [initialBookingId, setInitialBookingId] = useState<string | null>(null);
   const lastNotificationId = useRef<string | null>(null);
+  const [alertNotification, setAlertNotification] = useState<AdminNotification | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const beepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
 
   const checkAdmin = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -118,6 +126,93 @@ function AdminDashboard() {
   useEffect(() => {
     checkAdmin();
   }, []);
+
+  // Wake-Lock anfragen, sobald Admin eingeloggt ist – iPad-Bildschirm bleibt an.
+  useEffect(() => {
+    if (!isAdmin) return;
+    const requestWakeLock = async () => {
+      try {
+        const nav = navigator as Navigator & {
+          wakeLock?: { request: (t: string) => Promise<{ release: () => Promise<void> }> };
+        };
+        if (nav.wakeLock?.request) {
+          wakeLockRef.current = await nav.wakeLock.request("screen");
+        }
+      } catch {
+        // ignore
+      }
+    };
+    requestWakeLock();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") requestWakeLock();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      wakeLockRef.current?.release().catch(() => {});
+      wakeLockRef.current = null;
+    };
+  }, [isAdmin]);
+
+  const playBeep = () => {
+    try {
+      if (!audioCtxRef.current) {
+        const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+        audioCtxRef.current = new Ctx();
+      }
+      const ctx = audioCtxRef.current!;
+      if (ctx.state === "suspended") ctx.resume();
+      const now = ctx.currentTime;
+      [0, 0.18, 0.36].forEach((offset) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0, now + offset);
+        gain.gain.linearRampToValueAtTime(0.35, now + offset + 0.02);
+        gain.gain.linearRampToValueAtTime(0, now + offset + 0.14);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.16);
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const startBeepLoop = () => {
+    if (beepIntervalRef.current) return;
+    playBeep();
+    beepIntervalRef.current = setInterval(playBeep, 1500);
+  };
+
+  const stopBeepLoop = () => {
+    if (beepIntervalRef.current) {
+      clearInterval(beepIntervalRef.current);
+      beepIntervalRef.current = null;
+    }
+  };
+
+  const enableSound = async () => {
+    try {
+      const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+      audioCtxRef.current = new Ctx();
+      await audioCtxRef.current.resume();
+      // kurzer Ping zur Bestätigung
+      playBeep();
+      setSoundEnabled(true);
+    } catch {
+      setSoundEnabled(false);
+    }
+  };
+
+  // Beep läuft, solange ein Alert-Popup offen ist.
+  useEffect(() => {
+    if (alertNotification && soundEnabled) startBeepLoop();
+    else stopBeepLoop();
+    return () => stopBeepLoop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alertNotification, soundEnabled]);
 
   const loadAll = async () => {
     const [b, p, n] = await Promise.all([
@@ -162,6 +257,8 @@ function AdminDashboard() {
           setNotifications((prev) => [n, ...prev]);
           if (lastNotificationId.current !== n.id) {
             lastNotificationId.current = n.id;
+            // Großes Popup für jede neue Benachrichtigung – iPad-tauglich
+            setAlertNotification(n);
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
               try {
                 new Notification("MyTransporter · " + n.title, {
@@ -282,6 +379,7 @@ function AdminDashboard() {
   }
 
   return (
+    <>
     <main className="min-h-screen bg-background">
       <header className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -300,12 +398,24 @@ function AdminDashboard() {
               </p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="rounded-full bg-secondary px-3 py-2 text-xs font-medium flex items-center gap-1.5"
-          >
-            <LogOut className="w-3.5 h-3.5" /> Abmelden
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => (soundEnabled ? setSoundEnabled(false) : enableSound())}
+              className={`rounded-full px-3 py-2 text-xs font-medium flex items-center gap-1.5 ${
+                soundEnabled ? "bg-foreground text-background" : "bg-secondary"
+              }`}
+              title="iPad-Modus: Signal-Ton bei neuen Benachrichtigungen"
+            >
+              {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+              {soundEnabled ? "Signal an" : "Signal aus"}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="rounded-full bg-secondary px-3 py-2 text-xs font-medium flex items-center gap-1.5"
+            >
+              <LogOut className="w-3.5 h-3.5" /> Abmelden
+            </button>
+          </div>
         </div>
         <nav className="max-w-5xl mx-auto px-4 flex gap-1">
           <TabButton active={tab === "customers"} onClick={() => setTab("customers")}>
@@ -454,6 +564,62 @@ function AdminDashboard() {
         )}
       </div>
     </main>
+      {alertNotification && (
+        <div className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-6 animate-in fade-in">
+          <div className="bg-background border-4 border-foreground rounded-3xl max-w-xl w-full p-8 text-center shadow-2xl animate-in zoom-in-95">
+            <div className="w-20 h-20 rounded-full bg-foreground text-background flex items-center justify-center mx-auto mb-5 animate-pulse">
+              <BellRing className="w-10 h-10" />
+            </div>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
+              Neue Benachrichtigung
+            </p>
+            <h2 className="text-3xl font-bold mb-3">{alertNotification.title}</h2>
+            {alertNotification.body && (
+              <p className="text-base text-muted-foreground mb-6 whitespace-pre-line">
+                {alertNotification.body}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground mb-6">
+              {format(new Date(alertNotification.created_at), "dd.MM.yyyy · HH:mm:ss", { locale: de })}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={async () => {
+                  const id = alertNotification.id;
+                  setAlertNotification(null);
+                  await supabase.from("admin_notifications").update({ read: true }).eq("id", id);
+                  setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+                }}
+                className="rounded-full bg-foreground text-background px-8 py-4 text-base font-semibold flex items-center justify-center gap-2"
+              >
+                <Check className="w-5 h-5" /> Bestätigen
+              </button>
+              {alertNotification.booking_id && (
+                <button
+                  onClick={() => {
+                    const bookingId = alertNotification.booking_id!;
+                    const booking = bookings.find((b) => b.id === bookingId);
+                    setAlertNotification(null);
+                    if (booking) {
+                      setInitialBookingId(bookingId);
+                      setSelectedCustomer(booking.user_id);
+                    }
+                  }}
+                  className="rounded-full bg-secondary px-8 py-4 text-base font-semibold"
+                >
+                  Buchung öffnen
+                </button>
+              )}
+            </div>
+            {!soundEnabled && (
+              <p className="mt-5 text-xs text-muted-foreground">
+                Tipp: „Signal an" oben aktivieren, damit das iPad einen Ton abspielt.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
