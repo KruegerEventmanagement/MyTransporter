@@ -32,6 +32,22 @@ const VEHICLE = {
   length: "6,36 m",
 };
 
+type DbVehicle = {
+  id: string;
+  name: string;
+  plate: string;
+  brand: string | null;
+  model: string | null;
+  fuel_type: string | null;
+  max_weight_kg: number | null;
+  empty_weight_kg: number | null;
+  payload_kg: number | null;
+  power_kw: number | null;
+  seats: number | null;
+  photo_urls: string[];
+  is_active: boolean;
+};
+
 const AUTH_CONFIRM_URL = "https://www.mytransporter.org/auth/confirm";
 const AUTH_BOOKING_DRAFT_KEY = "mt_auth_booking_draft";
 const RESEND_COOLDOWN_SECONDS = 60;
