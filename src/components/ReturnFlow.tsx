@@ -73,6 +73,14 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
     PHOTO_SIDES.forEach((s) => (next[s.id] = placeholder));
     setPhotos(next);
     setInteriorPhoto(placeholder);
+  };
+
+  const fillTestKm = () => {
+    const placeholder =
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(
+        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='%23e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%23333'>TEST</text></svg>`
+      );
     setOdometerPhoto(placeholder);
     if (!endKm) setEndKm("42920");
   };
@@ -309,6 +317,14 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
         />
         <h3 className="text-xl font-bold text-foreground mb-2">Kilometerstand (Ende)</h3>
         <p className="text-sm text-muted-foreground mb-6">Trage den aktuellen Kilometerstand ein.</p>
+        {isAdmin && (
+          <button
+            onClick={fillTestKm}
+            className="w-full mb-4 rounded-full border border-dashed border-foreground py-2 text-xs font-medium text-foreground hover:bg-secondary"
+          >
+            🧪 Admin-Testmodus: Kilometerstand & Tacho-Foto fiktiv ausfüllen
+          </button>
+        )}
         <input
           type="number"
           value={endKm}
