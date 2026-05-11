@@ -533,43 +533,91 @@ export function BookingSection() {
         {/* Step 2: Vehicle */}
         {step === 2 && (
           <div className="mt-12 max-w-2xl mx-auto animate-fade-in-up">
-            <p className="text-center text-muted-foreground text-lg mb-8">Dein Fahrzeug</p>
+            <p className="text-center text-muted-foreground text-lg mb-2">Dein Fahrzeug</p>
+            {vehicles.length > 1 && (
+              <p className="text-center text-xs text-muted-foreground mb-6">
+                {vehicleIdx + 1} / {vehicles.length} – wische oder nutze die Pfeile
+              </p>
+            )}
 
-            <div className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
-              <img
-                src={fiatDucato}
-                alt="Fiat Ducato L4H2"
-                className="w-full h-64 object-cover"
-                width={1024}
-                height={576}
-                loading="lazy"
-              />
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-2xl font-bold text-foreground">{VEHICLE.name}</h3>
-                  <span className="px-4 py-1.5 rounded-full bg-secondary text-sm font-mono font-medium text-foreground">
-                    {VEHICLE.plate}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Kilometerstand</p>
-                    <p className="font-medium text-foreground">{VEHICLE.km.toLocaleString("de-DE")} km</p>
+            <div className="relative">
+              {vehicles.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setVehicleIdx((i) => (i - 1 + vehicles.length) % vehicles.length)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/90 border border-border shadow flex items-center justify-center hover:bg-background"
+                    aria-label="Vorheriges Fahrzeug"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVehicleIdx((i) => (i + 1) % vehicles.length)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/90 border border-border shadow flex items-center justify-center hover:bg-background"
+                    aria-label="Nächstes Fahrzeug"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+
+              <div className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
+                <img
+                  src={displayVehicle.photo}
+                  alt={displayVehicle.name}
+                  className="w-full h-64 object-cover"
+                  width={1024}
+                  height={576}
+                  loading="lazy"
+                />
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-2xl font-bold text-foreground">{displayVehicle.name}</h3>
+                    <span className="px-4 py-1.5 rounded-full bg-secondary text-sm font-mono font-medium text-foreground">
+                      {displayVehicle.plate}
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Kraftstoff</p>
-                    <p className="font-medium text-foreground">{VEHICLE.fuel}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Nutzlast</p>
-                    <p className="font-medium text-foreground">{VEHICLE.payload}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Länge</p>
-                    <p className="font-medium text-foreground">{VEHICLE.length}</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Kraftstoff</p>
+                      <p className="font-medium text-foreground">{displayVehicle.fuel}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Nutzlast</p>
+                      <p className="font-medium text-foreground">{displayVehicle.payload}</p>
+                    </div>
+                    {displayVehicle.power && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Leistung</p>
+                        <p className="font-medium text-foreground">{displayVehicle.power} kW</p>
+                      </div>
+                    )}
+                    {displayVehicle.seats && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Sitzplätze</p>
+                        <p className="font-medium text-foreground">{displayVehicle.seats}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+
+              {vehicles.length > 1 && (
+                <div className="flex justify-center gap-1.5 mt-4">
+                  {vehicles.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setVehicleIdx(i)}
+                      aria-label={`Fahrzeug ${i + 1}`}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        i === vehicleIdx ? "bg-foreground w-6" : "bg-border"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Summary */}
