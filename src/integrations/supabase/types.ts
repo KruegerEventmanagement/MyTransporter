@@ -258,6 +258,111 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicles: {
+        Row: {
+          axles: number | null
+          body_type: string | null
+          brand: string | null
+          color: string | null
+          created_at: string
+          displacement_ccm: number | null
+          empty_weight_kg: number | null
+          first_registration: string | null
+          fuel_type: string | null
+          hsn: string | null
+          id: string
+          is_active: boolean
+          manufacturer: string | null
+          max_weight_kg: number | null
+          model: string | null
+          name: string
+          notes: string | null
+          owner_name: string | null
+          payload_kg: number | null
+          photo_urls: string[]
+          plate: string
+          power_kw: number | null
+          registration_doc_url: string | null
+          seats: number | null
+          tire_size: string | null
+          trailer_load_braked_kg: number | null
+          trailer_load_unbraked_kg: number | null
+          tsn: string | null
+          type_variant_version: string | null
+          updated_at: string
+          vehicle_class: string | null
+          vin: string | null
+        }
+        Insert: {
+          axles?: number | null
+          body_type?: string | null
+          brand?: string | null
+          color?: string | null
+          created_at?: string
+          displacement_ccm?: number | null
+          empty_weight_kg?: number | null
+          first_registration?: string | null
+          fuel_type?: string | null
+          hsn?: string | null
+          id?: string
+          is_active?: boolean
+          manufacturer?: string | null
+          max_weight_kg?: number | null
+          model?: string | null
+          name?: string
+          notes?: string | null
+          owner_name?: string | null
+          payload_kg?: number | null
+          photo_urls?: string[]
+          plate?: string
+          power_kw?: number | null
+          registration_doc_url?: string | null
+          seats?: number | null
+          tire_size?: string | null
+          trailer_load_braked_kg?: number | null
+          trailer_load_unbraked_kg?: number | null
+          tsn?: string | null
+          type_variant_version?: string | null
+          updated_at?: string
+          vehicle_class?: string | null
+          vin?: string | null
+        }
+        Update: {
+          axles?: number | null
+          body_type?: string | null
+          brand?: string | null
+          color?: string | null
+          created_at?: string
+          displacement_ccm?: number | null
+          empty_weight_kg?: number | null
+          first_registration?: string | null
+          fuel_type?: string | null
+          hsn?: string | null
+          id?: string
+          is_active?: boolean
+          manufacturer?: string | null
+          max_weight_kg?: number | null
+          model?: string | null
+          name?: string
+          notes?: string | null
+          owner_name?: string | null
+          payload_kg?: number | null
+          photo_urls?: string[]
+          plate?: string
+          power_kw?: number | null
+          registration_doc_url?: string | null
+          seats?: number | null
+          tire_size?: string | null
+          trailer_load_braked_kg?: number | null
+          trailer_load_unbraked_kg?: number | null
+          tsn?: string | null
+          type_variant_version?: string | null
+          updated_at?: string
+          vehicle_class?: string | null
+          vin?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
