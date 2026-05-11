@@ -561,7 +561,62 @@ function AdminDashboard() {
         )}
       </div>
     </main>
-  {/* placeholder */}
+      {alertNotification && (
+        <div className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-6 animate-in fade-in">
+          <div className="bg-background border-4 border-foreground rounded-3xl max-w-xl w-full p-8 text-center shadow-2xl animate-in zoom-in-95">
+            <div className="w-20 h-20 rounded-full bg-foreground text-background flex items-center justify-center mx-auto mb-5 animate-pulse">
+              <BellRing className="w-10 h-10" />
+            </div>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
+              Neue Benachrichtigung
+            </p>
+            <h2 className="text-3xl font-bold mb-3">{alertNotification.title}</h2>
+            {alertNotification.body && (
+              <p className="text-base text-muted-foreground mb-6 whitespace-pre-line">
+                {alertNotification.body}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground mb-6">
+              {format(new Date(alertNotification.created_at), "dd.MM.yyyy · HH:mm:ss", { locale: de })}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={async () => {
+                  const id = alertNotification.id;
+                  setAlertNotification(null);
+                  await supabase.from("admin_notifications").update({ read: true }).eq("id", id);
+                  setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+                }}
+                className="rounded-full bg-foreground text-background px-8 py-4 text-base font-semibold flex items-center justify-center gap-2"
+              >
+                <Check className="w-5 h-5" /> Bestätigen
+              </button>
+              {alertNotification.booking_id && (
+                <button
+                  onClick={() => {
+                    const bookingId = alertNotification.booking_id!;
+                    const booking = bookings.find((b) => b.id === bookingId);
+                    setAlertNotification(null);
+                    if (booking) {
+                      setInitialBookingId(bookingId);
+                      setSelectedCustomer(booking.user_id);
+                    }
+                  }}
+                  className="rounded-full bg-secondary px-8 py-4 text-base font-semibold"
+                >
+                  Buchung öffnen
+                </button>
+              )}
+            </div>
+            {!soundEnabled && (
+              <p className="mt-5 text-xs text-muted-foreground">
+                Tipp: „Signal an" oben aktivieren, damit das iPad einen Ton abspielt.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
