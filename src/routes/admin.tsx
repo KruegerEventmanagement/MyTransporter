@@ -105,7 +105,7 @@ function AdminDashboard() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const beepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
 
   const checkAdmin = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -132,7 +132,9 @@ function AdminDashboard() {
     if (!isAdmin) return;
     const requestWakeLock = async () => {
       try {
-        const nav = navigator as Navigator & { wakeLock?: { request: (t: string) => Promise<WakeLockSentinel> } };
+        const nav = navigator as Navigator & {
+          wakeLock?: { request: (t: string) => Promise<{ release: () => Promise<void> }> };
+        };
         if (nav.wakeLock?.request) {
           wakeLockRef.current = await nav.wakeLock.request("screen");
         }
