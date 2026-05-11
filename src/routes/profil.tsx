@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, Car, Wallet, Route as RouteIcon, Calendar, Hash, MapPin, X } from "lucide-react";
+import { ChevronLeft, Car, Wallet, Route as RouteIcon, Calendar, Hash, MapPin, X, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -40,6 +40,7 @@ function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const loadBookings = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -67,6 +68,12 @@ function ProfilePage() {
       if (!mounted) return;
       if (p.data) setProfile(p.data as Profile);
       if (b.data) setBookings(b.data as Booking[]);
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin");
+      if (mounted) setIsAdmin(!!roles && roles.length > 0);
       setLoading(false);
     })();
     return () => { mounted = false; };
@@ -117,6 +124,15 @@ function ProfilePage() {
             <h1 className="text-base font-bold truncate">{displayName}</h1>
             <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
           </div>
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-foreground text-background px-3 py-1.5 text-xs font-medium hover:opacity-90"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              Admin
+            </Link>
+          )}
         </div>
       </header>
 
