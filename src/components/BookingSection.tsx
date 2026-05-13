@@ -11,6 +11,7 @@ import { PreDriveFlow } from "./PreDriveFlow";
 import { ActiveDriveScreen } from "./ActiveDriveScreen";
 import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
+import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
 
 const PRICING = [
   { id: "6h", hours: 6, price: 100, freeKm: 300, label: "6 Stunden", returnRule: "Rückgabe bis spätestens 22:00 Uhr" },
@@ -83,6 +84,54 @@ export function BookingSection() {
   const [profileComplete, setProfileComplete] = useState(false);
   const [vehicles, setVehicles] = useState<DbVehicle[]>([]);
   const [vehicleIdx, setVehicleIdx] = useState(0);
+  const [busySlots, setBusySlots] = useState<BusySlot[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    getBusySlots()
+      .then((slots) => {
+        if (alive) setBusySlots(slots);
+      })
+      .catch((e) => console.warn("Belegte Slots konnten nicht geladen werden:", e));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const currentPlate = vehicles[vehicleIdx]?.plate ?? "";
+  const slotsForVehicle = busySlots.filter(
+    (s) => !currentPlate || !s.vehiclePlate || s.vehiclePlate === currentPlate,
+  );
+
+  // Prüft, ob [start, start+hours) sich mit einer belegten Periode überschneidet
+  const overlapsBusy = (startMs: number, hours: number) => {
+    const endMs = startMs + hours * 3600_000;
+    return slotsForVehicle.some((s) => {
+      const bs = new Date(s.start).getTime();
+      const be = new Date(s.end).getTime();
+      return startMs < be && endMs > bs;
+    });
+  };
+
+  const isHourBusy = (d: Date, h: number) => {
+    const start = new Date(d);
+    start.setHours(h, 0, 0, 0);
+    // Eine Startstunde ist belegt, wenn sie innerhalb einer fremden Buchung liegt
+    return slotsForVehicle.some((s) => {
+      const bs = new Date(s.start).getTime();
+      const be = new Date(s.end).getTime();
+      return start.getTime() >= bs && start.getTime() < be;
+    });
+  };
+
+  const planHours = (planId: string) => (planId === "6h" ? 6 : 24);
+
+  const isPlanBlocked = (planId: string) => {
+    if (!date || startHour === null) return false;
+    const start = new Date(date);
+    start.setHours(startHour, 0, 0, 0);
+    return overlapsBusy(start.getTime(), planHours(planId));
+  };
 
   useEffect(() => {
     let alive = true;
