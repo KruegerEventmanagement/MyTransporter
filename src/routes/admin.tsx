@@ -872,33 +872,7 @@ function CustomerDetail({
                         <Stat label="End-KM" value={b.end_km ?? "–"} />
                       </div>
 
-                      <div className="p-4 rounded-2xl bg-secondary flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold flex items-center gap-1.5">
-                            <Wallet className="w-4 h-4" /> Kaution {b.deposit} €
-                          </p>
-                          {b.deposit_status === "released" ? (
-                            <p className="text-xs text-muted-foreground">
-                              Ausgezahlt am{" "}
-                              {b.deposit_released_at
-                                ? format(new Date(b.deposit_released_at), "dd.MM.yyyy HH:mm", { locale: de })
-                                : "–"}
-                            </p>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">
-                              Einbehalten · Auszahlung 3–7 Werktage nach Freigabe
-                            </p>
-                          )}
-                        </div>
-                        {b.deposit_status !== "released" && b.status === "completed" && (
-                          <button
-                            onClick={() => onReleaseDeposit(b.id)}
-                            className="rounded-full bg-foreground text-background px-3 py-2 text-xs font-semibold whitespace-nowrap"
-                          >
-                            Auszahlen
-                          </button>
-                        )}
-                      </div>
+                      <SettlementPanel booking={b} onChanged={onReloadBookings} />
 
                       {b.status === "returning" && (
                         <button
