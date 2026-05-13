@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import Stripe from "stripe";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 type PlanKey = "rent_6h" | "rent_24h" | "rent_km";
 
@@ -68,10 +70,152 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
       line_items,
       success_url: data.successUrl,
       cancel_url: data.cancelUrl,
+      customer_creation: "always",
+      payment_intent_data: {
+        setup_future_usage: "off_session",
+      },
       ...(data.customerEmail && { customer_email: data.customerEmail }),
       ...(data.userId && { metadata: { userId: data.userId, plan: data.plan } }),
     });
 
     if (!session.url) throw new Error("Stripe hat keine Checkout-URL zurückgegeben");
     return session.url;
+  });
+
+/** Liest Customer / PaymentIntent / PaymentMethod aus einer abgeschlossenen Session. */
+export const getCheckoutSessionDetails = createServerFn({ method: "POST" })
+  .inputValidator((data: { sessionId: string }) => {
+    if (!data.sessionId) throw new Error("sessionId fehlt");
+    return data;
+  })
+  .handler(async ({ data }) => {
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.retrieve(data.sessionId, {
+      expand: ["payment_intent"],
+    });
+    const pi = session.payment_intent as Stripe.PaymentIntent | null;
+    return {
+      customerId: typeof session.customer === "string" ? session.customer : session.customer?.id ?? null,
+      paymentIntentId: pi?.id ?? null,
+      paymentMethodId: typeof pi?.payment_method === "string" ? pi.payment_method : pi?.payment_method?.id ?? null,
+      paymentStatus: session.payment_status,
+    };
+  });
+
+async function assertAdmin(supabase: {
+  from: (t: string) => {
+    select: (s: string) => {
+      eq: (c: string, v: string) => {
+        eq: (c: string, v: string) => {
+          maybeSingle: () => Promise<{ data: unknown }>;
+        };
+      };
+    };
+  };
+}, userId: string) {
+  const { data } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+  if (!data) throw new Error("Nicht autorisiert");
+}
+
+/** Bucht Mehrkilometer (oder beliebigen Restbetrag) off-session von der gespeicherten Karte ab. */
+export const chargeBookingExtra = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { bookingId: string; amountCents: number; description?: string }) => {
+    if (!data.bookingId) throw new Error("bookingId fehlt");
+    if (!Number.isInteger(data.amountCents) || data.amountCents < 50) {
+      throw new Error("Betrag muss mindestens 0,50 € sein");
+    }
+    if (data.amountCents > 500_00) throw new Error("Betrag zu hoch (max. 500 €)");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { data: booking, error } = await supabaseAdmin
+      .from("bookings")
+      .select("stripe_customer_id, stripe_payment_method_id, extra_charge_status")
+      .eq("id", data.bookingId)
+      .maybeSingle();
+    if (error || !booking) throw new Error("Buchung nicht gefunden");
+    if (booking.extra_charge_status === "succeeded") {
+      throw new Error("Mehrkilometer wurden bereits abgebucht");
+    }
+    if (!booking.stripe_customer_id || !booking.stripe_payment_method_id) {
+      throw new Error("Keine gespeicherte Zahlungsmethode für diese Buchung");
+    }
+    const stripe = getStripe();
+    const intent = await stripe.paymentIntents.create({
+      amount: data.amountCents,
+      currency: "eur",
+      customer: booking.stripe_customer_id,
+      payment_method: booking.stripe_payment_method_id,
+      off_session: true,
+      confirm: true,
+      description: data.description ?? "Mehrkilometer / Zusatzkosten",
+      metadata: { bookingId: data.bookingId, kind: "extra_km" },
+    });
+    await supabaseAdmin
+      .from("bookings")
+      .update({
+        extra_charge_intent_id: intent.id,
+        extra_charge_status: intent.status,
+        extra_charge_cents: data.amountCents,
+      })
+      .eq("id", data.bookingId);
+    return { status: intent.status, intentId: intent.id };
+  });
+
+/** Behält einen Teil der Kaution ein und erstattet den Rest. deductCents = einbehaltener Betrag. */
+export const settleDeposit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { bookingId: string; deductCents: number }) => {
+    if (!data.bookingId) throw new Error("bookingId fehlt");
+    if (!Number.isInteger(data.deductCents) || data.deductCents < 0) {
+      throw new Error("Abzug ungültig");
+    }
+    if (data.deductCents > DEPOSIT_CENTS) {
+      throw new Error("Abzug darf die Kaution (200 €) nicht übersteigen");
+    }
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { data: booking, error } = await supabaseAdmin
+      .from("bookings")
+      .select("stripe_payment_intent_id, deposit_status")
+      .eq("id", data.bookingId)
+      .maybeSingle();
+    if (error || !booking) throw new Error("Buchung nicht gefunden");
+    if (booking.deposit_status === "released") {
+      throw new Error("Kaution wurde bereits abgerechnet");
+    }
+    if (!booking.stripe_payment_intent_id) {
+      throw new Error("Keine Stripe-Zahlung für diese Buchung gefunden");
+    }
+    const refundCents = DEPOSIT_CENTS - data.deductCents;
+    const stripe = getStripe();
+    let refundId: string | null = null;
+    if (refundCents > 0) {
+      const refund = await stripe.refunds.create({
+        payment_intent: booking.stripe_payment_intent_id,
+        amount: refundCents,
+        metadata: { bookingId: data.bookingId, kind: "deposit_partial" },
+      });
+      refundId = refund.id;
+    }
+    await supabaseAdmin
+      .from("bookings")
+      .update({
+        deposit_status: "released",
+        deposit_released_at: new Date().toISOString(),
+        deposit_released_by: context.userId,
+        deposit_deducted_cents: data.deductCents,
+        deposit_refund_id: refundId,
+      })
+      .eq("id", data.bookingId);
+    return { refundCents, refundId };
   });
