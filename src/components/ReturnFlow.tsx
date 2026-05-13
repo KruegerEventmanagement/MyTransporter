@@ -416,6 +416,28 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
           Lege den Tankbeleg gut sichtbar in den Rahmen – das Foto wird automatisch wie ein Scan in S/W aufbereitet.
         </p>
 
+        {kmSummary && (
+          <div className="mb-6 p-4 rounded-2xl border border-border bg-secondary/50">
+            <p className="text-sm font-medium text-foreground mb-2">Kilometer-Abrechnung</p>
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <div className="flex justify-between"><span>Gefahren</span><span className="text-foreground">{kmSummary.driven} km</span></div>
+              {kmSummary.free > 0 && (
+                <div className="flex justify-between"><span>Inklusive Freikilometer</span><span className="text-foreground">{kmSummary.free} km</span></div>
+              )}
+              <div className="flex justify-between"><span>{planId === "km" ? "Berechnete Kilometer" : "Mehrkilometer"}</span><span className="text-foreground">{kmSummary.extra} km</span></div>
+              <div className="flex justify-between font-medium pt-2 border-t border-border">
+                <span className="text-foreground">{kmSummary.extra > 0 ? "Aufpreis (0,90 €/km)" : "Aufpreis"}</span>
+                <span className="text-foreground">{(kmSummary.chargeCents / 100).toFixed(2)} €</span>
+              </div>
+            </div>
+            {kmSummary.chargeCents > 0 && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Der Betrag wird nach Bestätigung der Rückgabe von der Kaution einbehalten bzw. separat über deine hinterlegte Zahlungsmethode abgerechnet.
+              </p>
+            )}
+          </div>
+        )}
+
         {isAdmin && (
           <button
             onClick={() => {
