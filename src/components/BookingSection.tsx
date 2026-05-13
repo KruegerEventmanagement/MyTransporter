@@ -510,13 +510,18 @@ export function BookingSection() {
             <div className="space-y-4">
               {availablePlans.map((plan) => {
                 const idx = PRICING.findIndex((p) => p.id === plan.id);
+                const blocked = isPlanBlocked(plan.id);
                 return (
                 <button
                   key={plan.id}
-                  onClick={() => setSelectedPlan(idx)}
+                  onClick={() => !blocked && setSelectedPlan(idx)}
+                  disabled={blocked}
+                  title={blocked ? "Zeitraum überschneidet sich mit einer bestehenden Buchung" : undefined}
                   className={`w-full p-6 rounded-2xl border-2 text-left transition-all ${
                     selectedPlan === idx
                       ? "border-accent bg-accent/5 shadow-md"
+                      : blocked
+                      ? "border-border opacity-40 cursor-not-allowed"
                       : "border-border hover:border-accent/50"
                   }`}
                 >
@@ -526,6 +531,9 @@ export function BookingSection() {
                       <p className="text-sm text-muted-foreground">{plan.returnRule}</p>
                       {plan.freeKm > 0 && (
                         <p className="text-xs text-foreground/80 mt-1">{plan.freeKm} km inklusive · danach 0,90 €/km</p>
+                      )}
+                      {blocked && (
+                        <p className="text-xs text-destructive mt-1">In diesem Zeitraum bereits gebucht</p>
                       )}
                     </div>
                     {plan.price > 0 ? (
