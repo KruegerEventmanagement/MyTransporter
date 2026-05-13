@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ProfilRouteImport } from './routes/profil'
 import { Route as KontaktRouteImport } from './routes/kontakt'
 import { Route as ImpressumRouteImport } from './routes/impressum'
@@ -21,6 +22,11 @@ import { Route as TripBookingIdRouteImport } from './routes/trip.$bookingId'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfilRoute = ProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
   '/profil': typeof ProfilRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
   '/profil': typeof ProfilRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
   '/profil': typeof ProfilRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/impressum'
     | '/kontakt'
     | '/profil'
+    | '/sitemap.xml'
     | '/auth/confirm'
     | '/checkout/return'
     | '/trip/$bookingId'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/impressum'
     | '/kontakt'
     | '/profil'
+    | '/sitemap.xml'
     | '/auth/confirm'
     | '/checkout/return'
     | '/trip/$bookingId'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/impressum'
     | '/kontakt'
     | '/profil'
+    | '/sitemap.xml'
     | '/auth/confirm'
     | '/checkout/return'
     | '/trip/$bookingId'
@@ -168,6 +180,7 @@ export interface RootRouteChildren {
   ImpressumRoute: typeof ImpressumRoute
   KontaktRoute: typeof KontaktRoute
   ProfilRoute: typeof ProfilRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   AuthConfirmRoute: typeof AuthConfirmRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   TripBookingIdRoute: typeof TripBookingIdRoute
@@ -175,6 +188,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profil': {
       id: '/profil'
       path: '/profil'
@@ -264,6 +284,7 @@ const rootRouteChildren: RootRouteChildren = {
   ImpressumRoute: ImpressumRoute,
   KontaktRoute: KontaktRoute,
   ProfilRoute: ProfilRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   AuthConfirmRoute: AuthConfirmRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   TripBookingIdRoute: TripBookingIdRoute,
@@ -271,13 +292,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
