@@ -7,7 +7,7 @@ const FAQS = [
   },
   {
     q: "Was kostet die Transporter-Miete?",
-    a: "Bei MyTransporter mietest du einen Fiat Ducato L4H2 ab 100 € für 6 Stunden oder 150 € für 24 Stunden. Alternativ gibt es eine reine Kilometer-Abrechnung zu 0,90 € pro Kilometer. Die Preise sind transparent, ohne versteckte Kosten und ideal für günstige Umzüge in Leonberg, Stuttgart und Umgebung.",
+    a: "Bei MyTransporter mietest du einen Fiat Ducato L4H2 ab 100 € für 6 Stunden (inkl. 300 Freikilometern) oder ab 150 € für 24 Stunden (inkl. 500 Freikilometern). Jeder weitere Kilometer kostet 0,90 €. Alternativ gibt es eine reine Kilometer-Abrechnung zu 0,90 € pro Kilometer. Die Preise sind transparent, ohne versteckte Kosten und ideal für günstige Umzüge in Leonberg, Stuttgart und Umgebung.",
   },
   {
     q: "Gibt es eine Kaution?",
@@ -156,7 +156,7 @@ function FaqPage() {
 const SEO_BLOCKS = [
   {
     h: "Transporter mieten in Leonberg",
-    p: "MyTransporter ist deine lokale Transporter-Vermietung in Leonberg. Direkt in der Römerstraße 36 holst du deinen Fiat Ducato L4H2 ab – ideal für Umzüge, Möbeltransporte oder spontane Fahrten in der Region. Buchung online in unter 2 Minuten, transparente Preise ab 100 €.",
+    p: "MyTransporter ist deine lokale Transporter-Vermietung in Leonberg. Direkt in der Römerstraße 36 holst du deinen Fiat Ducato L4H2 ab – ideal für Umzüge, Möbeltransporte oder spontane Fahrten in der Region. Buchung online in unter 2 Minuten, transparente Preise ab 100 € inklusive 300 Freikilometern.",
   },
   {
     h: "Transporter mieten in Stuttgart & Umgebung",
@@ -176,7 +176,7 @@ const SEO_BLOCKS = [
   },
   {
     h: "Preise & Kaution – alles transparent",
-    p: "6 Stunden für 100 €, 24 Stunden für 150 € oder reine Kilometer-Abrechnung zu 0,90 € / km. Die Kaution beträgt 200 € und wird nach unbeschädigter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
+    p: "6 Stunden für 100 € (300 Freikilometer inklusive), 24 Stunden für 150 € (500 Freikilometer inklusive) oder reine Kilometer-Abrechnung zu 0,90 € / km. Jeder zusätzliche Kilometer über das Freikontingent hinaus kostet 0,90 €. Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer und vollgetankter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
   },
   {
     h: "Ablauf der Vermietung",
