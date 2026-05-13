@@ -384,8 +384,8 @@ function AdminDashboard() {
           setSelectedCustomer(null);
           setInitialBookingId(null);
         }}
-        onReleaseDeposit={releaseDeposit}
         onConfirmReturn={confirmReturn}
+        onReloadBookings={loadAll}
       />
     );
   }
@@ -678,14 +678,14 @@ function CustomerDetail({
   customer,
   initialBookingId,
   onBack,
-  onReleaseDeposit,
   onConfirmReturn,
+  onReloadBookings,
 }: {
   customer: { id: string; profile: Profile | undefined; bookings: Booking[] };
   initialBookingId?: string | null;
   onBack: () => void;
-  onReleaseDeposit: (id: string) => Promise<void>;
   onConfirmReturn: (id: string) => Promise<void>;
+  onReloadBookings: () => Promise<void>;
 }) {
   const [photos, setPhotos] = useState<TripPhoto[]>([]);
   const [gps, setGps] = useState<GpsPoint[]>([]);
