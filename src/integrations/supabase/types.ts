@@ -51,10 +51,15 @@ export type Database = {
         Row: {
           created_at: string
           deposit: number
+          deposit_deducted_cents: number | null
+          deposit_refund_id: string | null
           deposit_released_at: string | null
           deposit_released_by: string | null
           deposit_status: string
           end_km: number | null
+          extra_charge_cents: number | null
+          extra_charge_intent_id: string | null
+          extra_charge_status: string | null
           extra_km: number | null
           extra_km_charge_cents: number | null
           free_km: number
@@ -70,6 +75,9 @@ export type Database = {
           start_hour: number
           start_km: number | null
           status: string
+          stripe_customer_id: string | null
+          stripe_payment_intent_id: string | null
+          stripe_payment_method_id: string | null
           tank_level_end: string | null
           tank_level_start: string | null
           updated_at: string
@@ -80,10 +88,15 @@ export type Database = {
         Insert: {
           created_at?: string
           deposit?: number
+          deposit_deducted_cents?: number | null
+          deposit_refund_id?: string | null
           deposit_released_at?: string | null
           deposit_released_by?: string | null
           deposit_status?: string
           end_km?: number | null
+          extra_charge_cents?: number | null
+          extra_charge_intent_id?: string | null
+          extra_charge_status?: string | null
           extra_km?: number | null
           extra_km_charge_cents?: number | null
           free_km?: number
@@ -99,6 +112,9 @@ export type Database = {
           start_hour: number
           start_km?: number | null
           status?: string
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_payment_method_id?: string | null
           tank_level_end?: string | null
           tank_level_start?: string | null
           updated_at?: string
@@ -109,10 +125,15 @@ export type Database = {
         Update: {
           created_at?: string
           deposit?: number
+          deposit_deducted_cents?: number | null
+          deposit_refund_id?: string | null
           deposit_released_at?: string | null
           deposit_released_by?: string | null
           deposit_status?: string
           end_km?: number | null
+          extra_charge_cents?: number | null
+          extra_charge_intent_id?: string | null
+          extra_charge_status?: string | null
           extra_km?: number | null
           extra_km_charge_cents?: number | null
           free_km?: number
@@ -128,6 +149,9 @@ export type Database = {
           start_hour?: number
           start_km?: number | null
           status?: string
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_payment_method_id?: string | null
           tank_level_end?: string | null
           tank_level_start?: string | null
           updated_at?: string
