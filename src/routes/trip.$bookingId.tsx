@@ -23,6 +23,8 @@ interface Booking {
   vehicle_name: string;
   vehicle_plate: string;
   start_km: number | null;
+  free_km?: number | null;
+  km_price_cents?: number | null;
 }
 
 function TripPage() {
@@ -119,6 +121,10 @@ function TripPage() {
         <main className="min-h-screen bg-background py-12 px-4">
           <ReturnFlow
             bookingId={booking.id}
+            planId={booking.plan_id}
+            startKm={booking.start_km ?? startKm}
+            freeKm={booking.free_km ?? (booking.plan_id === "6h" ? 300 : booking.plan_id === "24h" ? 500 : 0)}
+            kmPriceCents={booking.km_price_cents ?? 90}
             onComplete={() => setPhase("done")}
           />
         </main>
