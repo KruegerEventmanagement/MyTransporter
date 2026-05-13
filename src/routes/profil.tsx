@@ -227,7 +227,11 @@ function computeCancellationFee(b: Booking): { hours: number; fee: number; start
   const startsAt = new Date(`${b.start_date}T${String(b.start_hour).padStart(2, "0")}:00:00`);
   const diffMs = startsAt.getTime() - Date.now();
   const hours = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60)));
-  const fee = hours; // 1 € pro Stunde
+  // Kostenlos ab 13 h vor Abfahrt. Innerhalb von 12 h: 1 € (12 h vorher) bis 12 € (1 h vorher / weniger).
+  let fee: number;
+  if (hours >= 13) fee = 0;
+  else if (hours <= 1) fee = 12;
+  else fee = 13 - hours;
   return { hours, fee, startsAt };
 }
 
@@ -331,7 +335,9 @@ function BookingRow({ booking: b, onCancelled }: { booking: Booking; onCancelled
           </p>
           <p className="text-xs text-muted-foreground">
             Stornogebühr: <span className="text-foreground font-bold">{fee.toFixed(2)} €</span>{" "}
-            (1 € pro Stunde bis Abfahrt)
+            {fee === 0
+              ? "(kostenlos – mehr als 12 h vor Abfahrt)"
+              : "(max. 12 € – 1 € bei 12 h, +1 € pro Stunde näher an Abfahrt)"}
           </p>
           {error && <p className="text-xs text-destructive">{error}</p>}
           <div className="flex gap-2 pt-1">
