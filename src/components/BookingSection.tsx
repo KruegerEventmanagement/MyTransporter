@@ -442,11 +442,12 @@ export function BookingSection() {
                         {canStartNow && (
                           <button
                             onClick={() => setStartHour(currentHour)}
+                            disabled={isHourBusy(date, currentHour)}
                             className={`mb-3 w-full py-3 px-4 rounded-xl text-sm font-bold transition-all ${
                               startHour === currentHour
                                 ? "bg-accent text-accent-foreground shadow-md"
                                 : "bg-foreground text-background hover:opacity-90"
-                            }`}
+                            } disabled:opacity-30 disabled:cursor-not-allowed disabled:line-through`}
                           >
                             ⚡ Jetzt sofort starten ({String(currentHour).padStart(2, "0")}:
                             {String(now.getMinutes()).padStart(2, "0")} Uhr)
@@ -454,19 +455,26 @@ export function BookingSection() {
                         )}
                         {visibleHours.length > 0 ? (
                           <div className="grid grid-cols-5 gap-2">
-                            {visibleHours.map((h) => (
-                              <button
-                                key={h}
-                                onClick={() => setStartHour(h)}
-                                className={`py-2 px-3 rounded-xl text-sm font-medium transition-all ${
-                                  startHour === h
-                                    ? "bg-accent text-accent-foreground shadow-md"
-                                    : "bg-secondary text-foreground hover:bg-accent/20"
-                                }`}
-                              >
-                                {h}:00
-                              </button>
-                            ))}
+                            {visibleHours.map((h) => {
+                              const busy = isHourBusy(date, h);
+                              return (
+                                <button
+                                  key={h}
+                                  onClick={() => setStartHour(h)}
+                                  disabled={busy}
+                                  title={busy ? "Bereits gebucht" : undefined}
+                                  className={`py-2 px-3 rounded-xl text-sm font-medium transition-all ${
+                                    startHour === h
+                                      ? "bg-accent text-accent-foreground shadow-md"
+                                      : busy
+                                      ? "bg-secondary/40 text-muted-foreground line-through cursor-not-allowed"
+                                      : "bg-secondary text-foreground hover:bg-accent/20"
+                                  }`}
+                                >
+                                  {h}:00
+                                </button>
+                              );
+                            })}
                           </div>
                         ) : (
                           !canStartNow && (
