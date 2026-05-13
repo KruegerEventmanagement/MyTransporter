@@ -19,12 +19,16 @@ const POST_ODOMETER_ID = "post_odometer";
 
 interface ReturnFlowProps {
   bookingId: string;
+  planId?: string;
+  startKm?: number | null;
+  freeKm?: number | null;
+  kmPriceCents?: number | null;
   onComplete: (returnCode: string) => void;
 }
 
 type ReturnStep = "photos" | "km" | "receipt" | "code" | "done";
 
-export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
+export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, onComplete }: ReturnFlowProps) {
   const [returnStep, setReturnStep] = useState<ReturnStep>("photos");
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [interiorPhoto, setInteriorPhoto] = useState<string | null>(null);
@@ -35,6 +39,12 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
   const [returnCode, setReturnCode] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [kmSummary, setKmSummary] = useState<{
+    driven: number;
+    free: number;
+    extra: number;
+    chargeCents: number;
+  } | null>(null);
   const [currentTarget, setCurrentTarget] = useState<
     | { kind: "side"; id: string }
     | { kind: "interior" }
@@ -155,10 +165,30 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
       : "Richte das Fahrzeug an der Vorlage aus";
 
   const handleSubmitKm = async () => {
+    const end = parseInt(endKm);
+    const start = typeof startKm === "number" ? startKm : 0;
+    const free = typeof freeKm === "number" ? freeKm : planId === "6h" ? 300 : planId === "24h" ? 500 : 0;
+    const pricePerKmCents = typeof kmPriceCents === "number" ? kmPriceCents : 90;
+    const driven = Math.max(0, end - start);
+    // Im reinen Kilometer-Tarif werden alle Kilometer berechnet (kein Freikontingent).
+    const billable = planId === "km" ? driven : Math.max(0, driven - free);
+    const chargeCents = billable * pricePerKmCents;
+
     await supabase
       .from("bookings")
-      .update({ end_km: parseInt(endKm) })
+      .update({
+        end_km: end,
+        extra_km: planId === "km" ? driven : Math.max(0, driven - free),
+        extra_km_charge_cents: chargeCents,
+      })
       .eq("id", bookingId);
+
+    setKmSummary({
+      driven,
+      free: planId === "km" ? 0 : free,
+      extra: planId === "km" ? driven : Math.max(0, driven - free),
+      chargeCents,
+    });
     setReturnStep("receipt");
   };
 
@@ -385,6 +415,28 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
         <p className="text-sm text-muted-foreground mb-6">
           Lege den Tankbeleg gut sichtbar in den Rahmen – das Foto wird automatisch wie ein Scan in S/W aufbereitet.
         </p>
+
+        {kmSummary && (
+          <div className="mb-6 p-4 rounded-2xl border border-border bg-secondary/50">
+            <p className="text-sm font-medium text-foreground mb-2">Kilometer-Abrechnung</p>
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <div className="flex justify-between"><span>Gefahren</span><span className="text-foreground">{kmSummary.driven} km</span></div>
+              {kmSummary.free > 0 && (
+                <div className="flex justify-between"><span>Inklusive Freikilometer</span><span className="text-foreground">{kmSummary.free} km</span></div>
+              )}
+              <div className="flex justify-between"><span>{planId === "km" ? "Berechnete Kilometer" : "Mehrkilometer"}</span><span className="text-foreground">{kmSummary.extra} km</span></div>
+              <div className="flex justify-between font-medium pt-2 border-t border-border">
+                <span className="text-foreground">{kmSummary.extra > 0 ? "Aufpreis (0,90 €/km)" : "Aufpreis"}</span>
+                <span className="text-foreground">{(kmSummary.chargeCents / 100).toFixed(2)} €</span>
+              </div>
+            </div>
+            {kmSummary.chargeCents > 0 && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Der Betrag wird nach Bestätigung der Rückgabe von der Kaution einbehalten bzw. separat über deine hinterlegte Zahlungsmethode abgerechnet.
+              </p>
+            )}
+          </div>
+        )}
 
         {isAdmin && (
           <button

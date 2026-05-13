@@ -43,6 +43,9 @@ function CheckoutReturn() {
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         const { data: userData } = await supabase.auth.getUser();
 
+        const freeKmFor = (planId: string) =>
+          planId === "6h" ? 300 : planId === "24h" ? 500 : 0;
+
         let bookingId: string;
         if (userData?.user) {
           const { data: booking, error: insertError } = await supabase
@@ -56,6 +59,8 @@ function CheckoutReturn() {
               start_hour: pending.startHour,
               pickup_code: code,
               status: "paid",
+              free_km: freeKmFor(pending.planId),
+              km_price_cents: 90,
               ...(pending.vehicleName ? { vehicle_name: pending.vehicleName } : {}),
               ...(pending.vehiclePlate ? { vehicle_plate: pending.vehiclePlate } : {}),
             })
