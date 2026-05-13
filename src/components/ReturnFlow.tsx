@@ -19,12 +19,16 @@ const POST_ODOMETER_ID = "post_odometer";
 
 interface ReturnFlowProps {
   bookingId: string;
+  planId?: string;
+  startKm?: number | null;
+  freeKm?: number | null;
+  kmPriceCents?: number | null;
   onComplete: (returnCode: string) => void;
 }
 
 type ReturnStep = "photos" | "km" | "receipt" | "code" | "done";
 
-export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
+export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, onComplete }: ReturnFlowProps) {
   const [returnStep, setReturnStep] = useState<ReturnStep>("photos");
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [interiorPhoto, setInteriorPhoto] = useState<string | null>(null);
@@ -35,6 +39,12 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
   const [returnCode, setReturnCode] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [kmSummary, setKmSummary] = useState<{
+    driven: number;
+    free: number;
+    extra: number;
+    chargeCents: number;
+  } | null>(null);
   const [currentTarget, setCurrentTarget] = useState<
     | { kind: "side"; id: string }
     | { kind: "interior" }
@@ -155,10 +165,30 @@ export function ReturnFlow({ bookingId, onComplete }: ReturnFlowProps) {
       : "Richte das Fahrzeug an der Vorlage aus";
 
   const handleSubmitKm = async () => {
+    const end = parseInt(endKm);
+    const start = typeof startKm === "number" ? startKm : 0;
+    const free = typeof freeKm === "number" ? freeKm : planId === "6h" ? 300 : planId === "24h" ? 500 : 0;
+    const pricePerKmCents = typeof kmPriceCents === "number" ? kmPriceCents : 90;
+    const driven = Math.max(0, end - start);
+    // Im reinen Kilometer-Tarif werden alle Kilometer berechnet (kein Freikontingent).
+    const billable = planId === "km" ? driven : Math.max(0, driven - free);
+    const chargeCents = billable * pricePerKmCents;
+
     await supabase
       .from("bookings")
-      .update({ end_km: parseInt(endKm) })
+      .update({
+        end_km: end,
+        extra_km: planId === "km" ? driven : Math.max(0, driven - free),
+        extra_km_charge_cents: chargeCents,
+      })
       .eq("id", bookingId);
+
+    setKmSummary({
+      driven,
+      free: planId === "km" ? 0 : free,
+      extra: planId === "km" ? driven : Math.max(0, driven - free),
+      chargeCents,
+    });
     setReturnStep("receipt");
   };
 
