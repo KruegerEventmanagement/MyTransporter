@@ -335,19 +335,6 @@ function AdminDashboard() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  const releaseDeposit = async (bookingId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase
-      .from("bookings")
-      .update({
-        deposit_status: "released",
-        deposit_released_at: new Date().toISOString(),
-        deposit_released_by: user?.id ?? null,
-      })
-      .eq("id", bookingId);
-    await loadAll();
-  };
-
   const confirmReturn = async (bookingId: string) => {
     await supabase.from("bookings").update({ status: "completed" }).eq("id", bookingId);
     await loadAll();
