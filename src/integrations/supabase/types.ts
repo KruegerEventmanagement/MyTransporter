@@ -55,7 +55,11 @@ export type Database = {
           deposit_released_by: string | null
           deposit_status: string
           end_km: number | null
+          extra_km: number | null
+          extra_km_charge_cents: number | null
+          free_km: number
           id: string
+          km_price_cents: number
           pickup_code: string
           plan_id: string
           plan_label: string
@@ -80,7 +84,11 @@ export type Database = {
           deposit_released_by?: string | null
           deposit_status?: string
           end_km?: number | null
+          extra_km?: number | null
+          extra_km_charge_cents?: number | null
+          free_km?: number
           id?: string
+          km_price_cents?: number
           pickup_code: string
           plan_id: string
           plan_label: string
@@ -105,7 +113,11 @@ export type Database = {
           deposit_released_by?: string | null
           deposit_status?: string
           end_km?: number | null
+          extra_km?: number | null
+          extra_km_charge_cents?: number | null
+          free_km?: number
           id?: string
+          km_price_cents?: number
           pickup_code?: string
           plan_id?: string
           plan_label?: string
