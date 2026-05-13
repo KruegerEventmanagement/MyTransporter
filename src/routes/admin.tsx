@@ -24,6 +24,9 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { AdminLogin } from "@/components/admin/AdminLogin";
 import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
+import { useServerFn } from "@tanstack/react-start";
+import { chargeBookingExtra, settleDeposit } from "@/lib/payments.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -51,6 +54,14 @@ interface Booking {
   status: string;
   remarks: string | null;
   created_at: string;
+  free_km?: number | null;
+  km_price_cents?: number | null;
+  extra_km?: number | null;
+  extra_km_charge_cents?: number | null;
+  extra_charge_status?: string | null;
+  extra_charge_cents?: number | null;
+  deposit_deducted_cents?: number | null;
+  stripe_payment_method_id?: string | null;
 }
 interface Profile {
   id: string;
@@ -324,19 +335,6 @@ function AdminDashboard() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  const releaseDeposit = async (bookingId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase
-      .from("bookings")
-      .update({
-        deposit_status: "released",
-        deposit_released_at: new Date().toISOString(),
-        deposit_released_by: user?.id ?? null,
-      })
-      .eq("id", bookingId);
-    await loadAll();
-  };
-
   const confirmReturn = async (bookingId: string) => {
     await supabase.from("bookings").update({ status: "completed" }).eq("id", bookingId);
     await loadAll();
@@ -373,8 +371,8 @@ function AdminDashboard() {
           setSelectedCustomer(null);
           setInitialBookingId(null);
         }}
-        onReleaseDeposit={releaseDeposit}
         onConfirmReturn={confirmReturn}
+        onReloadBookings={loadAll}
       />
     );
   }
@@ -667,14 +665,14 @@ function CustomerDetail({
   customer,
   initialBookingId,
   onBack,
-  onReleaseDeposit,
   onConfirmReturn,
+  onReloadBookings,
 }: {
   customer: { id: string; profile: Profile | undefined; bookings: Booking[] };
   initialBookingId?: string | null;
   onBack: () => void;
-  onReleaseDeposit: (id: string) => Promise<void>;
   onConfirmReturn: (id: string) => Promise<void>;
+  onReloadBookings: () => Promise<void>;
 }) {
   const [photos, setPhotos] = useState<TripPhoto[]>([]);
   const [gps, setGps] = useState<GpsPoint[]>([]);
@@ -861,33 +859,7 @@ function CustomerDetail({
                         <Stat label="End-KM" value={b.end_km ?? "–"} />
                       </div>
 
-                      <div className="p-4 rounded-2xl bg-secondary flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold flex items-center gap-1.5">
-                            <Wallet className="w-4 h-4" /> Kaution {b.deposit} €
-                          </p>
-                          {b.deposit_status === "released" ? (
-                            <p className="text-xs text-muted-foreground">
-                              Ausgezahlt am{" "}
-                              {b.deposit_released_at
-                                ? format(new Date(b.deposit_released_at), "dd.MM.yyyy HH:mm", { locale: de })
-                                : "–"}
-                            </p>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">
-                              Einbehalten · Auszahlung 3–7 Werktage nach Freigabe
-                            </p>
-                          )}
-                        </div>
-                        {b.deposit_status !== "released" && b.status === "completed" && (
-                          <button
-                            onClick={() => onReleaseDeposit(b.id)}
-                            className="rounded-full bg-foreground text-background px-3 py-2 text-xs font-semibold whitespace-nowrap"
-                          >
-                            Auszahlen
-                          </button>
-                        )}
-                      </div>
+                      <SettlementPanel booking={b} onChanged={onReloadBookings} />
 
                       {b.status === "returning" && (
                         <button
@@ -1058,6 +1030,195 @@ function PhotoGroup({ title, photos }: { title: string; photos: TripPhoto[] }) {
             </span>
           </a>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function SettlementPanel({
+  booking,
+  onChanged,
+}: {
+  booking: Booking;
+  onChanged: () => Promise<void>;
+}) {
+  const chargeExtra = useServerFn(chargeBookingExtra);
+  const settle = useServerFn(settleDeposit);
+
+  const extraOwedCents = booking.extra_km_charge_cents ?? 0;
+  const extraAlreadyCharged = booking.extra_charge_status === "succeeded";
+  const depositSettled = booking.deposit_status === "released";
+  const depositCents = Math.round(Number(booking.deposit ?? 200) * 100);
+
+  const [deductEuro, setDeductEuro] = useState<string>(
+    extraOwedCents > 0 ? (extraOwedCents / 100).toFixed(2) : "0",
+  );
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const deductCents = Math.max(
+    0,
+    Math.min(depositCents, Math.round(parseFloat(deductEuro.replace(",", ".") || "0") * 100)),
+  );
+  const refundCents = depositCents - deductCents;
+
+  const hasStripe = !!booking.stripe_payment_method_id;
+
+  const handleChargeExtra = async () => {
+    if (!extraOwedCents) return;
+    setBusy(true);
+    try {
+      const res = await chargeExtra({
+        data: {
+          bookingId: booking.id,
+          amountCents: extraOwedCents,
+          description: `Mehrkilometer · ${booking.extra_km ?? 0} km`,
+        },
+      });
+      toast.success(
+        res.status === "succeeded"
+          ? `Mehrkilometer (${(extraOwedCents / 100).toFixed(2)} €) eingezogen.`
+          : `Status: ${res.status}`,
+      );
+      await onChanged();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Abbuchung fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSettle = async () => {
+    setBusy(true);
+    try {
+      await settle({ data: { bookingId: booking.id, deductCents } });
+      toast.success(
+        refundCents > 0
+          ? `${(refundCents / 100).toFixed(2)} € zurückerstattet, ${(deductCents / 100).toFixed(2)} € einbehalten.`
+          : `Komplette Kaution (${(depositCents / 100).toFixed(2)} €) einbehalten.`,
+      );
+      setConfirm(false);
+      await onChanged();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Abrechnung fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
+      <div className="flex items-center gap-2">
+        <Wallet className="w-4 h-4" />
+        <h3 className="text-sm font-semibold">Kaution & Mehrkilometer</h3>
+      </div>
+
+      {/* Mehrkilometer */}
+      <div className="rounded-xl bg-secondary p-3">
+        <p className="text-xs text-muted-foreground">Mehrkilometer-Forderung</p>
+        <p className="text-lg font-bold">
+          {extraOwedCents > 0 ? `${(extraOwedCents / 100).toFixed(2)} €` : "—"}
+          {booking.extra_km != null && booking.extra_km > 0 && (
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              ({booking.extra_km} km × 0,90 €)
+            </span>
+          )}
+        </p>
+        {extraOwedCents > 0 && (
+          <button
+            onClick={handleChargeExtra}
+            disabled={busy || extraAlreadyCharged || !hasStripe}
+            className="mt-2 rounded-full bg-foreground text-background px-4 py-2 text-xs font-semibold disabled:opacity-50"
+          >
+            {extraAlreadyCharged
+              ? "Bereits eingezogen ✓"
+              : !hasStripe
+              ? "Keine gespeicherte Karte"
+              : `Jetzt ${(extraOwedCents / 100).toFixed(2)} € einziehen`}
+          </button>
+        )}
+      </div>
+
+      {/* Kautionsabrechnung */}
+      <div className="rounded-xl bg-secondary p-3 space-y-3">
+        <div>
+          <p className="text-xs text-muted-foreground">Kaution</p>
+          <p className="text-lg font-bold">{(depositCents / 100).toFixed(2)} €</p>
+        </div>
+
+        {depositSettled ? (
+          <div className="text-xs text-muted-foreground">
+            Abgerechnet am{" "}
+            {booking.deposit_released_at
+              ? format(new Date(booking.deposit_released_at), "dd.MM.yyyy HH:mm", { locale: de })
+              : "–"}
+            {booking.deposit_deducted_cents != null && (
+              <>
+                {" · einbehalten "}
+                <strong>{(booking.deposit_deducted_cents / 100).toFixed(2)} €</strong>
+                {" · erstattet "}
+                <strong>{((depositCents - booking.deposit_deducted_cents) / 100).toFixed(2)} €</strong>
+              </>
+            )}
+          </div>
+        ) : (
+          <>
+            <label className="block">
+              <span className="text-xs text-muted-foreground">Abzug von Kaution (€)</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0"
+                max={(depositCents / 100).toFixed(2)}
+                value={deductEuro}
+                onChange={(e) => setDeductEuro(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+              />
+            </label>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Einbehalten</span>
+              <strong>{(deductCents / 100).toFixed(2)} €</strong>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Erstattung an Kunden</span>
+              <strong>{(refundCents / 100).toFixed(2)} €</strong>
+            </div>
+
+            {!confirm ? (
+              <button
+                onClick={() => setConfirm(true)}
+                disabled={busy}
+                className="w-full rounded-full bg-foreground text-background py-2.5 text-sm font-semibold disabled:opacity-50"
+              >
+                Kaution abrechnen
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-center">
+                  Wirklich <strong>{(deductCents / 100).toFixed(2)} €</strong> einbehalten und{" "}
+                  <strong>{(refundCents / 100).toFixed(2)} €</strong> erstatten?
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setConfirm(false)}
+                    disabled={busy}
+                    className="rounded-full bg-background border border-border py-2 text-sm font-semibold"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    onClick={handleSettle}
+                    disabled={busy}
+                    className="rounded-full bg-foreground text-background py-2 text-sm font-semibold disabled:opacity-50"
+                  >
+                    {busy ? "…" : "Bestätigen"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

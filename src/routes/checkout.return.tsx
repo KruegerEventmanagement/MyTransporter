@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { notifyAdmin } from "@/lib/admin-notify";
+import { getCheckoutSessionDetails } from "@/lib/payments.functions";
 
 export const Route = createFileRoute("/checkout/return")({
   validateSearch: (search: Record<string, unknown>): { session_id?: string } => ({
@@ -46,6 +47,23 @@ function CheckoutReturn() {
         const freeKmFor = (planId: string) =>
           planId === "6h" ? 300 : planId === "24h" ? 500 : 0;
 
+        // Stripe-Session abrufen, um Customer + PaymentMethod zu speichern
+        let stripeIds: {
+          customerId: string | null;
+          paymentIntentId: string | null;
+          paymentMethodId: string | null;
+        } = { customerId: null, paymentIntentId: null, paymentMethodId: null };
+        try {
+          const details = await getCheckoutSessionDetails({ data: { sessionId } });
+          stripeIds = {
+            customerId: details.customerId,
+            paymentIntentId: details.paymentIntentId,
+            paymentMethodId: details.paymentMethodId,
+          };
+        } catch (e) {
+          console.warn("Stripe-Session konnte nicht abgerufen werden:", e);
+        }
+
         let bookingId: string;
         if (userData?.user) {
           const { data: booking, error: insertError } = await supabase
@@ -61,6 +79,9 @@ function CheckoutReturn() {
               status: "paid",
               free_km: freeKmFor(pending.planId),
               km_price_cents: 90,
+              stripe_customer_id: stripeIds.customerId,
+              stripe_payment_intent_id: stripeIds.paymentIntentId,
+              stripe_payment_method_id: stripeIds.paymentMethodId,
               ...(pending.vehicleName ? { vehicle_name: pending.vehicleName } : {}),
               ...(pending.vehiclePlate ? { vehicle_plate: pending.vehiclePlate } : {}),
             })
