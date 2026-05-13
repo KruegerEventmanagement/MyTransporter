@@ -24,6 +24,9 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { AdminLogin } from "@/components/admin/AdminLogin";
 import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
+import { useServerFn } from "@tanstack/react-start";
+import { chargeBookingExtra, settleDeposit } from "@/lib/payments.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -51,6 +54,14 @@ interface Booking {
   status: string;
   remarks: string | null;
   created_at: string;
+  free_km?: number | null;
+  km_price_cents?: number | null;
+  extra_km?: number | null;
+  extra_km_charge_cents?: number | null;
+  extra_charge_status?: string | null;
+  extra_charge_cents?: number | null;
+  deposit_deducted_cents?: number | null;
+  stripe_payment_method_id?: string | null;
 }
 interface Profile {
   id: string;
