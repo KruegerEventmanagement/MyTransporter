@@ -88,6 +88,13 @@ function ProfilePage() {
     }, 0);
     const active = bookings.find((b) => b.status === "active" || b.status === "returning");
     const vehicles = new Set(bookings.map((b) => b.vehicle_plate));
+    const upcoming = bookings
+      .filter((b) => b.status === "paid" && b.start_km === null)
+      .sort((a, b) => {
+        const da = new Date(`${a.start_date}T${String(a.start_hour).padStart(2, "0")}:00:00`).getTime();
+        const db = new Date(`${b.start_date}T${String(b.start_hour).padStart(2, "0")}:00:00`).getTime();
+        return da - db;
+      });
     return {
       totalTrips: bookings.length,
       completed: completedOrPaid.length,
@@ -95,6 +102,7 @@ function ProfilePage() {
       totalKm,
       activeBooking: active,
       vehicleCount: vehicles.size,
+      upcoming,
     };
   }, [bookings]);
 
@@ -161,10 +169,24 @@ function ProfilePage() {
           </Link>
         )}
 
+        {/* Anstehende Fahrten – mit direkter Stornier-Möglichkeit */}
+        {stats.upcoming.length > 0 && (
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1">
+              Anstehende Fahrt{stats.upcoming.length > 1 ? "en" : ""}
+            </h2>
+            <ul className="space-y-2">
+              {stats.upcoming.map((b) => (
+                <BookingRow key={b.id} booking={b} onCancelled={loadBookings} />
+              ))}
+            </ul>
+          </section>
+        )}
+
         {/* Buchungs-Historie */}
         <section>
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1">
-            Meine Fahrten
+            Alle Fahrten
           </h2>
           {bookings.length === 0 ? (
             <div className="rounded-2xl bg-card border border-border p-8 text-center">
