@@ -35,15 +35,24 @@ function AgbPage() {
 
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">§ 3 Kaution</h2>
-            <p>Bei Anmietung wird eine Kaution in Höhe von 200 € erhoben. Diese wird nach ordnungsgemäßer Rückgabe des Fahrzeugs und Prüfung auf Schäden zurückerstattet.</p>
+            <p>Bei Anmietung wird eine Kaution in Höhe von 200 € erhoben. Sie wird über Stripe vorautorisiert und nach ordnungsgemäßer Rückgabe des Fahrzeugs vollständig freigegeben.</p>
+            <p className="mt-2">Die Kaution dient ausdrücklich zur Absicherung folgender Fälle und kann hierfür ganz oder anteilig einbehalten werden:</p>
+            <ul className="list-disc pl-5 space-y-1 mt-2">
+              <li>Verschmutzte Rückgabe des Fahrzeugs (innen oder außen), die eine Reinigung erforderlich macht.</li>
+              <li>Rückgabe ohne vollen Tank oder ohne gültigen Tankbeleg.</li>
+              <li>Fehlende oder entwendete Ausstattung, insbesondere FM-Transmitter bzw. Bluetooth-Audiogerät, Spanngurte, Warndreieck, Warnweste, Verbandskasten, Ladekabel oder vergleichbares Zubehör.</li>
+              <li>Sonstige geringfügige Beschädigungen oder Vertragsverstöße, die im Rahmen der Kautionssumme abgegolten werden können.</li>
+            </ul>
+            <p className="mt-2">Übersteigt der Schaden oder die entstandenen Kosten die Kautionshöhe, bleibt die Geltendmachung des darüber hinausgehenden Betrags ausdrücklich vorbehalten.</p>
           </div>
 
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">§ 4 Preise und Tarife</h2>
             <ul className="list-disc pl-5 space-y-1">
-              <li>6-Stunden-Tarif: 100 € (Rückgabe bis spätestens 22:00 Uhr)</li>
-              <li>24-Stunden-Tarif: 150 € (Rückgabe zwischen 08:00 und 22:00 Uhr)</li>
-              <li>Kilometer-Tarif: 0,90 € pro gefahrenem Kilometer (Mindestbetrag 100 €)</li>
+              <li>6-Stunden-Tarif: 100 € inklusive 300 Freikilometern (Rückgabe bis spätestens 22:00 Uhr).</li>
+              <li>24-Stunden-Tarif: 150 € inklusive 500 Freikilometern (Rückgabe zwischen 08:00 und 22:00 Uhr).</li>
+              <li>Jeder über das jeweilige Freikilometer-Kontingent hinaus gefahrene Kilometer wird mit 0,90 € berechnet.</li>
+              <li>Reiner Kilometer-Tarif: 0,90 € pro gefahrenem Kilometer (Mindestbetrag 100 €).</li>
             </ul>
           </div>
 
@@ -79,7 +88,13 @@ function AgbPage() {
           </div>
 
           <div>
-            <h2 className="font-bold text-lg text-foreground mb-2">§ 9 Schlussbestimmungen</h2>
+            <h2 className="font-bold text-lg text-foreground mb-2">§ 9 Versicherung und Selbstbeteiligung</h2>
+            <p>Das Fahrzeug ist haftpflicht- sowie vollkaskoversichert. Im Schadensfall trägt der Mieter (Fahrer) eine Selbstbeteiligung in Höhe von 1.500 € pro Schadensereignis. Dies gilt unabhängig davon, ob der Schaden selbst verschuldet wurde, durch Dritte verursacht wurde und kein Verursacher ermittelt werden kann (z. B. Parkrempler ohne Zeugen) oder durch Vandalismus, Diebstahl oder Wildunfall entstanden ist.</p>
+            <p className="mt-2">Bei grob fahrlässiger oder vorsätzlicher Verursachung eines Schadens, bei Verstoß gegen die Mietbedingungen (z. B. Fahren unter Alkohol- oder Drogeneinfluss, nicht berechtigter Fahrer, Überladung) sowie bei Fahrerflucht entfällt der Versicherungsschutz und der Mieter haftet in voller Höhe des entstandenen Schadens.</p>
+          </div>
+
+          <div>
+            <h2 className="font-bold text-lg text-foreground mb-2">§ 10 Schlussbestimmungen</h2>
             <p>Es gilt das Recht der Bundesrepublik Deutschland. Gerichtsstand ist Leonberg. Sollten einzelne Bestimmungen unwirksam sein, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.</p>
           </div>
 

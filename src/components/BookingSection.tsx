@@ -13,9 +13,9 @@ import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
 
 const PRICING = [
-  { id: "6h", hours: 6, price: 100, label: "6 Stunden", returnRule: "Rückgabe bis spätestens 22:00 Uhr" },
-  { id: "24h", hours: 24, price: 150, label: "24 Stunden", returnRule: "Rückgabe zwischen 08:00 und 22:00 Uhr" },
-  { id: "km", hours: 0, price: 0, label: "Nur Kilometer", returnRule: "Rückgabe zwischen 08:00 und 22:00 Uhr" },
+  { id: "6h", hours: 6, price: 100, freeKm: 300, label: "6 Stunden", returnRule: "Rückgabe bis spätestens 22:00 Uhr" },
+  { id: "24h", hours: 24, price: 150, freeKm: 500, label: "24 Stunden", returnRule: "Rückgabe zwischen 08:00 und 22:00 Uhr" },
+  { id: "km", hours: 0, price: 0, freeKm: 0, label: "Nur Kilometer", returnRule: "Rückgabe zwischen 08:00 und 22:00 Uhr" },
 ];
 
 const DEPOSIT = 200;
@@ -467,6 +467,9 @@ export function BookingSection() {
                     <div>
                       <p className="text-lg font-medium text-foreground">{plan.label}</p>
                       <p className="text-sm text-muted-foreground">{plan.returnRule}</p>
+                      {plan.freeKm > 0 && (
+                        <p className="text-xs text-foreground/80 mt-1">{plan.freeKm} km inklusive · danach 0,90 €/km</p>
+                      )}
                     </div>
                     {plan.price > 0 ? (
                       <p className="text-2xl font-bold text-foreground">{plan.price} €</p>
