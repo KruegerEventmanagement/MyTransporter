@@ -11,6 +11,7 @@ import { PreDriveFlow } from "./PreDriveFlow";
 import { ActiveDriveScreen } from "./ActiveDriveScreen";
 import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
+import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
 
 const PRICING = [
   { id: "6h", hours: 6, price: 100, freeKm: 300, label: "6 Stunden", returnRule: "Rückgabe bis spätestens 22:00 Uhr" },
@@ -83,6 +84,54 @@ export function BookingSection() {
   const [profileComplete, setProfileComplete] = useState(false);
   const [vehicles, setVehicles] = useState<DbVehicle[]>([]);
   const [vehicleIdx, setVehicleIdx] = useState(0);
+  const [busySlots, setBusySlots] = useState<BusySlot[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    getBusySlots()
+      .then((slots) => {
+        if (alive) setBusySlots(slots);
+      })
+      .catch((e) => console.warn("Belegte Slots konnten nicht geladen werden:", e));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const currentPlate = vehicles[vehicleIdx]?.plate ?? "";
+  const slotsForVehicle = busySlots.filter(
+    (s) => !currentPlate || !s.vehiclePlate || s.vehiclePlate === currentPlate,
+  );
+
+  // Prüft, ob [start, start+hours) sich mit einer belegten Periode überschneidet
+  const overlapsBusy = (startMs: number, hours: number) => {
+    const endMs = startMs + hours * 3600_000;
+    return slotsForVehicle.some((s) => {
+      const bs = new Date(s.start).getTime();
+      const be = new Date(s.end).getTime();
+      return startMs < be && endMs > bs;
+    });
+  };
+
+  const isHourBusy = (d: Date, h: number) => {
+    const start = new Date(d);
+    start.setHours(h, 0, 0, 0);
+    // Eine Startstunde ist belegt, wenn sie innerhalb einer fremden Buchung liegt
+    return slotsForVehicle.some((s) => {
+      const bs = new Date(s.start).getTime();
+      const be = new Date(s.end).getTime();
+      return start.getTime() >= bs && start.getTime() < be;
+    });
+  };
+
+  const planHours = (planId: string) => (planId === "6h" ? 6 : 24);
+
+  const isPlanBlocked = (planId: string) => {
+    if (!date || startHour === null) return false;
+    const start = new Date(date);
+    start.setHours(startHour, 0, 0, 0);
+    return overlapsBusy(start.getTime(), planHours(planId));
+  };
 
   useEffect(() => {
     let alive = true;
@@ -393,11 +442,12 @@ export function BookingSection() {
                         {canStartNow && (
                           <button
                             onClick={() => setStartHour(currentHour)}
+                            disabled={isHourBusy(date, currentHour)}
                             className={`mb-3 w-full py-3 px-4 rounded-xl text-sm font-bold transition-all ${
                               startHour === currentHour
                                 ? "bg-accent text-accent-foreground shadow-md"
                                 : "bg-foreground text-background hover:opacity-90"
-                            }`}
+                            } disabled:opacity-30 disabled:cursor-not-allowed disabled:line-through`}
                           >
                             ⚡ Jetzt sofort starten ({String(currentHour).padStart(2, "0")}:
                             {String(now.getMinutes()).padStart(2, "0")} Uhr)
@@ -405,19 +455,26 @@ export function BookingSection() {
                         )}
                         {visibleHours.length > 0 ? (
                           <div className="grid grid-cols-5 gap-2">
-                            {visibleHours.map((h) => (
-                              <button
-                                key={h}
-                                onClick={() => setStartHour(h)}
-                                className={`py-2 px-3 rounded-xl text-sm font-medium transition-all ${
-                                  startHour === h
-                                    ? "bg-accent text-accent-foreground shadow-md"
-                                    : "bg-secondary text-foreground hover:bg-accent/20"
-                                }`}
-                              >
-                                {h}:00
-                              </button>
-                            ))}
+                            {visibleHours.map((h) => {
+                              const busy = isHourBusy(date, h);
+                              return (
+                                <button
+                                  key={h}
+                                  onClick={() => setStartHour(h)}
+                                  disabled={busy}
+                                  title={busy ? "Bereits gebucht" : undefined}
+                                  className={`py-2 px-3 rounded-xl text-sm font-medium transition-all ${
+                                    startHour === h
+                                      ? "bg-accent text-accent-foreground shadow-md"
+                                      : busy
+                                      ? "bg-secondary/40 text-muted-foreground line-through cursor-not-allowed"
+                                      : "bg-secondary text-foreground hover:bg-accent/20"
+                                  }`}
+                                >
+                                  {h}:00
+                                </button>
+                              );
+                            })}
                           </div>
                         ) : (
                           !canStartNow && (
@@ -453,13 +510,18 @@ export function BookingSection() {
             <div className="space-y-4">
               {availablePlans.map((plan) => {
                 const idx = PRICING.findIndex((p) => p.id === plan.id);
+                const blocked = isPlanBlocked(plan.id);
                 return (
                 <button
                   key={plan.id}
-                  onClick={() => setSelectedPlan(idx)}
+                  onClick={() => !blocked && setSelectedPlan(idx)}
+                  disabled={blocked}
+                  title={blocked ? "Zeitraum überschneidet sich mit einer bestehenden Buchung" : undefined}
                   className={`w-full p-6 rounded-2xl border-2 text-left transition-all ${
                     selectedPlan === idx
                       ? "border-accent bg-accent/5 shadow-md"
+                      : blocked
+                      ? "border-border opacity-40 cursor-not-allowed"
                       : "border-border hover:border-accent/50"
                   }`}
                 >
@@ -469,6 +531,9 @@ export function BookingSection() {
                       <p className="text-sm text-muted-foreground">{plan.returnRule}</p>
                       {plan.freeKm > 0 && (
                         <p className="text-xs text-foreground/80 mt-1">{plan.freeKm} km inklusive · danach 0,90 €/km</p>
+                      )}
+                      {blocked && (
+                        <p className="text-xs text-destructive mt-1">In diesem Zeitraum bereits gebucht</p>
                       )}
                     </div>
                     {plan.price > 0 ? (
