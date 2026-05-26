@@ -4,6 +4,7 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { notifyAdmin } from "@/lib/admin-notify";
 import { getCheckoutSessionDetails } from "@/lib/payments.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
 
 export const Route = createFileRoute("/checkout/return")({
   validateSearch: (search: Record<string, unknown>): { session_id?: string } => ({
@@ -54,7 +55,9 @@ function CheckoutReturn() {
           paymentMethodId: string | null;
         } = { customerId: null, paymentIntentId: null, paymentMethodId: null };
         try {
-          const details = await getCheckoutSessionDetails({ data: { sessionId } });
+          const details = await getCheckoutSessionDetails({
+            data: { sessionId, environment: getStripeEnvironment() },
+          });
           stripeIds = {
             customerId: details.customerId,
             paymentIntentId: details.paymentIntentId,
