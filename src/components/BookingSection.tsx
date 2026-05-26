@@ -63,6 +63,7 @@ export function BookingSection() {
   const [startHour, setStartHour] = useState<number | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authUser, setAuthUser] = useState<{ id: string; email?: string } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [regForm, setRegForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [regPassword, setRegPassword] = useState("");
@@ -209,6 +210,7 @@ export function BookingSection() {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setIsLoggedIn(true);
+        setAuthUser({ id: session.user.id, email: session.user.email ?? undefined });
         setProfileComplete(true);
         setSignupEmailSent(null);
         setShowLogin(false);
@@ -219,12 +221,14 @@ export function BookingSection() {
       } else {
         // Logout → Registrierungsschritt wieder anzeigen
         setIsLoggedIn(false);
+        setAuthUser(null);
         setProfileComplete(false);
       }
     });
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) {
         setIsLoggedIn(true);
+        setAuthUser({ id: data.session.user.id, email: data.session.user.email ?? undefined });
         setProfileComplete(true);
         setShowLogin(false);
         setStep((currentStep) => (currentStep === 3 ? 4 : currentStep));
@@ -306,6 +310,7 @@ export function BookingSection() {
     }
     if (data.user) {
       setIsLoggedIn(true);
+      setAuthUser({ id: data.user.id, email: data.user.email ?? undefined });
       setProfileComplete(true);
       setShowLogin(false);
       setStep(4);
@@ -1049,13 +1054,12 @@ export function BookingSection() {
                     setCheckoutClientSecret(null);
                     setShowCheckout(true);
                    try {
-                     const { data: authData } = await supabase.auth.getUser();
                      const origin = window.location.origin;
                      const result = await startBookingCheckout({
                        data: {
                          plan: planKey,
-                         customerEmail: regForm.email || authData.user?.email || undefined,
-                         userId: authData.user?.id,
+                          customerEmail: regForm.email || authUser?.email || undefined,
+                          userId: authUser?.id,
                          returnUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
                          environment: getStripeEnvironment(),
                        },
