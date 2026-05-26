@@ -21,39 +21,6 @@ function assertStripeEnvironment(environment: StripeEnv) {
   }
 }
 
-async function resolveOrCreateCustomer(
-  stripe: ReturnType<typeof createStripeClient>,
-  options: { email?: string; userId?: string },
-): Promise<string> {
-  if (options.userId && !/^[a-zA-Z0-9_-]+$/.test(options.userId)) {
-    throw new Error("Invalid userId");
-  }
-  if (options.userId) {
-    const found = await stripe.customers.search({
-      query: `metadata['userId']:'${options.userId}'`,
-      limit: 1,
-    });
-    if (found.data.length) return found.data[0].id;
-  }
-  if (options.email) {
-    const existing = await stripe.customers.list({ email: options.email, limit: 1 });
-    if (existing.data.length) {
-      const customer = existing.data[0];
-      if (options.userId && customer.metadata?.userId !== options.userId) {
-        await stripe.customers.update(customer.id, {
-          metadata: { ...customer.metadata, userId: options.userId },
-        });
-      }
-      return customer.id;
-    }
-  }
-  const created = await stripe.customers.create({
-    ...(options.email && { email: options.email }),
-    ...(options.userId && { metadata: { userId: options.userId } }),
-  });
-  return created.id;
-}
-
 export const createBookingCheckout = createServerFn({ method: "POST" })
   .inputValidator((data: {
     plan: PlanKey;
@@ -101,16 +68,13 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
       quantity: 1,
     });
 
-      const customerId = data.customerEmail || data.userId
-        ? await resolveOrCreateCustomer(stripe, { email: data.customerEmail, userId: data.userId })
-        : undefined;
-
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         ui_mode: "embedded_page",
         line_items,
         return_url: data.returnUrl,
-        ...(customerId && { customer: customerId }),
+        customer_creation: "always",
+        ...(data.customerEmail && { customer_email: data.customerEmail }),
         payment_intent_data: {
           description: plan.rent > 0 ? `${plan.label} + Kaution` : "Transporter-Miete · Kaution",
           setup_future_usage: "off_session",
