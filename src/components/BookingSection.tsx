@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -366,6 +367,7 @@ export function BookingSection() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const startBookingCheckout = useServerFn(createBookingCheckout);
   const embeddedCheckoutOptions = useMemo(
     () => ({ clientSecret: checkoutClientSecret }),
     [checkoutClientSecret],
@@ -1052,7 +1054,7 @@ export function BookingSection() {
                     setShowCheckout(true);
                    try {
                      const origin = window.location.origin;
-                     const clientSecret = await createBookingCheckout({
+                     const clientSecret = await startBookingCheckout({
                        data: {
                          plan: planKey,
                          customerEmail: regForm.email || undefined,
