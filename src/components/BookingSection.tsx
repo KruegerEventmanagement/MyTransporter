@@ -460,10 +460,11 @@ export function BookingSection() {
                       date.getMonth() === now.getMonth() &&
                       date.getDate() === now.getDate();
                     const currentHour = now.getHours();
-                    const canStartNow = isToday && currentHour >= 8 && currentHour < 22;
+                    // Späteste Abholung: 20:00 Uhr (LATEST_START_HOUR)
+                    const canStartNow = isToday && currentHour >= 8 && currentHour <= 20;
                     const visibleHours = isToday
-                      ? HOURS.filter((h) => h > currentHour)
-                      : HOURS;
+                      ? HOURS.filter((h) => h > currentHour && h <= 20)
+                      : HOURS.filter((h) => h <= 20);
                     return (
                       <>
                         {canStartNow && (
@@ -506,7 +507,7 @@ export function BookingSection() {
                         ) : (
                           !canStartNow && (
                             <p className="text-xs text-muted-foreground text-center py-4">
-                              Heute keine Startzeit mehr verfügbar – bitte einen anderen Tag wählen.
+                              Leider ist für heute nichts mehr verfügbar – bitte einen anderen Tag wählen.
                             </p>
                           )
                         )}
