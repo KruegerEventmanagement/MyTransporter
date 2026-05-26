@@ -20,6 +20,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TripBookingIdRouteImport } from './routes/trip.$bookingId'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as BuchungBookingIdRouteImport } from './routes/buchung.$bookingId'
 import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
 
@@ -78,6 +79,11 @@ const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   path: '/checkout/return',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BuchungBookingIdRoute = BuchungBookingIdRouteImport.update({
+  id: '/buchung/$bookingId',
+  path: '/buchung/$bookingId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthConfirmRoute = AuthConfirmRouteImport.update({
   id: '/auth/confirm',
   path: '/auth/confirm',
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/auth/confirm': typeof AuthConfirmRoute
+  '/buchung/$bookingId': typeof BuchungBookingIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/auth/confirm': typeof AuthConfirmRoute
+  '/buchung/$bookingId': typeof BuchungBookingIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/auth/confirm': typeof AuthConfirmRoute
+  '/buchung/$bookingId': typeof BuchungBookingIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/profil'
     | '/sitemap.xml'
     | '/auth/confirm'
+    | '/buchung/$bookingId'
     | '/checkout/return'
     | '/trip/$bookingId'
     | '/api/public/hooks/send-reminders'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
     | '/profil'
     | '/sitemap.xml'
     | '/auth/confirm'
+    | '/buchung/$bookingId'
     | '/checkout/return'
     | '/trip/$bookingId'
     | '/api/public/hooks/send-reminders'
@@ -179,6 +190,7 @@ export interface FileRouteTypes {
     | '/profil'
     | '/sitemap.xml'
     | '/auth/confirm'
+    | '/buchung/$bookingId'
     | '/checkout/return'
     | '/trip/$bookingId'
     | '/api/public/hooks/send-reminders'
@@ -195,6 +207,7 @@ export interface RootRouteChildren {
   ProfilRoute: typeof ProfilRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   AuthConfirmRoute: typeof AuthConfirmRoute
+  BuchungBookingIdRoute: typeof BuchungBookingIdRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   TripBookingIdRoute: typeof TripBookingIdRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
@@ -279,6 +292,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/buchung/$bookingId': {
+      id: '/buchung/$bookingId'
+      path: '/buchung/$bookingId'
+      fullPath: '/buchung/$bookingId'
+      preLoaderRoute: typeof BuchungBookingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/confirm': {
       id: '/auth/confirm'
       path: '/auth/confirm'
@@ -307,6 +327,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfilRoute: ProfilRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   AuthConfirmRoute: AuthConfirmRoute,
+  BuchungBookingIdRoute: BuchungBookingIdRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   TripBookingIdRoute: TripBookingIdRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,

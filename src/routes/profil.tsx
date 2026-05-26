@@ -29,6 +29,8 @@ interface Booking {
   status: string;
   created_at: string;
   remarks?: string | null;
+  deposit_deducted_cents?: number | null;
+  deposit_refund_id?: string | null;
 }
 
 interface Profile {
