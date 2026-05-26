@@ -1046,29 +1046,26 @@ export function BookingSection() {
                     );
                    }
                     setCheckoutError(null);
+                    setCheckoutClientSecret(null);
                     setShowCheckout(true);
                    try {
+                     const { data: authData } = await supabase.auth.getUser();
                      const origin = window.location.origin;
-                     const checkoutUrl = await startBookingCheckout({
+                     const result = await startBookingCheckout({
                        data: {
                          plan: planKey,
-                         customerEmail: regForm.email || undefined,
+                         customerEmail: regForm.email || authData.user?.email || undefined,
+                         userId: authData.user?.id,
                          returnUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
                          environment: getStripeEnvironment(),
                        },
                      });
-                     // Im Lovable-Preview läuft die App in einem iframe.
-                     // Stripe Checkout verweigert das Laden im iframe (CSP),
-                     // daher die Top-Ebene navigieren.
-                     const top = window.top ?? window;
-                     try {
-                       top.location.href = checkoutUrl;
-                     } catch {
-                       window.location.href = checkoutUrl;
-                     }
+                     if ("error" in result) throw new Error(result.error);
+                     setCheckoutClientSecret(result.clientSecret);
                    } catch (e) {
                      console.error(e);
                      setCheckoutError(e instanceof Error ? e.message : "Zahlung konnte nicht gestartet werden.");
+                      setCheckoutClientSecret(null);
                      setShowCheckout(false);
                    }
                 }}
@@ -1086,15 +1083,21 @@ export function BookingSection() {
                     <p className="text-sm text-muted-foreground">{checkoutError}</p>
                     <button
                       type="button"
-                      onClick={() => { setShowCheckout(false); setCheckoutError(null); }}
+                      onClick={() => { setShowCheckout(false); setCheckoutError(null); setCheckoutClientSecret(null); }}
                       className="rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium"
                     >
                       Erneut versuchen
                     </button>
                   </div>
+                ) : checkoutClientSecret ? (
+                  <div className="rounded-2xl border border-border bg-background p-2 sm:p-4 overflow-hidden">
+                    <EmbeddedCheckoutProvider stripe={getStripe()} options={{ clientSecret: checkoutClientSecret }}>
+                      <EmbeddedCheckout />
+                    </EmbeddedCheckoutProvider>
+                  </div>
                 ) : (
                   <div className="rounded-2xl bg-secondary p-6 text-center text-muted-foreground flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Du wirst zu Stripe weitergeleitet…
+                    <Loader2 className="h-4 w-4 animate-spin" /> Stripe-Zahlung wird geladen…
                   </div>
                 )}
               </div>
@@ -1103,7 +1106,7 @@ export function BookingSection() {
             {!paid && (
               <div className="mt-8 flex justify-start">
                 <button
-                  onClick={() => { setShowCheckout(false); setCheckoutError(null); setStep(registrationComplete ? 2 : 3); }}
+                  onClick={() => { setShowCheckout(false); setCheckoutError(null); setCheckoutClientSecret(null); setStep(registrationComplete ? 2 : 3); }}
                   className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
                 >
                   <ChevronLeft className="w-5 h-5" /> Zurück
