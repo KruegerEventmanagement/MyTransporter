@@ -1055,7 +1055,15 @@ export function BookingSection() {
                          environment: getStripeEnvironment(),
                        },
                      });
-                     window.location.assign(checkoutUrl);
+                     // Im Lovable-Preview läuft die App in einem iframe.
+                     // Stripe Checkout verweigert das Laden im iframe (CSP),
+                     // daher die Top-Ebene navigieren.
+                     const top = window.top ?? window;
+                     try {
+                       top.location.href = checkoutUrl;
+                     } catch {
+                       window.location.href = checkoutUrl;
+                     }
                    } catch (e) {
                      console.error(e);
                      setCheckoutError(e instanceof Error ? e.message : "Zahlung konnte nicht gestartet werden.");
