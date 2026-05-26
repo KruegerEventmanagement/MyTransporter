@@ -121,9 +121,9 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
         } else if (currentTarget.kind === "interior") {
           setInteriorPhoto(viewUrl);
         } else if (currentTarget.kind === "odometer") {
-          setOdometerPhoto(urlData.publicUrl);
+          setOdometerPhoto(viewUrl);
         } else {
-          setDamagePhotos((prev) => [...prev, urlData.publicUrl]);
+          setDamagePhotos((prev) => [...prev, viewUrl]);
         }
       } catch (err) {
         console.error("Upload error:", err);
