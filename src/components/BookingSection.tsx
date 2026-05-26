@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key, Eye, EyeOff } from "lucide-react";
+import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 import { createBookingCheckout } from "@/lib/payments.functions";
+import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
 import { DocumentScanner } from "./DocumentScanner";
@@ -362,7 +364,11 @@ export function BookingSection() {
   const [startKm, setStartKm] = useState<number>(0);
   const [drivePhase, setDrivePhase] = useState<"pre" | "active" | "return" | "done" | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
-  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
+  const embeddedCheckoutOptions = useMemo(
+    () => ({ clientSecret: checkoutClientSecret }),
+    [checkoutClientSecret],
+  );
 
   const stepTitles = registrationComplete
     ? ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Bezahlen", "Fahrt"]
@@ -1039,38 +1045,24 @@ export function BookingSection() {
                         vehiclePlate: displayVehicle.plate,
                       })
                     );
-                  }
-                   setShowCheckout(true);
+                   }
+                    setCheckoutClientSecret(null);
+                    setShowCheckout(true);
                    try {
                      const origin = window.location.origin;
-                     const url = await createBookingCheckout({
+                     const clientSecret = await createBookingCheckout({
                        data: {
                          plan: planKey,
                          customerEmail: regForm.email || undefined,
-                         successUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
-                         cancelUrl: `${origin}/?checkout=cancelled`,
+                         returnUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+                         environment: getStripeEnvironment(),
                        },
                      });
-                    setCheckoutUrl(url);
-                     // Bevorzugt im aktuellen Fenster navigieren – funktioniert zuverlässig auf
-                     // Mobile (auch in In-App-Browsern). Nur wenn wir in einem fremden iframe
-                     // (z. B. Lovable-Preview) sitzen, versuchen wir aus dem Frame auszubrechen.
-                     const inIframe = window.top && window.top !== window.self;
-                     let navigated = false;
-                     if (inIframe) {
-                       try {
-                         window.top!.location.href = url;
-                         navigated = true;
-                       } catch {
-                         // Cross-Origin – Top-Frame nicht erreichbar
-                       }
-                     }
-                     if (!navigated) {
-                       window.location.assign(url);
-                     }
+                     setCheckoutClientSecret(clientSecret);
                    } catch (e) {
                      console.error(e);
                      setShowCheckout(false);
+                     setCheckoutClientSecret(null);
                      alert("Zahlung konnte nicht gestartet werden. Bitte erneut versuchen.");
                    }
                 }}
@@ -1082,24 +1074,24 @@ export function BookingSection() {
 
             {showCheckout && !paid && planKey && (
               <div className="mt-8 text-left">
-                <div className="rounded-2xl bg-secondary p-6 text-center text-muted-foreground space-y-3">
-                  <div>Du wirst zu Stripe weitergeleitet...</div>
-                  {checkoutUrl && (
-                    <a
-                      href={checkoutUrl}
-                      className="inline-block underline font-medium text-foreground"
-                    >
-                      Falls nichts passiert: hier tippen, um zur Zahlung zu wechseln
-                    </a>
-                  )}
-                </div>
+                {checkoutClientSecret ? (
+                  <div className="rounded-2xl border border-border bg-background p-2 sm:p-4">
+                    <EmbeddedCheckoutProvider stripe={getStripe()} options={embeddedCheckoutOptions}>
+                      <EmbeddedCheckout />
+                    </EmbeddedCheckoutProvider>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl bg-secondary p-6 text-center text-muted-foreground">
+                    Zahlungsformular wird geladen...
+                  </div>
+                )}
               </div>
             )}
 
             {!paid && (
               <div className="mt-8 flex justify-start">
                 <button
-                  onClick={() => { setShowCheckout(false); setStep(registrationComplete ? 2 : 3); }}
+                  onClick={() => { setShowCheckout(false); setCheckoutClientSecret(null); setStep(registrationComplete ? 2 : 3); }}
                   className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
                 >
                   <ChevronLeft className="w-5 h-5" /> Zurück
