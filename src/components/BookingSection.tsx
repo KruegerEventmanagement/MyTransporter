@@ -1051,6 +1051,7 @@ export function BookingSection() {
                          cancelUrl: `${origin}/?checkout=cancelled`,
                        },
                      });
+                    setCheckoutUrl(url);
                      // Bevorzugt im aktuellen Fenster navigieren – funktioniert zuverlässig auf
                      // Mobile (auch in In-App-Browsern). Nur wenn wir in einem fremden iframe
                      // (z. B. Lovable-Preview) sitzen, versuchen wir aus dem Frame auszubrechen.
