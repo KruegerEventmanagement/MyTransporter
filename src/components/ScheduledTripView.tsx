@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Calendar, Clock, Car, Key, Lock } from "lucide-react";
+import { Calendar, Clock, Car, Key, Lock, ChevronLeft } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -46,8 +46,20 @@ export function ScheduledTripView({
   const remaining = unlockAt.getTime() - now;
 
   return (
-    <main className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-2xl mx-auto">
+    <main className="min-h-screen bg-background pb-12 px-4">
+      <header className="sticky top-0 z-10 bg-background/90 backdrop-blur -mx-4 mb-6 border-b border-border">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+          <Link
+            to="/profil"
+            className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-medium hover:bg-secondary/80"
+            aria-label="Zurück zu meinen Buchungen"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            Meine Buchungen
+          </Link>
+        </div>
+      </header>
+      <div className="max-w-2xl mx-auto pt-6">
         <div className="text-center mb-10">
           <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6">
             <Lock className="w-9 h-9 text-foreground" />
