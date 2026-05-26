@@ -1049,31 +1049,15 @@ export function BookingSection() {
                    setShowCheckout(true);
                    try {
                      const origin = window.location.origin;
-                     const url = await createBookingCheckout({
+                     const clientSecret = await createBookingCheckout({
                        data: {
                          plan: planKey,
                          customerEmail: regForm.email || undefined,
-                         successUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
-                         cancelUrl: `${origin}/?checkout=cancelled`,
+                         returnUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+                         environment: getStripeEnvironment(),
                        },
                      });
-                    setCheckoutUrl(url);
-                     // Bevorzugt im aktuellen Fenster navigieren – funktioniert zuverlässig auf
-                     // Mobile (auch in In-App-Browsern). Nur wenn wir in einem fremden iframe
-                     // (z. B. Lovable-Preview) sitzen, versuchen wir aus dem Frame auszubrechen.
-                     const inIframe = window.top && window.top !== window.self;
-                     let navigated = false;
-                     if (inIframe) {
-                       try {
-                         window.top!.location.href = url;
-                         navigated = true;
-                       } catch {
-                         // Cross-Origin – Top-Frame nicht erreichbar
-                       }
-                     }
-                     if (!navigated) {
-                       window.location.assign(url);
-                     }
+                     setCheckoutClientSecret(clientSecret);
                    } catch (e) {
                      console.error(e);
                      setShowCheckout(false);
@@ -1088,17 +1072,17 @@ export function BookingSection() {
 
             {showCheckout && !paid && planKey && (
               <div className="mt-8 text-left">
-                <div className="rounded-2xl bg-secondary p-6 text-center text-muted-foreground space-y-3">
-                  <div>Du wirst zu Stripe weitergeleitet...</div>
-                  {checkoutUrl && (
-                    <a
-                      href={checkoutUrl}
-                      className="inline-block underline font-medium text-foreground"
-                    >
-                      Falls nichts passiert: hier tippen, um zur Zahlung zu wechseln
-                    </a>
-                  )}
-                </div>
+                {checkoutClientSecret ? (
+                  <div className="rounded-2xl border border-border bg-background p-2 sm:p-4">
+                    <EmbeddedCheckoutProvider stripe={getStripe()} options={embeddedCheckoutOptions}>
+                      <EmbeddedCheckout />
+                    </EmbeddedCheckoutProvider>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl bg-secondary p-6 text-center text-muted-foreground">
+                    Zahlungsformular wird geladen...
+                  </div>
+                )}
               </div>
             )}
 
