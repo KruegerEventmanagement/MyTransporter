@@ -364,13 +364,8 @@ export function BookingSection() {
   const [startKm, setStartKm] = useState<number>(0);
   const [drivePhase, setDrivePhase] = useState<"pre" | "active" | "return" | "done" | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
-  const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const startBookingCheckout = useServerFn(createBookingCheckout);
-  const embeddedCheckoutOptions = useMemo(
-    () => ({ clientSecret: checkoutClientSecret }),
-    [checkoutClientSecret],
-  );
 
   const stepTitles = registrationComplete
     ? ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Bezahlen", "Fahrt"]
