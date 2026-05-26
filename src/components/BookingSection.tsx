@@ -310,6 +310,7 @@ export function BookingSection() {
     }
     if (data.user) {
       setIsLoggedIn(true);
+      setAuthUser({ id: data.user.id, email: data.user.email ?? undefined });
       setProfileComplete(true);
       setShowLogin(false);
       setStep(4);
@@ -1053,13 +1054,12 @@ export function BookingSection() {
                     setCheckoutClientSecret(null);
                     setShowCheckout(true);
                    try {
-                     const { data: authData } = await supabase.auth.getUser();
                      const origin = window.location.origin;
                      const result = await startBookingCheckout({
                        data: {
                          plan: planKey,
-                         customerEmail: regForm.email || authData.user?.email || undefined,
-                         userId: authData.user?.id,
+                          customerEmail: regForm.email || authUser?.email || undefined,
+                          userId: authUser?.id,
                          returnUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
                          environment: getStripeEnvironment(),
                        },
