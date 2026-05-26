@@ -127,11 +127,11 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
         } else if (currentTarget.kind === "interior") {
           setInteriorPhoto(viewUrl);
         } else if (currentTarget.kind === "damage") {
-          setDamagePhotos((prev) => [...prev, urlData.publicUrl]);
+          setDamagePhotos((prev) => [...prev, viewUrl]);
         } else if (currentTarget.kind === "odometer") {
-          setOdometerPhoto(urlData.publicUrl);
+          setOdometerPhoto(viewUrl);
         } else {
-          setReceiptUrl(urlData.publicUrl);
+          setReceiptUrl(viewUrl);
         }
       } catch (err) {
         console.error("Upload error:", err);
