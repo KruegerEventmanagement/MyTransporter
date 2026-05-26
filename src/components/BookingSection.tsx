@@ -1043,12 +1043,11 @@ export function BookingSection() {
                       })
                     );
                    }
-                    setCheckoutClientSecret(null);
                     setCheckoutError(null);
                     setShowCheckout(true);
                    try {
                      const origin = window.location.origin;
-                     const clientSecret = await startBookingCheckout({
+                     const checkoutUrl = await startBookingCheckout({
                        data: {
                          plan: planKey,
                          customerEmail: regForm.email || undefined,
@@ -1056,11 +1055,11 @@ export function BookingSection() {
                          environment: getStripeEnvironment(),
                        },
                      });
-                     setCheckoutClientSecret(clientSecret);
+                     window.location.assign(checkoutUrl);
                    } catch (e) {
                      console.error(e);
-                     setCheckoutClientSecret(null);
                      setCheckoutError(e instanceof Error ? e.message : "Zahlung konnte nicht gestartet werden.");
+                     setShowCheckout(false);
                    }
                 }}
                 className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
@@ -1077,21 +1076,15 @@ export function BookingSection() {
                     <p className="text-sm text-muted-foreground">{checkoutError}</p>
                     <button
                       type="button"
-                      onClick={() => { setShowCheckout(false); setCheckoutClientSecret(null); setCheckoutError(null); }}
+                      onClick={() => { setShowCheckout(false); setCheckoutError(null); }}
                       className="rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium"
                     >
                       Erneut versuchen
                     </button>
                   </div>
-                ) : checkoutClientSecret ? (
-                  <div className="rounded-2xl border border-border bg-background p-2 sm:p-4">
-                    <EmbeddedCheckoutProvider stripe={getStripe()} options={embeddedCheckoutOptions}>
-                      <EmbeddedCheckout />
-                    </EmbeddedCheckoutProvider>
-                  </div>
                 ) : (
                   <div className="rounded-2xl bg-secondary p-6 text-center text-muted-foreground flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Zahlungsformular wird geladen...
+                    <Loader2 className="h-4 w-4 animate-spin" /> Du wirst zu Stripe weitergeleitet…
                   </div>
                 )}
               </div>
@@ -1100,7 +1093,7 @@ export function BookingSection() {
             {!paid && (
               <div className="mt-8 flex justify-start">
                 <button
-                  onClick={() => { setShowCheckout(false); setCheckoutClientSecret(null); setCheckoutError(null); setStep(registrationComplete ? 2 : 3); }}
+                  onClick={() => { setShowCheckout(false); setCheckoutError(null); setStep(registrationComplete ? 2 : 3); }}
                   className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
                 >
                   <ChevronLeft className="w-5 h-5" /> Zurück
