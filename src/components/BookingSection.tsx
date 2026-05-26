@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key, Eye, EyeOff } from "lucide-react";
+import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 import { createBookingCheckout } from "@/lib/payments.functions";
+import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
 import { DocumentScanner } from "./DocumentScanner";
@@ -362,7 +364,11 @@ export function BookingSection() {
   const [startKm, setStartKm] = useState<number>(0);
   const [drivePhase, setDrivePhase] = useState<"pre" | "active" | "return" | "done" | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
-  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
+  const embeddedCheckoutOptions = useMemo(
+    () => ({ clientSecret: checkoutClientSecret }),
+    [checkoutClientSecret],
+  );
 
   const stepTitles = registrationComplete
     ? ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Bezahlen", "Fahrt"]
