@@ -1080,8 +1080,16 @@ export function BookingSection() {
 
             {showCheckout && !paid && planKey && (
               <div className="mt-8 text-left">
-                <div className="rounded-2xl bg-secondary p-6 text-center text-muted-foreground">
-                  Du wirst zu Stripe weitergeleitet...
+                <div className="rounded-2xl bg-secondary p-6 text-center text-muted-foreground space-y-3">
+                  <div>Du wirst zu Stripe weitergeleitet...</div>
+                  {checkoutUrl && (
+                    <a
+                      href={checkoutUrl}
+                      className="inline-block underline font-medium text-foreground"
+                    >
+                      Falls nichts passiert: hier tippen, um zur Zahlung zu wechseln
+                    </a>
+                  )}
                 </div>
               </div>
             )}
