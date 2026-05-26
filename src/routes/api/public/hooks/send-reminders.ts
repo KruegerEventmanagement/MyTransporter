@@ -116,10 +116,12 @@ async function processBatch(kind: ReminderKind) {
       user_id: b.user_id,
     });
 
-    await supabaseAdmin
-      .from("bookings")
-      .update({ [column]: new Date().toISOString() })
-      .eq("id", b.id);
+    const nowIso = new Date().toISOString();
+    if (kind === "24h") {
+      await supabaseAdmin.from("bookings").update({ reminder_24h_sent_at: nowIso }).eq("id", b.id);
+    } else {
+      await supabaseAdmin.from("bookings").update({ reminder_30min_sent_at: nowIso }).eq("id", b.id);
+    }
 
     processed++;
   }
