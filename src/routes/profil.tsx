@@ -273,13 +273,17 @@ function BookingRow({ booking: b, onCancelled }: { booking: Booking; onCancelled
 
   return (
     <li className="rounded-2xl bg-card border border-border p-4">
-      <div className="flex items-start justify-between gap-3">
+      <Link
+        to="/buchung/$bookingId"
+        params={{ bookingId: b.id }}
+        className="flex items-start justify-between gap-3 -m-1 p-1 rounded-xl hover:bg-secondary/40 transition-colors"
+      >
         <div className="min-w-0 flex-1">
           <p className="font-bold text-foreground">{b.vehicle_name}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{b.vehicle_plate}</p>
         </div>
         <StatusBadge status={b.status} />
-      </div>
+      </Link>
 
       <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
         <InfoLine icon={<Hash className="w-3 h-3" />} label="Buchung">
@@ -306,6 +310,28 @@ function BookingRow({ booking: b, onCancelled }: { booking: Booking; onCancelled
           </span>
         </div>
       )}
+
+      {b.status === "cancelled" && b.deposit_deducted_cents != null && (() => {
+        const feeEuro = (b.deposit_deducted_cents ?? 0) / 100;
+        const refundEuro = Math.max(0, Number(b.plan_price) - feeEuro) + Number(b.deposit);
+        return (
+          <Link
+            to="/buchung/$bookingId"
+            params={{ bookingId: b.id }}
+            className="mt-3 block rounded-xl bg-secondary px-3 py-2.5 text-xs hover:bg-secondary/80"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Stornogebühr</span>
+              <span className="font-bold text-foreground">{feeEuro.toFixed(2)} €</span>
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-muted-foreground">Zurückerstattet</span>
+              <span className="font-bold text-foreground">{refundEuro.toFixed(2)} €</span>
+            </div>
+            <p className="mt-1.5 text-[10px] text-muted-foreground">Details ansehen →</p>
+          </Link>
+        );
+      })()}
 
       {(b.status === "active" || b.status === "returning") && (
         <Link
