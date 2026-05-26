@@ -1,10 +1,22 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { computePlanReturn } from "@/lib/booking-rules";
 
 const FROM = process.env.RESEND_FROM_EMAIL || "MyTransporter <info@mytransporter.org>";
 
 function fmtDate(date: string, hour: number): string {
   return new Date(`${date}T${String(hour).padStart(2, "0")}:00:00`).toLocaleString("de-DE", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function fmtDateObj(d: Date): string {
+  return d.toLocaleString("de-DE", {
     weekday: "long",
     day: "2-digit",
     month: "long",
@@ -53,7 +65,7 @@ export const sendBookingConfirmation = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: booking, error } = await supabaseAdmin
       .from("bookings")
-      .select("id, user_id, vehicle_name, vehicle_plate, plan_label, start_date, start_hour, pickup_code")
+      .select("id, user_id, vehicle_name, vehicle_plate, plan_id, plan_label, start_date, start_hour, pickup_code")
       .eq("id", data.bookingId)
       .maybeSingle();
     if (error || !booking) throw new Error("Buchung nicht gefunden");
@@ -68,6 +80,9 @@ export const sendBookingConfirmation = createServerFn({ method: "POST" })
 
     const greeting = profile?.first_name ? `Hallo ${profile.first_name},` : "Hallo,";
     const startStr = fmtDate(booking.start_date, booking.start_hour);
+    const startDateObj = new Date(`${booking.start_date}T00:00:00`);
+    const returnDateObj = computePlanReturn(booking.plan_id, startDateObj, booking.start_hour);
+    const returnStr = fmtDateObj(returnDateObj);
     const tripUrl = `https://www.mytransporter.org/trip/${booking.id}`;
     const profilUrl = `https://www.mytransporter.org/profil`;
 
@@ -80,7 +95,8 @@ export const sendBookingConfirmation = createServerFn({ method: "POST" })
         <div style="background:#f7f7f7;border-radius:12px;padding:16px 20px;margin:20px 0;">
           <p style="margin:0 0 4px;"><strong>${booking.vehicle_name}</strong> · ${booking.vehicle_plate}</p>
           <p style="margin:0 0 4px;">${booking.plan_label}</p>
-          <p style="margin:0;"><strong>Abholung:</strong> ${startStr} Uhr</p>
+          <p style="margin:0 0 4px;"><strong>Abholung:</strong> ${startStr} Uhr</p>
+          <p style="margin:0;"><strong>Rückgabe spätestens:</strong> ${returnStr} Uhr</p>
         </div>
 
         <h3 style="margin:24px 0 8px;font-size:16px;">So geht es weiter</h3>

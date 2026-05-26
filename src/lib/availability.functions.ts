@@ -1,17 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { computePlanReturn } from "@/lib/booking-rules";
 
 export type BusySlot = {
   vehiclePlate: string;
   start: string; // ISO
   end: string;   // ISO
 };
-
-function durationHoursForPlan(planId: string): number {
-  if (planId === "6h") return 6;
-  if (planId === "24h") return 24;
-  return 24; // km – Tag blockieren
-}
 
 /** Liefert alle aktuell belegten Zeitfenster (anonymisiert: nur Fahrzeug + Start/Ende). */
 export const getBusySlots = createServerFn({ method: "GET" })
@@ -27,7 +22,7 @@ export const getBusySlots = createServerFn({ method: "GET" })
       .filter((b) => b.start_date && b.start_hour !== null)
       .map((b) => {
         const start = new Date(`${b.start_date}T${String(b.start_hour).padStart(2, "0")}:00:00`);
-        const end = new Date(start.getTime() + durationHoursForPlan(b.plan_id) * 3600_000);
+        const end = computePlanReturn(b.plan_id, start, b.start_hour as number);
         return {
           vehiclePlate: b.vehicle_plate ?? "",
           start: start.toISOString(),

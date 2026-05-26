@@ -15,11 +15,12 @@ import { ActiveDriveScreen } from "./ActiveDriveScreen";
 import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
 import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
+import { computePlanReturn } from "@/lib/booking-rules";
 
 const PRICING = [
   { id: "6h", hours: 6, price: 100, freeKm: 300, label: "6 Stunden", returnRule: "Rückgabe bis spätestens 22:00 Uhr" },
-  { id: "24h", hours: 24, price: 150, freeKm: 500, label: "24 Stunden", returnRule: "Rückgabe zwischen 08:00 und 22:00 Uhr" },
-  { id: "km", hours: 0, price: 0, freeKm: 0, label: "Nur Kilometer", returnRule: "Rückgabe zwischen 08:00 und 22:00 Uhr" },
+  { id: "24h", hours: 24, price: 150, freeKm: 500, label: "24 Stunden", returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit" },
+  { id: "km", hours: 0, price: 0, freeKm: 0, label: "Nur Kilometer", returnRule: "Rückgabe am selben Tag bis spätestens 22:00 Uhr" },
 ];
 
 const DEPOSIT = 200;
@@ -128,13 +129,19 @@ export function BookingSection() {
     });
   };
 
-  const planHours = (planId: string) => (planId === "6h" ? 6 : 24);
+  const planDurationHoursForOverlap = (planId: string) => {
+    if (!date || startHour === null) return 0;
+    const start = new Date(date);
+    start.setHours(startHour, 0, 0, 0);
+    const end = computePlanReturn(planId, date, startHour);
+    return (end.getTime() - start.getTime()) / 3600_000;
+  };
 
   const isPlanBlocked = (planId: string) => {
     if (!date || startHour === null) return false;
     const start = new Date(date);
     start.setHours(startHour, 0, 0, 0);
-    return overlapsBusy(start.getTime(), planHours(planId));
+    return overlapsBusy(start.getTime(), planDurationHoursForOverlap(planId));
   };
 
   useEffect(() => {
@@ -348,16 +355,25 @@ export function BookingSection() {
 
   // Return info for selected plan
   const getReturnInfo = () => {
-    if (selectedPlan === null || startHour === null) return null;
+    if (selectedPlan === null || startHour === null || !date) return null;
     const plan = PRICING[selectedPlan];
+    const ret = computePlanReturn(plan.id, date, startHour);
+    const sameDay =
+      ret.getDate() === date.getDate() &&
+      ret.getMonth() === date.getMonth() &&
+      ret.getFullYear() === date.getFullYear();
+    const dayStr = sameDay
+      ? "am selben Tag"
+      : `am ${format(ret, "EEEE, d. MMMM", { locale: de })}`;
+    const timeStr = format(ret, "HH:mm", { locale: de });
     if (plan.id === "6h") {
-      const returnHour = startHour + 6;
-      return { valid: true, msg: `Rückgabe bis ${returnHour}:00 Uhr am selben Tag` };
+      return { valid: true, msg: `Rückgabe ${dayStr} bis ${timeStr} Uhr` };
     }
     if (plan.id === "24h") {
-      return { valid: true, msg: `Rückgabe am nächsten Tag bis ${startHour}:00 Uhr (zwischen 08:00–22:00)` };
+      return { valid: true, msg: `Rückgabe ${dayStr} bis ${timeStr} Uhr (genau 24 h)` };
     }
-    return { valid: true, msg: "Rückgabe zwischen 08:00 und 22:00 Uhr" };
+    // km
+    return { valid: true, msg: `Rückgabe heute bis spätestens ${timeStr} Uhr` };
   };
 
   const total = selectedPlan !== null && PRICING[selectedPlan].price > 0

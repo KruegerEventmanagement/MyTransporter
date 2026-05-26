@@ -137,6 +137,7 @@ function TripPage() {
           vehicleName={booking.vehicle_name}
           vehiclePlate={booking.vehicle_plate}
           planLabel={booking.plan_label}
+          planId={booking.plan_id}
           onReturn={() => setPhase("return")}
         />
       )}

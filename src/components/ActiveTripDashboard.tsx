@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
+import { computePlanReturn } from "@/lib/booking-rules";
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAidsYmswSyYosN9yKXswFF3RtJxk8pclc";
 
@@ -32,6 +33,7 @@ interface Props {
   vehicleName: string;
   vehiclePlate: string;
   planLabel: string;
+  planId?: string;
   onReturn: () => void;
 }
 
@@ -43,6 +45,7 @@ export function ActiveTripDashboard({
   vehicleName,
   vehiclePlate,
   planLabel,
+  planId,
   onReturn,
 }: Props) {
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
@@ -72,23 +75,22 @@ export function ActiveTripDashboard({
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const trackInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Plan-Dauer aus Label/ID parsen (z.B. "6 Stunden", "1 Tag", "24h")
-  const planDurationHours: number = (() => {
-    const src = planLabel || "";
-    const dayMatch = src.match(/(\d+)\s*Tag/i);
-    if (dayMatch) return parseInt(dayMatch[1], 10) * 24;
-    const hMatch = src.match(/(\d+)\s*(?:Stunden|Std|h)\b/i);
-    if (hMatch) return parseInt(hMatch[1], 10);
-    const numMatch = src.match(/(\d+)/);
-    return numMatch ? parseInt(numMatch[1], 10) : 6;
-  })();
-
   const startDateTime = (() => {
     const d = new Date(startDate.getTime());
     d.setHours(startHour, 0, 0, 0);
     return d;
   })();
-  const returnDateTime = new Date(startDateTime.getTime() + planDurationHours * 3600000);
+  // Rückgabezeit anhand der zentralen Buchungsregeln berechnen
+  const effectivePlanId: string = (() => {
+    if (planId) return planId;
+    const src = planLabel || "";
+    if (/Kilometer/i.test(src)) return "km";
+    if (/24/.test(src) || /Tag/i.test(src)) return "24h";
+    if (/6/.test(src)) return "6h";
+    return "6h";
+  })();
+  const returnDateTime = computePlanReturn(effectivePlanId, startDate, startHour);
+  const planDurationHours = Math.round((returnDateTime.getTime() - startDateTime.getTime()) / 3600000);
 
   // Timer
   useEffect(() => {
