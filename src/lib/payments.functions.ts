@@ -67,9 +67,9 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      ui_mode: "embedded_page",
       line_items,
-      return_url: data.returnUrl,
+      success_url: data.returnUrl,
+      cancel_url: data.returnUrl.split("?")[0].replace(/\/checkout\/return$/, "/#booking"),
       customer_creation: "always",
       payment_intent_data: {
         description: plan.rent > 0 ? `${plan.label} + Kaution` : "Transporter-Miete · Kaution",
@@ -79,8 +79,8 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
       ...(data.userId && { metadata: { userId: data.userId, plan: data.plan } }),
     });
 
-    if (!session.client_secret) throw new Error("Stripe hat kein Checkout-Secret zurückgegeben");
-    return session.client_secret;
+    if (!session.url) throw new Error("Stripe hat keine Checkout-URL zurückgegeben");
+    return session.url;
   });
 
 /** Liest Customer / PaymentIntent / PaymentMethod aus einer abgeschlossenen Session. */
