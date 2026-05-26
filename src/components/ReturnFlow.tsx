@@ -113,22 +113,25 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
         const path = `${bookingId}/${tag}_${Date.now()}.jpg`;
         const { error } = await supabase.storage.from("trip-photos").upload(path, file);
         if (error) throw error;
-        const { data: urlData } = supabase.storage.from("trip-photos").getPublicUrl(path);
+        const { data: signed } = await supabase.storage
+          .from("trip-photos")
+          .createSignedUrl(path, 60 * 60);
+        const viewUrl = signed?.signedUrl ?? "";
         await supabase.from("trip_photos").insert({
           booking_id: bookingId,
-          photo_url: urlData.publicUrl,
+          photo_url: path,
           photo_type: tag,
         });
         if (currentTarget.kind === "side") {
-          setPhotos((prev) => ({ ...prev, [currentTarget.id]: urlData.publicUrl }));
+          setPhotos((prev) => ({ ...prev, [currentTarget.id]: viewUrl }));
         } else if (currentTarget.kind === "interior") {
-          setInteriorPhoto(urlData.publicUrl);
+          setInteriorPhoto(viewUrl);
         } else if (currentTarget.kind === "damage") {
-          setDamagePhotos((prev) => [...prev, urlData.publicUrl]);
+          setDamagePhotos((prev) => [...prev, viewUrl]);
         } else if (currentTarget.kind === "odometer") {
-          setOdometerPhoto(urlData.publicUrl);
+          setOdometerPhoto(viewUrl);
         } else {
-          setReceiptUrl(urlData.publicUrl);
+          setReceiptUrl(viewUrl);
         }
       } catch (err) {
         console.error("Upload error:", err);
