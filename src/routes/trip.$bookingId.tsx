@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PreDriveFlow } from "@/components/PreDriveFlow";
 import { ReturnFlow } from "@/components/ReturnFlow";
 import { ActiveTripDashboard } from "@/components/ActiveTripDashboard";
+import { ScheduledTripView } from "@/components/ScheduledTripView";
 import { Loader2, Check } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
@@ -33,6 +34,12 @@ function TripPage() {
   const [phase, setPhase] = useState<Phase>("pre");
   const [loading, setLoading] = useState(true);
   const [startKm, setStartKm] = useState<number>(42850);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -91,6 +98,23 @@ function TripPage() {
   }
 
   const startDate = new Date(booking.start_date);
+  const scheduledStart = new Date(booking.start_date);
+  scheduledStart.setHours(booking.start_hour, 0, 0, 0);
+  const unlockAt = new Date(scheduledStart.getTime() - 30 * 60_000);
+  const isUnlocked = now >= unlockAt.getTime();
+
+  if (phase === "pre" && !isUnlocked) {
+    return (
+      <ScheduledTripView
+        startDate={startDate}
+        startHour={booking.start_hour}
+        vehicleName={booking.vehicle_name}
+        vehiclePlate={booking.vehicle_plate}
+        planLabel={booking.plan_label}
+        unlockAt={unlockAt}
+      />
+    );
+  }
 
   return (
     <>
