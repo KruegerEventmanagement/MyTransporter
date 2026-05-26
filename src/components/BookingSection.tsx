@@ -63,6 +63,7 @@ export function BookingSection() {
   const [startHour, setStartHour] = useState<number | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authUser, setAuthUser] = useState<{ id: string; email?: string } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [regForm, setRegForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [regPassword, setRegPassword] = useState("");
@@ -209,6 +210,7 @@ export function BookingSection() {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setIsLoggedIn(true);
+        setAuthUser({ id: session.user.id, email: session.user.email ?? undefined });
         setProfileComplete(true);
         setSignupEmailSent(null);
         setShowLogin(false);
@@ -219,12 +221,14 @@ export function BookingSection() {
       } else {
         // Logout → Registrierungsschritt wieder anzeigen
         setIsLoggedIn(false);
+        setAuthUser(null);
         setProfileComplete(false);
       }
     });
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) {
         setIsLoggedIn(true);
+        setAuthUser({ id: data.session.user.id, email: data.session.user.email ?? undefined });
         setProfileComplete(true);
         setShowLogin(false);
         setStep((currentStep) => (currentStep === 3 ? 4 : currentStep));
