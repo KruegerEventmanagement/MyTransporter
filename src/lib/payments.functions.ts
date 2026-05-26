@@ -127,12 +127,13 @@ async function assertAdmin(supabase: {
 /** Bucht Mehrkilometer (oder beliebigen Restbetrag) off-session von der gespeicherten Karte ab. */
 export const chargeBookingExtra = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { bookingId: string; amountCents: number; description?: string }) => {
+  .inputValidator((data: { bookingId: string; amountCents: number; description?: string; environment: StripeEnv }) => {
     if (!data.bookingId) throw new Error("bookingId fehlt");
     if (!Number.isInteger(data.amountCents) || data.amountCents < 50) {
       throw new Error("Betrag muss mindestens 0,50 € sein");
     }
     if (data.amountCents > 500_00) throw new Error("Betrag zu hoch (max. 500 €)");
+    assertStripeEnvironment(data.environment);
     return data;
   })
   .handler(async ({ data, context }) => {
@@ -149,7 +150,7 @@ export const chargeBookingExtra = createServerFn({ method: "POST" })
     if (!booking.stripe_customer_id || !booking.stripe_payment_method_id) {
       throw new Error("Keine gespeicherte Zahlungsmethode für diese Buchung");
     }
-    const stripe = createStripeClient("sandbox");
+    const stripe = createStripeClient(data.environment);
     const intent = await stripe.paymentIntents.create({
       amount: data.amountCents,
       currency: "eur",
@@ -174,7 +175,7 @@ export const chargeBookingExtra = createServerFn({ method: "POST" })
 /** Behält einen Teil der Kaution ein und erstattet den Rest. deductCents = einbehaltener Betrag. */
 export const settleDeposit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { bookingId: string; deductCents: number }) => {
+  .inputValidator((data: { bookingId: string; deductCents: number; environment: StripeEnv }) => {
     if (!data.bookingId) throw new Error("bookingId fehlt");
     if (!Number.isInteger(data.deductCents) || data.deductCents < 0) {
       throw new Error("Abzug ungültig");
@@ -182,6 +183,7 @@ export const settleDeposit = createServerFn({ method: "POST" })
     if (data.deductCents > DEPOSIT_CENTS) {
       throw new Error("Abzug darf die Kaution (200 €) nicht übersteigen");
     }
+    assertStripeEnvironment(data.environment);
     return data;
   })
   .handler(async ({ data, context }) => {
@@ -199,7 +201,7 @@ export const settleDeposit = createServerFn({ method: "POST" })
       throw new Error("Keine Stripe-Zahlung für diese Buchung gefunden");
     }
     const refundCents = DEPOSIT_CENTS - data.deductCents;
-    const stripe = createStripeClient("sandbox");
+    const stripe = createStripeClient(data.environment);
     let refundId: string | null = null;
     if (refundCents > 0) {
       const refund = await stripe.refunds.create({
