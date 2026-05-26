@@ -1045,8 +1045,9 @@ export function BookingSection() {
                         vehiclePlate: displayVehicle.plate,
                       })
                     );
-                  }
-                   setShowCheckout(true);
+                   }
+                    setCheckoutClientSecret(null);
+                    setShowCheckout(true);
                    try {
                      const origin = window.location.origin;
                      const clientSecret = await createBookingCheckout({
@@ -1061,6 +1062,7 @@ export function BookingSection() {
                    } catch (e) {
                      console.error(e);
                      setShowCheckout(false);
+                     setCheckoutClientSecret(null);
                      alert("Zahlung konnte nicht gestartet werden. Bitte erneut versuchen.");
                    }
                 }}
@@ -1089,7 +1091,7 @@ export function BookingSection() {
             {!paid && (
               <div className="mt-8 flex justify-start">
                 <button
-                  onClick={() => { setShowCheckout(false); setStep(registrationComplete ? 2 : 3); }}
+                  onClick={() => { setShowCheckout(false); setCheckoutClientSecret(null); setStep(registrationComplete ? 2 : 3); }}
                   className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
                 >
                   <ChevronLeft className="w-5 h-5" /> Zurück
