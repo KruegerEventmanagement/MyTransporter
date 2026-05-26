@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type Stripe from "stripe";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
+import { createStripeClient, getStripeErrorMessage, type StripeEnv } from "@/lib/stripe.server";
 
 type PlanKey = "rent_6h" | "rent_24h" | "rent_km";
 
@@ -13,10 +13,45 @@ const PLAN_PRICING: Record<PlanKey, { rent: number; label: string }> = {
 };
 const DEPOSIT_CENTS = 200_00;
 
+type CheckoutSessionResult = { clientSecret: string } | { error: string };
+
 function assertStripeEnvironment(environment: StripeEnv) {
   if (environment !== "sandbox" && environment !== "live") {
     throw new Error("Ungültige Stripe-Umgebung");
   }
+}
+
+async function resolveOrCreateCustomer(
+  stripe: ReturnType<typeof createStripeClient>,
+  options: { email?: string; userId?: string },
+): Promise<string> {
+  if (options.userId && !/^[a-zA-Z0-9_-]+$/.test(options.userId)) {
+    throw new Error("Invalid userId");
+  }
+  if (options.userId) {
+    const found = await stripe.customers.search({
+      query: `metadata['userId']:'${options.userId}'`,
+      limit: 1,
+    });
+    if (found.data.length) return found.data[0].id;
+  }
+  if (options.email) {
+    const existing = await stripe.customers.list({ email: options.email, limit: 1 });
+    if (existing.data.length) {
+      const customer = existing.data[0];
+      if (options.userId && customer.metadata?.userId !== options.userId) {
+        await stripe.customers.update(customer.id, {
+          metadata: { ...customer.metadata, userId: options.userId },
+        });
+      }
+      return customer.id;
+    }
+  }
+  const created = await stripe.customers.create({
+    ...(options.email && { email: options.email }),
+    ...(options.userId && { metadata: { userId: options.userId } }),
+  });
+  return created.id;
 }
 
 export const createBookingCheckout = createServerFn({ method: "POST" })
@@ -34,9 +69,10 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     assertStripeEnvironment(data.environment);
     return data;
   })
-  .handler(async ({ data }) => {
-    const stripe = createStripeClient(data.environment);
-    const plan = PLAN_PRICING[data.plan];
+  .handler(async ({ data }): Promise<CheckoutSessionResult> => {
+    try {
+      const stripe = createStripeClient(data.environment);
+      const plan = PLAN_PRICING[data.plan];
 
     const line_items: Array<{
       price_data: {
@@ -65,22 +101,28 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
       quantity: 1,
     });
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items,
-      success_url: data.returnUrl,
-      cancel_url: data.returnUrl.split("?")[0].replace(/\/checkout\/return$/, "/#booking"),
-      customer_creation: "always",
-      payment_intent_data: {
-        description: plan.rent > 0 ? `${plan.label} + Kaution` : "Transporter-Miete · Kaution",
-        setup_future_usage: "off_session",
-      },
-      ...(data.customerEmail && { customer_email: data.customerEmail }),
-      ...(data.userId && { metadata: { userId: data.userId, plan: data.plan } }),
-    });
+      const customerId = data.customerEmail || data.userId
+        ? await resolveOrCreateCustomer(stripe, { email: data.customerEmail, userId: data.userId })
+        : undefined;
 
-    if (!session.url) throw new Error("Stripe hat keine Checkout-URL zurückgegeben");
-    return session.url;
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        ui_mode: "embedded_page",
+        line_items,
+        return_url: data.returnUrl,
+        ...(customerId && { customer: customerId }),
+        payment_intent_data: {
+          description: plan.rent > 0 ? `${plan.label} + Kaution` : "Transporter-Miete · Kaution",
+          setup_future_usage: "off_session",
+        },
+        ...(data.userId && { metadata: { userId: data.userId, plan: data.plan } }),
+      });
+
+      if (!session.client_secret) throw new Error("Stripe hat kein Checkout-Token zurückgegeben");
+      return { clientSecret: session.client_secret };
+    } catch (error) {
+      return { error: getStripeErrorMessage(error) };
+    }
   });
 
 /** Liest Customer / PaymentIntent / PaymentMethod aus einer abgeschlossenen Session. */
