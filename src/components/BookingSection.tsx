@@ -1066,7 +1066,6 @@ export function BookingSection() {
                      console.error(e);
                      setCheckoutError(e instanceof Error ? e.message : "Zahlung konnte nicht gestartet werden.");
                       setCheckoutClientSecret(null);
-                     setShowCheckout(false);
                    }
                 }}
                 className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
