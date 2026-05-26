@@ -1039,32 +1039,38 @@ export function BookingSection() {
                       })
                     );
                   }
-                  setShowCheckout(true);
-                  try {
-                    const origin = window.location.origin;
-                    const url = await createBookingCheckout({
-                      data: {
-                        plan: planKey,
-                        customerEmail: regForm.email || undefined,
-                        successUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
-                        cancelUrl: `${origin}/?checkout=cancelled`,
-                      },
-                    });
-                    // Aus dem Lovable-Preview-iframe ausbrechen, sonst blockt Stripe (X-Frame-Options).
-                    if (window.top && window.top !== window.self) {
-                      try {
-                        window.top.location.href = url;
-                      } catch {
-                        window.open(url, "_blank", "noopener,noreferrer");
-                      }
-                    } else {
-                      window.location.href = url;
-                    }
-                  } catch (e) {
-                    console.error(e);
-                    setShowCheckout(false);
-                    alert("Zahlung konnte nicht gestartet werden. Bitte erneut versuchen.");
-                  }
+                   setShowCheckout(true);
+                   try {
+                     const origin = window.location.origin;
+                     const url = await createBookingCheckout({
+                       data: {
+                         plan: planKey,
+                         customerEmail: regForm.email || undefined,
+                         successUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+                         cancelUrl: `${origin}/?checkout=cancelled`,
+                       },
+                     });
+                     // Bevorzugt im aktuellen Fenster navigieren – funktioniert zuverlässig auf
+                     // Mobile (auch in In-App-Browsern). Nur wenn wir in einem fremden iframe
+                     // (z. B. Lovable-Preview) sitzen, versuchen wir aus dem Frame auszubrechen.
+                     const inIframe = window.top && window.top !== window.self;
+                     let navigated = false;
+                     if (inIframe) {
+                       try {
+                         window.top!.location.href = url;
+                         navigated = true;
+                       } catch {
+                         // Cross-Origin – Top-Frame nicht erreichbar
+                       }
+                     }
+                     if (!navigated) {
+                       window.location.assign(url);
+                     }
+                   } catch (e) {
+                     console.error(e);
+                     setShowCheckout(false);
+                     alert("Zahlung konnte nicht gestartet werden. Bitte erneut versuchen.");
+                   }
                 }}
                 className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
               >
