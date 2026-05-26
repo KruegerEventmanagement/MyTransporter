@@ -70,6 +70,8 @@ export type Database = {
           plan_label: string
           plan_price: number
           remarks: string | null
+          reminder_24h_sent_at: string | null
+          reminder_30min_sent_at: string | null
           return_code: string | null
           start_date: string
           start_hour: number
@@ -107,6 +109,8 @@ export type Database = {
           plan_label: string
           plan_price?: number
           remarks?: string | null
+          reminder_24h_sent_at?: string | null
+          reminder_30min_sent_at?: string | null
           return_code?: string | null
           start_date: string
           start_hour: number
@@ -144,6 +148,8 @@ export type Database = {
           plan_label?: string
           plan_price?: number
           remarks?: string | null
+          reminder_24h_sent_at?: string | null
+          reminder_30min_sent_at?: string | null
           return_code?: string | null
           start_date?: string
           start_hour?: number
