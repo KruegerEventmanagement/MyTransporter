@@ -26,6 +26,7 @@ import { AdminLogin } from "@/components/admin/AdminLogin";
 import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
 import { useServerFn } from "@tanstack/react-start";
 import { chargeBookingExtra, settleDeposit } from "@/lib/payments.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
@@ -1073,6 +1074,7 @@ function SettlementPanel({
           bookingId: booking.id,
           amountCents: extraOwedCents,
           description: `Mehrkilometer · ${booking.extra_km ?? 0} km`,
+          environment: getStripeEnvironment(),
         },
       });
       toast.success(
@@ -1091,7 +1093,7 @@ function SettlementPanel({
   const handleSettle = async () => {
     setBusy(true);
     try {
-      await settle({ data: { bookingId: booking.id, deductCents } });
+      await settle({ data: { bookingId: booking.id, deductCents, environment: getStripeEnvironment() } });
       toast.success(
         refundCents > 0
           ? `${(refundCents / 100).toFixed(2)} € zurückerstattet, ${(deductCents / 100).toFixed(2)} € einbehalten.`
