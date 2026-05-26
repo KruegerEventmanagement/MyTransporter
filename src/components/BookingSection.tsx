@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key, Eye, EyeOff, Loader2 } from "lucide-react";
 import { createBookingCheckout } from "@/lib/payments.functions";
-import { getStripeEnvironment } from "@/lib/stripe";
+import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
 import { DocumentScanner } from "./DocumentScanner";
@@ -365,6 +366,7 @@ export function BookingSection() {
   const [drivePhase, setDrivePhase] = useState<"pre" | "active" | "return" | "done" | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const startBookingCheckout = useServerFn(createBookingCheckout);
 
   const stepTitles = registrationComplete
@@ -1044,30 +1046,26 @@ export function BookingSection() {
                     );
                    }
                     setCheckoutError(null);
+                    setCheckoutClientSecret(null);
                     setShowCheckout(true);
                    try {
+                     const { data: authData } = await supabase.auth.getUser();
                      const origin = window.location.origin;
-                     const checkoutUrl = await startBookingCheckout({
+                     const result = await startBookingCheckout({
                        data: {
                          plan: planKey,
-                         customerEmail: regForm.email || undefined,
+                         customerEmail: regForm.email || authData.user?.email || undefined,
+                         userId: authData.user?.id,
                          returnUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
                          environment: getStripeEnvironment(),
                        },
                      });
-                     // Im Lovable-Preview läuft die App in einem iframe.
-                     // Stripe Checkout verweigert das Laden im iframe (CSP),
-                     // daher die Top-Ebene navigieren.
-                     const top = window.top ?? window;
-                     try {
-                       top.location.href = checkoutUrl;
-                     } catch {
-                       window.location.href = checkoutUrl;
-                     }
+                     if ("error" in result) throw new Error(result.error);
+                     setCheckoutClientSecret(result.clientSecret);
                    } catch (e) {
                      console.error(e);
                      setCheckoutError(e instanceof Error ? e.message : "Zahlung konnte nicht gestartet werden.");
-                     setShowCheckout(false);
+                      setCheckoutClientSecret(null);
                    }
                 }}
                 className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
@@ -1084,15 +1082,21 @@ export function BookingSection() {
                     <p className="text-sm text-muted-foreground">{checkoutError}</p>
                     <button
                       type="button"
-                      onClick={() => { setShowCheckout(false); setCheckoutError(null); }}
+                      onClick={() => { setShowCheckout(false); setCheckoutError(null); setCheckoutClientSecret(null); }}
                       className="rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium"
                     >
                       Erneut versuchen
                     </button>
                   </div>
+                ) : checkoutClientSecret ? (
+                  <div className="rounded-2xl border border-border bg-background p-2 sm:p-4 overflow-hidden">
+                    <EmbeddedCheckoutProvider stripe={getStripe()} options={{ clientSecret: checkoutClientSecret }}>
+                      <EmbeddedCheckout />
+                    </EmbeddedCheckoutProvider>
+                  </div>
                 ) : (
                   <div className="rounded-2xl bg-secondary p-6 text-center text-muted-foreground flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Du wirst zu Stripe weitergeleitet…
+                    <Loader2 className="h-4 w-4 animate-spin" /> Stripe-Zahlung wird geladen…
                   </div>
                 )}
               </div>
@@ -1101,7 +1105,7 @@ export function BookingSection() {
             {!paid && (
               <div className="mt-8 flex justify-start">
                 <button
-                  onClick={() => { setShowCheckout(false); setCheckoutError(null); setStep(registrationComplete ? 2 : 3); }}
+                  onClick={() => { setShowCheckout(false); setCheckoutError(null); setCheckoutClientSecret(null); setStep(registrationComplete ? 2 : 3); }}
                   className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
                 >
                   <ChevronLeft className="w-5 h-5" /> Zurück
