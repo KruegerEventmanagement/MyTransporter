@@ -4,6 +4,7 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { notifyAdmin } from "@/lib/admin-notify";
 import { getCheckoutSessionDetails } from "@/lib/payments.functions";
+import { sendBookingConfirmation } from "@/lib/booking-emails.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
 
 export const Route = createFileRoute("/checkout/return")({
@@ -102,6 +103,10 @@ function CheckoutReturn() {
             bookingId,
             userId: userData.user.id,
           });
+          // Buchungsbestätigung per E-Mail (still im Hintergrund)
+          sendBookingConfirmation({ data: { bookingId } }).catch((e) =>
+            console.warn("Buchungsbestätigung konnte nicht gesendet werden:", e),
+          );
         } else {
           // Demo-Fallback ohne Auth
           bookingId = "demo-" + Date.now();
