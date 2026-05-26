@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, Car, Wallet, Route as RouteIcon, Calendar, Hash, MapPin, X, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { useServerFn } from "@tanstack/react-start";
+import { cancelBookingWithRefund } from "@/lib/payments.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
 
 export const Route = createFileRoute("/profil")({
   head: () => ({ meta: [{ title: "MyTransporter · Profil" }] }),
@@ -241,25 +244,20 @@ function BookingRow({ booking: b, onCancelled }: { booking: Booking; onCancelled
   const [error, setError] = useState<string | null>(null);
   const cancellable = b.status === "paid" && b.start_km === null;
   const { hours, fee, startsAt } = useMemo(() => computeCancellationFee(b), [b]);
+  const cancelFn = useServerFn(cancelBookingWithRefund);
 
   const handleCancel = async () => {
     setCancelling(true);
     setError(null);
-    const note = `Storniert am ${format(new Date(), "dd.MM.yyyy HH:mm", { locale: de })} · Gebühr ${fee.toFixed(2)} € (${hours} h vor Abfahrt)`;
-    const { error: err } = await supabase
-      .from("bookings")
-      .update({
-        status: "cancelled",
-        remarks: b.remarks ? `${b.remarks}\n${note}` : note,
-      })
-      .eq("id", b.id);
-    setCancelling(false);
-    if (err) {
-      setError(err.message);
-      return;
+    try {
+      await cancelFn({ data: { bookingId: b.id, environment: getStripeEnvironment() } });
+      setCancelling(false);
+      setConfirming(false);
+      await onCancelled();
+    } catch (e) {
+      setCancelling(false);
+      setError(e instanceof Error ? e.message : "Stornierung fehlgeschlagen");
     }
-    setConfirming(false);
-    await onCancelled();
   };
 
   const km = b.start_km !== null && b.end_km !== null ? Math.max(0, b.end_km - b.start_km) : null;
