@@ -229,3 +229,82 @@ export const settleDeposit = createServerFn({ method: "POST" })
       .eq("id", data.bookingId);
     return { refundCents, refundId };
   });
+
+/**
+ * Storniert eine Buchung des angemeldeten Nutzers, behält die fällige
+ * Stornogebühr ein und erstattet den Rest (Miete - Gebühr) + Kaution
+ * automatisch via Stripe-Refund auf den ursprünglichen PaymentIntent.
+ *
+ * Gebührenstaffel (h vor Abfahrt):
+ *   ≥13 h: 0 €  ·  12 h: 1 €  ·  11 h: 2 €  ·  …  ·  1 h oder weniger: 12 €
+ */
+function computeCancellationFeeCents(startsAtMs: number, nowMs: number): { hours: number; feeCents: number } {
+  const diffMs = startsAtMs - nowMs;
+  const hours = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60)));
+  let feeEuro: number;
+  if (hours >= 13) feeEuro = 0;
+  else if (hours <= 1) feeEuro = 12;
+  else feeEuro = 13 - hours;
+  return { hours, feeCents: feeEuro * 100 };
+}
+
+export const cancelBookingWithRefund = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { bookingId: string; environment: StripeEnv }) => {
+    if (!data.bookingId) throw new Error("bookingId fehlt");
+    assertStripeEnvironment(data.environment);
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    const { data: booking, error } = await supabaseAdmin
+      .from("bookings")
+      .select(
+        "id, user_id, status, start_date, start_hour, start_km, plan_price, deposit, deposit_status, stripe_payment_intent_id, remarks"
+      )
+      .eq("id", data.bookingId)
+      .maybeSingle();
+    if (error || !booking) throw new Error("Buchung nicht gefunden");
+    if (booking.user_id !== context.userId) throw new Error("Nicht autorisiert");
+    if (booking.status === "cancelled") throw new Error("Buchung ist bereits storniert");
+    if (booking.start_km !== null) throw new Error("Fahrt wurde bereits gestartet und kann nicht mehr storniert werden");
+    if (!booking.stripe_payment_intent_id) throw new Error("Keine Stripe-Zahlung für diese Buchung gefunden");
+
+    const startsAtMs = new Date(
+      `${booking.start_date}T${String(booking.start_hour).padStart(2, "0")}:00:00`
+    ).getTime();
+    const { hours, feeCents } = computeCancellationFeeCents(startsAtMs, Date.now());
+
+    const planPriceCents = Math.round(Number(booking.plan_price) * 100);
+    const depositCents = Math.round(Number(booking.deposit) * 100);
+    // Erstattet wird die Miete abzüglich Gebühr + die volle Kaution
+    const rentRefundCents = Math.max(0, planPriceCents - feeCents);
+    const refundCents = rentRefundCents + depositCents;
+
+    const stripe = createStripeClient(data.environment);
+    let refundId: string | null = null;
+    if (refundCents > 0) {
+      const refund = await stripe.refunds.create({
+        payment_intent: booking.stripe_payment_intent_id,
+        amount: refundCents,
+        metadata: { bookingId: booking.id, kind: "cancellation", fee_cents: String(feeCents) },
+      });
+      refundId = refund.id;
+    }
+
+    const nowIso = new Date().toISOString();
+    const note = `Storniert am ${new Date().toLocaleString("de-DE")} · Gebühr ${(feeCents / 100).toFixed(2)} € (${hours} h vor Abfahrt) · Erstattet ${(refundCents / 100).toFixed(2)} €`;
+    await supabaseAdmin
+      .from("bookings")
+      .update({
+        status: "cancelled",
+        deposit_status: "released",
+        deposit_released_at: nowIso,
+        deposit_released_by: context.userId,
+        deposit_deducted_cents: feeCents,
+        deposit_refund_id: refundId,
+        remarks: booking.remarks ? `${booking.remarks}\n${note}` : note,
+      })
+      .eq("id", booking.id);
+
+    return { refundCents, feeCents, hours, refundId };
+  });
