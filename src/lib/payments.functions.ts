@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 
 type PlanKey = "rent_6h" | "rent_24h" | "rent_km";
 
@@ -12,13 +13,10 @@ const PLAN_PRICING: Record<PlanKey, { rent: number; label: string }> = {
 };
 const DEPOSIT_CENTS = 200_00;
 
-function getStripe() {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) throw new Error("STRIPE_SECRET_KEY ist nicht konfiguriert");
-  return new Stripe(key, {
-    apiVersion: "2026-03-25.dahlia",
-    httpClient: Stripe.createFetchHttpClient(),
-  });
+function assertStripeEnvironment(environment: StripeEnv) {
+  if (environment !== "sandbox" && environment !== "live") {
+    throw new Error("Ungültige Stripe-Umgebung");
+  }
 }
 
 export const createBookingCheckout = createServerFn({ method: "POST" })
@@ -26,16 +24,18 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     plan: PlanKey;
     customerEmail?: string;
     userId?: string;
-    successUrl: string;
-    cancelUrl: string;
+    returnUrl: string;
+    environment: StripeEnv;
   }) => {
     if (!["rent_6h", "rent_24h", "rent_km"].includes(data.plan)) {
       throw new Error("Invalid plan");
     }
+    if (!data.returnUrl) throw new Error("returnUrl fehlt");
+    assertStripeEnvironment(data.environment);
     return data;
   })
   .handler(async ({ data }) => {
-    const stripe = getStripe();
+    const stripe = createStripeClient(data.environment);
     const plan = PLAN_PRICING[data.plan];
 
     const line_items: Array<{
@@ -67,29 +67,31 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
+      ui_mode: "embedded_page",
       line_items,
-      success_url: data.successUrl,
-      cancel_url: data.cancelUrl,
+      return_url: data.returnUrl,
       customer_creation: "always",
       payment_intent_data: {
+        description: plan.rent > 0 ? `${plan.label} + Kaution` : "Transporter-Miete · Kaution",
         setup_future_usage: "off_session",
       },
       ...(data.customerEmail && { customer_email: data.customerEmail }),
       ...(data.userId && { metadata: { userId: data.userId, plan: data.plan } }),
     });
 
-    if (!session.url) throw new Error("Stripe hat keine Checkout-URL zurückgegeben");
-    return session.url;
+    if (!session.client_secret) throw new Error("Stripe hat kein Checkout-Secret zurückgegeben");
+    return session.client_secret;
   });
 
 /** Liest Customer / PaymentIntent / PaymentMethod aus einer abgeschlossenen Session. */
 export const getCheckoutSessionDetails = createServerFn({ method: "POST" })
-  .inputValidator((data: { sessionId: string }) => {
+  .inputValidator((data: { sessionId: string; environment: StripeEnv }) => {
     if (!data.sessionId) throw new Error("sessionId fehlt");
+    assertStripeEnvironment(data.environment);
     return data;
   })
   .handler(async ({ data }) => {
-    const stripe = getStripe();
+    const stripe = createStripeClient(data.environment);
     const session = await stripe.checkout.sessions.retrieve(data.sessionId, {
       expand: ["payment_intent"],
     });
@@ -147,7 +149,7 @@ export const chargeBookingExtra = createServerFn({ method: "POST" })
     if (!booking.stripe_customer_id || !booking.stripe_payment_method_id) {
       throw new Error("Keine gespeicherte Zahlungsmethode für diese Buchung");
     }
-    const stripe = getStripe();
+    const stripe = createStripeClient("sandbox");
     const intent = await stripe.paymentIntents.create({
       amount: data.amountCents,
       currency: "eur",
@@ -197,7 +199,7 @@ export const settleDeposit = createServerFn({ method: "POST" })
       throw new Error("Keine Stripe-Zahlung für diese Buchung gefunden");
     }
     const refundCents = DEPOSIT_CENTS - data.deductCents;
-    const stripe = getStripe();
+    const stripe = createStripeClient("sandbox");
     let refundId: string | null = null;
     if (refundCents > 0) {
       const refund = await stripe.refunds.create({
