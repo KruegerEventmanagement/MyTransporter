@@ -59,7 +59,7 @@ function buildPackage(zone: Zone): PartnerPackage {
     sqm: Math.round(sqm * 100) / 100,
     widthCm,
     heightCm,
-    sizeLabel: `${widthCm} \u00d7 ${heightCm} cm`,
+    sizeLabel: `ca. ${widthCm} \u00d7 ${heightCm} cm`,
     monthly,
     prices: buildPrices(monthly),
     setupFee: SETUP_FEE,
@@ -92,7 +92,7 @@ export function formatEuro(amount: number): string {
 }
 
 export function formatSqm(sqm: number): string {
-  return `${sqm.toFixed(2).replace(".", ",")} m\u00b2`;
+  return `ca. ${sqm.toFixed(2).replace(".", ",")} m\u00b2`;
 }
 
 export const PACKAGES_BY_VIEW: Record<ViewId, PartnerPackage[]> = {
