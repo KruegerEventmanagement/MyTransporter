@@ -41,7 +41,7 @@ export function TransporterDiagram({ highlight, onSelect }: Props) {
         {/* Karosserie */}
         <path
           d="M 60 220 L 60 90 Q 60 60 90 60 L 170 60 L 200 30 L 510 30 Q 540 30 540 60 L 540 220 Z"
-          fill="hsl(var(--secondary))"
+          fill="var(--secondary)"
           stroke="currentColor"
           strokeWidth="2"
         />
@@ -50,7 +50,7 @@ export function TransporterDiagram({ highlight, onSelect }: Props) {
         {/* Fahrerfenster */}
         <path
           d="M 80 80 L 80 130 L 160 130 L 160 70 L 175 70 Z"
-          fill="hsl(var(--background))"
+          fill="var(--background)"
           stroke="currentColor"
           strokeWidth="1"
           opacity="0.7"
@@ -63,9 +63,9 @@ export function TransporterDiagram({ highlight, onSelect }: Props) {
 
         {/* Räder */}
         <circle cx="135" cy="225" r="26" fill="currentColor" />
-        <circle cx="135" cy="225" r="12" fill="hsl(var(--background))" />
+        <circle cx="135" cy="225" r="12" fill="var(--background)" />
         <circle cx="455" cy="225" r="26" fill="currentColor" />
-        <circle cx="455" cy="225" r="12" fill="hsl(var(--background))" />
+        <circle cx="455" cy="225" r="12" fill="var(--background)" />
 
         {/* Werbeflächen */}
         {AREAS.map((a) => {
