@@ -168,8 +168,9 @@ export function TransporterPhotoDiagram({ highlight, onSelect }: Props) {
       )}
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Tippe auf eine Fläche – sie wird mit einem Beispiel-Motiv eingeblendet.
-        Größe & Preis werden automatisch aus der gemessenen Fläche berechnet.
+        Tippe auf eine Fläche – sie wird hervorgehoben. So siehst du genau,
+        wie groß deine fertige Werbefläche auf dem Transporter wird.
+        Größe und Preis werden automatisch aus der gemessenen Fläche berechnet.
       </p>
     </div>
   );
