@@ -16,58 +16,208 @@ export interface ViewDef {
   zones: Zone[];
 }
 
-function rect(x: number, y: number, w: number, h: number): string {
-  return `${x},${y} ${x + w},${y} ${x + w},${y + h} ${x},${y + h}`;
-}
+// All polygon coordinates derived from the actual van photos
+// (van-driver.jpg / van-passenger.jpg: 1536×1024 — van-rear.jpg / van-front.jpg: 1024×1024)
+// Each zone hugs the real sheet-metal panel: rounded corners follow wheel arches,
+// triangular corners follow the cab roof curve, rear corner tapers upward.
 
 const driverZones: Zone[] = [
-  { code: "D1", view: "driver", points: rect(210, 210, 165, 90), label: { x: 292, y: 258 } },
-  { code: "D2", view: "driver", points: rect(380, 210, 160, 90), label: { x: 460, y: 258 } },
-  { code: "D3", view: "driver", points: rect(300, 510, 240, 170), label: { x: 420, y: 600 } },
-  { code: "D4", view: "driver", points: rect(560, 210, 235, 200), label: { x: 677, y: 312 } },
-  { code: "D5", view: "driver", points: rect(800, 210, 235, 200), label: { x: 917, y: 312 } },
-  { code: "D6", view: "driver", points: rect(1040, 210, 220, 200), label: { x: 1150, y: 312 } },
-  { code: "D7", view: "driver", points: rect(1265, 210, 215, 200), label: { x: 1372, y: 312 } },
-  { code: "D8", view: "driver", points: rect(560, 415, 235, 215), label: { x: 677, y: 525 } },
-  { code: "D9", view: "driver", points: rect(800, 415, 235, 215), label: { x: 917, y: 525 } },
-  { code: "D10", view: "driver", points: rect(1040, 415, 220, 215), label: { x: 1150, y: 525 } },
-  { code: "D11", view: "driver", points: rect(1265, 415, 215, 215), label: { x: 1372, y: 525 } },
-  { code: "D12", view: "driver", points: rect(560, 635, 235, 70), label: { x: 677, y: 672 } },
-  { code: "D13", view: "driver", points: rect(800, 635, 235, 70), label: { x: 917, y: 672 } },
-  { code: "D14", view: "driver", points: rect(1040, 635, 130, 70), label: { x: 1105, y: 672 } },
-  { code: "D15", view: "driver", points: rect(1355, 635, 125, 70), label: { x: 1417, y: 672 } },
-  { code: "D16", view: "driver", points: rect(165, 510, 125, 100), label: { x: 227, y: 562 } },
+  // D1 — Fahrertür (Trapez, vordere Unterkante folgt dem Radkasten-Bogen)
+  {
+    code: "D1",
+    view: "driver",
+    points: "395,470 555,470 555,720 440,720 410,710 395,690 388,665 388,520",
+    label: { x: 475, y: 600 },
+  },
+  // D2 — kleines Dreieck oben über/hinter dem Fahrerfenster (Dachrundung)
+  {
+    code: "D2",
+    view: "driver",
+    points: "395,310 555,310 555,460 395,460",
+    label: { x: 475, y: 390 },
+  },
+  // D3–D6 — obere Lade-Reihe (4 Kacheln)
+  {
+    code: "D3",
+    view: "driver",
+    points: "565,310 765,310 765,510 565,510",
+    label: { x: 665, y: 410 },
+  },
+  {
+    code: "D4",
+    view: "driver",
+    points: "770,310 970,310 970,510 770,510",
+    label: { x: 870, y: 410 },
+  },
+  {
+    code: "D5",
+    view: "driver",
+    points: "975,310 1170,310 1170,510 975,510",
+    label: { x: 1072, y: 410 },
+  },
+  {
+    code: "D6",
+    view: "driver",
+    points: "1175,310 1370,310 1370,510 1175,510",
+    label: { x: 1272, y: 410 },
+  },
+  // D7–D10 — untere Lade-Reihe (4 Kacheln)
+  {
+    code: "D7",
+    view: "driver",
+    points: "565,515 765,515 765,720 565,720",
+    label: { x: 665, y: 617 },
+  },
+  {
+    code: "D8",
+    view: "driver",
+    points: "770,515 970,515 970,720 770,720",
+    label: { x: 870, y: 617 },
+  },
+  // D9 — vor dem hinteren Radkasten: untere Kante folgt dem Bogen
+  {
+    code: "D9",
+    view: "driver",
+    points: "975,515 1170,515 1170,650 1155,675 1130,690 1090,700 975,700",
+    label: { x: 1072, y: 605 },
+  },
+  // D10 — über dem hinteren Radkasten: untere Kante folgt dem Bogen
+  {
+    code: "D10",
+    view: "driver",
+    points: "1175,515 1370,515 1370,720 1300,720 1260,705 1230,690 1205,675 1190,655 1175,635",
+    label: { x: 1272, y: 605 },
+  },
+  // D11 — Heckeck (Polygon, hinten leicht verjüngt)
+  {
+    code: "D11",
+    view: "driver",
+    points: "1375,310 1455,330 1455,710 1375,720",
+    label: { x: 1415, y: 520 },
+  },
 ];
 
+// Beifahrerseite — gespiegelt (van schaut nach rechts, x ≈ 1536 - x_driver)
 const passengerZones: Zone[] = [
-  { code: "P1", view: "passenger", points: rect(1000, 210, 165, 90), label: { x: 1082, y: 258 } },
-  { code: "P2", view: "passenger", points: rect(1170, 210, 160, 90), label: { x: 1250, y: 258 } },
-  { code: "P3", view: "passenger", points: rect(1100, 510, 240, 170), label: { x: 1220, y: 600 } },
-  { code: "P4", view: "passenger", points: rect(720, 210, 270, 200), label: { x: 855, y: 312 } },
-  { code: "P5", view: "passenger", points: rect(720, 415, 270, 215), label: { x: 855, y: 525 } },
-  { code: "P6", view: "passenger", points: rect(485, 210, 230, 200), label: { x: 600, y: 312 } },
-  { code: "P7", view: "passenger", points: rect(245, 210, 235, 200), label: { x: 362, y: 312 } },
-  { code: "P8", view: "passenger", points: rect(90, 210, 150, 200), label: { x: 165, y: 312 } },
-  { code: "P9", view: "passenger", points: rect(485, 415, 230, 215), label: { x: 600, y: 525 } },
-  { code: "P10", view: "passenger", points: rect(245, 415, 235, 215), label: { x: 362, y: 525 } },
-  { code: "P11", view: "passenger", points: rect(90, 415, 150, 215), label: { x: 165, y: 525 } },
-  { code: "P12", view: "passenger", points: rect(485, 635, 230, 70), label: { x: 600, y: 672 } },
-  { code: "P13", view: "passenger", points: rect(245, 635, 235, 70), label: { x: 362, y: 672 } },
-  { code: "P14", view: "passenger", points: rect(90, 635, 130, 70), label: { x: 155, y: 672 } },
+  // P1 — Beifahrertür (gespiegelt zu D1)
+  {
+    code: "P1",
+    view: "passenger",
+    points: "1141,470 981,470 981,720 1096,720 1126,710 1141,690 1148,665 1148,520",
+    label: { x: 1061, y: 600 },
+  },
+  // P2 — Dreieck oben über Beifahrerfenster
+  {
+    code: "P2",
+    view: "passenger",
+    points: "1141,310 981,310 981,460 1141,460",
+    label: { x: 1061, y: 390 },
+  },
+  // P3–P6 — obere Lade-Reihe (von vorne nach hinten, also rechts→links im Bild)
+  {
+    code: "P3",
+    view: "passenger",
+    points: "971,310 771,310 771,510 971,510",
+    label: { x: 871, y: 410 },
+  },
+  {
+    code: "P4",
+    view: "passenger",
+    points: "766,310 566,310 566,510 766,510",
+    label: { x: 666, y: 410 },
+  },
+  {
+    code: "P5",
+    view: "passenger",
+    points: "561,310 366,310 366,510 561,510",
+    label: { x: 464, y: 410 },
+  },
+  {
+    code: "P6",
+    view: "passenger",
+    points: "361,310 166,310 166,510 361,510",
+    label: { x: 264, y: 410 },
+  },
+  // P7–P10 — untere Lade-Reihe
+  {
+    code: "P7",
+    view: "passenger",
+    points: "971,515 771,515 771,720 971,720",
+    label: { x: 871, y: 617 },
+  },
+  {
+    code: "P8",
+    view: "passenger",
+    points: "766,515 566,515 566,720 766,720",
+    label: { x: 666, y: 617 },
+  },
+  // P9 — vor hinterem Radkasten
+  {
+    code: "P9",
+    view: "passenger",
+    points: "561,515 366,515 366,650 381,675 406,690 446,700 561,700",
+    label: { x: 464, y: 605 },
+  },
+  // P10 — über hinterem Radkasten
+  {
+    code: "P10",
+    view: "passenger",
+    points: "361,515 166,515 166,720 236,720 276,705 306,690 331,675 346,655 361,635",
+    label: { x: 264, y: 605 },
+  },
+  // P11 — Heckeck links im Bild
+  {
+    code: "P11",
+    view: "passenger",
+    points: "161,310 81,330 81,710 161,720",
+    label: { x: 121, y: 520 },
+  },
 ];
 
 const rearZones: Zone[] = [
-  { code: "R1", view: "rear", points: rect(220, 175, 290, 70), label: { x: 365, y: 213 } },
-  { code: "R2", view: "rear", points: rect(515, 175, 290, 70), label: { x: 660, y: 213 } },
-  { code: "R3", view: "rear", points: rect(220, 475, 290, 200), label: { x: 365, y: 580 } },
-  { code: "R4", view: "rear", points: rect(515, 475, 290, 200), label: { x: 660, y: 580 } },
-  { code: "R5", view: "rear", points: rect(255, 700, 255, 65), label: { x: 382, y: 735 } },
-  { code: "R6", view: "rear", points: rect(515, 700, 255, 65), label: { x: 642, y: 735 } },
+  // R1 / R2 — Header oberhalb der Fenster (links / rechts der Mittelnaht)
+  {
+    code: "R1",
+    view: "rear",
+    points: "275,175 510,175 510,255 275,255",
+    label: { x: 392, y: 218 },
+  },
+  {
+    code: "R2",
+    view: "rear",
+    points: "514,175 749,175 749,255 514,255",
+    label: { x: 631, y: 218 },
+  },
+  // R3 / R4 — Türpanele unter den Fenstern, oberhalb des Stoßfängers
+  {
+    code: "R3",
+    view: "rear",
+    points: "275,490 510,490 510,690 275,690",
+    label: { x: 392, y: 590 },
+  },
+  {
+    code: "R4",
+    view: "rear",
+    points: "514,490 749,490 749,690 514,690",
+    label: { x: 631, y: 590 },
+  },
 ];
 
 const frontZones: Zone[] = [
-  { code: "F1", view: "front", points: rect(265, 145, 490, 75), label: { x: 510, y: 187 } },
-  { code: "F2", view: "front", points: rect(285, 460, 450, 105), label: { x: 510, y: 517 } },
+  // F1 — Dachstreifen über der Windschutzscheibe (Trapez, oben schmaler)
+  {
+    code: "F1",
+    view: "front",
+    points: "310,150 715,150 745,220 280,220",
+    label: { x: 512, y: 188 },
+  },
+  // F2 — Motorhaube zwischen Scheinwerfern (Trapez, oben schmaler)
+  {
+    code: "F2",
+    view: "front",
+    points: "330,455 695,455 730,555 295,555",
+    label: { x: 512, y: 510 },
+  },
 ];
 
 export const VIEWS: Record<ViewId, ViewDef> = {
