@@ -30,7 +30,7 @@ export const Route = createFileRoute("/partner")({
 });
 
 function PartnerPage() {
-  const [selected, setSelected] = useState<PartnerPackageId>("hauptsponsor");
+  const [selected, setSelected] = useState<PartnerPackageId>("D4");
 
   const scrollToForm = () => {
     document.getElementById("partner-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
