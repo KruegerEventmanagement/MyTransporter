@@ -1,5 +1,11 @@
 import { Check } from "lucide-react";
-import { PARTNER_PACKAGES, formatEuro, type PartnerPackageId } from "@/lib/partner-packages";
+import {
+  PACKAGES_BY_VIEW,
+  formatEuro,
+  formatSqm,
+  type PartnerPackageId,
+} from "@/lib/partner-packages";
+import { VIEWS, type ViewId } from "@/lib/partner-zones";
 
 interface Props {
   highlight?: PartnerPackageId | null;
@@ -7,62 +13,70 @@ interface Props {
 }
 
 export function PartnerPackages({ highlight, onSelect }: Props) {
+  const viewOrder: ViewId[] = ["driver", "passenger", "rear", "front"];
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {PARTNER_PACKAGES.map((pkg) => {
-        const isActive = highlight === pkg.id;
+    <div className="space-y-10">
+      {viewOrder.map((v) => {
+        const pkgs = PACKAGES_BY_VIEW[v];
+        if (pkgs.length === 0) return null;
         return (
-          <button
-            key={pkg.id}
-            type="button"
-            onClick={() => onSelect?.(pkg.id)}
-            className={`text-left p-5 rounded-2xl border bg-card transition-all ${
-              isActive
-                ? "border-foreground shadow-md scale-[1.01]"
-                : "border-border hover:border-foreground/40"
-            }`}
-          >
-            <div className="flex items-baseline justify-between gap-3">
-              <div className="flex items-baseline gap-2">
-                <span className="text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded bg-foreground text-background">
-                  {pkg.code}
-                </span>
-                <h3 className="text-base font-semibold text-foreground">{pkg.name}</h3>
-              </div>
-              <span className="text-xs text-muted-foreground whitespace-nowrap">{pkg.sizeLabel}</span>
+          <div key={v}>
+            <div className="flex items-baseline justify-between mb-3">
+              <h3 className="text-lg font-semibold text-foreground">{VIEWS[v].label}</h3>
+              <span className="text-xs text-muted-foreground">
+                {pkgs.length} Flächen · ab {formatEuro(Math.min(...pkgs.map((p) => p.monthly)))}/Mon.
+              </span>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{pkg.description}</p>
-
-            <div className="mt-4 flex items-baseline gap-1.5">
-              <span className="text-3xl font-bold text-foreground">{formatEuro(pkg.monthly)}</span>
-              <span className="text-xs text-muted-foreground">/ Monat</span>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {pkgs.map((pkg) => {
+                const isActive = highlight === pkg.id;
+                return (
+                  <button
+                    key={pkg.id}
+                    type="button"
+                    onClick={() => onSelect?.(pkg.id)}
+                    className={`text-left p-4 rounded-xl border bg-card transition-all ${
+                      isActive
+                        ? "border-foreground shadow-md scale-[1.01]"
+                        : "border-border hover:border-foreground/40"
+                    }`}
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded bg-foreground text-background">
+                        {pkg.code}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                        {pkg.sizeLabel}
+                      </span>
+                    </div>
+                    <div className="mt-2 text-[11px] text-muted-foreground">{formatSqm(pkg.sqm)}</div>
+                    <div className="mt-2 flex items-baseline gap-1.5">
+                      <span className="text-2xl font-bold text-foreground">{formatEuro(pkg.monthly)}</span>
+                      <span className="text-[11px] text-muted-foreground">/ Mon.</span>
+                    </div>
+                    <div className="mt-3 space-y-1 text-[11px]">
+                      {pkg.prices.map((p) => (
+                        <div
+                          key={p.years}
+                          className="flex items-center justify-between border-t border-border/60 pt-1"
+                        >
+                          <span className="text-muted-foreground">
+                            {p.years} {p.years === 1 ? "Jahr" : "Jahre"}
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {formatEuro(p.monthly)}/Mon.
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <Check className="w-3 h-3" /> Setup {formatEuro(pkg.setupFee)}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              {pkg.slots} {pkg.slots === 1 ? "Platz verfügbar" : "Plätze verfügbar"}
-            </p>
-
-            <div className="mt-4 space-y-1.5">
-              {pkg.prices.map((p) => (
-                <div
-                  key={p.years}
-                  className="flex items-center justify-between text-xs border-t border-border/60 pt-1.5"
-                >
-                  <span className="text-muted-foreground">
-                    {p.years} {p.years === 1 ? "Jahr" : "Jahre"}
-                  </span>
-                  <span className="font-medium text-foreground">
-                    {formatEuro(p.monthly)}<span className="text-muted-foreground font-normal">/Mon.</span>
-                    <span className="text-muted-foreground font-normal"> · gesamt {formatEuro(p.total)}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <Check className="w-3.5 h-3.5" />
-              Einmalige Druck-/Produktionsgebühr: <strong className="text-foreground">{formatEuro(pkg.setupFee)}</strong>
-            </div>
-          </button>
+          </div>
         );
       })}
     </div>

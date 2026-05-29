@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getPartnerPackageOrNull, formatEuro, formatSqm } from "./partner-packages";
 
 const FROM = process.env.RESEND_FROM_EMAIL || "MyTransporter <info@mytransporter.org>";
 const ADMIN_TO = process.env.RESEND_FROM_EMAIL?.match(/<(.+)>/)?.[1] || "info@mytransporter.org";
@@ -10,29 +11,15 @@ const Schema = z.object({
   name: z.string().trim().min(1, "Name fehlt").max(120),
   email: z.string().trim().email("Ungültige E-Mail").max(255),
   phone: z.string().trim().max(40).optional().or(z.literal("")),
-  packageId: z.enum([
-    "hauptsponsor",
-    "leschi",
-    "heck_goldplatz",
-    "city_spot",
-    "mini_spot",
-  ]),
+  packageId: z.string().trim().min(1).max(20).regex(/^[A-Z0-9]+$/),
   years: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   message: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
-const PACKAGE_LABEL: Record<string, string> = {
-  hauptsponsor: "Hauptsponsor (140 × 80 cm)",
-  leschi: "Leschi – Premium-Seitenfläche (100 × 60 cm)",
-  heck_goldplatz: "Heck Goldplatz (90 × 50 cm)",
-  city_spot: "City Spot (60 × 40 cm)",
-  mini_spot: "Mini Spot (30 × 25 cm)",
-};
-
 async function sendEmail(to: string, subject: string, html: string, replyTo?: string): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.warn("RESEND_API_KEY missing – Partner-Anfrage E-Mail wird nicht versendet");
+    console.warn("RESEND_API_KEY missing");
     return false;
   }
   const res = await fetch("https://api.resend.com/emails", {
@@ -48,17 +35,17 @@ async function sendEmail(to: string, subject: string, html: string, replyTo?: st
 }
 
 function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 export const submitPartnerInquiry = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => Schema.parse(data))
   .handler(async ({ data }) => {
-    const packageLabel = PACKAGE_LABEL[data.packageId] ?? data.packageId;
+    const pkg = getPartnerPackageOrNull(data.packageId);
+    const packageLabel = pkg
+      ? `${pkg.viewLabel} ${pkg.code} (${pkg.sizeLabel}, ${formatSqm(pkg.sqm)})`
+      : data.packageId;
+    const priceLabel = pkg ? `${formatEuro(pkg.monthly)}/Mon.` : "—";
     const yearsLabel = `${data.years} ${data.years === 1 ? "Jahr" : "Jahre"}`;
 
     const html = `
@@ -70,6 +57,7 @@ export const submitPartnerInquiry = createServerFn({ method: "POST" })
           <tr><td style="padding:6px 0;color:#666;">E-Mail</td><td>${escapeHtml(data.email)}</td></tr>
           <tr><td style="padding:6px 0;color:#666;">Telefon</td><td>${escapeHtml(data.phone || "—")}</td></tr>
           <tr><td style="padding:6px 0;color:#666;">Fläche</td><td>${escapeHtml(packageLabel)}</td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Preis</td><td>${escapeHtml(priceLabel)}</td></tr>
           <tr><td style="padding:6px 0;color:#666;">Laufzeit</td><td>${yearsLabel}</td></tr>
         </table>
         ${data.message ? `<div style="margin-top:20px;padding:14px 16px;background:#f5f5f5;border-radius:10px;white-space:pre-wrap;font-size:14px;">${escapeHtml(data.message)}</div>` : ""}
@@ -85,7 +73,7 @@ export const submitPartnerInquiry = createServerFn({ method: "POST" })
     await supabaseAdmin.from("admin_notifications").insert({
       type: "partner_inquiry",
       title: `Partner-Anfrage: ${packageLabel}`,
-      body: `${data.name}${data.company ? ` (${data.company})` : ""} · ${data.email}${data.phone ? ` · ${data.phone}` : ""} · ${yearsLabel}${data.message ? `\n\n${data.message}` : ""}`,
+      body: `${data.name}${data.company ? ` (${data.company})` : ""} · ${data.email}${data.phone ? ` · ${data.phone}` : ""} · ${yearsLabel} · ${priceLabel}${data.message ? `\n\n${data.message}` : ""}`,
     });
 
     return { sent };
