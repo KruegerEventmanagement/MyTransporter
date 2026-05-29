@@ -20,54 +20,55 @@ function rect(x: number, y: number, w: number, h: number): string {
   return `${x},${y} ${x + w},${y} ${x + w},${y + h} ${x},${y + h}`;
 }
 
+// Polygone liegen ausschließlich auf Karosserieblech.
+// Ausgespart: Räder/Radkästen, Stoßfänger, Plastik-Schweller, Fensterscheiben.
+// Fahrerseite: Cab links, Heck rechts. Beifahrerseite: gespiegelt.
 const driverZones: Zone[] = [
-  { code: "D1", view: "driver", points: rect(210, 210, 165, 90), label: { x: 292, y: 258 } },
-  { code: "D2", view: "driver", points: rect(380, 210, 160, 90), label: { x: 460, y: 258 } },
-  { code: "D3", view: "driver", points: rect(300, 510, 240, 170), label: { x: 420, y: 600 } },
-  { code: "D4", view: "driver", points: rect(560, 210, 235, 200), label: { x: 677, y: 312 } },
-  { code: "D5", view: "driver", points: rect(800, 210, 235, 200), label: { x: 917, y: 312 } },
-  { code: "D6", view: "driver", points: rect(1040, 210, 220, 200), label: { x: 1150, y: 312 } },
-  { code: "D7", view: "driver", points: rect(1265, 210, 215, 200), label: { x: 1372, y: 312 } },
-  { code: "D8", view: "driver", points: rect(560, 415, 235, 215), label: { x: 677, y: 525 } },
-  { code: "D9", view: "driver", points: rect(800, 415, 235, 215), label: { x: 917, y: 525 } },
-  { code: "D10", view: "driver", points: rect(1040, 415, 220, 215), label: { x: 1150, y: 525 } },
-  { code: "D11", view: "driver", points: rect(1265, 415, 215, 215), label: { x: 1372, y: 525 } },
-  { code: "D12", view: "driver", points: rect(560, 635, 235, 70), label: { x: 677, y: 672 } },
-  { code: "D13", view: "driver", points: rect(800, 635, 235, 70), label: { x: 917, y: 672 } },
-  { code: "D14", view: "driver", points: rect(1040, 635, 130, 70), label: { x: 1105, y: 672 } },
-  { code: "D15", view: "driver", points: rect(1355, 635, 125, 70), label: { x: 1417, y: 672 } },
-  { code: "D16", view: "driver", points: rect(165, 510, 125, 100), label: { x: 227, y: 562 } },
+  // Fahrertür-Panel (unter Fenster)
+  { code: "D1", view: "driver", points: rect(310, 485, 155, 195), label: { x: 388, y: 583 } },
+  // Oberes Frachtraum-Band (über Mittelsicke)
+  { code: "D2", view: "driver", points: rect(485, 270, 230, 200), label: { x: 600, y: 370 } },
+  { code: "D3", view: "driver", points: rect(715, 270, 230, 200), label: { x: 830, y: 370 } },
+  { code: "D4", view: "driver", points: rect(945, 270, 230, 200), label: { x: 1060, y: 370 } },
+  { code: "D5", view: "driver", points: rect(1175, 270, 230, 200), label: { x: 1290, y: 370 } },
+  // Unteres Frachtraum-Band zwischen den Radkästen (oberhalb der Plastik-Schwellerleiste)
+  { code: "D6", view: "driver", points: rect(425, 485, 230, 170), label: { x: 540, y: 570 } },
+  { code: "D7", view: "driver", points: rect(660, 485, 230, 170), label: { x: 775, y: 570 } },
+  { code: "D8", view: "driver", points: rect(895, 485, 235, 170), label: { x: 1012, y: 570 } },
+  // Schmaler Streifen hinter dem hinteren Radkasten
+  { code: "D9", view: "driver", points: rect(1345, 485, 60, 170), label: { x: 1375, y: 570 } },
 ];
 
 const passengerZones: Zone[] = [
-  { code: "P1", view: "passenger", points: rect(1000, 210, 165, 90), label: { x: 1082, y: 258 } },
-  { code: "P2", view: "passenger", points: rect(1170, 210, 160, 90), label: { x: 1250, y: 258 } },
-  { code: "P3", view: "passenger", points: rect(1100, 510, 240, 170), label: { x: 1220, y: 600 } },
-  { code: "P4", view: "passenger", points: rect(720, 210, 270, 200), label: { x: 855, y: 312 } },
-  { code: "P5", view: "passenger", points: rect(720, 415, 270, 215), label: { x: 855, y: 525 } },
-  { code: "P6", view: "passenger", points: rect(485, 210, 230, 200), label: { x: 600, y: 312 } },
-  { code: "P7", view: "passenger", points: rect(245, 210, 235, 200), label: { x: 362, y: 312 } },
-  { code: "P8", view: "passenger", points: rect(90, 210, 150, 200), label: { x: 165, y: 312 } },
-  { code: "P9", view: "passenger", points: rect(485, 415, 230, 215), label: { x: 600, y: 525 } },
-  { code: "P10", view: "passenger", points: rect(245, 415, 235, 215), label: { x: 362, y: 525 } },
-  { code: "P11", view: "passenger", points: rect(90, 415, 150, 215), label: { x: 165, y: 525 } },
-  { code: "P12", view: "passenger", points: rect(485, 635, 230, 70), label: { x: 600, y: 672 } },
-  { code: "P13", view: "passenger", points: rect(245, 635, 235, 70), label: { x: 362, y: 672 } },
-  { code: "P14", view: "passenger", points: rect(90, 635, 130, 70), label: { x: 155, y: 672 } },
+  // Beifahrertür-Panel (Cab rechts in dieser Ansicht)
+  { code: "P1", view: "passenger", points: rect(1075, 485, 155, 195), label: { x: 1153, y: 583 } },
+  // Oberes Frachtraum-Band
+  { code: "P2", view: "passenger", points: rect(131, 270, 230, 200), label: { x: 246, y: 370 } },
+  { code: "P3", view: "passenger", points: rect(361, 270, 230, 200), label: { x: 476, y: 370 } },
+  { code: "P4", view: "passenger", points: rect(591, 270, 230, 200), label: { x: 706, y: 370 } },
+  { code: "P5", view: "passenger", points: rect(821, 270, 230, 200), label: { x: 936, y: 370 } },
+  // Unteres Frachtraum-Band (mit Schiebetür-Panel)
+  { code: "P6", view: "passenger", points: rect(406, 485, 230, 170), label: { x: 521, y: 570 } },
+  { code: "P7", view: "passenger", points: rect(641, 485, 230, 170), label: { x: 756, y: 570 } },
+  { code: "P8", view: "passenger", points: rect(876, 485, 235, 170), label: { x: 993, y: 570 } },
+  // Schmaler Streifen hinter dem hinteren Radkasten
+  { code: "P9", view: "passenger", points: rect(131, 485, 60, 170), label: { x: 161, y: 570 } },
 ];
 
 const rearZones: Zone[] = [
-  { code: "R1", view: "rear", points: rect(220, 175, 290, 70), label: { x: 365, y: 213 } },
-  { code: "R2", view: "rear", points: rect(515, 175, 290, 70), label: { x: 660, y: 213 } },
-  { code: "R3", view: "rear", points: rect(220, 475, 290, 200), label: { x: 365, y: 580 } },
-  { code: "R4", view: "rear", points: rect(515, 475, 290, 200), label: { x: 660, y: 580 } },
-  { code: "R5", view: "rear", points: rect(255, 700, 255, 65), label: { x: 382, y: 735 } },
-  { code: "R6", view: "rear", points: rect(515, 700, 255, 65), label: { x: 642, y: 735 } },
+  // Header-Panel über den Heckscheiben
+  { code: "R1", view: "rear", points: rect(255, 160, 255, 85), label: { x: 382, y: 202 } },
+  { code: "R2", view: "rear", points: rect(515, 160, 255, 85), label: { x: 642, y: 202 } },
+  // Türflächen unter den Heckscheiben (über Plastik-Stoßfänger)
+  { code: "R3", view: "rear", points: rect(255, 475, 255, 245), label: { x: 382, y: 597 } },
+  { code: "R4", view: "rear", points: rect(515, 475, 255, 245), label: { x: 642, y: 597 } },
 ];
 
 const frontZones: Zone[] = [
-  { code: "F1", view: "front", points: rect(265, 145, 490, 75), label: { x: 510, y: 187 } },
-  { code: "F2", view: "front", points: rect(285, 460, 450, 105), label: { x: 510, y: 517 } },
+  // Dachstreifen über Windschutzscheibe
+  { code: "F1", view: "front", points: rect(295, 135, 435, 90), label: { x: 512, y: 180 } },
+  // Motorhaube (unter Scheibe, über schwarzem Stoßfänger)
+  { code: "F2", view: "front", points: rect(265, 445, 495, 125), label: { x: 512, y: 507 } },
 ];
 
 export const VIEWS: Record<ViewId, ViewDef> = {
