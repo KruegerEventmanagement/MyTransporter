@@ -6,7 +6,6 @@ import driverImg from "@/assets/partner/van-driver.jpg";
 import passengerImg from "@/assets/partner/van-passenger.jpg";
 import rearImg from "@/assets/partner/van-rear.jpg";
 import frontImg from "@/assets/partner/van-front.jpg";
-import adMockup from "@/assets/partner/ad-mockup.jpg";
 
 interface Props {
   highlight?: string | null;
@@ -24,20 +23,13 @@ function ZonePolygon({
   zone,
   selected,
   anySelected,
-  clipId,
-  viewBoxW,
-  viewBoxH,
   onSelect,
 }: {
   zone: Zone;
   selected: boolean;
   anySelected: boolean;
-  clipId: string;
-  viewBoxW: number;
-  viewBoxH: number;
   onSelect?: (id: string) => void;
 }) {
-  const pkg = getPartnerPackageOrNull(zone.code);
   return (
     <g
       className="cursor-pointer"
@@ -46,30 +38,10 @@ function ZonePolygon({
         onSelect?.(zone.code);
       }}
     >
-      {selected && (
-        <>
-          <defs>
-            <clipPath id={clipId}>
-              <polygon points={zone.points} />
-            </clipPath>
-          </defs>
-          <image
-            href={adMockup}
-            x="0"
-            y="0"
-            width={viewBoxW}
-            height={viewBoxH}
-            preserveAspectRatio="xMidYMid slice"
-            clipPath={`url(#${clipId})`}
-            opacity="0.9"
-            style={{ mixBlendMode: "multiply" }}
-          />
-        </>
-      )}
       <polygon
         points={zone.points}
-        fill={selected ? "transparent" : "white"}
-        fillOpacity={selected ? 0 : 0.14}
+        fill="white"
+        fillOpacity={selected ? 0.4 : 0.14}
         stroke={selected ? "black" : "white"}
         strokeOpacity={selected ? 1 : 0.85}
         strokeWidth={selected ? 4 : 1.5}
@@ -116,7 +88,6 @@ export function TransporterPhotoDiagram({ highlight, onSelect }: Props) {
 
   const current = VIEWS[view];
   const anySelected = !!highlight;
-  const [, , vbW, vbH] = current.viewBox.split(" ").map(Number);
   const activePkg = highlight ? getPartnerPackageOrNull(highlight) : null;
 
   return (
@@ -175,9 +146,6 @@ export function TransporterPhotoDiagram({ highlight, onSelect }: Props) {
               zone={z}
               selected={highlight === z.code}
               anySelected={anySelected}
-              clipId={`clip-${view}-${z.code}-${i}`}
-              viewBoxW={vbW}
-              viewBoxH={vbH}
               onSelect={onSelect}
             />
           ))}
@@ -200,8 +168,8 @@ export function TransporterPhotoDiagram({ highlight, onSelect }: Props) {
       )}
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Tippe auf eine Fläche – sie wird mit einem Beispiel-Motiv eingeblendet.
-        Größe & Preis werden automatisch aus der gemessenen Fläche berechnet.
+        Tippe auf eine Fläche – Größe und Preis werden automatisch aus der
+        gemessenen Fläche berechnet.
       </p>
     </div>
   );
