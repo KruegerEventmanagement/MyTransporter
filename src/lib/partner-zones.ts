@@ -21,143 +21,86 @@ export interface ViewDef {
 // Each zone hugs the real sheet-metal panel: rounded corners follow wheel arches,
 // triangular corners follow the cab roof curve, rear corner tapers upward.
 
+// Sponsoren-Raster nach Referenzbild:
+//  Reihe A (220–295): Hochdach-Band, 5 kleine Slots über dem Fenster
+//  Reihe B (305–500): Hauptflächen — 4 große Werbeplätze (teure Werbung)
+//  Reihe C (510–585): schmaler Balken — 4 kleinere Werbungen
+//  Reihe D (595–700): untere Karosseriereihe — 3 Slots (Schiebetür / Radhaus ausgespart)
 const driverZones: Zone[] = [
-  // D1 — Fahrertür (Trapez, vordere Unterkante folgt dem Radkasten-Bogen)
+  // D1 — Fahrertür (Polygon, vordere Unterkante folgt dem Radkasten)
   {
     code: "D1",
     view: "driver",
-    points: "395,470 555,470 555,720 440,720 410,710 395,690 388,665 388,520",
+    points: "398,475 555,475 555,705 445,705 415,695 400,675 392,650 392,525",
     label: { x: 475, y: 600 },
   },
-  // D2–D5 — obere Lade-Reihe (4 Kacheln) — Cab-Fenster wird nicht beklebt
+  // Reihe A — Hochdach-Band (5 kleine Slots)
+  { code: "D2", view: "driver", points: "565,225 720,225 720,295 565,295", label: { x: 642, y: 263 } },
+  { code: "D3", view: "driver", points: "725,225 880,225 880,295 725,295", label: { x: 802, y: 263 } },
+  { code: "D4", view: "driver", points: "885,225 1040,225 1040,295 885,295", label: { x: 962, y: 263 } },
+  { code: "D5", view: "driver", points: "1045,225 1200,225 1200,295 1045,295", label: { x: 1122, y: 263 } },
+  { code: "D6", view: "driver", points: "1205,225 1370,225 1370,295 1205,295", label: { x: 1287, y: 263 } },
+  // Reihe B — Hauptflächen (4 große)
+  { code: "D7", view: "driver", points: "565,305 765,305 765,500 565,500", label: { x: 665, y: 405 } },
+  { code: "D8", view: "driver", points: "770,305 970,305 970,500 770,500", label: { x: 870, y: 405 } },
+  { code: "D9", view: "driver", points: "975,305 1170,305 1170,500 975,500", label: { x: 1072, y: 405 } },
+  { code: "D10", view: "driver", points: "1175,305 1370,305 1370,500 1175,500", label: { x: 1272, y: 405 } },
+  // Reihe C — schmaler Balken (4 kleinere)
+  { code: "D11", view: "driver", points: "565,510 765,510 765,585 565,585", label: { x: 665, y: 550 } },
+  { code: "D12", view: "driver", points: "770,510 970,510 970,585 770,585", label: { x: 870, y: 550 } },
+  { code: "D13", view: "driver", points: "975,510 1170,510 1170,585 975,585", label: { x: 1072, y: 550 } },
+  { code: "D14", view: "driver", points: "1175,510 1370,510 1370,585 1175,585", label: { x: 1272, y: 550 } },
+  // Reihe D — untere Karosseriereihe (Schiebetür-/Radhaus-Bereiche ausgespart)
+  { code: "D15", view: "driver", points: "565,595 765,595 765,700 565,700", label: { x: 665, y: 648 } },
+  { code: "D16", view: "driver", points: "770,595 970,595 970,700 770,700", label: { x: 870, y: 648 } },
+  // D17 über dem hinteren Radkasten — Unterkante folgt dem Bogen
   {
-    code: "D2",
+    code: "D17",
     view: "driver",
-    points: "565,310 765,310 765,510 565,510",
-    label: { x: 665, y: 410 },
+    points: "1175,595 1370,595 1370,700 1335,700 1325,685 1305,672 1275,662 1235,658 1200,663 1180,672 1175,682",
+    label: { x: 1272, y: 640 },
   },
-  {
-    code: "D3",
-    view: "driver",
-    points: "770,310 970,310 970,510 770,510",
-    label: { x: 870, y: 410 },
-  },
-  {
-    code: "D4",
-    view: "driver",
-    points: "975,310 1170,310 1170,510 975,510",
-    label: { x: 1072, y: 410 },
-  },
-  {
-    code: "D5",
-    view: "driver",
-    points: "1175,310 1370,310 1370,510 1175,510",
-    label: { x: 1272, y: 410 },
-  },
-  // D6–D9 — untere Lade-Reihe (4 Kacheln)
-  {
-    code: "D6",
-    view: "driver",
-    points: "565,515 765,515 765,720 565,720",
-    label: { x: 665, y: 617 },
-  },
-  {
-    code: "D7",
-    view: "driver",
-    points: "770,515 970,515 970,720 770,720",
-    label: { x: 870, y: 617 },
-  },
-  // D8 — vor dem hinteren Radkasten
-  {
-    code: "D8",
-    view: "driver",
-    points: "975,515 1170,515 1170,720 975,720",
-    label: { x: 1072, y: 605 },
-  },
-  // D9 — über dem hinteren Radkasten: Unterkante folgt dem Radkasten-Bogen
-  {
-    code: "D9",
-    view: "driver",
-    points: "1175,515 1370,515 1370,720 1335,720 1325,700 1305,680 1275,665 1235,660 1200,665 1180,675 1175,685",
-    label: { x: 1272, y: 605 },
-  },
-  // D10 — Heckeck (schmale Fläche zwischen hinterem Radkasten und Rücklicht)
-  {
-    code: "D10",
-    view: "driver",
-    points: "1375,310 1445,330 1445,665 1375,665",
-    label: { x: 1415, y: 520 },
-  },
+  // D18 Heckeck (schmal, zwischen hinterem Radkasten und Rücklicht)
+  { code: "D18", view: "driver", points: "1375,305 1445,325 1445,655 1375,655", label: { x: 1415, y: 480 } },
 ];
 
-// Beifahrerseite — gespiegelt (van schaut nach rechts, x ≈ 1536 - x_driver)
+// Beifahrerseite — gespiegelt zur Fahrerseite (x' = 1536 − x), gleiche Reihen
 const passengerZones: Zone[] = [
   // P1 — Beifahrertür (gespiegelt zu D1)
   {
     code: "P1",
     view: "passenger",
-    points: "1141,470 981,470 981,720 1096,720 1126,710 1141,690 1148,665 1148,520",
+    points: "1138,475 981,475 981,705 1091,705 1121,695 1136,675 1144,650 1144,525",
     label: { x: 1061, y: 600 },
   },
-  // P2–P5 — obere Lade-Reihe (von vorne nach hinten, also rechts→links im Bild)
+  // Reihe A — Hochdach (5 Slots, von vorne nach hinten = rechts→links)
+  { code: "P2", view: "passenger", points: "971,225 816,225 816,295 971,295", label: { x: 894, y: 263 } },
+  { code: "P3", view: "passenger", points: "811,225 656,225 656,295 811,295", label: { x: 734, y: 263 } },
+  { code: "P4", view: "passenger", points: "651,225 496,225 496,295 651,295", label: { x: 574, y: 263 } },
+  { code: "P5", view: "passenger", points: "491,225 336,225 336,295 491,295", label: { x: 414, y: 263 } },
+  { code: "P6", view: "passenger", points: "331,225 166,225 166,295 331,295", label: { x: 249, y: 263 } },
+  // Reihe B — Hauptflächen (4 große)
+  { code: "P7", view: "passenger", points: "971,305 771,305 771,500 971,500", label: { x: 871, y: 405 } },
+  { code: "P8", view: "passenger", points: "766,305 566,305 566,500 766,500", label: { x: 666, y: 405 } },
+  { code: "P9", view: "passenger", points: "561,305 366,305 366,500 561,500", label: { x: 464, y: 405 } },
+  { code: "P10", view: "passenger", points: "361,305 166,305 166,500 361,500", label: { x: 264, y: 405 } },
+  // Reihe C — schmaler Balken (4)
+  { code: "P11", view: "passenger", points: "971,510 771,510 771,585 971,585", label: { x: 871, y: 550 } },
+  { code: "P12", view: "passenger", points: "766,510 566,510 566,585 766,585", label: { x: 666, y: 550 } },
+  { code: "P13", view: "passenger", points: "561,510 366,510 366,585 561,585", label: { x: 464, y: 550 } },
+  { code: "P14", view: "passenger", points: "361,510 166,510 166,585 361,585", label: { x: 264, y: 550 } },
+  // Reihe D — untere Reihe (Schiebetür-Bereich vorhanden, Radhaus ausgespart)
+  { code: "P15", view: "passenger", points: "971,595 771,595 771,700 971,700", label: { x: 871, y: 648 } },
+  { code: "P16", view: "passenger", points: "766,595 566,595 566,700 766,700", label: { x: 666, y: 648 } },
+  // P17 über dem hinteren Radkasten (gespiegelt)
   {
-    code: "P2",
+    code: "P17",
     view: "passenger",
-    points: "971,310 771,310 771,510 971,510",
-    label: { x: 871, y: 410 },
+    points: "361,595 166,595 166,700 201,700 211,685 231,672 261,662 301,658 336,663 356,672 361,682",
+    label: { x: 264, y: 640 },
   },
-  {
-    code: "P3",
-    view: "passenger",
-    points: "766,310 566,310 566,510 766,510",
-    label: { x: 666, y: 410 },
-  },
-  {
-    code: "P4",
-    view: "passenger",
-    points: "561,310 366,310 366,510 561,510",
-    label: { x: 464, y: 410 },
-  },
-  {
-    code: "P5",
-    view: "passenger",
-    points: "361,310 166,310 166,510 361,510",
-    label: { x: 264, y: 410 },
-  },
-  // P6–P9 — untere Lade-Reihe
-  {
-    code: "P6",
-    view: "passenger",
-    points: "971,515 771,515 771,720 971,720",
-    label: { x: 871, y: 617 },
-  },
-  {
-    code: "P7",
-    view: "passenger",
-    points: "766,515 566,515 566,720 766,720",
-    label: { x: 666, y: 617 },
-  },
-  // P8 — vor hinterem Radkasten
-  {
-    code: "P8",
-    view: "passenger",
-    points: "561,515 366,515 366,720 561,720",
-    label: { x: 464, y: 617 },
-  },
-  // P9 — über hinterem Radkasten: Unterkante folgt dem Bogen
-  {
-    code: "P9",
-    view: "passenger",
-    points: "361,515 166,515 166,720 201,720 211,700 231,680 261,665 301,660 336,665 356,675 361,685",
-    label: { x: 264, y: 605 },
-  },
-  // P10 — Heckeck links im Bild
-  {
-    code: "P10",
-    view: "passenger",
-    points: "161,310 91,330 91,665 161,665",
-    label: { x: 126, y: 520 },
-  },
+  // P18 Heckeck links im Bild
+  { code: "P18", view: "passenger", points: "161,305 91,325 91,655 161,655", label: { x: 126, y: 480 } },
 ];
 
 const rearZones: Zone[] = [
