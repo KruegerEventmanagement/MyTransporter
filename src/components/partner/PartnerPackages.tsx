@@ -8,7 +8,7 @@ interface Props {
 
 export function PartnerPackages({ highlight, onSelect }: Props) {
   return (
-    <div className="grid sm:grid-cols-2 gap-4">
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {PARTNER_PACKAGES.map((pkg) => {
         const isActive = highlight === pkg.id;
         return (
@@ -23,25 +23,36 @@ export function PartnerPackages({ highlight, onSelect }: Props) {
             }`}
           >
             <div className="flex items-baseline justify-between gap-3">
-              <h3 className="text-base font-semibold text-foreground">{pkg.name}</h3>
-              <span className="text-xs text-muted-foreground">{pkg.sizeLabel}</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded bg-foreground text-background">
+                  {pkg.code}
+                </span>
+                <h3 className="text-base font-semibold text-foreground">{pkg.name}</h3>
+              </div>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{pkg.sizeLabel}</span>
             </div>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{pkg.description}</p>
+
+            <div className="mt-4 flex items-baseline gap-1.5">
+              <span className="text-3xl font-bold text-foreground">{formatEuro(pkg.monthly)}</span>
+              <span className="text-xs text-muted-foreground">/ Monat</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              {pkg.slots} {pkg.slots === 1 ? "Platz verfügbar" : "Plätze verfügbar"}
+            </p>
 
             <div className="mt-4 space-y-1.5">
               {pkg.prices.map((p) => (
                 <div
                   key={p.years}
-                  className="flex items-center justify-between text-sm border-t border-border/60 pt-1.5"
+                  className="flex items-center justify-between text-xs border-t border-border/60 pt-1.5"
                 >
                   <span className="text-muted-foreground">
                     {p.years} {p.years === 1 ? "Jahr" : "Jahre"}
                   </span>
                   <span className="font-medium text-foreground">
-                    {formatEuro(p.total)}
-                    <span className="text-xs text-muted-foreground font-normal">
-                      {" "}· {formatEuro(p.perYear)}/Jahr
-                    </span>
+                    {formatEuro(p.monthly)}<span className="text-muted-foreground font-normal">/Mon.</span>
+                    <span className="text-muted-foreground font-normal"> · gesamt {formatEuro(p.total)}</span>
                   </span>
                 </div>
               ))}
@@ -49,7 +60,7 @@ export function PartnerPackages({ highlight, onSelect }: Props) {
 
             <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
               <Check className="w-3.5 h-3.5" />
-              Einmalige Bearbeitungsgebühr Magnetfolie: <strong className="text-foreground">{formatEuro(pkg.setupFee)}</strong>
+              Einmalige Druck-/Produktionsgebühr: <strong className="text-foreground">{formatEuro(pkg.setupFee)}</strong>
             </div>
           </button>
         );

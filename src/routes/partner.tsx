@@ -21,7 +21,7 @@ export const Route = createFileRoute("/partner")({
       {
         property: "og:description",
         content:
-          "Sponsor & Werbepartner werden: Magnetfolien-Flächen am Transporter mieten – ab 300 € / Jahr.",
+          "Sponsor & Werbepartner werden: über 25 Magnetfolien-Werbeflächen am Transporter – ab 29 € / Monat.",
       },
     ],
     links: [{ rel: "canonical", href: "https://www.mytransporter.org/partner" }],
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/partner")({
 });
 
 function PartnerPage() {
-  const [selected, setSelected] = useState<PartnerPackageId>("large");
+  const [selected, setSelected] = useState<PartnerPackageId>("hauptsponsor");
 
   const scrollToForm = () => {
     document.getElementById("partner-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -64,11 +64,11 @@ function PartnerPage() {
             Sponsoring & Werbung
           </span>
           <h1 className="mt-4 text-3xl md:text-5xl font-bold text-foreground animate-fade-in-up">
-            Werde Partner von MyTransporter
+            Werbeflächen am Transporter
           </h1>
           <p className="mt-4 text-base md:text-lg text-muted-foreground leading-relaxed animate-fade-in-up animate-delay-200">
-            Lass dein Unternehmen täglich durch Leonberg, Stuttgart und die ganze Region fahren.
-            Miete eine Werbefläche an unserem Transporter – als hochwertige Magnetfolie,
+            Über 25 buchbare Plätze – vom Hauptsponsor bis zum Mini-Spot. Lass dein Unternehmen täglich
+            durch Leonberg, Stuttgart, Böblingen und die ganze Region fahren. Hochwertige Magnetfolie,
             jederzeit austauschbar und lackschonend.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -92,10 +92,10 @@ function PartnerPage() {
       <section className="px-4 pb-16">
         <div className="max-w-4xl mx-auto p-6 sm:p-10 rounded-3xl bg-secondary/40 border border-border text-foreground">
           <h2 className="text-xl md:text-2xl font-bold text-center mb-2">
-            Deine Werbefläche – auf einen Blick
+            Werbeflächen am Transporter
           </h2>
           <p className="text-center text-sm text-muted-foreground mb-6">
-            Unser Fiat Ducato L4H2 bietet mehrere buchbare Flächen.
+            Optimierte Flächenaufteilung für maximale Sichtbarkeit – Citroën Jumper / Peugeot Boxer L4H3.
           </p>
           <TransporterDiagram highlight={selected} onSelect={handleSelect} />
         </div>
