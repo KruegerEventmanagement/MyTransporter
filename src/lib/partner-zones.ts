@@ -106,8 +106,8 @@ export const VIEWS: Record<ViewId, ViewDef> = {
   },
   rear: {
     label: "Rückseite",
-    viewBox: "0 0 395 420",
-    aspect: "395 / 420",
+    viewBox: "0 0 470 500",
+    aspect: "470 / 500",
     pxPerMeter: 105, // ca. 2 m Fahrzeugbreite
     ratePerSqmMonth: 130,
     zones: rearZones,
