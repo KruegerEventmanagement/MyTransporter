@@ -1,62 +1,78 @@
 ## Ziel
-Echte, foto-realistische Transporter-Ansichten + dichtes Werbefl\u00e4chen-Raster wie im Referenzbild. Fl\u00e4chen werden vermessen und Preis automatisch aus m\u00b2 berechnet.
 
-## 1. Neue Fotos (KI-generiert, Studio-Stil)
-Im Stil des Citro\u00ebn Jumper Referenzfotos (sauber, wei\u00df, neutral, leichter Schatten). Premium-Qualit\u00e4t, keine Texte/Logos:
-- `src/assets/partner/van-driver.jpg` \u2014 reine Seitenansicht Fahrerseite (links), Hochdach, lang (L4H2)
-- `src/assets/partner/van-passenger.jpg` \u2014 reine Seitenansicht Beifahrerseite (rechts, Schiebet\u00fcr)
-- `src/assets/partner/van-rear.jpg` \u2014 reine Heckansicht, geschlossene Fl\u00fcgelt\u00fcren
-- `src/assets/partner/van-front.jpg` \u2014 reine Frontansicht (Stirn \u00fcber Windschutz + Motorhaube + Sto\u00dffl\u00e4che, vergleichbar mit Ford Transit Foto)
+Die Werbeflächen sollen wie auf dem hochgeladenen, beklebten Sponsoren-Transporter aussehen: dicht aneinander, vollständig auf dem Blech, **mit echten Karosserie-Konturen** (Schrägen an der Fahrertür zum Radkasten, Dreiecks-Ecke oben über der Tür, Heckecke nach hinten verjüngt). Keine Flächen mehr über Scheinwerfern, Reifen, Plastik oder in der Luft.
 
-Alte Bilder (`transporter-*.jpg`) werden ersetzt.
+## Was sich konkret ändert
 
-## 2. Dichtes Werbefl\u00e4chen-Raster (genau wie Referenz)
-Layout pro Ansicht (Polygone in `src/lib/partner-zones.ts` aktualisiert):
+Datei: `src/lib/partner-zones.ts` — komplett neu mit echten Polygonen statt `rect()`-Helper.
 
-**Fahrerseite (16 Fl\u00e4chen)**
-- Oberes Band \u00fcber Fenstern: 4 Felder (HS1-HS4)
-- Mittleres Hauptband (gro\u00dfe Felder zwischen Fenster- und Schwellerlinie): 6 Felder (M1-M6)
-- Unteres Schwellerband: 6 Felder (S1-S6)
+### Fahrerseite (van-driver.jpg, 1536×1024) — 11 Zonen
 
-**Beifahrerseite (14 Fl\u00e4chen \u2014 weniger wegen Schiebet\u00fcr)**
-- Oberes Band: 4 Felder
-- Mittleres Band: 5 Felder (Schiebet\u00fcr-Bereich = 1 gro\u00dfes Feld)
-- Schwellerband: 5 Felder
+Aus dem Foto abgeleitete Karosserie-Grenzen (van schaut nach links):
+- Vorderer Radkasten-Bogen: x ≈ 220–380, oben y ≈ 670
+- Fahrertür: x ≈ 380–555, unten endet am schwarzen Sill (y ≈ 720)
+- Großer Laderaum-Block: x ≈ 555–1370, oben y ≈ 295, unten y ≈ 720
+- Hinterer Radkasten-Bogen: x ≈ 1175–1340
+- Hintere Eckverjüngung: ab x ≈ 1370 geht die Karosserie schräg nach oben
 
-**Heck (6 Fl\u00e4chen)**
-- 2 oben \u00fcber Heckscheibe, 2 mittig auf T\u00fcrfl\u00e4chen, 2 unten
+Neue Zonen:
 
-**Front (2 Fl\u00e4chen)**
-- Stirnband \u00fcber Windschutzscheibe (wie auf Ford-Foto sichtbar)
-- Motorhaube/Grill-Bereich
+- **D1 — Fahrertür (Trapez mit Rundung)**: Polygon mit Punkten, die unten dem Radkasten-Bogen folgen (5 Punkte, abgeschrägte vordere Unterkante), oben unter dem Fenster gerade.
+- **D2 — Dreieck oben hinter Fahrerfenster**: 3-Punkt-Polygon im Eck (B-Säule-Bereich), füllt die kleine Dreiecksfläche oberhalb der Tür / hinter dem Fenster.
+- **D3–D6 — obere Lade-Reihe (4 Kacheln)**: gleichmäßige Rechtecke ca. 200×195 px, y 295→490, x 555→1365.
+- **D7–D10 — untere Lade-Reihe (4 Kacheln)**: gleichmäßige Rechtecke ca. 200×220 px, y 490→715, x 555→1365.
+- **D11 — Heckeck-Streifen (Polygon mit Schräge)**: schmale Fläche x 1370→1455, oben verjüngt (oben breiter, unten schmaler, folgt dem hinteren Aufstieg der Karosserie).
 
-Gesamt: **~38 Pakete**.
+→ 11 Zonen statt vorher 16. Keine Zonen mehr über Scheinwerfer (D16 entfällt), keine schwebenden D1/D2 vor der Tür.
 
-## 3. Auto-Vermessung & Preislogik
-Neue Datei `src/lib/partner-pricing.ts`:
-- Pro Polygon wird die Pixelfl\u00e4che mit Shoelace-Formel berechnet
-- Kalibrierung pro Ansicht: bekannte Realma\u00dfe Jumper L4H2 (L\u00e4nge 5.99m, H\u00f6he 2.52m, Breite 2.05m) \u2192 px/m Faktor
-- Daraus realer m\u00b2 Wert
-- Preis: **\u20ac/m\u00b2/Monat \u00d7 Fl\u00e4che**, gerundet auf 5\u20ac
-- Recherchierter Marktpreis Fahrzeugwerbung DE: ~100\u20ac/m\u00b2/Monat Seite, ~120\u20ac/m\u00b2/Monat Heck (h\u00f6here Aufmerksamkeit im Stau), ~140\u20ac/m\u00b2/Monat Front
-- Mindestpreis 25\u20ac/Monat
-- Anzeige in Karte + Overlay: "0,8 m\u00b2 \u00b7 ab 80\u20ac/Monat"
+### Beifahrerseite (van-passenger.jpg, 1536×1024) — 11 Zonen, gespiegelt
 
-## 4. Komponenten-Updates
-- `TransporterPhotoDiagram.tsx`: neue Fotos, neue Polygon-Coords, Label zeigt jetzt `id \u2022 m\u00b2 \u2022 Preis`
-- `PartnerPackages.tsx`: Liste wird aus `partner-zones.ts` + `partner-pricing.ts` generiert (keine harten Preise mehr in `partner-packages.ts`), gruppiert nach Ansicht
-- `partner-packages.ts`: wird zu einem Adapter der die generierten Pakete exportiert
-- `partner-inquiry.functions.ts`: unver\u00e4ndert (nimmt weiterhin packageId entgegen)
+Van schaut nach rechts. Schiebetür-Mitte (x ≈ 740) wird **nicht** als separate Naht behandelt — Werbung darf über die Schiebetür-Naht laufen (so wie auf dem Referenzfoto auch).
 
-## 5. Mockup-Overlay
-Bleibt wie aktuell (clipPath + mix-blend-multiply auf ad-mockup.jpg). Funktioniert auch bei den neuen, dichteren Polygonen.
+- **P1 — Beifahrertür (Trapez mit Rundung)**: spiegelverkehrt zu D1, vordere Unterkante folgt dem rechten Radkasten.
+- **P2 — Dreieck oben hinter Beifahrerfenster**: spiegelverkehrt zu D2.
+- **P3–P6 — obere Lade-Reihe (4 Kacheln)**.
+- **P7–P10 — untere Lade-Reihe (4 Kacheln)**.
+- **P11 — Heckeck-Streifen (Polygon mit Schräge)** auf der linken Bildseite (hintere Fahrzeugseite).
 
-## Nicht-Ziele
-- Keine Backend-/Schema-\u00c4nderungen
-- Keine Routen-\u00c4nderungen
-- Form, Hero, Benefits bleiben unber\u00fchrt
+### Heck (van-rear.jpg, 1024×1024) — 4 Zonen
+
+Über den Fenstern und unter den Fenstern, jeweils 2 Spalten (links/rechts der Mittelnaht). Die Bereiche neben den Rückleuchten werden **weggelassen** (zu schmal und Plastik-nah).
+- **R1, R2** — Header über den beiden Fenstern (y 175→260).
+- **R3, R4** — Türpanele unter den Fenstern, oberhalb des schwarzen Stoßfängers (y 480→700, x von Rückleuchten-Innenkante bis Mittelnaht/andere Seite).
+
+### Front (van-front.jpg, 1024×1024) — 2 Zonen
+
+- **F1 — Dachstreifen** über der Windschutzscheibe (Trapez, oben schmaler wegen Dachrundung): x 280→745, y 150→220.
+- **F2 — Motorhaube** zwischen Scheinwerfern, über dem Kühlergrill: leicht trapezförmig (oben schmaler), x 295→730, y 460→555. **Geht nicht** über die schwarzen Scheinwerfer-Plastikteile.
+
+## Polygon-Geometrie (Beispiel D1 Fahrertür)
+
+Statt `rect(380, 510, 175, 210)` jetzt 6-Punkt-Polygon:
+```text
+"380,510 555,510 555,720 430,720 395,705 380,665"
+```
+- Vordere Unterkante (395,705 → 380,665) schmiegt sich an die Radkasten-Rundung
+- Hintere Kante senkrecht zur B-Säule
+
+Ähnlich für D2 (Dreieck): `"380,295 555,295 555,400"` — Dreieck, das den Bereich unter der Dachrundung über der Tür füllt.
 
 ## Technische Details
-- Bildgenerierung: `imagegen` mit `model: premium`, querformat 1920\u00d71024 f\u00fcr Seiten, 1024\u00d71024 f\u00fcr Heck/Front
-- Shoelace-Fl\u00e4che: `Math.abs(\u03a3(x_i \u00b7 y_{i+1} - x_{i+1} \u00b7 y_i)) / 2`
-- Kalibrierung pro View als Konstante: `{ driver: { realLengthM: 5.99, pxLength: <gemessen aus viewBox> }, ... }`
+
+- `polygonAreaPx` (Shoelace) funktioniert bereits für beliebige Polygone → Preisberechnung automatisch korrekt für neue Formen.
+- `pxPerMeter` Werte bleiben: Driver/Passenger 220, Rear 297, Front 366.
+- `TransporterPhotoDiagram.tsx` rendert bereits `<polygon points={...}>` → keine Komponenten-Änderung nötig.
+- `src/routes/partner.tsx` Default-Selektion bleibt auf erstem Zonen-Code (jetzt "D1" Fahrertür statt "D4").
+- Inquiry-Formular und Server-Funktion sind bereits dynamisch (akzeptieren beliebige Zonen-Codes) → keine Änderung.
+
+## Ergebnis
+
+- 28 Zonen total (11+11+4+2) statt 38, aber **deckungsgleich mit Karosserie**.
+- Tür ist ein Trapez mit abgerundeter Vorderkante zum Radkasten.
+- Dreiecks-Zone oben über der Tür (wie im Referenzfoto die kleinen Sponsoren-Aufkleber im oberen Eck).
+- Heckeck verjüngt sich nach oben.
+- Keine Zone mehr über Reifen, Scheinwerfern, Plastik-Sill oder Stoßfängern.
+
+## Geänderte Dateien
+- `src/lib/partner-zones.ts` (Komplett-Rewrite mit Polygonen)
+- `src/routes/partner.tsx` (Default-Zone "D1")
