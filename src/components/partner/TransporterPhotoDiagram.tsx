@@ -66,38 +66,16 @@ function ZonePolygon({
           />
         </>
       )}
+      {/* Codes (S1, R1, …) sind bereits ins Hintergrundbild eingezeichnet —
+          das Overlay markiert nur die aktive Fläche bzw. nimmt Klicks entgegen. */}
       <polygon
         points={zone.points}
-        fill={selected ? "transparent" : "white"}
-        fillOpacity={selected ? 0 : 0.14}
-        stroke={selected ? "black" : "white"}
-        strokeOpacity={selected ? 1 : 0.85}
-        strokeWidth={selected ? 4 : 1.5}
-        strokeDasharray={selected ? "0" : "8 5"}
-        opacity={!selected && anySelected ? 0.45 : 1}
-        className="transition-all duration-200 hover:opacity-100"
+        fill={selected ? "black" : "white"}
+        fillOpacity={selected ? 0.18 : 0.001}
+        stroke={selected ? "black" : "transparent"}
+        strokeWidth={selected ? 2.5 : 0}
+        className="transition-all duration-200 hover:fill-black/10"
       />
-      <g style={{ pointerEvents: "none" }}>
-        <rect
-          x={zone.label.x - 26}
-          y={zone.label.y - 14}
-          width={52}
-          height={24}
-          rx={5}
-          fill={selected ? "black" : "white"}
-          fillOpacity={selected ? 1 : 0.85}
-        />
-        <text
-          x={zone.label.x}
-          y={zone.label.y + 4}
-          textAnchor="middle"
-          fontSize={selected ? 16 : 13}
-          fontWeight="700"
-          fill={selected ? "white" : "black"}
-        >
-          {zone.code}
-        </text>
-      </g>
     </g>
   );
 }
