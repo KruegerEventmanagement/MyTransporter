@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, Sparkles } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
-import { TransporterDiagram } from "@/components/partner/TransporterDiagram";
+import { TransporterPhotoDiagram } from "@/components/partner/TransporterPhotoDiagram";
 import { PartnerPackages } from "@/components/partner/PartnerPackages";
 import { PartnerBenefits } from "@/components/partner/PartnerBenefits";
 import { PartnerInquiryForm } from "@/components/partner/PartnerInquiryForm";
@@ -97,7 +97,7 @@ function PartnerPage() {
           <p className="text-center text-sm text-muted-foreground mb-6">
             Optimierte Flächenaufteilung für maximale Sichtbarkeit – Citroën Jumper / Peugeot Boxer L4H3.
           </p>
-          <TransporterDiagram highlight={selected} onSelect={handleSelect} />
+          <TransporterPhotoDiagram highlight={selected} onSelect={handleSelect} />
         </div>
       </section>
 

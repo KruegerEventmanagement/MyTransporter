@@ -1,71 +1,55 @@
 ## Ziel
 
-Die `/partner` Seite an die Referenz-Infografik (ChatGPT-Bild) anpassen: gleicher Aufbau, gleiche Anzahl & Art der Werbeflächen, realistische monatliche Preise basierend auf Marktvergleich (Werbung auf Transportern in DE: ~50–300 €/Monat je Fläche).
+Die billigen SVG-Grafiken auf `/partner` durch echte fotorealistische Transporter-Bilder ersetzen. Auf jedem Bild liegen alle Werbeflächen als gestrichelte, leicht ausgegraute Overlays. Die aktuell ausgewählte Fläche wird dick hervorgehoben und zeigt zusätzlich ein Werbe-Mockup (Platzhalter-Logo) auf der Fläche, damit man sieht wie's beklebt aussehen würde.
 
-## Werbeflächen (genau wie Referenz, 5 Kategorien, insgesamt 28 Flächen-Slots)
+## Vorgehen
 
-| Kat. | Code | Bezeichnung | Größe | Preis/Monat | Anzahl |
-|---|---|---|---|---|---|
-| 1 | HS1, HS2 | **Hauptsponsor** – größte Seitenfläche | 140 × 80 cm | **249 €** | 2 |
-| 2 | L1, L2 | **Leschi** – Premium-Seitenfläche | 100 × 60 cm | **129 €** | 2 |
-| 3 | HG1, HG2 | **Heck Goldplatz** – Hecktüren, ideal für QR/CTA | 90 × 50 cm | **149 €** | 2 |
-| 4 | C1–C10 | **City Spot** – Standard-Werbefläche regional | 60 × 40 cm | **69 €** | 10 |
-| 5 | M1–M10 | **Mini Spot** – kompakte Zusatzfläche | 30 × 25 cm | **29 €** | 10 |
+**1. Bilder beschaffen (Mix: Referenzfotos + KI)**
+- Per `imagegen` (Modell `premium`, ohne Text-Anforderung) 4 saubere Seitenansichten eines weißen Citroën Jumper L4H3 generieren:
+  - `transporter-driver.jpg` (Fahrerseite)
+  - `transporter-passenger.jpg` (Beifahrerseite)
+  - `transporter-rear.jpg` (Heck)
+  - `transporter-front.jpg` (Front)
+- Studio-Look, neutraler heller Hintergrund, exakt orthogonale Seitenansicht (kein 3/4-Winkel), damit Overlays sauber sitzen.
+- Ein Platzhalter-Werbemotiv generieren (`ad-mockup.jpg` – buntes abstraktes Logo-Muster) für das "Plus Werbe-Mockup"-Verhalten.
+- Ablage: `src/assets/partner/`.
 
-Zusätzlich einmalige **Druck- & Produktionsgebühr 149 €** (Magnetfolie 0,9 mm, wetterfest).
+**2. Neue Komponente `TransporterPhotoDiagram.tsx`**
+Ersetzt die bisherige SVG-Komponente komplett. Aufbau pro Ansicht:
+- `<img>` mit dem Fotohintergrund
+- Darüber ein absolut positioniertes `<svg>` mit `viewBox` passend zum Foto
+- Jede Werbefläche als `<polygon>` (nicht nur Rechtecke – Eckpunkte folgen der Karosserieform: schräge Kanten an A-/C-Säule, ausgeschnittene Ecken um Radkasten/Fenster, wie auf den Referenzfotos echter beklebter Transporter)
+- Zustände der Polygone:
+  - **nicht ausgewählt**: `fill: white/15%`, `stroke: white/40%`, `stroke-dasharray="6 4"`, dünn (1.5px), Label klein
+  - **ausgewählt**: `fill: var(--primary)/0%`, `stroke: var(--primary)`, durchgezogen, dick (3px), Label fett + größerer Hintergrund-Chip; **zusätzlich** wird `ad-mockup.jpg` als `<image>` mit `clipPath` exakt in das Polygon eingepasst (Opacity ~85%, leichter `mix-blend-multiply` für realistischen Folien-Look)
+  - **hover**: Zwischenzustand, hellt auf
+- Tab-Leiste oben: Fahrerseite | Beifahrerseite | Heck | Front (statt aller 4 untereinander → spart Platz, eine Ansicht groß sichtbar)
+- Klick auf Polygon → setzt `selectedPackageId` (gleicher State wie Package-Cards), scrollt Cards in View
+- Klick auf Package-Card → wechselt automatisch zur passenden Ansicht und selektiert das Polygon
 
-Laufzeiten weiterhin 1/2/3 Jahre mit Staffelrabatt (10 % / 20 %) auf den Monatspreis.
+**3. Koordinaten-Mapping**
+- Für jede der 26 Flächen (HS1, HS2, L1, L2, HG1, HG2, C1–C10, M1–M10) Polygon-Koordinaten im `viewBox`-Raum definieren.
+- Form orientiert sich an den vom User geschickten Referenzfotos: Hauptsponsor schließt am Radkasten bündig ab (untere Kante folgt der Radkasten-Wölbung als 3-4 Punkte), Heck-Goldplätze umfließen das Rückleuchten-Gehäuse, City-Spots zwischen den Fenstern.
+- Definiert in `src/lib/partner-zones.ts` als Map `{ id, view, points: "x1,y1 x2,y2 …", labelAnchor: {x,y} }`.
 
-## Markt-Referenz (kurz, in Code-Kommentar dokumentiert)
+**4. Anpassungen Bestandsdateien**
+- `src/routes/partner.tsx`: Import wechseln auf `TransporterPhotoDiagram`, State (`selectedPackageId`) liften und an beide Kinder durchreichen.
+- `src/components/partner/PartnerPackages.tsx`: `onSelect`/`selectedId` Props ergänzen, aktive Karte visuell markieren.
+- Alte `src/components/partner/TransporterDiagram.tsx` löschen.
 
-- Mobile Außenwerbung DE: typ. 50–400 €/Monat je Fläche
-- Hauptsponsor-Großflächen (Trikot-/Fahrzeugsponsoring im Amateurbereich): 200–300 €/Monat
-- Heck mit QR/CTA: 120–180 €/Monat (höchster Blickkontakt im Stau)
-- Kleine City-Spots: 50–80 €/Monat
-- Mini-Logo-Flächen (Sponsorenwand-Stil): 20–40 €/Monat
+**5. Keine Backend-/Logikänderungen**
+- `partner-packages.ts`, `partner-inquiry.functions.ts`, Formular, Preise bleiben unverändert.
 
-→ unsere Preise liegen mittig und sind realistisch für Region Böblingen.
+## Technische Details
 
-## Code-Änderungen
+- Bilder als statische Assets, via `import img from '@/assets/partner/transporter-driver.jpg'` eingebunden (Vite hashed sie).
+- SVG-Overlay: `position: absolute; inset: 0; width: 100%; height: 100%` über `position: relative` Container.
+- `clipPath` pro Polygon mit eindeutiger ID (`clip-hs1`, …) damit das Werbe-Mockup-Bild exakt in der Form sitzt.
+- Monochrome Design-Token bleiben respektiert (Schwarz/Weiß/Grau, kein Farbakzent außer im Werbe-Mockup selbst – das darf bunt sein, ist ja eine echte Werbung).
+- Responsive: auf Mobile Tab-Leiste scrollbar, SVG-Polygone skalieren automatisch mit dem `viewBox`.
 
-**1. `src/lib/partner-packages.ts`** – komplett ersetzen
-- 5 Pakete: `hauptsponsor`, `leschi`, `heck_goldplatz`, `city_spot`, `mini_spot`
-- Felder: id, code, name, beschreibung, größe (cm × cm), monatspreis, anzahlVerfügbar, farbe (Token), positionen[]
-- Tier-Preise (1J = voll, 2J = −10 %, 3J = −20 %, jeweils ×12 als Jahressumme)
-- Setup-Fee bleibt 149 €
+## Was nicht passiert
 
-**2. `src/components/partner/TransporterDiagram.tsx`** – komplett neu im Stil der Referenz
-- 4 Ansichten untereinander/grid: Fahrerseite (links), Beifahrerseite (rechts), Heck, Front
-- Transporter als sauberes monochromes SVG (Citroën Jumper / Peugeot Boxer Silhouette, L4H3-Proportion)
-- Werbeflächen als farbige Rechtecke mit gestricheltem Rahmen + Code-Label (HS1, L1, C1 …)
-- Farb-Tokens (monochrom-kompatibel, nur Akzent-Outlines):
-  - Hauptsponsor: gefüllt dunkelgrau, dicker Rand
-  - Leschi: schraffiert
-  - Heck Goldplatz: gepunktet
-  - City: dünn gestrichelt
-  - Mini: sehr dünn
-- Klick auf Fläche → scrollt zum jeweiligen Paket / setzt Auswahl im Formular
-- Header-Icons: Sichtbarkeit, Magnetisch, Wetterfest, Austauschbar (wie Referenz)
-
-**3. `src/components/partner/PartnerPackages.tsx`** – 5 Karten statt 4
-- Jede Karte zeigt: Farb-Indikator, Code, Name, Größe, „X Plätze verfügbar", Monatspreis groß, Laufzeit-Tabs (1/2/3 J mit Rabatt), kurzer Nutzen-Text
-- CTA „Diese Fläche anfragen" füllt Formular vor
-
-**4. `src/components/partner/PartnerBenefits.tsx`** – Footer-Block wie Referenz
-- 4 Icons: Magnetisch haftend · Wetterfest & UV-beständig · Einfach wechselbar · Kosteneffizient & mehr Reichweite
-
-**5. `src/components/partner/PartnerInquiryForm.tsx`** – nur Select-Optionen anpassen (5 statt 4 Pakete + „mehrere Flächen kombinieren")
-
-**6. `src/routes/partner.tsx`** – Sektion-Reihenfolge bleibt; Headline anpassen: „Werbeflächen am Transporter – über 25 Plätze, ab 29 € / Monat"
-
-**7. `src/lib/partner-inquiry.functions.ts`** – Zod-Enum auf neue 5 Paket-IDs erweitern, E-Mail-Template entsprechend.
-
-## Nicht betroffen
-
-Navbar, Footer, Routing, Auth, andere Seiten — keine Änderungen.
-
-## QA
-
-- Diagramm in 928 px Vorschau prüfen (Mobile-first stacking)
-- Klick-Hotzones treffen die richtigen Rechtecke
-- Formular sendet mit neuen Paket-IDs erfolgreich
+- Keine Änderungen am Anfrageformular, an Preisen, an Routen oder am Datenmodell.
+- Keine Animationen/Motion – bewusst ruhig.
+- Kein Versuch, Text in die KI-generierten Bilder zu rendern (KI-Text ist unzuverlässig); alle Labels kommen aus dem SVG-Overlay.
