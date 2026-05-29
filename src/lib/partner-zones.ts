@@ -137,26 +137,26 @@ const passengerZones: Zone[] = [
     points: "766,515 566,515 566,720 766,720",
     label: { x: 666, y: 617 },
   },
-  // P9 — vor hinterem Radkasten
+  // P8 — vor hinterem Radkasten
+  {
+    code: "P8",
+    view: "passenger",
+    points: "561,515 366,515 366,720 561,720",
+    label: { x: 464, y: 617 },
+  },
+  // P9 — über hinterem Radkasten: Unterkante folgt dem Bogen
   {
     code: "P9",
     view: "passenger",
-    points: "561,515 366,515 366,650 381,675 406,690 446,700 561,700",
-    label: { x: 464, y: 605 },
+    points: "361,515 166,515 166,720 201,720 211,700 231,680 261,665 301,660 336,665 356,675 361,685",
+    label: { x: 264, y: 605 },
   },
-  // P10 — über hinterem Radkasten
+  // P10 — Heckeck links im Bild
   {
     code: "P10",
     view: "passenger",
-    points: "361,515 166,515 166,720 236,720 276,705 306,690 331,675 346,655 361,635",
-    label: { x: 264, y: 605 },
-  },
-  // P11 — Heckeck links im Bild
-  {
-    code: "P11",
-    view: "passenger",
-    points: "161,310 81,330 81,710 161,720",
-    label: { x: 121, y: 520 },
+    points: "161,310 91,330 91,665 161,665",
+    label: { x: 126, y: 520 },
   },
 ];
 
@@ -194,14 +194,14 @@ const frontZones: Zone[] = [
   {
     code: "F1",
     view: "front",
-    points: "310,150 715,150 745,220 280,220",
+    points: "320,135 705,135 730,225 290,225",
     label: { x: 512, y: 188 },
   },
-  // F2 — Motorhaube zwischen Scheinwerfern (Trapez, oben schmaler)
+  // F2 — Motorhaube zwischen Scheinwerfern (zwischen den schwarzen Plastik-Teilen)
   {
     code: "F2",
     view: "front",
-    points: "330,455 695,455 730,555 295,555",
+    points: "365,475 660,475 680,540 350,540",
     label: { x: 512, y: 510 },
   },
 ];
