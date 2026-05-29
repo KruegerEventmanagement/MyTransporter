@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { Eye, Magnet, CloudRain, RefreshCw } from "lucide-react";
-import type { PartnerPackageId } from "@/lib/partner-packages";
-import { VIEWS, type ViewId, type Zone } from "@/lib/partner-zones";
-import driverImg from "@/assets/partner/transporter-driver.jpg";
-import passengerImg from "@/assets/partner/transporter-passenger.jpg";
-import rearImg from "@/assets/partner/transporter-rear.jpg";
-import frontImg from "@/assets/partner/transporter-front.jpg";
+import { VIEWS, type ViewId, type Zone, getViewForZone } from "@/lib/partner-zones";
+import { getPartnerPackageOrNull, formatEuro, formatSqm } from "@/lib/partner-packages";
+import driverImg from "@/assets/partner/van-driver.jpg";
+import passengerImg from "@/assets/partner/van-passenger.jpg";
+import rearImg from "@/assets/partner/van-rear.jpg";
+import frontImg from "@/assets/partner/van-front.jpg";
 import adMockup from "@/assets/partner/ad-mockup.jpg";
 
 interface Props {
-  highlight?: PartnerPackageId | null;
-  onSelect?: (id: PartnerPackageId) => void;
+  highlight?: string | null;
+  onSelect?: (id: string) => void;
 }
 
 const IMAGES: Record<ViewId, string> = {
@@ -20,38 +20,32 @@ const IMAGES: Record<ViewId, string> = {
   front: frontImg,
 };
 
-/** Welche Ansicht enthält welches Paket (für Auto-Switch bei Klick auf Card). */
-function viewForPackage(pkg: PartnerPackageId | null | undefined): ViewId {
-  if (!pkg) return "driver";
-  const order: ViewId[] = ["driver", "passenger", "rear", "front"];
-  for (const v of order) {
-    if (VIEWS[v].zones.some((z) => z.pkg === pkg)) return v;
-  }
-  return "driver";
-}
-
 function ZonePolygon({
   zone,
   selected,
   anySelected,
   clipId,
+  viewBoxW,
+  viewBoxH,
   onSelect,
 }: {
   zone: Zone;
   selected: boolean;
   anySelected: boolean;
   clipId: string;
-  onSelect?: (id: PartnerPackageId) => void;
+  viewBoxW: number;
+  viewBoxH: number;
+  onSelect?: (id: string) => void;
 }) {
+  const pkg = getPartnerPackageOrNull(zone.code);
   return (
     <g
       className="cursor-pointer"
       onClick={(e) => {
         e.stopPropagation();
-        onSelect?.(zone.pkg);
+        onSelect?.(zone.code);
       }}
     >
-      {/* Werbe-Mockup nur im ausgewählten Zustand */}
       {selected && (
         <>
           <defs>
@@ -63,37 +57,33 @@ function ZonePolygon({
             href={adMockup}
             x="0"
             y="0"
-            width="1600"
-            height="800"
+            width={viewBoxW}
+            height={viewBoxH}
             preserveAspectRatio="xMidYMid slice"
             clipPath={`url(#${clipId})`}
-            opacity="0.92"
+            opacity="0.9"
             style={{ mixBlendMode: "multiply" }}
           />
         </>
       )}
-
-      {/* Fläche */}
       <polygon
         points={zone.points}
         fill={selected ? "transparent" : "white"}
-        fillOpacity={selected ? 0 : 0.18}
+        fillOpacity={selected ? 0 : 0.14}
         stroke={selected ? "black" : "white"}
         strokeOpacity={selected ? 1 : 0.85}
         strokeWidth={selected ? 4 : 1.5}
-        strokeDasharray={selected ? "0" : "10 6"}
-        opacity={!selected && anySelected ? 0.55 : 1}
+        strokeDasharray={selected ? "0" : "8 5"}
+        opacity={!selected && anySelected ? 0.45 : 1}
         className="transition-all duration-200 hover:opacity-100"
       />
-
-      {/* Label */}
       <g style={{ pointerEvents: "none" }}>
         <rect
-          x={zone.label.x - 28}
-          y={zone.label.y - 16}
-          width={56}
-          height={28}
-          rx={6}
+          x={zone.label.x - 26}
+          y={zone.label.y - 14}
+          width={52}
+          height={24}
+          rx={5}
           fill={selected ? "black" : "white"}
           fillOpacity={selected ? 1 : 0.85}
         />
@@ -101,7 +91,7 @@ function ZonePolygon({
           x={zone.label.x}
           y={zone.label.y + 4}
           textAnchor="middle"
-          fontSize={selected ? 18 : 14}
+          fontSize={selected ? 16 : 13}
           fontWeight="700"
           fill={selected ? "white" : "black"}
         >
@@ -113,21 +103,24 @@ function ZonePolygon({
 }
 
 export function TransporterPhotoDiagram({ highlight, onSelect }: Props) {
-  const [view, setView] = useState<ViewId>(() => viewForPackage(highlight));
+  const [view, setView] = useState<ViewId>(() =>
+    highlight ? getViewForZone(highlight) : "driver",
+  );
 
-  // Bei Auswahl von außen automatisch auf passende Ansicht wechseln
   useEffect(() => {
     if (!highlight) return;
-    const inCurrent = VIEWS[view].zones.some((z) => z.pkg === highlight);
-    if (!inCurrent) setView(viewForPackage(highlight));
-  }, [highlight]); // eslint-disable-line react-hooks/exhaustive-deps
+    const v = getViewForZone(highlight);
+    if (v !== view) setView(v);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlight]);
 
   const current = VIEWS[view];
   const anySelected = !!highlight;
+  const [, , vbW, vbH] = current.viewBox.split(" ").map(Number);
+  const activePkg = highlight ? getPartnerPackageOrNull(highlight) : null;
 
   return (
     <div className="w-full text-foreground">
-      {/* Feature-Icons */}
       <div className="flex flex-wrap justify-center gap-4 sm:gap-6 mb-6 text-muted-foreground">
         {[
           { icon: Eye, label: "Hohe Sichtbarkeit" },
@@ -144,7 +137,6 @@ export function TransporterPhotoDiagram({ highlight, onSelect }: Props) {
         ))}
       </div>
 
-      {/* Tab-Leiste */}
       <div className="flex justify-center gap-2 mb-4 overflow-x-auto">
         {(Object.keys(VIEWS) as ViewId[]).map((v) => (
           <button
@@ -157,12 +149,11 @@ export function TransporterPhotoDiagram({ highlight, onSelect }: Props) {
                 : "bg-background text-foreground border-border hover:border-foreground/40"
             }`}
           >
-            {VIEWS[v].label}
+            {VIEWS[v].label} ({VIEWS[v].zones.length})
           </button>
         ))}
       </div>
 
-      {/* Foto + Overlay */}
       <div
         className="relative w-full rounded-2xl overflow-hidden border border-border bg-secondary"
         style={{ aspectRatio: current.aspect }}
@@ -182,19 +173,35 @@ export function TransporterPhotoDiagram({ highlight, onSelect }: Props) {
             <ZonePolygon
               key={`${view}-${z.code}-${i}`}
               zone={z}
-              selected={highlight === z.pkg}
+              selected={highlight === z.code}
               anySelected={anySelected}
               clipId={`clip-${view}-${z.code}-${i}`}
+              viewBoxW={vbW}
+              viewBoxH={vbH}
               onSelect={onSelect}
             />
           ))}
         </svg>
       </div>
 
+      {activePkg && (
+        <div className="mt-4 p-4 rounded-xl bg-card border border-border flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-xs text-muted-foreground">{activePkg.viewLabel} · Fläche {activePkg.code}</div>
+            <div className="text-sm font-semibold text-foreground">
+              {activePkg.sizeLabel} · {formatSqm(activePkg.sqm)}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-bold text-foreground">{formatEuro(activePkg.monthly)}<span className="text-xs text-muted-foreground font-normal"> / Monat</span></div>
+            <div className="text-[11px] text-muted-foreground">bei 1 Jahr Laufzeit</div>
+          </div>
+        </div>
+      )}
+
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Tippe auf eine Fläche, um sie auszuwählen. Ausgewählte Fläche zeigt ein
-        Beispiel-Werbemotiv – so sieht's beklebt aus. Magnetfolie 0,9 mm, wetterfest,
-        jederzeit austauschbar.
+        Tippe auf eine Fläche – sie wird mit einem Beispiel-Motiv eingeblendet.
+        Größe & Preis werden automatisch aus der gemessenen Fläche berechnet.
       </p>
     </div>
   );

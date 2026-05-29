@@ -1,40 +1,41 @@
-// Marktrecherche (Mai 2026, Region Stuttgart/Böblingen):
-// - Mobile Außenwerbung DE: ~50–400 €/Monat je Fläche
-// - Hauptsponsor-Großflächen (Trikot-/Fahrzeugsponsoring Amateurbereich): 200–300 €/Monat
-// - Heck mit QR/CTA (höchster Blickkontakt im Stau): 120–180 €/Monat
-// - City-Spot (60×40): 50–80 €/Monat
-// - Mini-Logo-Flächen (Sponsorenwand-Stil): 20–40 €/Monat
-// → Unsere Preise liegen mittig und sind regional realistisch.
+import {
+  ALL_ZONES,
+  VIEWS,
+  polygonAreaPx,
+  polygonBBox,
+  type ViewId,
+  type Zone,
+} from "./partner-zones";
 
-export type PartnerPackageId =
-  | "hauptsponsor"
-  | "leschi"
-  | "heck_goldplatz"
-  | "city_spot"
-  | "mini_spot";
+export type PartnerPackageId = string;
 
 export interface PartnerPackage {
   id: PartnerPackageId;
   code: string;
-  name: string;
-  sizeLabel: string;
+  view: ViewId;
+  viewLabel: string;
+  sqm: number;
   widthCm: number;
   heightCm: number;
-  /** Anzahl verfügbarer Plätze auf dem Transporter */
-  slots: number;
-  description: string;
-  /** Monatspreis (Vollpreis bei 1 Jahr) */
+  sizeLabel: string;
   monthly: number;
-  /** Preis in € für 1 / 2 / 3 Jahre (Werbefläche, ohne Bearbeitungsgebühr) */
   prices: { years: 1 | 2 | 3; monthly: number; total: number }[];
-  /** Einmalige Bearbeitungs-/Produktionsgebühr Magnetfolie in € */
   setupFee: number;
+  zone: Zone;
+}
+
+const ROUND_TO = 5;
+const MIN_MONTHLY = 25;
+const SETUP_FEE = 149;
+
+function round5(n: number): number {
+  return Math.max(MIN_MONTHLY, Math.round(n / ROUND_TO) * ROUND_TO);
 }
 
 function buildPrices(monthly: number) {
   const m1 = monthly;
-  const m2 = Math.round(monthly * 0.9);
-  const m3 = Math.round(monthly * 0.8);
+  const m2 = round5(monthly * 0.9);
+  const m3 = round5(monthly * 0.8);
   return [
     { years: 1 as const, monthly: m1, total: m1 * 12 },
     { years: 2 as const, monthly: m2, total: m2 * 24 },
@@ -42,83 +43,44 @@ function buildPrices(monthly: number) {
   ];
 }
 
-export const PARTNER_PACKAGES: PartnerPackage[] = [
-  {
-    id: "hauptsponsor",
-    code: "HS",
-    name: "Hauptsponsor",
-    sizeLabel: "140 × 80 cm",
-    widthCm: 140,
-    heightCm: 80,
-    slots: 2,
-    description:
-      "Größte und auffälligste Seitenfläche – maximale Sichtbarkeit, exklusive Position. Nur 2× verfügbar.",
-    monthly: 249,
-    prices: buildPrices(249),
-    setupFee: 149,
-  },
-  {
-    id: "leschi",
-    code: "L",
-    name: "Leschi",
-    sizeLabel: "100 × 60 cm",
-    widthCm: 100,
-    heightCm: 60,
-    slots: 2,
-    description:
-      "Premium-Seitenfläche mit hoher Sichtbarkeit, direkt neben dem Hauptsponsor.",
-    monthly: 129,
-    prices: buildPrices(129),
-    setupFee: 149,
-  },
-  {
-    id: "heck_goldplatz",
-    code: "HG",
-    name: "Heck Goldplatz",
-    sizeLabel: "90 × 50 cm",
-    widthCm: 90,
-    heightCm: 50,
-    slots: 2,
-    description:
-      "Premium-Heckfläche – ideal für QR-Code oder Call-to-Action. Wirkt lang im Stau und an der Ampel.",
-    monthly: 149,
-    prices: buildPrices(149),
-    setupFee: 149,
-  },
-  {
-    id: "city_spot",
-    code: "C",
-    name: "City Spot",
-    sizeLabel: "60 × 40 cm",
-    widthCm: 60,
-    heightCm: 40,
-    slots: 10,
-    description:
-      "Standard-Werbefläche für regionale Firmen – günstig, gut sichtbar, in mehreren Positionen verfügbar.",
-    monthly: 69,
-    prices: buildPrices(69),
-    setupFee: 149,
-  },
-  {
-    id: "mini_spot",
-    code: "M",
-    name: "Mini Spot",
-    sizeLabel: "30 × 25 cm",
-    widthCm: 30,
-    heightCm: 25,
-    slots: 10,
-    description:
-      "Kompakte Zusatzfläche im Sponsorenwand-Stil – perfekt für Logo, Kontakt oder QR-Code.",
-    monthly: 29,
-    prices: buildPrices(29),
-    setupFee: 149,
-  },
-];
+function buildPackage(zone: Zone): PartnerPackage {
+  const view = VIEWS[zone.view];
+  const px = polygonAreaPx(zone.points);
+  const sqm = px / (view.pxPerMeter * view.pxPerMeter);
+  const bbox = polygonBBox(zone.points);
+  const widthCm = Math.round((bbox.width / view.pxPerMeter) * 100);
+  const heightCm = Math.round((bbox.height / view.pxPerMeter) * 100);
+  const monthly = round5(sqm * view.ratePerSqmMonth);
+  return {
+    id: zone.code,
+    code: zone.code,
+    view: zone.view,
+    viewLabel: view.label,
+    sqm: Math.round(sqm * 100) / 100,
+    widthCm,
+    heightCm,
+    sizeLabel: `${widthCm} \u00d7 ${heightCm} cm`,
+    monthly,
+    prices: buildPrices(monthly),
+    setupFee: SETUP_FEE,
+    zone,
+  };
+}
+
+export const PARTNER_PACKAGES: PartnerPackage[] = ALL_ZONES.map(buildPackage);
+
+const PACKAGE_BY_ID: Record<string, PartnerPackage> = Object.fromEntries(
+  PARTNER_PACKAGES.map((p) => [p.id, p]),
+);
 
 export function getPartnerPackage(id: PartnerPackageId): PartnerPackage {
-  const pkg = PARTNER_PACKAGES.find((p) => p.id === id);
-  if (!pkg) throw new Error(`Unbekanntes Paket: ${id}`);
-  return pkg;
+  const p = PACKAGE_BY_ID[id];
+  if (!p) throw new Error(`Unbekanntes Paket: ${id}`);
+  return p;
+}
+
+export function getPartnerPackageOrNull(id: string): PartnerPackage | null {
+  return PACKAGE_BY_ID[id] ?? null;
 }
 
 export function formatEuro(amount: number): string {
@@ -128,3 +90,14 @@ export function formatEuro(amount: number): string {
     maximumFractionDigits: 0,
   }).format(amount);
 }
+
+export function formatSqm(sqm: number): string {
+  return `${sqm.toFixed(2).replace(".", ",")} m\u00b2`;
+}
+
+export const PACKAGES_BY_VIEW: Record<ViewId, PartnerPackage[]> = {
+  driver: PARTNER_PACKAGES.filter((p) => p.view === "driver"),
+  passenger: PARTNER_PACKAGES.filter((p) => p.view === "passenger"),
+  rear: PARTNER_PACKAGES.filter((p) => p.view === "rear"),
+  front: PARTNER_PACKAGES.filter((p) => p.view === "front"),
+};
