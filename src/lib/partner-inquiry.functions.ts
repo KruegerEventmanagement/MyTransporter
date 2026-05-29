@@ -10,16 +10,23 @@ const Schema = z.object({
   name: z.string().trim().min(1, "Name fehlt").max(120),
   email: z.string().trim().email("Ungültige E-Mail").max(255),
   phone: z.string().trim().max(40).optional().or(z.literal("")),
-  packageId: z.enum(["large", "tailgate", "medium", "small"]),
+  packageId: z.enum([
+    "hauptsponsor",
+    "leschi",
+    "heck_goldplatz",
+    "city_spot",
+    "mini_spot",
+  ]),
   years: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   message: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
 const PACKAGE_LABEL: Record<string, string> = {
-  large: "Große Seitenfläche (ca. 200 × 100 cm)",
-  tailgate: "Heckklappe (ca. 120 × 80 cm)",
-  medium: "Mittlere Seitenfläche (ca. 100 × 60 cm)",
-  small: "Kleine Fläche (ca. 50 × 30 cm)",
+  hauptsponsor: "Hauptsponsor (140 × 80 cm)",
+  leschi: "Leschi – Premium-Seitenfläche (100 × 60 cm)",
+  heck_goldplatz: "Heck Goldplatz (90 × 50 cm)",
+  city_spot: "City Spot (60 × 40 cm)",
+  mini_spot: "Mini Spot (30 × 25 cm)",
 };
 
 async function sendEmail(to: string, subject: string, html: string, replyTo?: string): Promise<boolean> {
