@@ -29,70 +29,63 @@ const driverZones: Zone[] = [
     points: "395,470 555,470 555,720 440,720 410,710 395,690 388,665 388,520",
     label: { x: 475, y: 600 },
   },
-  // D2 — kleines Dreieck oben über/hinter dem Fahrerfenster (Dachrundung)
+  // D2–D5 — obere Lade-Reihe (4 Kacheln) — Cab-Fenster wird nicht beklebt
   {
     code: "D2",
-    view: "driver",
-    points: "395,310 555,310 555,460 395,460",
-    label: { x: 475, y: 390 },
-  },
-  // D3–D6 — obere Lade-Reihe (4 Kacheln)
-  {
-    code: "D3",
     view: "driver",
     points: "565,310 765,310 765,510 565,510",
     label: { x: 665, y: 410 },
   },
   {
-    code: "D4",
+    code: "D3",
     view: "driver",
     points: "770,310 970,310 970,510 770,510",
     label: { x: 870, y: 410 },
   },
   {
-    code: "D5",
+    code: "D4",
     view: "driver",
     points: "975,310 1170,310 1170,510 975,510",
     label: { x: 1072, y: 410 },
   },
   {
-    code: "D6",
+    code: "D5",
     view: "driver",
     points: "1175,310 1370,310 1370,510 1175,510",
     label: { x: 1272, y: 410 },
   },
-  // D7–D10 — untere Lade-Reihe (4 Kacheln)
+  // D6–D9 — untere Lade-Reihe (4 Kacheln)
   {
-    code: "D7",
+    code: "D6",
     view: "driver",
     points: "565,515 765,515 765,720 565,720",
     label: { x: 665, y: 617 },
   },
   {
-    code: "D8",
+    code: "D7",
     view: "driver",
     points: "770,515 970,515 970,720 770,720",
     label: { x: 870, y: 617 },
   },
-  // D9 — vor dem hinteren Radkasten: untere Kante folgt dem Bogen
+  // D8 — vor dem hinteren Radkasten
+  {
+    code: "D8",
+    view: "driver",
+    points: "975,515 1170,515 1170,720 975,720",
+    label: { x: 1072, y: 605 },
+  },
+  // D9 — über dem hinteren Radkasten: Unterkante folgt dem Radkasten-Bogen
   {
     code: "D9",
     view: "driver",
-    points: "975,515 1170,515 1170,650 1155,675 1130,690 1090,700 975,700",
-    label: { x: 1072, y: 605 },
+    points: "1175,515 1370,515 1370,720 1335,720 1325,700 1305,680 1275,665 1235,660 1200,665 1180,675 1175,685",
+    label: { x: 1272, y: 605 },
   },
-  // D10 — über dem hinteren Radkasten: untere Kante folgt dem Bogen
+  // D10 — Heckeck (schmale Fläche zwischen hinterem Radkasten und Rücklicht)
   {
     code: "D10",
     view: "driver",
-    points: "1175,515 1370,515 1370,720 1300,720 1260,705 1230,690 1205,675 1190,655 1175,635",
-    label: { x: 1272, y: 605 },
-  },
-  // D11 — Heckeck (Polygon, hinten leicht verjüngt)
-  {
-    code: "D11",
-    view: "driver",
-    points: "1375,310 1455,330 1455,710 1375,720",
+    points: "1375,310 1445,330 1445,665 1375,665",
     label: { x: 1415, y: 520 },
   },
 ];
@@ -106,47 +99,40 @@ const passengerZones: Zone[] = [
     points: "1141,470 981,470 981,720 1096,720 1126,710 1141,690 1148,665 1148,520",
     label: { x: 1061, y: 600 },
   },
-  // P2 — Dreieck oben über Beifahrerfenster
+  // P2–P5 — obere Lade-Reihe (von vorne nach hinten, also rechts→links im Bild)
   {
     code: "P2",
-    view: "passenger",
-    points: "1141,310 981,310 981,460 1141,460",
-    label: { x: 1061, y: 390 },
-  },
-  // P3–P6 — obere Lade-Reihe (von vorne nach hinten, also rechts→links im Bild)
-  {
-    code: "P3",
     view: "passenger",
     points: "971,310 771,310 771,510 971,510",
     label: { x: 871, y: 410 },
   },
   {
-    code: "P4",
+    code: "P3",
     view: "passenger",
     points: "766,310 566,310 566,510 766,510",
     label: { x: 666, y: 410 },
   },
   {
-    code: "P5",
+    code: "P4",
     view: "passenger",
     points: "561,310 366,310 366,510 561,510",
     label: { x: 464, y: 410 },
   },
   {
-    code: "P6",
+    code: "P5",
     view: "passenger",
     points: "361,310 166,310 166,510 361,510",
     label: { x: 264, y: 410 },
   },
-  // P7–P10 — untere Lade-Reihe
+  // P6–P9 — untere Lade-Reihe
   {
-    code: "P7",
+    code: "P6",
     view: "passenger",
     points: "971,515 771,515 771,720 971,720",
     label: { x: 871, y: 617 },
   },
   {
-    code: "P8",
+    code: "P7",
     view: "passenger",
     points: "766,515 566,515 566,720 766,720",
     label: { x: 666, y: 617 },
