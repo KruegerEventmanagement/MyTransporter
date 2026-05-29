@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ProfilRouteImport } from './routes/profil'
+import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as KontaktRouteImport } from './routes/kontakt'
 import { Route as ImpressumRouteImport } from './routes/impressum'
 import { Route as FaqRouteImport } from './routes/faq'
@@ -32,6 +33,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ProfilRoute = ProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnerRoute = PartnerRouteImport.update({
+  id: '/partner',
+  path: '/partner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KontaktRoute = KontaktRouteImport.update({
@@ -104,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
+  '/partner': typeof PartnerRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/auth/confirm': typeof AuthConfirmRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
+  '/partner': typeof PartnerRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/auth/confirm': typeof AuthConfirmRoute
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
+  '/partner': typeof PartnerRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/auth/confirm': typeof AuthConfirmRoute
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/impressum'
     | '/kontakt'
+    | '/partner'
     | '/profil'
     | '/sitemap.xml'
     | '/auth/confirm'
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/impressum'
     | '/kontakt'
+    | '/partner'
     | '/profil'
     | '/sitemap.xml'
     | '/auth/confirm'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/impressum'
     | '/kontakt'
+    | '/partner'
     | '/profil'
     | '/sitemap.xml'
     | '/auth/confirm'
@@ -204,6 +216,7 @@ export interface RootRouteChildren {
   FaqRoute: typeof FaqRoute
   ImpressumRoute: typeof ImpressumRoute
   KontaktRoute: typeof KontaktRoute
+  PartnerRoute: typeof PartnerRoute
   ProfilRoute: typeof ProfilRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   AuthConfirmRoute: typeof AuthConfirmRoute
@@ -227,6 +240,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/profil'
       preLoaderRoute: typeof ProfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partner': {
+      id: '/partner'
+      path: '/partner'
+      fullPath: '/partner'
+      preLoaderRoute: typeof PartnerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kontakt': {
@@ -324,6 +344,7 @@ const rootRouteChildren: RootRouteChildren = {
   FaqRoute: FaqRoute,
   ImpressumRoute: ImpressumRoute,
   KontaktRoute: KontaktRoute,
+  PartnerRoute: PartnerRoute,
   ProfilRoute: ProfilRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   AuthConfirmRoute: AuthConfirmRoute,
@@ -335,13 +356,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
