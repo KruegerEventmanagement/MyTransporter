@@ -114,8 +114,8 @@ export const VIEWS: Record<ViewId, ViewDef> = {
   },
   front: {
     label: "Vorderseite",
-    viewBox: "0 0 385 420",
-    aspect: "385 / 420",
+    viewBox: "0 0 450 500",
+    aspect: "450 / 500",
     pxPerMeter: 105,
     ratePerSqmMonth: 140,
     zones: frontZones,

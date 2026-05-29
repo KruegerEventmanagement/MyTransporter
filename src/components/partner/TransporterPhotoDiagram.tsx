@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Eye, Magnet, CloudRain, RefreshCw } from "lucide-react";
-import { VIEWS, type ViewId, type Zone, getViewForZone } from "@/lib/partner-zones";
+import { VIEWS, type ViewId, getViewForZone } from "@/lib/partner-zones";
 import { getPartnerPackageOrNull, formatEuro, formatSqm } from "@/lib/partner-packages";
 import driverImg from "@/assets/partner/van-driver.jpg";
 import passengerImg from "@/assets/partner/van-passenger.jpg";
@@ -18,45 +18,7 @@ const IMAGES: Record<ViewId, string> = {
   front: frontImg,
 };
 
-function ZonePolygon({
-  zone,
-  selected,
-  anySelected,
-  viewBoxW,
-  viewBoxH,
-  onSelect,
-}: {
-  zone: Zone;
-  selected: boolean;
-  anySelected: boolean;
-  viewBoxW: number;
-  viewBoxH: number;
-  onSelect?: (id: string) => void;
-}) {
-  const pkg = getPartnerPackageOrNull(zone.code);
-  return (
-    <g
-      className="cursor-pointer"
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect?.(zone.code);
-      }}
-    >
-      {/* Codes (S1, R1, …) sind bereits ins Hintergrundbild eingezeichnet —
-          das Overlay markiert nur die aktive Fläche bzw. nimmt Klicks entgegen. */}
-      <polygon
-        points={zone.points}
-        fill={selected ? "black" : "white"}
-        fillOpacity={selected ? 0.18 : 0.001}
-        stroke={selected ? "black" : "transparent"}
-        strokeWidth={selected ? 2.5 : 0}
-        className="transition-all duration-200 hover:fill-black/10"
-      />
-    </g>
-  );
-}
-
-export function TransporterPhotoDiagram({ highlight, onSelect }: Props) {
+export function TransporterPhotoDiagram({ highlight }: Props) {
   const [view, setView] = useState<ViewId>(() =>
     highlight ? getViewForZone(highlight) : "driver",
   );
@@ -69,8 +31,6 @@ export function TransporterPhotoDiagram({ highlight, onSelect }: Props) {
   }, [highlight]);
 
   const current = VIEWS[view];
-  const anySelected = !!highlight;
-  const [, , vbW, vbH] = current.viewBox.split(" ").map(Number);
   const activePkg = highlight ? getPartnerPackageOrNull(highlight) : null;
 
   return (
@@ -118,23 +78,6 @@ export function TransporterPhotoDiagram({ highlight, onSelect }: Props) {
           loading="lazy"
           className="absolute inset-0 w-full h-full object-contain"
         />
-        <svg
-          viewBox={current.viewBox}
-          className="absolute inset-0 w-full h-full"
-          preserveAspectRatio="xMidYMid meet"
-        >
-          {current.zones.map((z, i) => (
-            <ZonePolygon
-              key={`${view}-${z.code}-${i}`}
-              zone={z}
-              selected={highlight === z.code}
-              anySelected={anySelected}
-              viewBoxW={vbW}
-              viewBoxH={vbH}
-              onSelect={onSelect}
-            />
-          ))}
-        </svg>
       </div>
 
       {activePkg && (
@@ -153,8 +96,8 @@ export function TransporterPhotoDiagram({ highlight, onSelect }: Props) {
       )}
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Tippe auf eine Fläche – sie wird mit einem Beispiel-Motiv eingeblendet.
-        Größe & Preis werden automatisch aus der gemessenen Fläche berechnet.
+        Wähle weiter unten eine Fläche aus – Größe & Preis werden automatisch aus der
+        gemessenen Fläche berechnet.
       </p>
     </div>
   );
