@@ -1,55 +1,62 @@
 ## Ziel
+Echte, foto-realistische Transporter-Ansichten + dichtes Werbefl\u00e4chen-Raster wie im Referenzbild. Fl\u00e4chen werden vermessen und Preis automatisch aus m\u00b2 berechnet.
 
-Die billigen SVG-Grafiken auf `/partner` durch echte fotorealistische Transporter-Bilder ersetzen. Auf jedem Bild liegen alle Werbeflächen als gestrichelte, leicht ausgegraute Overlays. Die aktuell ausgewählte Fläche wird dick hervorgehoben und zeigt zusätzlich ein Werbe-Mockup (Platzhalter-Logo) auf der Fläche, damit man sieht wie's beklebt aussehen würde.
+## 1. Neue Fotos (KI-generiert, Studio-Stil)
+Im Stil des Citro\u00ebn Jumper Referenzfotos (sauber, wei\u00df, neutral, leichter Schatten). Premium-Qualit\u00e4t, keine Texte/Logos:
+- `src/assets/partner/van-driver.jpg` \u2014 reine Seitenansicht Fahrerseite (links), Hochdach, lang (L4H2)
+- `src/assets/partner/van-passenger.jpg` \u2014 reine Seitenansicht Beifahrerseite (rechts, Schiebet\u00fcr)
+- `src/assets/partner/van-rear.jpg` \u2014 reine Heckansicht, geschlossene Fl\u00fcgelt\u00fcren
+- `src/assets/partner/van-front.jpg` \u2014 reine Frontansicht (Stirn \u00fcber Windschutz + Motorhaube + Sto\u00dffl\u00e4che, vergleichbar mit Ford Transit Foto)
 
-## Vorgehen
+Alte Bilder (`transporter-*.jpg`) werden ersetzt.
 
-**1. Bilder beschaffen (Mix: Referenzfotos + KI)**
-- Per `imagegen` (Modell `premium`, ohne Text-Anforderung) 4 saubere Seitenansichten eines weißen Citroën Jumper L4H3 generieren:
-  - `transporter-driver.jpg` (Fahrerseite)
-  - `transporter-passenger.jpg` (Beifahrerseite)
-  - `transporter-rear.jpg` (Heck)
-  - `transporter-front.jpg` (Front)
-- Studio-Look, neutraler heller Hintergrund, exakt orthogonale Seitenansicht (kein 3/4-Winkel), damit Overlays sauber sitzen.
-- Ein Platzhalter-Werbemotiv generieren (`ad-mockup.jpg` – buntes abstraktes Logo-Muster) für das "Plus Werbe-Mockup"-Verhalten.
-- Ablage: `src/assets/partner/`.
+## 2. Dichtes Werbefl\u00e4chen-Raster (genau wie Referenz)
+Layout pro Ansicht (Polygone in `src/lib/partner-zones.ts` aktualisiert):
 
-**2. Neue Komponente `TransporterPhotoDiagram.tsx`**
-Ersetzt die bisherige SVG-Komponente komplett. Aufbau pro Ansicht:
-- `<img>` mit dem Fotohintergrund
-- Darüber ein absolut positioniertes `<svg>` mit `viewBox` passend zum Foto
-- Jede Werbefläche als `<polygon>` (nicht nur Rechtecke – Eckpunkte folgen der Karosserieform: schräge Kanten an A-/C-Säule, ausgeschnittene Ecken um Radkasten/Fenster, wie auf den Referenzfotos echter beklebter Transporter)
-- Zustände der Polygone:
-  - **nicht ausgewählt**: `fill: white/15%`, `stroke: white/40%`, `stroke-dasharray="6 4"`, dünn (1.5px), Label klein
-  - **ausgewählt**: `fill: var(--primary)/0%`, `stroke: var(--primary)`, durchgezogen, dick (3px), Label fett + größerer Hintergrund-Chip; **zusätzlich** wird `ad-mockup.jpg` als `<image>` mit `clipPath` exakt in das Polygon eingepasst (Opacity ~85%, leichter `mix-blend-multiply` für realistischen Folien-Look)
-  - **hover**: Zwischenzustand, hellt auf
-- Tab-Leiste oben: Fahrerseite | Beifahrerseite | Heck | Front (statt aller 4 untereinander → spart Platz, eine Ansicht groß sichtbar)
-- Klick auf Polygon → setzt `selectedPackageId` (gleicher State wie Package-Cards), scrollt Cards in View
-- Klick auf Package-Card → wechselt automatisch zur passenden Ansicht und selektiert das Polygon
+**Fahrerseite (16 Fl\u00e4chen)**
+- Oberes Band \u00fcber Fenstern: 4 Felder (HS1-HS4)
+- Mittleres Hauptband (gro\u00dfe Felder zwischen Fenster- und Schwellerlinie): 6 Felder (M1-M6)
+- Unteres Schwellerband: 6 Felder (S1-S6)
 
-**3. Koordinaten-Mapping**
-- Für jede der 26 Flächen (HS1, HS2, L1, L2, HG1, HG2, C1–C10, M1–M10) Polygon-Koordinaten im `viewBox`-Raum definieren.
-- Form orientiert sich an den vom User geschickten Referenzfotos: Hauptsponsor schließt am Radkasten bündig ab (untere Kante folgt der Radkasten-Wölbung als 3-4 Punkte), Heck-Goldplätze umfließen das Rückleuchten-Gehäuse, City-Spots zwischen den Fenstern.
-- Definiert in `src/lib/partner-zones.ts` als Map `{ id, view, points: "x1,y1 x2,y2 …", labelAnchor: {x,y} }`.
+**Beifahrerseite (14 Fl\u00e4chen \u2014 weniger wegen Schiebet\u00fcr)**
+- Oberes Band: 4 Felder
+- Mittleres Band: 5 Felder (Schiebet\u00fcr-Bereich = 1 gro\u00dfes Feld)
+- Schwellerband: 5 Felder
 
-**4. Anpassungen Bestandsdateien**
-- `src/routes/partner.tsx`: Import wechseln auf `TransporterPhotoDiagram`, State (`selectedPackageId`) liften und an beide Kinder durchreichen.
-- `src/components/partner/PartnerPackages.tsx`: `onSelect`/`selectedId` Props ergänzen, aktive Karte visuell markieren.
-- Alte `src/components/partner/TransporterDiagram.tsx` löschen.
+**Heck (6 Fl\u00e4chen)**
+- 2 oben \u00fcber Heckscheibe, 2 mittig auf T\u00fcrfl\u00e4chen, 2 unten
 
-**5. Keine Backend-/Logikänderungen**
-- `partner-packages.ts`, `partner-inquiry.functions.ts`, Formular, Preise bleiben unverändert.
+**Front (2 Fl\u00e4chen)**
+- Stirnband \u00fcber Windschutzscheibe (wie auf Ford-Foto sichtbar)
+- Motorhaube/Grill-Bereich
+
+Gesamt: **~38 Pakete**.
+
+## 3. Auto-Vermessung & Preislogik
+Neue Datei `src/lib/partner-pricing.ts`:
+- Pro Polygon wird die Pixelfl\u00e4che mit Shoelace-Formel berechnet
+- Kalibrierung pro Ansicht: bekannte Realma\u00dfe Jumper L4H2 (L\u00e4nge 5.99m, H\u00f6he 2.52m, Breite 2.05m) \u2192 px/m Faktor
+- Daraus realer m\u00b2 Wert
+- Preis: **\u20ac/m\u00b2/Monat \u00d7 Fl\u00e4che**, gerundet auf 5\u20ac
+- Recherchierter Marktpreis Fahrzeugwerbung DE: ~100\u20ac/m\u00b2/Monat Seite, ~120\u20ac/m\u00b2/Monat Heck (h\u00f6here Aufmerksamkeit im Stau), ~140\u20ac/m\u00b2/Monat Front
+- Mindestpreis 25\u20ac/Monat
+- Anzeige in Karte + Overlay: "0,8 m\u00b2 \u00b7 ab 80\u20ac/Monat"
+
+## 4. Komponenten-Updates
+- `TransporterPhotoDiagram.tsx`: neue Fotos, neue Polygon-Coords, Label zeigt jetzt `id \u2022 m\u00b2 \u2022 Preis`
+- `PartnerPackages.tsx`: Liste wird aus `partner-zones.ts` + `partner-pricing.ts` generiert (keine harten Preise mehr in `partner-packages.ts`), gruppiert nach Ansicht
+- `partner-packages.ts`: wird zu einem Adapter der die generierten Pakete exportiert
+- `partner-inquiry.functions.ts`: unver\u00e4ndert (nimmt weiterhin packageId entgegen)
+
+## 5. Mockup-Overlay
+Bleibt wie aktuell (clipPath + mix-blend-multiply auf ad-mockup.jpg). Funktioniert auch bei den neuen, dichteren Polygonen.
+
+## Nicht-Ziele
+- Keine Backend-/Schema-\u00c4nderungen
+- Keine Routen-\u00c4nderungen
+- Form, Hero, Benefits bleiben unber\u00fchrt
 
 ## Technische Details
-
-- Bilder als statische Assets, via `import img from '@/assets/partner/transporter-driver.jpg'` eingebunden (Vite hashed sie).
-- SVG-Overlay: `position: absolute; inset: 0; width: 100%; height: 100%` über `position: relative` Container.
-- `clipPath` pro Polygon mit eindeutiger ID (`clip-hs1`, …) damit das Werbe-Mockup-Bild exakt in der Form sitzt.
-- Monochrome Design-Token bleiben respektiert (Schwarz/Weiß/Grau, kein Farbakzent außer im Werbe-Mockup selbst – das darf bunt sein, ist ja eine echte Werbung).
-- Responsive: auf Mobile Tab-Leiste scrollbar, SVG-Polygone skalieren automatisch mit dem `viewBox`.
-
-## Was nicht passiert
-
-- Keine Änderungen am Anfrageformular, an Preisen, an Routen oder am Datenmodell.
-- Keine Animationen/Motion – bewusst ruhig.
-- Kein Versuch, Text in die KI-generierten Bilder zu rendern (KI-Text ist unzuverlässig); alle Labels kommen aus dem SVG-Overlay.
+- Bildgenerierung: `imagegen` mit `model: premium`, querformat 1920\u00d71024 f\u00fcr Seiten, 1024\u00d71024 f\u00fcr Heck/Front
+- Shoelace-Fl\u00e4che: `Math.abs(\u03a3(x_i \u00b7 y_{i+1} - x_{i+1} \u00b7 y_i)) / 2`
+- Kalibrierung pro View als Konstante: `{ driver: { realLengthM: 5.99, pxLength: <gemessen aus viewBox> }, ... }`
