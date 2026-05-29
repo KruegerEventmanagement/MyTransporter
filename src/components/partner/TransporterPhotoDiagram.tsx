@@ -6,8 +6,6 @@ import driverImg from "@/assets/partner/van-driver.jpg";
 import passengerImg from "@/assets/partner/van-passenger.jpg";
 import rearImg from "@/assets/partner/van-rear.jpg";
 import frontImg from "@/assets/partner/van-front.jpg";
-import adMockup from "@/assets/partner/ad-mockup.jpg";
-
 interface Props {
   highlight?: string | null;
   onSelect?: (id: string) => void;
@@ -46,26 +44,6 @@ function ZonePolygon({
         onSelect?.(zone.code);
       }}
     >
-      {selected && (
-        <>
-          <defs>
-            <clipPath id={clipId}>
-              <polygon points={zone.points} />
-            </clipPath>
-          </defs>
-          <image
-            href={adMockup}
-            x="0"
-            y="0"
-            width={viewBoxW}
-            height={viewBoxH}
-            preserveAspectRatio="xMidYMid slice"
-            clipPath={`url(#${clipId})`}
-            opacity="0.9"
-            style={{ mixBlendMode: "multiply" }}
-          />
-        </>
-      )}
       {/* Codes (S1, R1, …) sind bereits ins Hintergrundbild eingezeichnet —
           das Overlay markiert nur die aktive Fläche bzw. nimmt Klicks entgegen. */}
       <polygon
