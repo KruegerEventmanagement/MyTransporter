@@ -22,7 +22,6 @@ function ZonePolygon({
   zone,
   selected,
   anySelected,
-  clipId,
   viewBoxW,
   viewBoxH,
   onSelect,
@@ -30,7 +29,6 @@ function ZonePolygon({
   zone: Zone;
   selected: boolean;
   anySelected: boolean;
-  clipId: string;
   viewBoxW: number;
   viewBoxH: number;
   onSelect?: (id: string) => void;
@@ -131,7 +129,6 @@ export function TransporterPhotoDiagram({ highlight, onSelect }: Props) {
               zone={z}
               selected={highlight === z.code}
               anySelected={anySelected}
-              clipId={`clip-${view}-${z.code}-${i}`}
               viewBoxW={vbW}
               viewBoxH={vbH}
               onSelect={onSelect}
