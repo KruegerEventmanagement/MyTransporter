@@ -799,6 +799,32 @@ export function BookingSection() {
               )}
             </div>
 
+            {/* Optionale Zusatzpakete */}
+            <div className="mt-12">
+              <div className="text-center mb-6">
+                <h3 className="text-xl sm:text-2xl font-bold text-foreground">
+                  Praktische Zusatzpakete
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground max-w-xl mx-auto">
+                  Damit dein Umzug einfacher, sicherer und stressfreier wird – optional zubuchbar.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                {ADDONS.map((addon) => (
+                  <AddonPackageCard
+                    key={addon.id}
+                    addon={addon}
+                    selected={selectedAddonIds.includes(addon.id)}
+                    onToggle={toggleAddon}
+                  />
+                ))}
+              </div>
+              <p className="mt-6 text-xs text-muted-foreground text-center">{ADDON_NOTE}</p>
+              <div className="mt-4 rounded-xl border border-border bg-secondary/50 p-4">
+                <p className="text-xs text-foreground text-center">{ADDON_TRUST}</p>
+              </div>
+            </div>
+
             {/* Summary */}
             {total !== null && (
               <div className="mt-6 p-6 rounded-2xl bg-primary text-primary-foreground">
