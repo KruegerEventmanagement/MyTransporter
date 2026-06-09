@@ -4,6 +4,8 @@ import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
 import { notifyAdmin } from "@/lib/admin-notify";
+import { useServerFn } from "@tanstack/react-start";
+import { recognizeOdometer } from "@/lib/odometer-ai.functions";
 
 const TEST_MODE_ADMIN_EMAIL = "krueger.christian96@gmx.de";
 
@@ -37,6 +39,9 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
   const [codeShown, setCodeShown] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isTestAdmin, setIsTestAdmin] = useState(false);
+  const [aiRecognition, setAiRecognition] = useState<{ km: number | null; fuelPercent: number | null; confidence: string } | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const recognize = useServerFn(recognizeOdometer);
   const [currentTarget, setCurrentTarget] = useState<
     | { kind: "side"; id: string }
     | { kind: "interior" }
@@ -139,6 +144,20 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
           setInteriorPhoto(viewUrl);
         } else if (currentTarget.kind === "odometer") {
           setOdometerPhoto(viewUrl);
+          // KI-Erkennung im Hintergrund starten
+          setAiBusy(true);
+          setAiRecognition(null);
+          try {
+            const result = await recognize({ data: { photoPath: path, bookingId, phase: "start" } });
+            setAiRecognition({ km: result.km, fuelPercent: result.fuelPercent, confidence: result.confidence });
+            if (result.km !== null && result.confidence !== "low") {
+              setStartKm(String(result.km));
+            }
+          } catch (err) {
+            console.warn("Odometer-KI nicht verfügbar", err);
+          } finally {
+            setAiBusy(false);
+          }
         } else {
           setDamagePhotos((prev) => [...prev, viewUrl]);
         }
