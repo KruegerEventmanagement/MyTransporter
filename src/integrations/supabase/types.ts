@@ -428,6 +428,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bookings_locked_fields_unchanged: {
+        Args: {
+          _addons: Json
+          _addons_total_cents: number
+          _deposit: number
+          _deposit_deducted_cents: number
+          _deposit_refund_id: string
+          _deposit_released_at: string
+          _deposit_released_by: string
+          _deposit_status: string
+          _extra_charge_cents: number
+          _extra_charge_intent_id: string
+          _extra_charge_status: string
+          _free_km: number
+          _id: string
+          _km_price_cents: number
+          _plan_price: number
+          _stripe_customer_id: string
+          _stripe_payment_intent_id: string
+          _stripe_payment_method_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
