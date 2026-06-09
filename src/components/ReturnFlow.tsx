@@ -28,12 +28,13 @@ interface ReturnFlowProps {
   startKm?: number | null;
   freeKm?: number | null;
   kmPriceCents?: number | null;
+  addons?: Array<{ id: string; label: string; price_cents: number }>;
   onComplete: (returnCode: string) => void;
 }
 
 type ReturnStep = "photos" | "km" | "receipt" | "code" | "done";
 
-export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, onComplete }: ReturnFlowProps) {
+export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, addons, onComplete }: ReturnFlowProps) {
   const [returnStep, setReturnStep] = useState<ReturnStep>("photos");
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [interiorPhoto, setInteriorPhoto] = useState<string | null>(null);
@@ -47,6 +48,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
   const [aiRecognition, setAiRecognition] = useState<{ km: number | null; fuelPercent: number | null; confidence: string } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [endFuelPercent, setEndFuelPercent] = useState<string>("");
+  const [addonsReturned, setAddonsReturned] = useState(false);
   const recognize = useServerFn(recognizeOdometer);
   const [kmSummary, setKmSummary] = useState<{
     driven: number;
