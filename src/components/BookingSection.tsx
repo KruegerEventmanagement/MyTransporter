@@ -16,6 +16,8 @@ import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
 import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
 import { computePlanReturn, getPlanById, getAvailablePlans, DEPOSIT_EUR } from "@/lib/booking-rules";
+import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot } from "@/lib/addons";
+import { AddonPackageCard } from "./AddonPackageCard";
 
 const DEPOSIT = DEPOSIT_EUR;
 
@@ -83,6 +85,14 @@ export function BookingSection() {
   const [vehicles, setVehicles] = useState<DbVehicle[]>([]);
   const [vehicleIdx, setVehicleIdx] = useState(0);
   const [busySlots, setBusySlots] = useState<BusySlot[]>([]);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
+
+  const toggleAddon = (id: string) => {
+    setSelectedAddonIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+  const addonsTotal = sumAddonsEur(selectedAddonIds);
 
   useEffect(() => {
     let alive = true;
