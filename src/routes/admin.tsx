@@ -63,6 +63,10 @@ interface Booking {
   extra_charge_cents?: number | null;
   deposit_deducted_cents?: number | null;
   stripe_payment_method_id?: string | null;
+  ai_start_km?: number | null;
+  ai_end_km?: number | null;
+  ai_start_fuel_percent?: number | null;
+  ai_end_fuel_percent?: number | null;
 }
 interface Profile {
   id: string;
