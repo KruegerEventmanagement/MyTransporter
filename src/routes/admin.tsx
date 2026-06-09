@@ -1139,6 +1139,24 @@ function SettlementPanel({
         <h3 className="text-sm font-semibold">Kaution & Mehrkilometer</h3>
       </div>
 
+      {/* Zusatzpakete */}
+      {Array.isArray(booking.addons) && booking.addons.length > 0 && (
+        <div className="rounded-xl bg-secondary p-3">
+          <p className="text-xs text-muted-foreground mb-1">Gebuchte Zusatzpakete</p>
+          <ul className="text-sm space-y-1">
+            {booking.addons.map((a) => (
+              <li key={a.id} className="flex items-center justify-between">
+                <span>📦 {a.label}</span>
+                <span className="text-muted-foreground">{(a.price_cents / 100).toFixed(2)} €</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-muted-foreground mt-2">
+            Summe: <strong>{((booking.addons_total_cents ?? 0) / 100).toFixed(2)} €</strong> · vor Übergabe bereitlegen, bei Rückgabe auf Vollständigkeit prüfen.
+          </p>
+        </div>
+      )}
+
       {/* Mehrkilometer */}
       <div className="rounded-xl bg-secondary p-3">
         <p className="text-xs text-muted-foreground">Mehrkilometer-Forderung</p>
