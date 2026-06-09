@@ -242,13 +242,19 @@ export function BookingSection() {
         const savedDraft = localStorage.getItem(AUTH_BOOKING_DRAFT_KEY);
         if (savedDraft) {
           const draft = JSON.parse(savedDraft) as {
-            date?: string;
+            from?: string;
+            to?: string;
             startHour?: number | null;
-            selectedPlan?: number | null;
+            selectedPlanId?: string | null;
           };
-          if (draft.date) setDate(new Date(draft.date));
+          if (draft.from) {
+            setRange({
+              from: new Date(draft.from),
+              to: draft.to ? new Date(draft.to) : new Date(draft.from),
+            });
+          }
           if (typeof draft.startHour === "number") setStartHour(draft.startHour);
-          if (typeof draft.selectedPlan === "number") setSelectedPlan(draft.selectedPlan);
+          if (typeof draft.selectedPlanId === "string") setSelectedPlanId(draft.selectedPlanId);
         }
       } catch {
         localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
@@ -310,9 +316,10 @@ export function BookingSection() {
     localStorage.setItem(
       AUTH_BOOKING_DRAFT_KEY,
       JSON.stringify({
-        date: date?.toISOString(),
+        from: rangeFrom?.toISOString(),
+        to: rangeTo?.toISOString(),
         startHour,
-        selectedPlan,
+        selectedPlanId,
       }),
     );
     const { data, error } = await supabase.auth.signUp({
@@ -386,21 +393,25 @@ export function BookingSection() {
     localStorage.setItem(RESEND_LAST_SENT_KEY, String(now));
   };
 
-  const canProceedStep0 = date !== undefined && startHour !== null;
-  const canProceedStep1 = selectedPlan !== null;
+  const canProceedStep0 = rangeFrom !== undefined && rangeTo !== undefined && startHour !== null;
+  const canProceedStep1 = selectedPlanId !== null;
 
-  // Filter available plans based on start hour
-  const availablePlans = PRICING.filter((plan) => {
+  // Tarife passend zur gewählten Tagesanzahl
+  const availablePlans = PLAN_CATALOG.filter((plan) => {
+    if (rangeDays <= 0) return true;
+    if (rangeDays === 1) return plan.days === 1;
+    return plan.days === rangeDays;
+  }).filter((plan) => {
     if (startHour === null) return true;
-    if (plan.id === "6h") return startHour + 6 <= 22;
-    return true;
+    return isStartHourAllowed(plan.id, startHour);
   });
+
+  const selectedPlanEntry = selectedPlanId ? PLAN_CATALOG.find((p) => p.id === selectedPlanId) ?? null : null;
 
   // Return info for selected plan
   const getReturnInfo = () => {
-    if (selectedPlan === null || startHour === null || !date) return null;
-    const plan = PRICING[selectedPlan];
-    const ret = computePlanReturn(plan.id, date, startHour);
+    if (!selectedPlanEntry || startHour === null || !date) return null;
+    const ret = computePlanReturn(selectedPlanEntry.id, date, startHour);
     const sameDay =
       ret.getDate() === date.getDate() &&
       ret.getMonth() === date.getMonth() &&
@@ -409,19 +420,13 @@ export function BookingSection() {
       ? "am selben Tag"
       : `am ${format(ret, "EEEE, d. MMMM", { locale: de })}`;
     const timeStr = format(ret, "HH:mm", { locale: de });
-    if (plan.id === "6h") {
+    if (selectedPlanEntry.durationHours < 24) {
       return { valid: true, msg: `Rückgabe ${dayStr} bis ${timeStr} Uhr` };
     }
-    if (plan.id === "24h") {
-      return { valid: true, msg: `Rückgabe ${dayStr} bis ${timeStr} Uhr (genau 24 h)` };
-    }
-    // km
-    return { valid: true, msg: `Rückgabe heute bis spätestens ${timeStr} Uhr` };
+    return { valid: true, msg: `Rückgabe ${dayStr} bis ${timeStr} Uhr` };
   };
 
-  const total = selectedPlan !== null && PRICING[selectedPlan].price > 0
-    ? PRICING[selectedPlan].price + DEPOSIT
-    : selectedPlan !== null ? DEPOSIT : null;
+  const total = selectedPlanEntry ? selectedPlanEntry.price + DEPOSIT : null;
 
   const [paid, setPaid] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
@@ -439,14 +444,7 @@ export function BookingSection() {
   // Wenn Registrierung übersprungen wird, mappen wir step 4/5 auf Stepper-Position 3/4
   const stepperIndex = registrationComplete && step >= 3 ? step - 1 : step;
 
-  const planKey: "rent_6h" | "rent_24h" | "rent_km" | null =
-    selectedPlan === null
-      ? null
-      : PRICING[selectedPlan].id === "6h"
-      ? "rent_6h"
-      : PRICING[selectedPlan].id === "24h"
-      ? "rent_24h"
-      : "rent_km";
+  const planKey: string | null = selectedPlanEntry ? `rent_${selectedPlanEntry.id}` : null;
 
   return (
     <section id="booking" className="py-6 px-3 sm:px-4 overflow-x-hidden">
