@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Calendar, Clock, Car, Key, Lock, ChevronLeft } from "lucide-react";
+import { Calendar, Clock, Car, Key, Lock, ChevronLeft, Package } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -11,6 +11,7 @@ interface ScheduledTripViewProps {
   vehiclePlate: string;
   planLabel: string;
   unlockAt: Date;
+  addons?: Array<{ id: string; label: string; price_cents: number }>;
 }
 
 function formatRemaining(ms: number): string {
@@ -33,6 +34,7 @@ export function ScheduledTripView({
   vehiclePlate,
   planLabel,
   unlockAt,
+  addons,
 }: ScheduledTripViewProps) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -107,6 +109,19 @@ export function ScheduledTripView({
               <p className="font-medium">{planLabel}</p>
             </div>
           </div>
+          {addons && addons.length > 0 && (
+            <div className="flex items-start gap-3 pt-3 border-t border-border">
+              <Package className="w-5 h-5 mt-0.5 text-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Gebuchtes Zubehör</p>
+                <ul className="font-medium space-y-0.5">
+                  {addons.map((a) => (
+                    <li key={a.id}>{a.label}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-8 rounded-2xl bg-secondary/60 p-5 text-sm text-muted-foreground">
