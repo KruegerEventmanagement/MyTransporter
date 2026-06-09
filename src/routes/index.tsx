@@ -3,6 +3,10 @@ import { Link } from "@tanstack/react-router";
 import { HeroSection } from "@/components/HeroSection";
 import { BookingSection } from "@/components/BookingSection";
 import { Navbar } from "@/components/Navbar";
+import { TariffSection } from "@/components/TariffSection";
+import { AdvantagesSection } from "@/components/AdvantagesSection";
+import { CompareSection } from "@/components/CompareSection";
+import { BookingInfoSection } from "@/components/BookingInfoSection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -65,7 +69,11 @@ function Index() {
       <Navbar />
       <HeroSection />
       <h1 className="sr-only">Transporter mieten in Leonberg & Stuttgart</h1>
+      <TariffSection />
+      <AdvantagesSection />
       <BookingSection />
+      <CompareSection />
+      <BookingInfoSection />
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
         <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
         <div className="mt-3 flex flex-wrap justify-center gap-4">
