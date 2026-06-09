@@ -1,49 +1,38 @@
-## Ziel
-Kompletter End-to-End-Test der MyTransporter-App mit dem bestehenden Testaccount – von Buchung über Fahrt bis Rückgabe – inklusive der neu hinzugefügten Zusatzpakete.
+## Zwei Aufgaben
 
-## Vorgehen (Browser-Automation im Preview)
+### 1. Bug-Fix: `/trip/{id}` ignoriert `booking.status`
 
-### 1. Vorbereitung
-- Preview öffnen, Login mit Testaccount prüfen (falls nicht eingeloggt, User darauf hinweisen)
-- DB-Snapshot: Aktuelle Buchungen, Vehicles und Verfügbarkeiten via `supabase--read_query` lesen
+**Problem:** `src/routes/trip.$bookingId.tsx` initialisiert `phase` immer auf `"pre"`. Eine Buchung mit Status `active` oder `returning` zeigt fälschlicherweise wieder Abhol-Code / Pre-Drive.
 
-### 2. Buchungsflow (Startseite → Checkout)
-- Datum/Zeit auswählen
-- Schritt 2: Fahrzeug + **Zusatzpaket "Sicher-Transport" (19 €)** auswählen
-- Gesamtbetrag prüfen: Miete + Kaution + 19 € Addon
-- Stripe-Checkout durchlaufen (Sandbox-Testkarte)
-- Rückkehr auf `/checkout/return` → Buchung wird in DB angelegt
-- DB-Check: `addons`, `addons_total_cents`, Status, Beträge
+**Fix:** Phase aus `booking.status` ableiten (in einem `useEffect` nach dem Laden):
+- `active` → `phase = "active"`
+- `returning` → `phase = "return"`
+- `completed` / `cancelled` → `phase = "done"`
+- sonst → `"pre"` (default)
 
-### 3. Buchungsdetailseite
-- `/buchung/{id}` aufrufen → gebuchte Zusatzpakete sichtbar?
-- Bestätigungsmail-Logs prüfen (Resend / server-function-logs)
+Eine Datei, ~10 Zeilen.
 
-### 4. Admin-Ansicht
-- `/admin` → Buchung sichtbar, Zubehör-Prep-Liste korrekt?
+### 2. Stripe von Sandbox → Live umschalten
 
-### 5. Pre-Drive-Flow (Übergabe)
-- `/trip/{id}` aufrufen → Zubehörliste sichtbar
-- Pre-Drive: Kilometerstand erfassen (inkl. AI-Odometer-Erkennung), Fotos
-- Status auf "active" / Trip läuft
+**Status laut Go-Live-Check:** Alle 5 Schritte abgeschlossen, Live-Keys provisioniert.
 
-### 6. GPS-Tracking
-- Während aktiver Fahrt: GPS-Punkt simulieren / prüfen ob `gps_tracks` Einträge bekommt
-- Karte / Track-Anzeige im Admin
+**Aktuelles Problem:** `src/lib/stripe.ts` hat den Sandbox-Publishable-Key (`pk_test_...`) hardcoded und fällt darauf zurück, weil `VITE_PAYMENTS_CLIENT_TOKEN` nicht gesetzt ist. Der Server-Side-Stripe-Client wählt das Environment basierend auf dem an `createBookingCheckout` übergebenen `environment`-Parameter — der wiederum aus dem Client kommt (`getStripeEnvironment()` schaut auf das Prefix des Client-Tokens). Solange der Client-Token `pk_test_` bleibt, läuft alles im Sandbox-Modus.
 
-### 7. Rückgabeflow
-- `ReturnFlow` öffnen → End-Kilometerstand, Foto, **Pflicht-Checkbox "Zubehör vollständig & unbeschädigt zurückgegeben"**
-- Versuch ohne Checkbox → blockiert?
-- Mit Checkbox → Buchung abgeschlossen, Status final
-- DB-Check: Endkilometer, Differenzen, Status `completed`
+**Was ich brauche von dir:** den Live-Publishable-Key deines Stripe-Accounts (beginnt mit `pk_live_...`). Diesen findest du in deinem Stripe-Dashboard unter:
+**Developers → API keys → Standard keys → Publishable key** (im Live-Modus, nicht Sandbox).
 
-### 8. Bug-Report
-Nach jedem Schritt: Screenshot + kurze Notiz. Am Ende kompakter Bericht:
-- Was funktioniert
-- Was hakt (UI/Logik/DB)
-- Empfehlungen für Fixes (separat, nicht in diesem Lauf gefixt – außer du sagst explizit "fixen")
+**Was ich dann mache:**
+1. Den `pk_live_...` als Fallback in `src/lib/stripe.ts` setzen (oder besser: als `VITE_PAYMENTS_CLIENT_TOKEN` in `.env` schreiben, damit Sandbox/Live einfach umschaltbar bleibt für spätere Tests).
+2. Verifizieren, dass `getStripeEnvironment()` `'live'` zurückgibt → Server nutzt `STRIPE_LIVE_API_KEY` und `PAYMENTS_LIVE_WEBHOOK_SECRET`.
+3. Webhook-URL in Stripe Live-Modus prüfen — Lovable hat sie automatisch beim Provisioning angelegt, aber wir verifizieren, dass `/api/public/...` Webhook-Endpoint die `?env=live` Query bekommt.
+4. Projekt publishen (Frontend-Änderungen brauchen das Publish-Klick).
 
-## Hinweise
-- Destruktive Aktionen (echte Stripe-Live-Zahlungen) werden vermieden – nur Sandbox.
-- Falls Login-Wall: ich stoppe und bitte dich, im Preview einzuloggen.
-- Falls die Browser-Automation an einer Stelle scheitert (z. B. Stripe-Iframe, Kamera-Upload), berichte ich das ehrlich statt es zu überspielen.
+**Wichtig:** Sobald live, werden echte Karten belastet. Empfehlung: erste echte Test-Buchung mit deiner eigenen Karte und kleinem Betrag, dann Geld zurückerstatten.
+
+### Reihenfolge in der nächsten Runde (Build-Mode)
+1. Trip-Bug fixen (kann ich sofort)
+2. Auf deinen `pk_live_...` warten
+3. Stripe-Client umstellen
+4. Publishen
+
+**Bitte poste deinen Live-Publishable-Key** (`pk_live_...`) — der ist öffentlich/safe und darf im Frontend stehen.
