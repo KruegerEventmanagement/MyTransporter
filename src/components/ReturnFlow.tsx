@@ -3,6 +3,8 @@ import { Camera, Check, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine } fr
 import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
 
+const TEST_MODE_ADMIN_EMAIL = "krueger.christian96@gmx.de";
+
 const PHOTO_SIDES = [
   { id: "post_front", label: "Vorne", icon: "⬆️", variant: "front" as SilhouetteVariant },
   { id: "post_front_right", label: "Vorne rechts", icon: "↗️", variant: "three-quarter-front-right" as SilhouetteVariant },
@@ -59,12 +61,11 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!mounted || !userData.user) return;
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userData.user.id)
-        .eq("role", "admin");
-      if (mounted) setIsAdmin(!!data && data.length > 0);
+      if (mounted) {
+        setIsAdmin(
+          userData.user.email?.toLowerCase() === TEST_MODE_ADMIN_EMAIL.toLowerCase()
+        );
+      }
     })();
     return () => { mounted = false; };
   }, []);
@@ -77,7 +78,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
     const placeholder =
       "data:image/svg+xml;utf8," +
       encodeURIComponent(
-        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='%23e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%23333'>TEST</text></svg>`
+        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='#e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#333'>TEST</text></svg>`
       );
     const next: Record<string, string> = {};
     PHOTO_SIDES.forEach((s) => (next[s.id] = placeholder));
@@ -89,7 +90,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
     const placeholder =
       "data:image/svg+xml;utf8," +
       encodeURIComponent(
-        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='%23e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%23333'>TEST</text></svg>`
+        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='#e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#333'>TEST</text></svg>`
       );
     setOdometerPhoto(placeholder);
     if (!endKm) setEndKm("42920");
@@ -223,12 +224,14 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
           Fotografiere das Fahrzeug von allen 8 Seiten und den Innenraum, bevor du den Schlüssel abgibst.
         </p>
 
-        <button
-          onClick={fillTestPhotos}
-          className="w-full mb-4 rounded-full border border-dashed border-foreground py-2 text-xs font-medium text-foreground hover:bg-secondary"
-        >
-          🧪 Testmodus: alle Fotos überspringen
-        </button>
+        {isAdmin && (
+          <button
+            onClick={fillTestPhotos}
+            className="w-full mb-4 rounded-full border border-dashed border-foreground py-2 text-xs font-medium text-foreground hover:bg-secondary"
+          >
+            🧪 Admin-Testmodus: alle Fotos überspringen
+          </button>
+        )}
 
         <div className="grid grid-cols-2 gap-3 mb-6">
           {PHOTO_SIDES.map((side) => (
