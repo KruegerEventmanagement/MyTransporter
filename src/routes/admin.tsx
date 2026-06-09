@@ -519,6 +519,11 @@ function AdminDashboard() {
                       <p className="text-xs text-muted-foreground truncate">
                         {b.vehicle_plate} · {b.plan_label} · {b.start_date} {b.start_hour}:00
                       </p>
+                      {Array.isArray(b.addons) && b.addons.length > 0 && (
+                        <p className="text-[11px] text-foreground mt-0.5 truncate">
+                          📦 {b.addons.map((a) => a.label).join(", ")}
+                        </p>
+                      )}
                     </div>
                     <StatusBadge status={b.status} />
                   </button>
