@@ -1170,6 +1170,7 @@ export function BookingSection() {
                         phone: regForm.phone,
                         vehicleName: displayVehicle.name || undefined,
                         vehiclePlate: displayVehicle.plate || undefined,
+                        addons: buildAddonSnapshot(selectedAddonIds),
                       })
                     );
                    }
@@ -1185,6 +1186,7 @@ export function BookingSection() {
                           userId: authUser?.id,
                          returnUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
                          environment: getStripeEnvironment(),
+                          addonIds: selectedAddonIds,
                        },
                      });
                      if ("error" in result) throw new Error(result.error);
