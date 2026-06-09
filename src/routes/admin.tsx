@@ -67,6 +67,8 @@ interface Booking {
   ai_end_km?: number | null;
   ai_start_fuel_percent?: number | null;
   ai_end_fuel_percent?: number | null;
+  addons?: Array<{ id: string; label: string; price_cents: number }> | null;
+  addons_total_cents?: number | null;
 }
 interface Profile {
   id: string;
