@@ -15,7 +15,7 @@ import { ActiveDriveScreen } from "./ActiveDriveScreen";
 import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
 import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
-import { computePlanReturn, PLAN_CATALOG, DEPOSIT_EUR, isStartHourAllowed } from "@/lib/booking-rules";
+import { computePlanReturn, getPlanById, getAvailablePlans, DEPOSIT_EUR } from "@/lib/booking-rules";
 
 const DEPOSIT = DEPOSIT_EUR;
 
@@ -128,6 +128,8 @@ export function BookingSection() {
   const handleRangeSelect = (next: { from?: Date; to?: Date } | undefined) => {
     if (!next?.from) {
       setRange(undefined);
+      setStartHour(null);
+      setSelectedPlanId(null);
       return;
     }
     // Wenn ein Range gewählt wurde, prüfen ob ein Tag drin belegt ist
@@ -139,6 +141,7 @@ export function BookingSection() {
         if (busyDateSet.has(dayKey(cursor))) {
           // Ungültig → nur Startdatum übernehmen
           setRange({ from: next.from, to: undefined });
+          setStartHour(null);
           setSelectedPlanId(null);
           return;
         }
@@ -148,6 +151,7 @@ export function BookingSection() {
     } else {
       setRange({ from: next.from, to: undefined });
     }
+    setStartHour(null);
     setSelectedPlanId(null);
   };
 
@@ -393,20 +397,13 @@ export function BookingSection() {
     localStorage.setItem(RESEND_LAST_SENT_KEY, String(now));
   };
 
-  const canProceedStep0 = rangeFrom !== undefined && rangeTo !== undefined && startHour !== null;
-  const canProceedStep1 = selectedPlanId !== null;
+  const canProceedStep0 = rangeFrom !== undefined && rangeTo !== undefined;
+  const canProceedStep1 = startHour !== null && selectedPlanId !== null;
 
-  // Tarife passend zur gewählten Tagesanzahl
-  const availablePlans = PLAN_CATALOG.filter((plan) => {
-    if (rangeDays <= 0) return true;
-    if (rangeDays === 1) return plan.days === 1;
-    return plan.days === rangeDays;
-  }).filter((plan) => {
-    if (startHour === null) return true;
-    return isStartHourAllowed(plan.id, startHour);
-  });
+  // Tarife passend zur gewählten Tagesanzahl + Startstunde
+  const availablePlans = getAvailablePlans(rangeDays, startHour);
 
-  const selectedPlanEntry = selectedPlanId ? PLAN_CATALOG.find((p) => p.id === selectedPlanId) ?? null : null;
+  const selectedPlanEntry = selectedPlanId ? getPlanById(selectedPlanId) : null;
 
   // Return info for selected plan
   const getReturnInfo = () => {
@@ -439,8 +436,8 @@ export function BookingSection() {
   const startBookingCheckout = useServerFn(createBookingCheckout);
 
   const stepTitles = registrationComplete
-    ? ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Bezahlen", "Fahrt"]
-    : ["Datum & Uhrzeit", "Tarif wählen", "Fahrzeug", "Registrierung", "Bezahlen", "Fahrt"];
+    ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug", "Bezahlen", "Fahrt"]
+    : ["Datum", "Uhrzeit & Tarif", "Fahrzeug", "Registrierung", "Bezahlen", "Fahrt"];
   // Wenn Registrierung übersprungen wird, mappen wir step 4/5 auf Stepper-Position 3/4
   const stepperIndex = registrationComplete && step >= 3 ? step - 1 : step;
 
