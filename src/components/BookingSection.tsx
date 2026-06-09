@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays, addDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key, Eye, EyeOff, Loader2 } from "lucide-react";
 import { createBookingCheckout } from "@/lib/payments.functions";
@@ -15,16 +15,9 @@ import { ActiveDriveScreen } from "./ActiveDriveScreen";
 import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
 import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
-import { computePlanReturn } from "@/lib/booking-rules";
+import { computePlanReturn, PLAN_CATALOG, DEPOSIT_EUR, isStartHourAllowed } from "@/lib/booking-rules";
 
-const PRICING = [
-  { id: "6h", hours: 6, price: 100, freeKm: 300, label: "6 Stunden", returnRule: "Rückgabe bis spätestens 22:00 Uhr" },
-  { id: "24h", hours: 24, price: 150, freeKm: 500, label: "24 Stunden", returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit" },
-  { id: "km", hours: 0, price: 0, freeKm: 0, label: "Nur Kilometer", returnRule: "Rückgabe am selben Tag bis spätestens 22:00 Uhr" },
-];
-
-const DEPOSIT = 200;
-const KM_PRICE = 0.9;
+const DEPOSIT = DEPOSIT_EUR;
 
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8:00 - 20:00 (letzte Buchung 20 Uhr)
 
@@ -60,9 +53,9 @@ const RESEND_LAST_SENT_KEY = "mt_resend_last_sent";
 
 export function BookingSection() {
   const [step, setStep] = useState(0);
-  const [date, setDate] = useState<Date | undefined>();
+  const [range, setRange] = useState<{ from?: Date; to?: Date } | undefined>();
   const [startHour, setStartHour] = useState<number | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authUser, setAuthUser] = useState<{ id: string; email?: string } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
@@ -107,6 +100,56 @@ export function BookingSection() {
   const slotsForVehicle = busySlots.filter(
     (s) => !currentPlate || !s.vehiclePlate || s.vehiclePlate === currentPlate,
   );
+
+  // Convenience: range start/end + day count
+  const rangeFrom = range?.from;
+  const rangeTo = range?.to ?? range?.from;
+  const rangeDays = rangeFrom && rangeTo ? differenceInCalendarDays(rangeTo, rangeFrom) + 1 : 0;
+  const date = rangeFrom; // bestehender Code unten verwendet `date` als Startdatum
+
+  // Set belegter Tage (YYYY-MM-DD), basierend auf slotsForVehicle
+  const busyDateSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of slotsForVehicle) {
+      const bs = new Date(s.start);
+      const be = new Date(s.end);
+      const d = new Date(bs.getFullYear(), bs.getMonth(), bs.getDate());
+      while (d.getTime() < be.getTime()) {
+        set.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+        d.setDate(d.getDate() + 1);
+      }
+    }
+    return set;
+  }, [slotsForVehicle]);
+
+  const dayKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  const handleRangeSelect = (next: { from?: Date; to?: Date } | undefined) => {
+    if (!next?.from) {
+      setRange(undefined);
+      return;
+    }
+    // Wenn ein Range gewählt wurde, prüfen ob ein Tag drin belegt ist
+    if (next.to) {
+      const start = next.from < next.to ? next.from : next.to;
+      const end = next.from < next.to ? next.to : next.from;
+      const cursor = new Date(start);
+      while (cursor.getTime() <= end.getTime()) {
+        if (busyDateSet.has(dayKey(cursor))) {
+          // Ungültig → nur Startdatum übernehmen
+          setRange({ from: next.from, to: undefined });
+          setSelectedPlanId(null);
+          return;
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      setRange({ from: start, to: end });
+    } else {
+      setRange({ from: next.from, to: undefined });
+    }
+    setSelectedPlanId(null);
+  };
 
   // Prüft, ob [start, start+hours) sich mit einer belegten Periode überschneidet
   const overlapsBusy = (startMs: number, hours: number) => {
