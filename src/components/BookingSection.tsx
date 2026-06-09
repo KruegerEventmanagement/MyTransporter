@@ -513,10 +513,11 @@ export function BookingSection() {
                   </p>
                   {(() => {
                     const now = new Date();
+                    const d = rangeFrom!;
                     const isToday =
-                      date.getFullYear() === now.getFullYear() &&
-                      date.getMonth() === now.getMonth() &&
-                      date.getDate() === now.getDate();
+                      d.getFullYear() === now.getFullYear() &&
+                      d.getMonth() === now.getMonth() &&
+                      d.getDate() === now.getDate();
                     const currentHour = now.getHours();
                     // Späteste Abholung: 20:00 Uhr (LATEST_START_HOUR)
                     const canStartNow = isToday && currentHour >= 8 && currentHour <= 20;
@@ -528,7 +529,7 @@ export function BookingSection() {
                         {canStartNow && (
                           <button
                             onClick={() => setStartHour(currentHour)}
-                            disabled={isHourBusy(date, currentHour)}
+                            disabled={isHourBusy(d, currentHour)}
                             className={`mb-3 w-full py-3 px-4 rounded-xl text-sm font-bold transition-all ${
                               startHour === currentHour
                                 ? "bg-accent text-accent-foreground shadow-md"
@@ -542,7 +543,7 @@ export function BookingSection() {
                         {visibleHours.length > 0 ? (
                           <div className="grid grid-cols-5 gap-2">
                             {visibleHours.map((h) => {
-                              const busy = isHourBusy(date, h);
+                              const busy = isHourBusy(d, h);
                               return (
                                 <button
                                   key={h}
@@ -781,10 +782,7 @@ export function BookingSection() {
                   <p className="text-3xl font-bold">{total} €</p>
                 </div>
                 <p className="text-sm opacity-80 mt-1">
-                  {PRICING[selectedPlan!].price > 0
-                    ? `inkl. ${PRICING[selectedPlan!].price} € Miete + ${DEPOSIT} € Kaution`
-                    : `${DEPOSIT} € Kaution + 0,90 €/km (wird beim Checkout berechnet)`
-                  }
+                  {selectedPlanEntry && `inkl. ${selectedPlanEntry.price} € Miete + ${DEPOSIT} € Kaution`}
                 </p>
               </div>
             )}
@@ -1094,10 +1092,7 @@ export function BookingSection() {
                   <p className="text-3xl font-bold">{total} €</p>
                 </div>
                 <p className="text-sm opacity-80 mt-1">
-                  {PRICING[selectedPlan!].price > 0
-                    ? `${PRICING[selectedPlan!].price} € Miete + ${DEPOSIT} € Kaution`
-                    : `${DEPOSIT} € Kaution · Kilometerkosten werden nach Fahrt berechnet`
-                  }
+                  {selectedPlanEntry && `${selectedPlanEntry.price} € Miete + ${DEPOSIT} € Kaution`}
                 </p>
               </div>
             )}
@@ -1106,13 +1101,13 @@ export function BookingSection() {
               <button
                 onClick={async () => {
                   // Pending Booking für /checkout/return persistieren
-                  if (typeof window !== "undefined" && date && startHour !== null && selectedPlan !== null) {
+                  if (typeof window !== "undefined" && date && startHour !== null && selectedPlanEntry) {
                     localStorage.setItem(
                       "mt_pending_booking",
                       JSON.stringify({
-                        planId: PRICING[selectedPlan].id,
-                        planLabel: PRICING[selectedPlan].label,
-                        planPrice: PRICING[selectedPlan].price,
+                        planId: selectedPlanEntry.id,
+                        planLabel: selectedPlanEntry.label,
+                        planPrice: selectedPlanEntry.price,
                         startDate: format(date, "yyyy-MM-dd"),
                         startHour,
                         email: regForm.email,
