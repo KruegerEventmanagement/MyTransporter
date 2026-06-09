@@ -57,14 +57,10 @@ export const recognizeOdometer = createServerFn({ method: "POST" })
     });
 
     // Persistieren, ohne Nutzer-Eingaben zu überschreiben
-    const updateFields: Record<string, number | null> = {};
-    if (data.phase === "start") {
-      updateFields.ai_start_km = output.km;
-      updateFields.ai_start_fuel_percent = output.fuelPercent;
-    } else {
-      updateFields.ai_end_km = output.km;
-      updateFields.ai_end_fuel_percent = output.fuelPercent;
-    }
+    const updateFields =
+      data.phase === "start"
+        ? { ai_start_km: output.km, ai_start_fuel_percent: output.fuelPercent }
+        : { ai_end_km: output.km, ai_end_fuel_percent: output.fuelPercent };
     await supabaseAdmin.from("bookings").update(updateFields).eq("id", data.bookingId);
 
     return output;
