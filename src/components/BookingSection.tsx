@@ -477,22 +477,39 @@ export function BookingSection() {
 
             <div className="flex flex-col items-center">
               <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
+                mode="range"
+                selected={range as { from: Date | undefined; to: Date | undefined }}
+                onSelect={handleRangeSelect}
+                numberOfMonths={1}
                 locale={de}
                 disabled={(d) => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
-                  return d < today;
+                  if (d < today) return true;
+                  return busyDateSet.has(dayKey(d));
                 }}
                 className="rounded-3xl border border-border p-8 shadow-lg pointer-events-auto text-lg [--cell-size:3.5rem]"
               />
 
-              {date && (
+              {rangeFrom && !rangeTo && (
+                <p className="mt-4 text-sm text-muted-foreground text-center">
+                  Startdatum: <strong className="text-foreground">{format(rangeFrom, "PPP", { locale: de })}</strong> · Wähle jetzt das Enddatum (für 1 Tag: erneut auf denselben Tag klicken)
+                </p>
+              )}
+              {rangeFrom && rangeTo && (
+                <p className="mt-4 text-sm text-muted-foreground text-center">
+                  Zeitraum: <strong className="text-foreground">{format(rangeFrom, "PPP", { locale: de })}</strong>
+                  {rangeDays > 1 && (
+                    <> bis <strong className="text-foreground">{format(rangeTo, "PPP", { locale: de })}</strong></>
+                  )}
+                  {" "}· {rangeDays} {rangeDays === 1 ? "Tag" : "Tage"}
+                </p>
+              )}
+
+              {rangeFrom && rangeTo && (
                 <div className="mt-8 w-full max-w-md">
                   <p className="text-sm font-medium text-foreground mb-3">
-                    Startzeit am {format(date, "PPP", { locale: de })}
+                    Startzeit am {format(rangeFrom, "PPP", { locale: de })}
                   </p>
                   {(() => {
                     const now = new Date();
@@ -578,16 +595,15 @@ export function BookingSection() {
 
             <div className="space-y-4">
               {availablePlans.map((plan) => {
-                const idx = PRICING.findIndex((p) => p.id === plan.id);
                 const blocked = isPlanBlocked(plan.id);
                 return (
                 <button
                   key={plan.id}
-                  onClick={() => !blocked && setSelectedPlan(idx)}
+                  onClick={() => !blocked && setSelectedPlanId(plan.id)}
                   disabled={blocked}
                   title={blocked ? "Zeitraum überschneidet sich mit einer bestehenden Buchung" : undefined}
                   className={`w-full p-6 rounded-2xl border-2 text-left transition-all ${
-                    selectedPlan === idx
+                    selectedPlanId === plan.id
                       ? "border-accent bg-accent/5 shadow-md"
                       : blocked
                       ? "border-border opacity-40 cursor-not-allowed"
@@ -596,46 +612,46 @@ export function BookingSection() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-lg font-medium text-foreground">{plan.label}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-lg font-medium text-foreground">{plan.label}</p>
+                        {plan.highlightLabel && (
+                          <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-foreground text-background font-semibold">
+                            {plan.highlightLabel}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">{plan.returnRule}</p>
                       {plan.freeKm > 0 && (
-                        <p className="text-xs text-foreground/80 mt-1">{plan.freeKm} km inklusive · danach 0,90 €/km</p>
+                        <p className="text-xs text-foreground/80 mt-1">{plan.freeKm.toLocaleString("de-DE")} km inklusive · danach {(plan.extraKmCents / 100).toFixed(2).replace(".", ",")} €/km</p>
                       )}
                       {blocked && (
                         <p className="text-xs text-destructive mt-1">In diesem Zeitraum bereits gebucht</p>
                       )}
                     </div>
-                    {plan.price > 0 ? (
-                      <p className="text-2xl font-bold text-foreground">{plan.price} €</p>
-                    ) : (
-                      <p className="text-2xl font-bold text-foreground">0,90 €<span className="text-sm font-normal">/km</span></p>
-                    )}
+                    <p className="text-2xl font-bold text-foreground whitespace-nowrap">{plan.price} €</p>
                   </div>
+                  {plan.days > 1 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      ≈ {(plan.price / plan.days).toFixed(2).replace(".", ",")} € pro Tag
+                    </p>
+                  )}
                 </button>
                 );
               })}
+              {availablePlans.length === 0 && (
+                <div className="p-6 rounded-2xl border border-border bg-secondary text-center text-sm text-muted-foreground">
+                  Für {rangeDays} Tage bieten wir online keinen Standardtarif an. Bitte kontaktiere uns – wir machen dir ein individuelles Angebot.
+                </div>
+              )}
             </div>
 
             {/* Return time validation */}
-            {selectedPlan !== null && getReturnInfo() && (
+            {selectedPlanEntry && getReturnInfo() && (
               <div className={`mt-4 p-4 rounded-xl ${getReturnInfo()!.valid ? "bg-secondary" : "bg-destructive/10 border border-destructive/30"}`}>
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
                   <p className={`text-sm ${getReturnInfo()!.valid ? "text-muted-foreground" : "text-destructive"}`}>
                     {getReturnInfo()!.msg}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Kilometer extra info */}
-            {selectedPlan === 2 && (
-              <div className="mt-4 p-4 rounded-xl bg-accent/5 border border-accent/20">
-                <div className="flex items-center gap-2">
-                  <Car className="w-4 h-4 text-accent" />
-                  <p className="text-sm text-muted-foreground">
-                    Kilometer werden per Foto des Kilometerstands (Start & Ende) von unserer KI berechnet. Mindestbetrag: 100 €.
-                    Vorab werden pauschal 50 € berechnet. Fährst du weniger, wird dir die Differenz erstattet. Fährst du mehr, zahlst du den Restbetrag nach.
                   </p>
                 </div>
               </div>
