@@ -436,7 +436,7 @@ export function BookingSection() {
     return { valid: true, msg: `Rückgabe ${dayStr} bis ${timeStr} Uhr` };
   };
 
-  const total = selectedPlanEntry ? selectedPlanEntry.price + DEPOSIT : null;
+  const total = selectedPlanEntry ? selectedPlanEntry.price + addonsTotal + DEPOSIT : null;
 
   const [paid, setPaid] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
