@@ -449,8 +449,8 @@ export function BookingSection() {
   const startBookingCheckout = useServerFn(createBookingCheckout);
 
   const stepTitles = registrationComplete
-    ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug", "Bezahlen", "Fahrt"]
-    : ["Datum", "Uhrzeit & Tarif", "Fahrzeug", "Registrierung", "Bezahlen", "Fahrt"];
+    ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Bezahlen", "Fahrt"]
+    : ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Registrierung", "Bezahlen", "Fahrt"];
   // Wenn Registrierung übersprungen wird, mappen wir step 4/5 auf Stepper-Position 3/4
   const stepperIndex = registrationComplete && step >= 3 ? step - 1 : step;
 
