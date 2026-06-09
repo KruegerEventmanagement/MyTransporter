@@ -1,19 +1,28 @@
-Der Upload scheitert weiterhin an der Speicher-Berechtigung, nicht am Formular. Die aktuelle Policy ruft `has_role(...)` beim Hochladen auf. Diese Funktion ist zwar für normale angemeldete Nutzer freigegeben, aber nicht für die interne Storage-Rolle, die den Datei-Upload tatsächlich ausführt. Dadurch wird der Upload von Fahrzeugfotos weiterhin als nicht erlaubt abgelehnt.
+Do I know what the issue is? Ja.
+
+Der Fehler kommt nicht mehr von der Admin-Rolle selbst. Der Upload wird mit Überschreiben-Modus (`upsert`) abgeschickt. Dafür braucht der Backend-Speicher zusätzlich einen Lesezugriff auf die Objekt-Zeile. Genau diese Lese-Regel für Admins wurde früher entfernt, damit niemand den Fahrzeug-Bucket auflisten kann. Dadurch blockiert die Sicherheitsregel den Upload mit „new row violates row-level security policy“.
 
 Plan:
+1. Backend-Speicher-Regel korrigieren
+   - Eine gezielte Leseregel für angemeldete Admins im Fahrzeug-Speicher hinzufügen.
+   - Upload, Ersetzen und Löschen bleiben weiterhin nur für Admins erlaubt.
+   - Öffentliche Fahrzeugbilder bleiben über ihre Bild-URL sichtbar, aber normale Besucher bekommen keine Admin-Rechte.
 
-1. **Storage-Berechtigung korrigieren**
-   - `public.has_role(uuid, app_role)` zusätzlich für die interne Storage-Rolle ausführbar machen.
-   - Die Funktion bleibt weiterhin `SECURITY DEFINER`, damit die Admin-Rolle zuverlässig geprüft wird.
+2. Upload-Code entschärfen
+   - Den Fahrzeugfoto-Upload in `VehiclesAdmin` so ändern, dass neue eindeutig benannte Fotos nicht mehr unnötig mit `upsert` hochgeladen werden.
+   - Damit reicht für neue Fotos die normale Upload-Erlaubnis, und der Speicher muss nicht erst eine vorhandene Datei prüfen.
 
-2. **Fahrzeugfoto-Policy robust neu setzen**
-   - Die Upload-, Update- und Löschregeln für den Bucket `vehicles` sauber neu anlegen.
-   - Erlaubt bleibt nur: angemeldete Admins dürfen Fahrzeugbilder hochladen, ersetzen und löschen.
-   - Öffentliche Fahrzeugbilder bleiben weiter per öffentlicher URL sichtbar, wie bisher.
+3. Fehleranzeige verbessern
+   - Statt Browser-Alert eine klare Admin-Meldung anzeigen, damit der echte Fehler sichtbar bleibt und nicht wieder in einem generischen Popup versteckt wird.
 
-3. **Optional kleine UI-Absicherung im Admin-Formular**
-   - Falls nötig, im Fahrzeug-Editor die Upload-Fehlermeldung klarer anzeigen, damit man sofort sieht, ob der Datei-Upload oder das Speichern der Fahrzeugdaten scheitert.
+4. Danach prüfen
+   - Die aktiven Speicher-Regeln abfragen.
+   - Den Upload im Admin-Bereich erneut testen bzw. anhand der Netzwerkantwort prüfen, dass kein RLS-Fehler mehr zurückkommt.
 
-4. **Prüfung danach**
-   - Nochmals prüfen, ob die neue Berechtigung in der Datenbank aktiv ist.
-   - Danach sollte „Fahrzeuge → Bearbeiten → Foto hochladen“ ohne 403/RLS-Fehler funktionieren.
+<presentation-actions>
+  <presentation-open-history>View History</presentation-open-history>
+</presentation-actions>
+
+<presentation-actions>
+<presentation-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</presentation-link>
+</presentation-actions>
