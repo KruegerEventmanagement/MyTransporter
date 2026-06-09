@@ -206,6 +206,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
         end_km: end,
         extra_km: planId === "km" ? driven : Math.max(0, driven - free),
         extra_km_charge_cents: chargeCents,
+        ...(endFuelPercent !== "" ? { ai_end_fuel_percent: parseInt(endFuelPercent) } : {}),
       })
       .eq("id", bookingId);
 
