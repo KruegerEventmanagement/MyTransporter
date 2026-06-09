@@ -1,25 +1,19 @@
-## Problem
+Der Upload scheitert weiterhin an der Speicher-Berechtigung, nicht am Formular. Die aktuelle Policy ruft `has_role(...)` beim Hochladen auf. Diese Funktion ist zwar für normale angemeldete Nutzer freigegeben, aber nicht für die interne Storage-Rolle, die den Datei-Upload tatsächlich ausführt. Dadurch wird der Upload von Fahrzeugfotos weiterhin als nicht erlaubt abgelehnt.
 
-Beim Hochladen eines Fahrzeugfotos antwortet der Storage mit `403 – new row violates row-level security policy`, obwohl der angemeldete Nutzer Admin ist.
+Plan:
 
-## Ursache
+1. **Storage-Berechtigung korrigieren**
+   - `public.has_role(uuid, app_role)` zusätzlich für die interne Storage-Rolle ausführbar machen.
+   - Die Funktion bleibt weiterhin `SECURITY DEFINER`, damit die Admin-Rolle zuverlässig geprüft wird.
 
-Die Datenbankfunktion `public.has_role(uuid, app_role)` ist **nicht** als `SECURITY DEFINER` markiert. Sie läuft daher mit den Rechten des aufrufenden Nutzers (`authenticated`). Die Rolle `authenticated` hat aber **kein `GRANT SELECT` auf `public.user_roles`** (nur `sandbox_exec` hat Rechte). Dadurch schlägt der interne `SELECT` in `has_role` fehl, die Funktion liefert effektiv „false", und die Storage-Policy „Admins can upload vehicle assets" verweigert den Upload.
+2. **Fahrzeugfoto-Policy robust neu setzen**
+   - Die Upload-, Update- und Löschregeln für den Bucket `vehicles` sauber neu anlegen.
+   - Erlaubt bleibt nur: angemeldete Admins dürfen Fahrzeugbilder hochladen, ersetzen und löschen.
+   - Öffentliche Fahrzeugbilder bleiben weiter per öffentlicher URL sichtbar, wie bisher.
 
-Das gleiche Problem betrifft potenziell alle Stellen, an denen `has_role` aus einer RLS-Policy heraus aufgerufen wird (z. B. Vehicles-Tabelle, Buchungen, Admin-Benachrichtigungen) – es ist nur bislang nicht überall aufgefallen.
+3. **Optional kleine UI-Absicherung im Admin-Formular**
+   - Falls nötig, im Fahrzeug-Editor die Upload-Fehlermeldung klarer anzeigen, damit man sofort sieht, ob der Datei-Upload oder das Speichern der Fahrzeugdaten scheitert.
 
-## Fix (eine Migration)
-
-1. `public.has_role` neu anlegen mit `SECURITY DEFINER`, `STABLE`, `SET search_path = public` (Standard-Empfehlung für Role-Checks, vermeidet RLS-Rekursion und Berechtigungsprobleme).
-2. `GRANT SELECT ON public.user_roles TO authenticated;` ergänzen, damit auch direkte Reads (z. B. der bestehende Client-Call `select role from user_roles where user_id = …`) sauber funktionieren.
-3. `GRANT EXECUTE ON FUNCTION public.has_role(uuid, app_role) TO authenticated;` zur Sicherheit.
-
-## Verifikation
-
-- Migration anwenden.
-- Im Admin-Bereich „Fahrzeuge → Bearbeiten → Foto hochladen" testen: Upload muss `200` liefern, Foto erscheint in der Galerie und nach Speichern in `vehicles.photo_urls`.
-- Bestehende Admin-Reads (Buchungen, Notifications) weiter prüfen, dass keine Regression auftritt.
-
-## Keine Code-Änderungen am Frontend nötig
-
-Der Upload-Code in `src/components/admin/VehiclesAdmin.tsx` ist korrekt; der Bug liegt ausschließlich in der Datenbank-Policy/Funktion.
+4. **Prüfung danach**
+   - Nochmals prüfen, ob die neue Berechtigung in der Datenbank aktiv ist.
+   - Danach sollte „Fahrzeuge → Bearbeiten → Foto hochladen“ ohne 403/RLS-Fehler funktionieren.
