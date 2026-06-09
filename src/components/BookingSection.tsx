@@ -4,7 +4,7 @@ import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe
 import { Calendar } from "@/components/ui/calendar";
 import { format, differenceInCalendarDays, addDays } from "date-fns";
 import { de } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Clock, CreditCard, User, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { createBookingCheckout } from "@/lib/payments.functions";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
