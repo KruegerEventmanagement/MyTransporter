@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
 import { notifyAdmin } from "@/lib/admin-notify";
 
+const TEST_MODE_ADMIN_EMAIL = "krueger.christian96@gmx.de";
+
 const PHOTO_SIDES = [
   { id: "pre_front", label: "Vorne", icon: "⬆️", variant: "front" as SilhouetteVariant },
   { id: "pre_front_right", label: "Vorne rechts", icon: "↗️", variant: "three-quarter-front-right" as SilhouetteVariant },
@@ -34,6 +36,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
   const [startKm, setStartKm] = useState("");
   const [codeShown, setCodeShown] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isTestAdmin, setIsTestAdmin] = useState(false);
   const [currentTarget, setCurrentTarget] = useState<
     | { kind: "side"; id: string }
     | { kind: "interior" }
@@ -41,6 +44,20 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
     | { kind: "odometer" }
     | null
   >(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!mounted) return;
+      setIsTestAdmin(
+        data.user?.email?.toLowerCase() === TEST_MODE_ADMIN_EMAIL.toLowerCase()
+      );
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Bereits hochgeladene Fotos für diese Buchung laden
   useEffect(() => {
@@ -76,7 +93,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
     const placeholder =
       "data:image/svg+xml;utf8," +
       encodeURIComponent(
-        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='%23e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%23333'>TEST</text></svg>`
+        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='#e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#333'>TEST</text></svg>`
       );
     const next: Record<string, string> = {};
     PHOTO_SIDES.forEach((s) => (next[s.id] = placeholder));
