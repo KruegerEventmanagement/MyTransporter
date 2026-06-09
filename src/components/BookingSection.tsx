@@ -101,10 +101,13 @@ export function BookingSection() {
     (s) => !currentPlate || !s.vehiclePlate || s.vehiclePlate === currentPlate,
   );
 
-  // Convenience: range start/end + day count
+  // Convenience: range start/end + Nächtezahl
+  // Wichtig: 1 Nacht = 1 Tag. Selber Tag (0 Nächte) = Tagesmiete (<24h).
   const rangeFrom = range?.from;
   const rangeTo = range?.to ?? range?.from;
-  const rangeDays = rangeFrom && rangeTo ? differenceInCalendarDays(rangeTo, rangeFrom) + 1 : 0;
+  const nights = rangeFrom && rangeTo ? differenceInCalendarDays(rangeTo, rangeFrom) : -1;
+  // Für UI-Anzeige: 0 Nächte → "Tagesmiete", sonst N Tage = N Nächte
+  const rangeDays = nights; // semantisch = Nächte
   const date = rangeFrom; // bestehender Code unten verwendet `date` als Startdatum
 
   // Set belegter Tage (YYYY-MM-DD), basierend auf slotsForVehicle
@@ -400,8 +403,8 @@ export function BookingSection() {
   const canProceedStep0 = rangeFrom !== undefined && rangeTo !== undefined;
   const canProceedStep1 = startHour !== null && selectedPlanId !== null;
 
-  // Tarife passend zur gewählten Tagesanzahl + Startstunde
-  const availablePlans = getAvailablePlans(rangeDays, startHour);
+  // Tarife passend zur gewählten Nächtezahl + Startstunde
+  const availablePlans = getAvailablePlans(nights, startHour);
 
   const selectedPlanEntry = selectedPlanId ? getPlanById(selectedPlanId) : null;
 

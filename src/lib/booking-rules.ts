@@ -120,20 +120,23 @@ export function getPlanById(planId: string): PlanEntry | null {
 }
 
 /**
- * Liefert die für eine Tagesanzahl + Startstunde verfügbaren Tarife.
- * 1 Tag → alle Eintagestarife (gefiltert nach Startzeit).
- * 2-7 Tage → genau der passende Mehrtagestarif.
- * 8+ Tage → ein dynamisches Wochenpaket mit ceil(days/7) × Wochenmiete.
+ * Liefert die für eine Nächtezahl + Startstunde verfügbaren Tarife.
+ * 0 Nächte (selber Tag) → nur Tagesmiete unter 24h (3h/6h).
+ * 1 Nacht → 24h-Tarife (Rückgabe Folgetag gleiche Uhrzeit).
+ * 2-7 Nächte → passender Mehrtagestarif (days === nights).
+ * 8+ Nächte → dynamisches Wochenpaket mit ceil(nights/7) × Wochenmiete.
  */
-export function getAvailablePlans(rangeDays: number, startHour: number | null): PlanEntry[] {
-  if (rangeDays <= 0) return [];
+export function getAvailablePlans(nights: number, startHour: number | null): PlanEntry[] {
+  if (nights < 0) return [];
   let candidates: PlanEntry[];
-  if (rangeDays === 1) {
-    candidates = PLAN_CATALOG.filter((p) => p.days === 1);
-  } else if (rangeDays >= 2 && rangeDays <= 7) {
-    candidates = PLAN_CATALOG.filter((p) => p.days === rangeDays);
+  if (nights === 0) {
+    candidates = PLAN_CATALOG.filter((p) => p.days === 1 && p.durationHours < 24);
+  } else if (nights === 1) {
+    candidates = PLAN_CATALOG.filter((p) => p.days === 1 && p.durationHours === 24);
+  } else if (nights >= 2 && nights <= 7) {
+    candidates = PLAN_CATALOG.filter((p) => p.days === nights);
   } else {
-    const n = Math.ceil(rangeDays / 7);
+    const n = Math.ceil(nights / 7);
     const synth = getPlanById(`week_x${n}`);
     candidates = synth ? [synth] : [];
   }

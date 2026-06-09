@@ -1,73 +1,43 @@
-## Ziel
+## Problem
 
-Startseite wieder reduziert wie früher: nur Hero "Buche deinen Transporter" mit den 5 Schritten und Buchungspanel. Marketing-Inhalte wandern auf eine neue Seite "Über uns". Buchung nutzt progressive Offenlegung (Datum → Uhrzeit → Tarif). Mittelstriche werden aus allen Texten entfernt.
+Aktuell wird `rangeDays = differenceInCalendarDays(to, from) + 1` berechnet. Wenn der Nutzer vom 15. bis 16. klickt (1 Nacht), springt die Logik sofort auf 2 Tage und zeigt nur den „2 Tage Kurzprojekt" Tarif. Richtig wäre: 1 Nacht = 1 Tag (24h Tarif), 2 Nächte = 2 Tage, usw. Ein Klick auf denselben Tag (0 Nächte) = Tagesmiete unter 24h (3h/6h).
 
-## 1. Startseite reduzieren (`src/routes/index.tsx`)
+## Änderungen
 
-Entfernen: `TariffSection`, `AdvantagesSection`, `CompareSection`, `BookingInfoSection`.
-Bleibt: `Navbar`, `HeroSection`, `BookingSection`, Footer.
-Footer: neuen Link "Über uns" neben FAQ / Partner einfügen.
+### 1. `src/lib/booking-rules.ts` – `getAvailablePlans(nights, startHour)`
 
-## 2. Neue Seite `src/routes/ueber-uns.tsx`
+Parameter umbenennen von `rangeDays` zu `nights` und Mapping anpassen:
 
-Komponiert die vier verschobenen Sektionen: Tariftabelle (Mehrtagestarife + Einzeltage), Vorteile (L4H2, faire km, gepflegtes Fahrzeug), Vergleich (faire km-Pakete), "Gut zu wissen" (Kaution, Führerschein, Tanken, Auslandsfahrten etc.). Eigene head() mit eigenem Title / Description / og-Tags. H1 "Über MyTransporter".
+- `nights === 0` (selber Tag): nur Eintagestarife mit `durationHours < 24` → 3h Express, 6h Mini
+- `nights === 1` (eine Nacht): nur 24h-Tarife (`days === 1 && durationHours === 24`) → 24h Umzugstag, 24h Langstrecke
+- `nights >= 2 && nights <= 7`: `days === nights` (bestehende Mehrtagestarife)
+- `nights >= 8`: Wochenpaket `week_x{ceil(nights/7)}`
 
-## 3. Buchungsflow Schritt 1 umbauen (`src/components/BookingSection.tsx`)
+Startzeit-Filter (`isStartHourAllowed`) bleibt unverändert – kürzere Tarife brauchen weiterhin früheren Start (Rückgabe ≤ 22:00).
 
-Schritt 1 erhält drei Unterphasen mit progressiver Anzeige:
+### 2. `src/components/BookingSection.tsx`
 
-```text
-1a) Kalender (Range)
-    → Nutzer wählt von/bis (Doppelklick = 1 Tag)
-    → Button "Weiter" aktiv sobald range vollständig
-1b) Startzeit
-    → wird erst sichtbar nachdem Range bestätigt wurde
-    → blendet je nach rangeDays nur erlaubte Stunden ein
-1c) Tarifkarten
-    → werden erst sichtbar nachdem Startzeit gewählt wurde
-    → nur Tarife passend zu rangeDays + Startzeitregeln
-```
+- `rangeDays` neu berechnen als `nights = differenceInCalendarDays(rangeTo, rangeFrom)` (ohne `+1`). Variable bleibt im UI als „Tage" benannt, aber semantisch = Nächte.
+- `canProceedStep0`: weiterhin verlangen, dass beide `from` und `to` gesetzt sind (Doppelklick auf denselben Tag setzt `to=from`, 0 Nächte = Tagesmiete).
+- Aufruf `getAvailablePlans(nights, startHour)` mit der neuen Semantik.
+- Anzeige im Datumsschritt anpassen:
+  - 0 Nächte → „Tagesmiete (3h/6h Tarife)"
+  - 1 Nacht → „1 Tag (1 Nacht)"
+  - 2+ Nächte → „N Tage (N Nächte)"
+- Anzeige im Uhrzeit-Schritt analog (`rangeDays > 1` Hinweis ergänzen).
+- Hinweistext beim Range-Picker aktualisieren: „für Tagesmiete: erneut auf denselben Tag klicken, für 1 Tag mit Übernachtung: Folgetag klicken".
 
-Konkret: neuer lokaler State `rangeConfirmed: boolean`. Wechsel-Logik:
-- Button "Weiter zu Uhrzeit" erscheint unter dem Kalender wenn `range.from && range.to`.
-- Klick setzt `rangeConfirmed = true`, blendet Uhrzeit-Grid ein.
-- Klick auf Stunde setzt `startHour`, blendet Tarifkarten ein.
-- Bisheriger globaler "Weiter"-Button bleibt für den Sprung Schritt 1 → Schritt 2 (Fahrzeug), aktiv sobald `selectedPlanId` gesetzt.
+### 3. Hinweis im UI für die 24h-Logik
 
-## 4. Tarif- und Uhrzeitlogik
+Im Tarifschritt unter den Tarifkarten kurzen Hinweis ergänzen wenn `nights === 1`: „Rückgabe am Folgetag zur gleichen Uhrzeit. Für längere Mietdauer bitte mehr Tage im Kalender wählen." Damit ist klar: wer Mo 8 Uhr holt und Di 16 Uhr zurück will, muss 2 Nächte (Mo→Mi) wählen und bekommt den 2-Tage-Tarif.
 
-Späteste Rückgabe = 22:00. Daraus ergeben sich Startzeitfenster pro Tarif:
+### 4. `busyDateSet` / Overlap-Check
 
-| Tarif | Dauer | spätester Start |
-|---|---|---|
-| 3h Express | 3 h | 19:00 |
-| 6h Mini | 6 h | 16:00 |
-| 24h Umzugstag / Langstrecke | 24 h | 20:00 (Rückgabe nächster Tag bis 22:00) |
-| 2–7 Tage | n×24 h | 20:00 |
+Bleibt unverändert – arbeitet schon korrekt mit kalendarischen Tagen.
 
-Mehrtage:
-- `rangeDays == 1` → nur Einzeltagestarife (Express, Mini, Umzugstag, Langstrecke), gefiltert nach `startHour`.
-- `rangeDays` 2…7 → nur der passende Mehrtagestarif (z. B. 3 Tage → 3-Tage-Umzug+).
-- `rangeDays > 7` → automatisch n×7-Tage-Wochentarif: `pakete = ceil(rangeDays / 7)`, Anzeige z. B. "2× Wochentarif (14 Tage) = 898 €". Restwoche < 7 wird auf vollen Wochentarif aufgerundet. Eine Karte, ein Plan-ID-Schema `rent_week_x{n}`.
+## Geänderte Dateien
 
-Logik dafür in `src/lib/booking-rules.ts`:
-- Neue Hilfsfunktion `getAvailablePlans(rangeDays, startHour)` → Array von Tarifen mit ggf. dynamisch berechnetem Wochenpaket-Eintrag (Multiplikator + Gesamtpreis + km).
-- `computePlanReturn` erweitern: bei Wochenpaket `durationHours = pakete * 7 * 24`.
-- `isStartHourAllowed` bleibt; für Wochenpakete gilt Regel der 24h-Tarife (≤ 20:00).
+- `src/lib/booking-rules.ts` (getAvailablePlans Mapping)
+- `src/components/BookingSection.tsx` (rangeDays Berechnung, UI Texte)
 
-Schritt 2 ("Tarif wählen") bleibt im Stepper, dient nur als Bestätigung der in Schritt 1c getroffenen Auswahl bzw. wird übersprungen (Stepper-Anzeige zeigt direkt Fahrzeug). Empfehlung: Stepper-Titel "Tarif wählen" entfällt, da Tarif schon in 1c gewählt; Stepper hat dann 4 Schritte (Datum & Tarif, Fahrzeug, Bezahlen, Fahrt) bzw. 5 mit Registrierung. Damit ist die Reihenfolge: Datum → Uhrzeit → Tarif (alles in einem Step) → Weiter → Fahrzeug.
-
-## 5. Mittelstriche entfernen
-
-Alle Vorkommen von `–` (en dash) und `—` (em dash) in `src/**` durch normalen Bindestrich `-` oder Komma ersetzen, je nach Kontext. Ausgenommen Code (z. B. Kommentare unkritisch, aber wir machen es einheitlich). Betroffene Komponenten v. a. `HeroSection`, `BookingSection`, neue Seite, Promotexte, Tarifbeschreibungen in `PLAN_CATALOG`, `partner-packages.ts`.
-
-## 6. Navbar
-
-`src/components/Navbar.tsx`: "Über uns" als Link aufnehmen (Desktop + Mobile Menü).
-
-## Technische Details
-
-- Geänderte Dateien: `src/routes/index.tsx`, `src/routes/ueber-uns.tsx` (neu), `src/components/BookingSection.tsx`, `src/components/Navbar.tsx`, `src/lib/booking-rules.ts`, ggf. `src/lib/payments.functions.ts` und `src/routes/checkout.return.tsx` für neue Wochenpaket-Plan-IDs (`rent_week_xN`).
-- Komponenten `TariffSection`, `AdvantagesSection`, `CompareSection`, `BookingInfoSection` bleiben erhalten, werden nur auf der neuen Seite eingebunden.
-- TanStack-Routing: neue Route-Datei erzeugt Eintrag automatisch in `routeTree.gen.ts`.
-- Keine DB-Änderungen.
+Keine Änderungen an Tarifkatalog, Preisen, Checkout oder anderen Komponenten.
