@@ -224,12 +224,14 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
           Fotografiere das Fahrzeug von allen 8 Seiten und den Innenraum, bevor du den Schlüssel abgibst.
         </p>
 
-        <button
-          onClick={fillTestPhotos}
-          className="w-full mb-4 rounded-full border border-dashed border-foreground py-2 text-xs font-medium text-foreground hover:bg-secondary"
-        >
-          🧪 Testmodus: alle Fotos überspringen
-        </button>
+        {isAdmin && (
+          <button
+            onClick={fillTestPhotos}
+            className="w-full mb-4 rounded-full border border-dashed border-foreground py-2 text-xs font-medium text-foreground hover:bg-secondary"
+          >
+            🧪 Admin-Testmodus: alle Fotos überspringen
+          </button>
+        )}
 
         <div className="grid grid-cols-2 gap-3 mb-6">
           {PHOTO_SIDES.map((side) => (
