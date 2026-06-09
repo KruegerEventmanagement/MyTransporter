@@ -158,8 +158,12 @@ function VehicleEditor({
 
   const upload = async (file: File, prefix: string) => {
     const ext = file.name.split(".").pop() ?? "bin";
-    const path = `${form.id ?? "new"}/${prefix}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("vehicles").upload(path, file, { upsert: true });
+    const rand = Math.random().toString(36).slice(2, 10);
+    const path = `${form.id ?? "new"}/${prefix}-${Date.now()}-${rand}.${ext}`;
+    const { error } = await supabase.storage.from("vehicles").upload(path, file, {
+      upsert: false,
+      contentType: file.type || undefined,
+    });
     if (error) throw error;
     const { data } = supabase.storage.from("vehicles").getPublicUrl(path);
     return data.publicUrl;
