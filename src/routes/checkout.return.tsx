@@ -157,7 +157,7 @@ function CheckoutReturn() {
             </div>
             <h1 className="text-3xl font-bold text-foreground mb-2">Zahlung erfolgreich</h1>
             <p className="text-muted-foreground">
-              Deine Buchung wird vorbereitet – einen Moment bitte...
+              Deine Buchung wird vorbereitet, einen Moment bitte...
             </p>
           </>
         )}

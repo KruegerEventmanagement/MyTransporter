@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Erzeugt eine Admin-Benachrichtigung. Schluckt Fehler still –
+ * Erzeugt eine Admin-Benachrichtigung. Schluckt Fehler still -
  * darf den eigentlichen User-Flow nie blockieren.
  */
 export async function notifyAdmin(args: {

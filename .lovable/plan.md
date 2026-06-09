@@ -1,84 +1,73 @@
-# Buchung: Datumsbereich-Picker + neue Tarifstruktur
+## Ziel
 
-## Was sich ändert
+Startseite wieder reduziert wie früher: nur Hero "Buche deinen Transporter" mit den 5 Schritten und Buchungspanel. Marketing-Inhalte wandern auf eine neue Seite "Über uns". Buchung nutzt progressive Offenlegung (Datum → Uhrzeit → Tarif). Mittelstriche werden aus allen Texten entfernt.
 
-### 1. Buchungsablauf (Schritt 1 „Datum & Uhrzeit")
+## 1. Startseite reduzieren (`src/routes/index.tsx`)
 
-Statt **ein Datum + Uhrzeit** wählt der Kunde jetzt wie bei einer Urlaubsbuchung **einen Datumsbereich**:
+Entfernen: `TariffSection`, `AdvantagesSection`, `CompareSection`, `BookingInfoSection`.
+Bleibt: `Navbar`, `HeroSection`, `BookingSection`, Footer.
+Footer: neuen Link "Über uns" neben FAQ / Partner einfügen.
 
-- Erster Klick = Startdatum, zweiter Klick = Enddatum.
-- Eintägige Buchung: zweimal auf den gleichen Tag klicken (z. B. 15. → 15.).
-- Mehrtägige Buchung: 15. → 18. = 4 Tage in einem Rutsch.
-- Erst **danach** wird die Startuhrzeit gewählt (Rückgabezeit ergibt sich automatisch aus dem Tarif, bleibt wie bisher).
-- Belegte Tage und vergangene Tage bleiben deaktiviert. Ein Bereich, der einen belegten Tag enthält, ist nicht auswählbar.
+## 2. Neue Seite `src/routes/ueber-uns.tsx`
 
-### 2. Neue Tarifstruktur (Schritt 2)
+Komponiert die vier verschobenen Sektionen: Tariftabelle (Mehrtagestarife + Einzeltage), Vorteile (L4H2, faire km, gepflegtes Fahrzeug), Vergleich (faire km-Pakete), "Gut zu wissen" (Kaution, Führerschein, Tanken, Auslandsfahrten etc.). Eigene head() mit eigenem Title / Description / og-Tags. H1 "Über MyTransporter".
 
-Tarife werden basierend auf der Tagesanzahl gefiltert.
+## 3. Buchungsflow Schritt 1 umbauen (`src/components/BookingSection.tsx`)
 
-**Eintagestarife** (Start = Ende):
+Schritt 1 erhält drei Unterphasen mit progressiver Anzeige:
 
-| Tarif | Preis | Inklusive | Dauer |
-|---|---|---|---|
-| 3 h Express | 39 € | 100 km | 3 Stunden |
-| 6 h Umzug Mini | 59 € | 200 km | 6 Stunden |
-| 24 h Umzugstag ★ Beliebtester Tarif | 89 € | 300 km | 24 Stunden |
-| 24 h Langstrecke ★ Bester Kilometer-Deal | 119 € | 500 km | 24 Stunden |
+```text
+1a) Kalender (Range)
+    → Nutzer wählt von/bis (Doppelklick = 1 Tag)
+    → Button "Weiter" aktiv sobald range vollständig
+1b) Startzeit
+    → wird erst sichtbar nachdem Range bestätigt wurde
+    → blendet je nach rangeDays nur erlaubte Stunden ein
+1c) Tarifkarten
+    → werden erst sichtbar nachdem Startzeit gewählt wurde
+    → nur Tarife passend zu rangeDays + Startzeitregeln
+```
 
-**Mehrtagestarife** (passend zur gewählten Tagesanzahl):
+Konkret: neuer lokaler State `rangeConfirmed: boolean`. Wechsel-Logik:
+- Button "Weiter zu Uhrzeit" erscheint unter dem Kalender wenn `range.from && range.to`.
+- Klick setzt `rangeConfirmed = true`, blendet Uhrzeit-Grid ein.
+- Klick auf Stunde setzt `startHour`, blendet Tarifkarten ein.
+- Bisheriger globaler "Weiter"-Button bleibt für den Sprung Schritt 1 → Schritt 2 (Fahrzeug), aktiv sobald `selectedPlanId` gesetzt.
 
-| Tage | Tarif | Preis | Inklusive | Tagespreis |
-|---|---|---|---|---|
-| 2 | Kurzprojekt | 159 € | 600 km | 79,50 €/Tag |
-| 3 | Umzug Plus ★ Beliebt für Umzüge | 219 € | 900 km | 73,00 €/Tag |
-| 4 | Renovierungs-Tarif | 289 € | 1.100 km | 72,25 €/Tag |
-| 5 | Projektwoche Mini | 349 € | 1.300 km | 69,80 €/Tag |
-| 6 | Projektwoche | 399 € | 1.400 km | 66,50 €/Tag |
-| 7 | Wochenmiete ★ Bester Tagespreis | 449 € | 1.500 km | 64,14 €/Tag |
+## 4. Tarif- und Uhrzeitlogik
 
-Mehrkilometer: 0,39 € (Eintagestarife), 0,35 € (2–6 Tage), 0,29 € (Wochenmiete). Kaution 200 € bleibt.
+Späteste Rückgabe = 22:00. Daraus ergeben sich Startzeitfenster pro Tarif:
 
-Bei mehr als 7 Tagen: Hinweis „Bitte kontaktiere uns für längere Mieten".
+| Tarif | Dauer | spätester Start |
+|---|---|---|
+| 3h Express | 3 h | 19:00 |
+| 6h Mini | 6 h | 16:00 |
+| 24h Umzugstag / Langstrecke | 24 h | 20:00 (Rückgabe nächster Tag bis 22:00) |
+| 2–7 Tage | n×24 h | 20:00 |
 
-### 3. Neue Sektion auf der Startseite: „Großer L4H2-Transporter zum fairen Preis"
+Mehrtage:
+- `rangeDays == 1` → nur Einzeltagestarife (Express, Mini, Umzugstag, Langstrecke), gefiltert nach `startHour`.
+- `rangeDays` 2…7 → nur der passende Mehrtagestarif (z. B. 3 Tage → 3-Tage-Umzug+).
+- `rangeDays > 7` → automatisch n×7-Tage-Wochentarif: `pakete = ceil(rangeDays / 7)`, Anzeige z. B. "2× Wochentarif (14 Tage) = 898 €". Restwoche < 7 wird auf vollen Wochentarif aufgerundet. Eine Karte, ein Plan-ID-Schema `rent_week_x{n}`.
 
-Unter dem Hero / über der Buchung wird ein neuer Tarifbereich eingebaut:
+Logik dafür in `src/lib/booking-rules.ts`:
+- Neue Hilfsfunktion `getAvailablePlans(rangeDays, startHour)` → Array von Tarifen mit ggf. dynamisch berechnetem Wochenpaket-Eintrag (Multiplikator + Gesamtpreis + km).
+- `computePlanReturn` erweitern: bei Wochenpaket `durationHours = pakete * 7 * 24`.
+- `isStartHourAllowed` bleibt; für Wochenpakete gilt Regel der 24h-Tarife (≤ 20:00).
 
-- **Überschrift**: „Großer L4H2-Transporter zum fairen Preis"
-- **Unterüberschrift**: „Mehr Platz, faire Kilometer und transparente Preise – perfekt für Umzug, Möbeltransport, Entrümpelung und Großeinkäufe."
-- **4 Eintagestarif-Karten** mit Highlights für „Beliebtester Tarif" (89 €) und „Bester Kilometer-Deal" (119 €).
-- **Mehrtagestarife** als kompakte, aufklappbare Liste/Tabelle mit Tagespreis-Spalte, Hervorhebung 3 Tage („Beliebt für Umzüge") und 7 Tage („Bester Tagespreis").
-- Jeder Tarif bekommt einen Button „Verfügbarkeit prüfen" → scrollt zum Buchungsbereich.
+Schritt 2 ("Tarif wählen") bleibt im Stepper, dient nur als Bestätigung der in Schritt 1c getroffenen Auswahl bzw. wird übersprungen (Stepper-Anzeige zeigt direkt Fahrzeug). Empfehlung: Stepper-Titel "Tarif wählen" entfällt, da Tarif schon in 1c gewählt; Stepper hat dann 4 Schritte (Datum & Tarif, Fahrzeug, Bezahlen, Fahrt) bzw. 5 mit Registrierung. Damit ist die Reihenfolge: Datum → Uhrzeit → Tarif (alles in einem Step) → Weiter → Fahrzeug.
 
-### 4. Neue Sektion „Warum MyTransporter?"
+## 5. Mittelstriche entfernen
 
-Vorteilsbereich mit Punkten: L4H2 lang & hoch · viel Ladevolumen · 300/500 km inklusive · sauber aufbereitet · neue Bremsen/Reifen/Federn · zuverlässig · ideal für Leonberg, Stuttgart und Umgebung. Ehrlich-positive Formulierung („nicht neu, aber technisch gepflegt").
+Alle Vorkommen von `–` (en dash) und `—` (em dash) in `src/**` durch normalen Bindestrich `-` oder Komma ersetzen, je nach Kontext. Ausgenommen Code (z. B. Kommentare unkritisch, aber wir machen es einheitlich). Betroffene Komponenten v. a. `HeroSection`, `BookingSection`, neue Seite, Promotexte, Tarifbeschreibungen in `PLAN_CATALOG`, `partner-packages.ts`.
 
-### 5. Neue Sektion „Fair vergleichen"
+## 6. Navbar
 
-Kurzer Vergleichshinweis (keine Konkurrenz-Namen): „Viele Anbieter wirken im Grundpreis günstig, haben aber oft nur wenige Kilometer inklusive. Bei MyTransporter bekommst du einen großen L4H2-Transporter mit fairen Kilometerpaketen."
-
-### 6. Neue Sektion „Gut zu wissen"
-
-Hinweisbereich: Kaution nach Absprache · Führerschein & Ausweis · Übergabe mit Fotos und Protokoll · vollgetankt zurück · besenrein · Rauchen verboten · Auslandsfahrten nur nach Absprache · Baustoffe nur mit Schutzplane.
+`src/components/Navbar.tsx`: "Über uns" als Link aufnehmen (Desktop + Mobile Menü).
 
 ## Technische Details
 
-- **`src/lib/booking-rules.ts`**: Neue `PLAN_CATALOG`-Konstante mit allen 10 Tarifen (4 Eintages, 6 Mehrtages). `computePlanReturn` erweitert: Mehrtagestarife = Start + n×24 h. `isStartHourAllowed` berücksichtigt nur 3h/6h-Endzeit-Begrenzung.
-- **`src/components/BookingSection.tsx`**:
-  - `date: Date | undefined` → `range: { from?: Date; to?: Date }`, `Calendar mode="range"`.
-  - `disabled` blockt Bereiche, die einen belegten Tag enthalten (mit `slotsForVehicle` prüfen).
-  - Tarif-Filterung nach `tageAnzahl = differenceInCalendarDays(to, from) + 1`.
-  - Startuhrzeit-Auswahl bleibt im selben Step nach Datumsbereich-Wahl sichtbar.
-  - Preisberechnung + Rückgabe-Anzeige auf neue Tarife umstellen.
-  - `AUTH_BOOKING_DRAFT_KEY` speichert jetzt `{from, to, startHour, selectedPlan}`.
-- **Neue Komponente `src/components/TariffSection.tsx`**: Tarif-Übersicht für die Landingpage (Eintages-Karten + Mehrtages-Tabelle).
-- **Neue Komponenten `AdvantagesSection.tsx`, `CompareSection.tsx`, `BookingInfoSection.tsx`**: kleine, statische Inhalts-Sektionen im monochromen Stil.
-- **`src/routes/index.tsx`**: Neue Sektionen unter dem Hero einbauen.
-- **`src/lib/payments.functions.ts` / Checkout**: Preisbetrag wird im Buchungsdraft mitgegeben, daher passt der bestehende Mechanismus, sobald `selectedPlan` die neuen Preise liefert. Plan-Keys werden auf `rent_3h | rent_6h | rent_24h_short | rent_24h_long | rent_multi_{n}d` erweitert (Mapping in `BookingSection`).
-- **`booking-emails.functions.ts` / Trip-Anzeigen**: Tarif-Labels werden aus `PLAN_CATALOG` gelesen, keine hartkodierten Strings mehr.
-
-## Was nicht geändert wird
-
-- Belegt-Slot-Logik, Auth-Flow, Stripe-Checkout-Mechanik, PreDrive/ActiveDrive/Return-Komponenten.
-- Design bleibt strikt monochrom (Schwarz/Weiß/Grau, Fredoka), keine neuen Farben.
+- Geänderte Dateien: `src/routes/index.tsx`, `src/routes/ueber-uns.tsx` (neu), `src/components/BookingSection.tsx`, `src/components/Navbar.tsx`, `src/lib/booking-rules.ts`, ggf. `src/lib/payments.functions.ts` und `src/routes/checkout.return.tsx` für neue Wochenpaket-Plan-IDs (`rent_week_xN`).
+- Komponenten `TariffSection`, `AdvantagesSection`, `CompareSection`, `BookingInfoSection` bleiben erhalten, werden nur auf der neuen Seite eingebunden.
+- TanStack-Routing: neue Route-Datei erzeugt Eintrag automatisch in `routeTree.gen.ts`.
+- Keine DB-Änderungen.

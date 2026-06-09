@@ -4,12 +4,12 @@ const BENEFITS = [
   {
     icon: RefreshCw,
     title: "Jederzeit austauschbar",
-    text: "Neues Motiv? Aktion? Saisonale Werbung? Die Magnetfolie wird einfach gewechselt – kein Aufwand für dich.",
+    text: "Neues Motiv? Aktion? Saisonale Werbung? Die Magnetfolie wird einfach gewechselt, kein Aufwand für dich.",
   },
   {
     icon: Shield,
     title: "Lackschonend",
-    text: "Kein Kleber, keine Rückstände, keine Schäden – Magnetfolie haftet sicher, ohne den Transporter zu beschädigen.",
+    text: "Kein Kleber, keine Rückstände, keine Schäden, Magnetfolie haftet sicher, ohne den Transporter zu beschädigen.",
   },
   {
     icon: Repeat,
@@ -19,7 +19,7 @@ const BENEFITS = [
   {
     icon: Unlink,
     title: "Flexibel kündbar",
-    text: "Vertrag läuft aus oder du willst pausieren? Die Folie wird einfach abgenommen – fertig.",
+    text: "Vertrag läuft aus oder du willst pausieren? Die Folie wird einfach abgenommen, fertig.",
   },
   {
     icon: MapPin,

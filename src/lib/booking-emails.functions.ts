@@ -40,7 +40,7 @@ function cancellationTable(): string {
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.warn("RESEND_API_KEY missing – Buchungsbestätigung wird nicht versendet");
+    console.warn("RESEND_API_KEY missing, Buchungsbestätigung wird nicht versendet");
     return false;
   }
   const res = await fetch("https://api.resend.com/emails", {
@@ -102,7 +102,7 @@ export const sendBookingConfirmation = createServerFn({ method: "POST" })
         <h3 style="margin:24px 0 8px;font-size:16px;">So geht es weiter</h3>
         <ol style="padding-left:20px;line-height:1.6;">
           <li>Dein <strong>Schlüssel-Code</strong> wird automatisch <strong>30 Minuten vor Abholung</strong> in der App freigeschaltet.</li>
-          <li>Du bekommst rechtzeitig eine Erinnerung per E-Mail – einmal <strong>24 Stunden</strong> vorher und nochmal <strong>30 Minuten</strong> vor Start.</li>
+          <li>Du bekommst rechtzeitig eine Erinnerung per E-Mail, einmal <strong>24 Stunden</strong> vorher und nochmal <strong>30 Minuten</strong> vor Start.</li>
           <li>Über den Button unten kommst du jederzeit zu deiner Buchung.</li>
         </ol>
 
@@ -111,7 +111,7 @@ export const sendBookingConfirmation = createServerFn({ method: "POST" })
         </p>
 
         <h3 style="margin:32px 0 8px;font-size:16px;">Stornierung</h3>
-        <p style="margin:0 0 8px;">Du kannst deine Fahrt jederzeit kostenlos im <a href="${profilUrl}" style="color:#000;">Profil</a> stornieren – bis 13 Stunden vor Abfahrt fallen keine Gebühren an.</p>
+        <p style="margin:0 0 8px;">Du kannst deine Fahrt jederzeit kostenlos im <a href="${profilUrl}" style="color:#000;">Profil</a> stornieren, bis 13 Stunden vor Abfahrt fallen keine Gebühren an.</p>
         ${cancellationTable()}
         <p style="font-size:12px;color:#666;margin:8px 0 0;">Die Kaution wird in jedem Fall vollständig zurückerstattet.</p>
 

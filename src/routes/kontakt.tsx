@@ -4,8 +4,8 @@ import { Mail, Phone, MapPin } from "lucide-react";
 export const Route = createFileRoute("/kontakt")({
   head: () => ({
     meta: [
-      { title: "Kontakt – MyTransporter" },
-      { name: "description", content: "Kontaktiere MyTransporter – Transporter mieten in Leonberg" },
+      { title: "Kontakt, MyTransporter" },
+      { name: "description", content: "Kontaktiere MyTransporter, Transporter mieten in Leonberg" },
     ],
   }),
   component: KontaktPage,
@@ -66,7 +66,7 @@ function KontaktPage() {
           <p className="text-sm text-muted-foreground">
             Schlüsselabholung und -rückgabe: <span className="text-foreground font-medium">Römerstraße 36, 71229 Leonberg</span>
           </p>
-          <p className="text-xs text-muted-foreground mt-1">Öffnungszeiten: 08:00 – 22:00 Uhr</p>
+          <p className="text-xs text-muted-foreground mt-1">Öffnungszeiten: 08:00, 22:00 Uhr</p>
         </div>
       </div>
     </main>

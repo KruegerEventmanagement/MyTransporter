@@ -109,7 +109,7 @@ export function VehiclesAdmin() {
                     {v.name || `${v.brand ?? ""} ${v.model ?? ""}`.trim() || "Unbenanntes Fahrzeug"}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {v.plate || "—"} · {v.fuel_type ?? "—"} · {v.power_kw ? `${v.power_kw} kW` : "—"}
+                    {v.plate || "-"} · {v.fuel_type ?? "-"} · {v.power_kw ? `${v.power_kw} kW` : "-"}
                   </p>
                 </div>
                 {!v.is_active && (

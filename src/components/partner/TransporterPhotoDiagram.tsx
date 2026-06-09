@@ -96,7 +96,7 @@ export function TransporterPhotoDiagram({ highlight }: Props) {
       )}
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Wähle weiter unten eine Fläche aus – Größe & Preis werden automatisch aus der
+        Wähle weiter unten eine Fläche aus, Größe & Preis werden automatisch aus der
         gemessenen Fläche berechnet.
       </p>
     </div>

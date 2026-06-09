@@ -45,17 +45,17 @@ export const submitPartnerInquiry = createServerFn({ method: "POST" })
     const packageLabel = pkg
       ? `${pkg.viewLabel} ${pkg.code} (${pkg.sizeLabel}, ${formatSqm(pkg.sqm)})`
       : data.packageId;
-    const priceLabel = pkg ? `${formatEuro(pkg.monthly)}/Mon.` : "—";
+    const priceLabel = pkg ? `${formatEuro(pkg.monthly)}/Mon.` : "-";
     const yearsLabel = `${data.years} ${data.years === 1 ? "Jahr" : "Jahre"}`;
 
     const html = `
       <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:auto;padding:24px;color:#111;">
         <h2 style="margin:0 0 16px;">Neue Partner-Anfrage</h2>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
-          <tr><td style="padding:6px 0;color:#666;width:140px;">Firma</td><td>${escapeHtml(data.company || "—")}</td></tr>
+          <tr><td style="padding:6px 0;color:#666;width:140px;">Firma</td><td>${escapeHtml(data.company || "-")}</td></tr>
           <tr><td style="padding:6px 0;color:#666;">Name</td><td>${escapeHtml(data.name)}</td></tr>
           <tr><td style="padding:6px 0;color:#666;">E-Mail</td><td>${escapeHtml(data.email)}</td></tr>
-          <tr><td style="padding:6px 0;color:#666;">Telefon</td><td>${escapeHtml(data.phone || "—")}</td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Telefon</td><td>${escapeHtml(data.phone || "-")}</td></tr>
           <tr><td style="padding:6px 0;color:#666;">Fläche</td><td>${escapeHtml(packageLabel)}</td></tr>
           <tr><td style="padding:6px 0;color:#666;">Preis</td><td>${escapeHtml(priceLabel)}</td></tr>
           <tr><td style="padding:6px 0;color:#666;">Laufzeit</td><td>${yearsLabel}</td></tr>

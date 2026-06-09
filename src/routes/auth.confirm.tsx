@@ -8,7 +8,7 @@ const RETURN_URL = "https://www.mytransporter.org/?email_confirmed=1#booking";
 export const Route = createFileRoute("/auth/confirm")({
   head: () => ({
     meta: [
-      { title: "E-Mail bestätigt – MyTransporter" },
+      { title: "E-Mail bestätigt, MyTransporter" },
       { name: "description", content: "Deine E-Mail-Adresse wurde bestätigt. Du wirst automatisch zu MyTransporter weitergeleitet." },
     ],
   }),

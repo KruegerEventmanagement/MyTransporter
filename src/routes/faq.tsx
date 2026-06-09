@@ -15,7 +15,7 @@ const FAQS = [
   },
   {
     q: "Für welche Strecken kann ich den Transporter nutzen?",
-    a: "Der Transporter ist ideal für Fahrten in Leonberg, Stuttgart, Böblingen, Sindelfingen, Ludwigsburg und der gesamten Region Baden-Württemberg. Auch bundesweite Fahrten innerhalb Deutschlands sind problemlos möglich – z. B. für Umzüge, Möbeltransporte, Kleinanzeigen-Abholungen oder Baumarkt-Touren.",
+    a: "Der Transporter ist ideal für Fahrten in Leonberg, Stuttgart, Böblingen, Sindelfingen, Ludwigsburg und der gesamten Region Baden-Württemberg. Auch bundesweite Fahrten innerhalb Deutschlands sind problemlos möglich, z. B. für Umzüge, Möbeltransporte, Kleinanzeigen-Abholungen oder Baumarkt-Touren.",
   },
   {
     q: "Ist der Transporter für Umzüge geeignet?",
@@ -23,7 +23,7 @@ const FAQS = [
   },
   {
     q: "Kann ich den Transporter kurzfristig mieten?",
-    a: "Ja, kurzfristige Buchungen sind direkt online möglich – häufig auch noch am selben Tag. Solange ein freier Slot zwischen 08:00 und 22:00 Uhr verfügbar ist, kannst du den Transporter sofort buchen und abholen.",
+    a: "Ja, kurzfristige Buchungen sind direkt online möglich, häufig auch noch am selben Tag. Solange ein freier Slot zwischen 08:00 und 22:00 Uhr verfügbar ist, kannst du den Transporter sofort buchen und abholen.",
   },
   {
     q: "Welche Voraussetzungen brauche ich für die Anmietung?",
@@ -31,7 +31,7 @@ const FAQS = [
   },
   {
     q: "Wo hole ich den Transporter ab?",
-    a: "Abholung und Rückgabe erfolgen in der Römerstraße 36, 71229 Leonberg – verkehrsgünstig zwischen Stuttgart, Böblingen und Sindelfingen gelegen. Öffnungszeiten: täglich 08:00 bis 22:00 Uhr.",
+    a: "Abholung und Rückgabe erfolgen in der Römerstraße 36, 71229 Leonberg, verkehrsgünstig zwischen Stuttgart, Böblingen und Sindelfingen gelegen. Öffnungszeiten: täglich 08:00 bis 22:00 Uhr.",
   },
   {
     q: "Ist im Preis eine Versicherung enthalten?",
@@ -46,13 +46,13 @@ const FAQS = [
 export const Route = createFileRoute("/faq")({
   head: () => ({
     meta: [
-      { title: "FAQ – Transporter mieten in Leonberg & Stuttgart | MyTransporter" },
+      { title: "FAQ, Transporter mieten in Leonberg & Stuttgart | MyTransporter" },
       {
         name: "description",
         content:
           "Häufige Fragen zur Transporter-Vermietung in Leonberg, Stuttgart, Böblingen, Sindelfingen und Ludwigsburg: Buchung, Preise, Kaution, Umzug, kurzfristige Miete.",
       },
-      { property: "og:title", content: "FAQ – Transporter mieten in Leonberg & Stuttgart" },
+      { property: "og:title", content: "FAQ, Transporter mieten in Leonberg & Stuttgart" },
       {
         property: "og:description",
         content:
@@ -89,10 +89,10 @@ function FaqPage() {
           ← Zurück
         </Link>
         <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
-          Häufige Fragen – Transporter mieten in Leonberg & Stuttgart
+          Häufige Fragen, Transporter mieten in Leonberg & Stuttgart
         </h1>
         <p className="text-muted-foreground mb-10">
-          Alles, was du zur Transporter-Vermietung bei MyTransporter wissen musst – von Buchung
+          Alles, was du zur Transporter-Vermietung bei MyTransporter wissen musst, von Buchung
           und Preisen über Kaution bis hin zu Umzug, Möbeltransport und kurzfristiger Miete in
           Leonberg, Stuttgart, Böblingen, Sindelfingen und Ludwigsburg.
         </p>
@@ -127,7 +127,7 @@ function FaqPage() {
             <a href="tel:+4915236230118" className="text-foreground underline">
               0152 3623 0118
             </a>
-            . Wir helfen dir gerne weiter – persönlich, schnell und unkompliziert.
+            . Wir helfen dir gerne weiter, persönlich, schnell und unkompliziert.
           </p>
         </section>
 
@@ -156,30 +156,30 @@ function FaqPage() {
 const SEO_BLOCKS = [
   {
     h: "Transporter mieten in Leonberg",
-    p: "MyTransporter ist deine lokale Transporter-Vermietung in Leonberg. Direkt in der Römerstraße 36 holst du deinen Fiat Ducato L4H2 ab – ideal für Umzüge, Möbeltransporte oder spontane Fahrten in der Region. Buchung online in unter 2 Minuten, transparente Preise ab 100 € inklusive 300 Freikilometern.",
+    p: "MyTransporter ist deine lokale Transporter-Vermietung in Leonberg. Direkt in der Römerstraße 36 holst du deinen Fiat Ducato L4H2 ab, ideal für Umzüge, Möbeltransporte oder spontane Fahrten in der Region. Buchung online in unter 2 Minuten, transparente Preise ab 100 € inklusive 300 Freikilometern.",
   },
   {
     h: "Transporter mieten in Stuttgart & Umgebung",
-    p: "Auch für Kunden aus Stuttgart, Böblingen, Sindelfingen und Ludwigsburg sind wir die schnelle Alternative zu großen Mietwagen-Konzernen. Statt langer Schlangen am Schalter bekommst du den Transporter ohne Umweg – persönlich übergeben, vollgetankt und einsatzbereit.",
+    p: "Auch für Kunden aus Stuttgart, Böblingen, Sindelfingen und Ludwigsburg sind wir die schnelle Alternative zu großen Mietwagen-Konzernen. Statt langer Schlangen am Schalter bekommst du den Transporter ohne Umweg, persönlich übergeben, vollgetankt und einsatzbereit.",
   },
   {
-    h: "Umzugswagen mieten – günstig & flexibel",
+    h: "Umzugswagen mieten, günstig & flexibel",
     p: "Mit 6,36 m Länge, 1.200 kg Nutzlast und Hochdach ist unser Transporter ein vollwertiger Umzugswagen. Du transportierst den Inhalt einer 2- bis 3-Zimmer-Wohnung in einer Tour. Perfekt für deinen Umzug in Leonberg, Stuttgart oder bundesweit.",
   },
   {
     h: "Möbeltransport, Baumarkt & Kleinanzeigen",
-    p: "Ob Couch von Kleinanzeigen abholen, Baumaterial aus dem Baumarkt transportieren oder neue Möbel von IKEA holen – mit unserem Transporter bleibst du flexibel, ohne ein Auto zu besitzen.",
+    p: "Ob Couch von Kleinanzeigen abholen, Baumaterial aus dem Baumarkt transportieren oder neue Möbel von IKEA holen, mit unserem Transporter bleibst du flexibel, ohne ein Auto zu besitzen.",
   },
   {
-    h: "Kurzfristig buchen – auch heute noch",
+    h: "Kurzfristig buchen, auch heute noch",
     p: "Spontane Pläne? Kein Problem. Solange ein freier Slot zwischen 08:00 und 22:00 Uhr verfügbar ist, kannst du noch am selben Tag buchen, abholen und losfahren.",
   },
   {
-    h: "Preise & Kaution – alles transparent",
+    h: "Preise & Kaution, alles transparent",
     p: "6 Stunden für 100 € (300 Freikilometer inklusive), 24 Stunden für 150 € (500 Freikilometer inklusive) oder reine Kilometer-Abrechnung zu 0,90 € / km. Jeder zusätzliche Kilometer über das Freikontingent hinaus kostet 0,90 €. Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer und vollgetankter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
   },
   {
     h: "Ablauf der Vermietung",
-    p: "1. Online buchen und Verifizierung mit Führerschein & Ausweis. 2. Schlüssel in Leonberg abholen. 3. Fahrzeug-Check per App. 4. Losfahren. 5. Rückgabe, Tankbeleg hochladen – fertig. So einfach mietet man heute einen Transporter.",
+    p: "1. Online buchen und Verifizierung mit Führerschein & Ausweis. 2. Schlüssel in Leonberg abholen. 3. Fahrzeug-Check per App. 4. Losfahren. 5. Rückgabe, Tankbeleg hochladen, fertig. So einfach mietet man heute einen Transporter.",
   },
 ];
