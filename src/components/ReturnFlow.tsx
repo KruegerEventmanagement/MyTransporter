@@ -416,6 +416,29 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
           )}
         </button>
 
+        {aiBusy && (
+          <p className="text-xs text-muted-foreground -mt-4 mb-4">🤖 KI analysiert Tacho…</p>
+        )}
+        {!aiBusy && aiRecognition && (
+          <p className="text-xs text-muted-foreground -mt-4 mb-4">
+            🤖 KI hat erkannt:&nbsp;
+            {aiRecognition.km !== null ? `${aiRecognition.km.toLocaleString("de-DE")} km` : "Kilometerstand nicht lesbar"}
+            {aiRecognition.fuelPercent !== null ? ` · Tank ${aiRecognition.fuelPercent}%` : ""}
+            {aiRecognition.confidence === "low" ? " (unsicher – bitte prüfen)" : " – bitte prüfen"}
+          </p>
+        )}
+
+        <label className="text-sm font-medium text-foreground">Tankstand (Ende, in %)</label>
+        <input
+          type="number"
+          min={0}
+          max={100}
+          value={endFuelPercent}
+          onChange={(e) => setEndFuelPercent(e.target.value)}
+          placeholder="z.B. 75"
+          className="mt-1 mb-6 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+
         <button
           disabled={!endKm || !odometerPhoto}
           onClick={handleSubmitKm}
