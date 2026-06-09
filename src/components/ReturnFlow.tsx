@@ -543,6 +543,26 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           </button>
         )}
 
+        {addons && addons.length > 0 && (
+          <div className="mb-4 rounded-2xl border border-border bg-secondary/50 p-4">
+            <p className="text-sm font-medium text-foreground mb-2">Gebuchtes Zubehör zurückgeben</p>
+            <ul className="text-xs text-muted-foreground space-y-1 mb-3">
+              {addons.map((a) => (
+                <li key={a.id}>• {a.label}</li>
+              ))}
+            </ul>
+            <label className="flex items-start gap-2 text-xs text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={addonsReturned}
+                onChange={(e) => setAddonsReturned(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>Zubehör vollständig &amp; unbeschädigt zurückgegeben</span>
+            </label>
+          </div>
+        )}
+
         <button
           disabled={!receiptUrl}
           onClick={handleFinish}
