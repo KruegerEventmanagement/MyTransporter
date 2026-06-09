@@ -1,43 +1,25 @@
 ## Problem
 
-Aktuell wird `rangeDays = differenceInCalendarDays(to, from) + 1` berechnet. Wenn der Nutzer vom 15. bis 16. klickt (1 Nacht), springt die Logik sofort auf 2 Tage und zeigt nur den „2 Tage Kurzprojekt" Tarif. Richtig wäre: 1 Nacht = 1 Tag (24h Tarif), 2 Nächte = 2 Tage, usw. Ein Klick auf denselben Tag (0 Nächte) = Tagesmiete unter 24h (3h/6h).
+Beim Hochladen eines Fahrzeugfotos antwortet der Storage mit `403 – new row violates row-level security policy`, obwohl der angemeldete Nutzer Admin ist.
 
-## Änderungen
+## Ursache
 
-### 1. `src/lib/booking-rules.ts` – `getAvailablePlans(nights, startHour)`
+Die Datenbankfunktion `public.has_role(uuid, app_role)` ist **nicht** als `SECURITY DEFINER` markiert. Sie läuft daher mit den Rechten des aufrufenden Nutzers (`authenticated`). Die Rolle `authenticated` hat aber **kein `GRANT SELECT` auf `public.user_roles`** (nur `sandbox_exec` hat Rechte). Dadurch schlägt der interne `SELECT` in `has_role` fehl, die Funktion liefert effektiv „false", und die Storage-Policy „Admins can upload vehicle assets" verweigert den Upload.
 
-Parameter umbenennen von `rangeDays` zu `nights` und Mapping anpassen:
+Das gleiche Problem betrifft potenziell alle Stellen, an denen `has_role` aus einer RLS-Policy heraus aufgerufen wird (z. B. Vehicles-Tabelle, Buchungen, Admin-Benachrichtigungen) – es ist nur bislang nicht überall aufgefallen.
 
-- `nights === 0` (selber Tag): nur Eintagestarife mit `durationHours < 24` → 3h Express, 6h Mini
-- `nights === 1` (eine Nacht): nur 24h-Tarife (`days === 1 && durationHours === 24`) → 24h Umzugstag, 24h Langstrecke
-- `nights >= 2 && nights <= 7`: `days === nights` (bestehende Mehrtagestarife)
-- `nights >= 8`: Wochenpaket `week_x{ceil(nights/7)}`
+## Fix (eine Migration)
 
-Startzeit-Filter (`isStartHourAllowed`) bleibt unverändert – kürzere Tarife brauchen weiterhin früheren Start (Rückgabe ≤ 22:00).
+1. `public.has_role` neu anlegen mit `SECURITY DEFINER`, `STABLE`, `SET search_path = public` (Standard-Empfehlung für Role-Checks, vermeidet RLS-Rekursion und Berechtigungsprobleme).
+2. `GRANT SELECT ON public.user_roles TO authenticated;` ergänzen, damit auch direkte Reads (z. B. der bestehende Client-Call `select role from user_roles where user_id = …`) sauber funktionieren.
+3. `GRANT EXECUTE ON FUNCTION public.has_role(uuid, app_role) TO authenticated;` zur Sicherheit.
 
-### 2. `src/components/BookingSection.tsx`
+## Verifikation
 
-- `rangeDays` neu berechnen als `nights = differenceInCalendarDays(rangeTo, rangeFrom)` (ohne `+1`). Variable bleibt im UI als „Tage" benannt, aber semantisch = Nächte.
-- `canProceedStep0`: weiterhin verlangen, dass beide `from` und `to` gesetzt sind (Doppelklick auf denselben Tag setzt `to=from`, 0 Nächte = Tagesmiete).
-- Aufruf `getAvailablePlans(nights, startHour)` mit der neuen Semantik.
-- Anzeige im Datumsschritt anpassen:
-  - 0 Nächte → „Tagesmiete (3h/6h Tarife)"
-  - 1 Nacht → „1 Tag (1 Nacht)"
-  - 2+ Nächte → „N Tage (N Nächte)"
-- Anzeige im Uhrzeit-Schritt analog (`rangeDays > 1` Hinweis ergänzen).
-- Hinweistext beim Range-Picker aktualisieren: „für Tagesmiete: erneut auf denselben Tag klicken, für 1 Tag mit Übernachtung: Folgetag klicken".
+- Migration anwenden.
+- Im Admin-Bereich „Fahrzeuge → Bearbeiten → Foto hochladen" testen: Upload muss `200` liefern, Foto erscheint in der Galerie und nach Speichern in `vehicles.photo_urls`.
+- Bestehende Admin-Reads (Buchungen, Notifications) weiter prüfen, dass keine Regression auftritt.
 
-### 3. Hinweis im UI für die 24h-Logik
+## Keine Code-Änderungen am Frontend nötig
 
-Im Tarifschritt unter den Tarifkarten kurzen Hinweis ergänzen wenn `nights === 1`: „Rückgabe am Folgetag zur gleichen Uhrzeit. Für längere Mietdauer bitte mehr Tage im Kalender wählen." Damit ist klar: wer Mo 8 Uhr holt und Di 16 Uhr zurück will, muss 2 Nächte (Mo→Mi) wählen und bekommt den 2-Tage-Tarif.
-
-### 4. `busyDateSet` / Overlap-Check
-
-Bleibt unverändert – arbeitet schon korrekt mit kalendarischen Tagen.
-
-## Geänderte Dateien
-
-- `src/lib/booking-rules.ts` (getAvailablePlans Mapping)
-- `src/components/BookingSection.tsx` (rangeDays Berechnung, UI Texte)
-
-Keine Änderungen an Tarifkatalog, Preisen, Checkout oder anderen Komponenten.
+Der Upload-Code in `src/components/admin/VehiclesAdmin.tsx` ist korrekt; der Bug liegt ausschließlich in der Datenbank-Policy/Funktion.
