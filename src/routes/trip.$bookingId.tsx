@@ -152,6 +152,7 @@ function TripPage() {
             startKm={booking.start_km ?? startKm}
             freeKm={booking.free_km ?? (booking.plan_id === "6h" ? 300 : booking.plan_id === "24h" ? 500 : 0)}
             kmPriceCents={booking.km_price_cents ?? 90}
+            addons={booking.addons ?? undefined}
             onComplete={() => setPhase("done")}
           />
         </main>
