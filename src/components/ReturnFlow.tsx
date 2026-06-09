@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
 import { useServerFn } from "@tanstack/react-start";
 import { recognizeOdometer } from "@/lib/odometer-ai.functions";
+import { notifyAdmin } from "@/lib/admin-notify";
 
 const TEST_MODE_ADMIN_EMAIL = "krueger.christian96@gmx.de";
 
@@ -225,6 +226,13 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
       .from("bookings")
       .update({ return_code: code, status: "returning" })
       .eq("id", bookingId);
+    // Admin informieren, damit Rückgabe zeitnah bestätigt werden kann
+    notifyAdmin({
+      type: "trip_returning",
+      title: "Rückgabe steht an",
+      body: `Rückgabecode ${code}${kmSummary ? ` · ${kmSummary.driven} km gefahren · Mehrkilometer-Aufpreis ${(kmSummary.chargeCents / 100).toFixed(2)} €` : ""}`,
+      bookingId,
+    });
     setReturnCode(code);
     setReturnStep("code");
   };

@@ -51,6 +51,28 @@ function CheckoutReturn() {
         const freeKm = planEntry?.freeKm ?? (pending.planId === "6h" ? 300 : pending.planId === "24h" ? 500 : 0);
         const kmPriceCents = planEntry?.extraKmCents ?? 90;
 
+        // Fahrzeug-Snapshot: bevorzugt aus pending (was der Nutzer gerade gesehen hat),
+        // sonst echtes aktives Fahrzeug aus DB. Niemals hardcoded Fallback-Strings.
+        let vehicleName = pending.vehicleName ?? null;
+        let vehiclePlate = pending.vehiclePlate ?? null;
+        if (!vehicleName || !vehiclePlate) {
+          try {
+            const { data: activeVehicle } = await supabase
+              .from("vehicles")
+              .select("name, plate")
+              .eq("is_active", true)
+              .order("created_at", { ascending: true })
+              .limit(1)
+              .maybeSingle();
+            if (activeVehicle) {
+              vehicleName = vehicleName ?? activeVehicle.name;
+              vehiclePlate = vehiclePlate ?? activeVehicle.plate;
+            }
+          } catch (e) {
+            console.warn("Aktives Fahrzeug konnte nicht ermittelt werden:", e);
+          }
+        }
+
         // Stripe-Session abrufen, um Customer + PaymentMethod zu speichern
         let stripeIds: {
           customerId: string | null;
@@ -88,8 +110,8 @@ function CheckoutReturn() {
               stripe_customer_id: stripeIds.customerId,
               stripe_payment_intent_id: stripeIds.paymentIntentId,
               stripe_payment_method_id: stripeIds.paymentMethodId,
-              ...(pending.vehicleName ? { vehicle_name: pending.vehicleName } : {}),
-              ...(pending.vehiclePlate ? { vehicle_plate: pending.vehiclePlate } : {}),
+              ...(vehicleName ? { vehicle_name: vehicleName } : {}),
+              ...(vehiclePlate ? { vehicle_plate: vehiclePlate } : {}),
             })
             .select()
             .single();

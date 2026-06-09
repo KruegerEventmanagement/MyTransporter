@@ -59,10 +59,12 @@ function getOverlay(variant: SilhouetteVariant): { src: string; flip: boolean } 
 
 export function CameraCapture({ open, title, hint, variant, onClose, onCapture, scanMode = false }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
+  const [fileMode, setFileMode] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -71,6 +73,12 @@ export function CameraCapture({ open, title, hint, variant, onClose, onCapture, 
     setReady(false);
 
     const start = async () => {
+      // Wenn Browser keine Mediendevices unterstützt (z. B. älteres iOS,
+      // Webview ohne Kamera) direkt in den Datei-Upload-Modus wechseln.
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setFileMode(true);
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -92,7 +100,8 @@ export function CameraCapture({ open, title, hint, variant, onClose, onCapture, 
         }
       } catch (err) {
         console.error("Camera error", err);
-        setError("Kamera konnte nicht geöffnet werden. Bitte Berechtigungen prüfen.");
+        // Fallback: nativen Datei-Upload mit Kamera-Capture anbieten
+        setFileMode(true);
       }
     };
 
@@ -151,6 +160,52 @@ export function CameraCapture({ open, title, hint, variant, onClose, onCapture, 
   };
 
   if (!open) return null;
+
+  if (fileMode) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 text-white">
+          <button
+            onClick={onClose}
+            className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center"
+            aria-label="Schließen"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="text-center">
+            <p className="text-sm font-medium">{title}</p>
+            {hint && <p className="text-[11px] opacity-70">{hint}</p>}
+          </div>
+          <div className="w-10" />
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-white text-center gap-6">
+          <CameraIcon className="w-16 h-16 opacity-70" />
+          <div>
+            <p className="text-base font-medium mb-1">Live-Kamera nicht verfügbar</p>
+            <p className="text-sm opacity-70">Bitte nimm jetzt ein Foto mit deiner Geräte-Kamera auf.</p>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onCapture(file);
+              e.target.value = "";
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="rounded-full bg-white text-black px-8 py-3 font-medium"
+          >
+            Foto aufnehmen
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">

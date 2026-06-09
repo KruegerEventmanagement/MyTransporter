@@ -220,7 +220,7 @@ export function BookingSection() {
         seats: currentVehicle.seats,
         power: currentVehicle.power_kw,
       }
-    : { name: VEHICLE.name, plate: VEHICLE.plate, photo: fiatDucato, fuel: VEHICLE.fuel, payload: VEHICLE.payload, seats: null as number | null, power: null as number | null };
+    : { name: "", plate: "", photo: fiatDucato, fuel: VEHICLE.fuel, payload: VEHICLE.payload, seats: null as number | null, power: null as number | null };
   const registrationComplete = isLoggedIn || profileComplete;
 
   // Tick clock every second while a confirmation is pending so the cooldown updates live
@@ -1129,8 +1129,8 @@ export function BookingSection() {
                         firstName: regForm.firstName,
                         lastName: regForm.lastName,
                         phone: regForm.phone,
-                        vehicleName: displayVehicle.name,
-                        vehiclePlate: displayVehicle.plate,
+                        vehicleName: displayVehicle.name || undefined,
+                        vehiclePlate: displayVehicle.plate || undefined,
                       })
                     );
                    }
