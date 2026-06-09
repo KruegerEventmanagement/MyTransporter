@@ -470,7 +470,7 @@ export function BookingSection() {
         {/* Step 0: Date & Time */}
         {step === 0 && (
           <div className="mt-12 animate-fade-in-up">
-            <p className="text-center text-muted-foreground text-lg mb-8">Wähle dein Startdatum und die Uhrzeit</p>
+            <p className="text-center text-muted-foreground text-lg mb-8">Wähle deinen Zeitraum</p>
 
             <div className="flex flex-col items-center">
               <Calendar
@@ -502,76 +502,6 @@ export function BookingSection() {
                   {" "}· {rangeDays} {rangeDays === 1 ? "Tag" : "Tage"}
                 </p>
               )}
-
-              {rangeFrom && rangeTo && (
-                <div className="mt-8 w-full max-w-md">
-                  <p className="text-sm font-medium text-foreground mb-3">
-                    Startzeit am {format(rangeFrom, "PPP", { locale: de })}
-                  </p>
-                  {(() => {
-                    const now = new Date();
-                    const d = rangeFrom!;
-                    const isToday =
-                      d.getFullYear() === now.getFullYear() &&
-                      d.getMonth() === now.getMonth() &&
-                      d.getDate() === now.getDate();
-                    const currentHour = now.getHours();
-                    // Späteste Abholung: 20:00 Uhr (LATEST_START_HOUR)
-                    const canStartNow = isToday && currentHour >= 8 && currentHour <= 20;
-                    const visibleHours = isToday
-                      ? HOURS.filter((h) => h > currentHour && h <= 20)
-                      : HOURS.filter((h) => h <= 20);
-                    return (
-                      <>
-                        {canStartNow && (
-                          <button
-                            onClick={() => setStartHour(currentHour)}
-                            disabled={isHourBusy(d, currentHour)}
-                            className={`mb-3 w-full py-3 px-4 rounded-xl text-sm font-bold transition-all ${
-                              startHour === currentHour
-                                ? "bg-accent text-accent-foreground shadow-md"
-                                : "bg-foreground text-background hover:opacity-90"
-                            } disabled:opacity-30 disabled:cursor-not-allowed disabled:line-through`}
-                          >
-                            ⚡ Jetzt sofort starten ({String(currentHour).padStart(2, "0")}:
-                            {String(now.getMinutes()).padStart(2, "0")} Uhr)
-                          </button>
-                        )}
-                        {visibleHours.length > 0 ? (
-                          <div className="grid grid-cols-5 gap-2">
-                            {visibleHours.map((h) => {
-                              const busy = isHourBusy(d, h);
-                              return (
-                                <button
-                                  key={h}
-                                  onClick={() => setStartHour(h)}
-                                  disabled={busy}
-                                  title={busy ? "Bereits gebucht" : undefined}
-                                  className={`py-2 px-3 rounded-xl text-sm font-medium transition-all ${
-                                    startHour === h
-                                      ? "bg-accent text-accent-foreground shadow-md"
-                                      : busy
-                                      ? "bg-secondary/40 text-muted-foreground line-through cursor-not-allowed"
-                                      : "bg-secondary text-foreground hover:bg-accent/20"
-                                  }`}
-                                >
-                                  {h}:00
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          !canStartNow && (
-                            <p className="text-xs text-muted-foreground text-center py-4">
-                              Leider ist für heute nichts mehr verfügbar – bitte einen anderen Tag wählen.
-                            </p>
-                          )
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
             </div>
 
             <div className="mt-10 flex justify-center">
@@ -586,13 +516,88 @@ export function BookingSection() {
           </div>
         )}
 
-        {/* Step 1: Tariff */}
+        {/* Step 1: Time & Tariff */}
         {step === 1 && (
           <div className="mt-12 max-w-xl mx-auto animate-fade-in-up">
-            <p className="text-center text-muted-foreground text-lg mb-8">Wähle deinen Tarif</p>
+            <p className="text-center text-muted-foreground text-lg mb-2">Wähle deine Startzeit</p>
+            {rangeFrom && (
+              <p className="text-center text-sm text-muted-foreground mb-6">
+                am {format(rangeFrom, "PPPP", { locale: de })}
+                {rangeDays > 1 && <> · {rangeDays} Tage</>}
+              </p>
+            )}
 
-            <div className="space-y-4">
-              {availablePlans.map((plan) => {
+            {rangeFrom && (
+              <div className="w-full max-w-md mx-auto">
+                {(() => {
+                  const now = new Date();
+                  const d = rangeFrom;
+                  const isToday =
+                    d.getFullYear() === now.getFullYear() &&
+                    d.getMonth() === now.getMonth() &&
+                    d.getDate() === now.getDate();
+                  const currentHour = now.getHours();
+                  const canStartNow = isToday && currentHour >= 8 && currentHour <= 20;
+                  const visibleHours = isToday
+                    ? HOURS.filter((h) => h > currentHour && h <= 20)
+                    : HOURS.filter((h) => h <= 20);
+                  return (
+                    <>
+                      {canStartNow && (
+                        <button
+                          onClick={() => setStartHour(currentHour)}
+                          disabled={isHourBusy(d, currentHour)}
+                          className={`mb-3 w-full py-3 px-4 rounded-xl text-sm font-bold transition-all ${
+                            startHour === currentHour
+                              ? "bg-accent text-accent-foreground shadow-md"
+                              : "bg-foreground text-background hover:opacity-90"
+                          } disabled:opacity-30 disabled:cursor-not-allowed disabled:line-through`}
+                        >
+                          Jetzt sofort starten ({String(currentHour).padStart(2, "0")}:
+                          {String(now.getMinutes()).padStart(2, "0")} Uhr)
+                        </button>
+                      )}
+                      {visibleHours.length > 0 ? (
+                        <div className="grid grid-cols-5 gap-2">
+                          {visibleHours.map((h) => {
+                            const busy = isHourBusy(d, h);
+                            return (
+                              <button
+                                key={h}
+                                onClick={() => { setStartHour(h); setSelectedPlanId(null); }}
+                                disabled={busy}
+                                title={busy ? "Bereits gebucht" : undefined}
+                                className={`py-2 px-3 rounded-xl text-sm font-medium transition-all ${
+                                  startHour === h
+                                    ? "bg-accent text-accent-foreground shadow-md"
+                                    : busy
+                                    ? "bg-secondary/40 text-muted-foreground line-through cursor-not-allowed"
+                                    : "bg-secondary text-foreground hover:bg-accent/20"
+                                }`}
+                              >
+                                {h}:00
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        !canStartNow && (
+                          <p className="text-xs text-muted-foreground text-center py-4">
+                            Leider ist für heute nichts mehr verfügbar, bitte einen anderen Tag wählen.
+                          </p>
+                        )
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {startHour !== null && (
+              <>
+                <p className="text-center text-muted-foreground text-lg mt-10 mb-6">Wähle deinen Tarif</p>
+                <div className="space-y-4">
+                  {availablePlans.map((plan) => {
                 const blocked = isPlanBlocked(plan.id);
                 return (
                 <button
@@ -638,10 +643,12 @@ export function BookingSection() {
               })}
               {availablePlans.length === 0 && (
                 <div className="p-6 rounded-2xl border border-border bg-secondary text-center text-sm text-muted-foreground">
-                  Für {rangeDays} Tage bieten wir online keinen Standardtarif an. Bitte kontaktiere uns – wir machen dir ein individuelles Angebot.
+                  Für diese Auswahl bieten wir online keinen Standardtarif an. Bitte kontaktiere uns, wir machen dir ein individuelles Angebot.
                 </div>
               )}
-            </div>
+                </div>
+              </>
+            )}
 
             {/* Return time validation */}
             {selectedPlanEntry && getReturnInfo() && (
