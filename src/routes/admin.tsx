@@ -63,6 +63,10 @@ interface Booking {
   extra_charge_cents?: number | null;
   deposit_deducted_cents?: number | null;
   stripe_payment_method_id?: string | null;
+  ai_start_km?: number | null;
+  ai_end_km?: number | null;
+  ai_start_fuel_percent?: number | null;
+  ai_end_fuel_percent?: number | null;
 }
 interface Profile {
   id: string;
@@ -859,6 +863,19 @@ function CustomerDetail({
                         <Stat label="Start-KM" value={b.start_km ?? "-"} />
                         <Stat label="End-KM" value={b.end_km ?? "-"} />
                       </div>
+                      {(b.ai_start_km != null || b.ai_end_km != null || b.ai_start_fuel_percent != null || b.ai_end_fuel_percent != null) && (
+                        <div className="rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground space-y-0.5">
+                          <p className="font-medium text-foreground">🤖 KI-Erkennung</p>
+                          {b.ai_start_km != null && (
+                            <p>Start: {b.ai_start_km.toLocaleString("de-DE")} km{b.start_km != null && b.start_km !== b.ai_start_km ? ` (Nutzer: ${b.start_km.toLocaleString("de-DE")} km ⚠️)` : ""}</p>
+                          )}
+                          {b.ai_end_km != null && (
+                            <p>Ende: {b.ai_end_km.toLocaleString("de-DE")} km{b.end_km != null && b.end_km !== b.ai_end_km ? ` (Nutzer: ${b.end_km.toLocaleString("de-DE")} km ⚠️)` : ""}</p>
+                          )}
+                          {b.ai_start_fuel_percent != null && <p>Tank Start: {b.ai_start_fuel_percent}%</p>}
+                          {b.ai_end_fuel_percent != null && <p>Tank Ende: {b.ai_end_fuel_percent}%</p>}
+                        </div>
+                      )}
 
                       <SettlementPanel booking={b} onChanged={onReloadBookings} />
 

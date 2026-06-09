@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from "react";
 import { Camera, Check, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
+import { useServerFn } from "@tanstack/react-start";
+import { recognizeOdometer } from "@/lib/odometer-ai.functions";
 
 const TEST_MODE_ADMIN_EMAIL = "krueger.christian96@gmx.de";
 
@@ -41,6 +43,10 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
   const [returnCode, setReturnCode] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [aiRecognition, setAiRecognition] = useState<{ km: number | null; fuelPercent: number | null; confidence: string } | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [endFuelPercent, setEndFuelPercent] = useState<string>("");
+  const recognize = useServerFn(recognizeOdometer);
   const [kmSummary, setKmSummary] = useState<{
     driven: number;
     free: number;
@@ -131,6 +137,22 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
           setDamagePhotos((prev) => [...prev, viewUrl]);
         } else if (currentTarget.kind === "odometer") {
           setOdometerPhoto(viewUrl);
+          setAiBusy(true);
+          setAiRecognition(null);
+          try {
+            const result = await recognize({ data: { photoPath: path, bookingId, phase: "end" } });
+            setAiRecognition({ km: result.km, fuelPercent: result.fuelPercent, confidence: result.confidence });
+            if (result.km !== null && result.confidence !== "low") {
+              setEndKm(String(result.km));
+            }
+            if (result.fuelPercent !== null && result.confidence !== "low") {
+              setEndFuelPercent(String(result.fuelPercent));
+            }
+          } catch (err) {
+            console.warn("Odometer-KI nicht verfügbar", err);
+          } finally {
+            setAiBusy(false);
+          }
         } else {
           setReceiptUrl(viewUrl);
         }
@@ -184,6 +206,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
         end_km: end,
         extra_km: planId === "km" ? driven : Math.max(0, driven - free),
         extra_km_charge_cents: chargeCents,
+        ...(endFuelPercent !== "" ? { ai_end_fuel_percent: parseInt(endFuelPercent) } : {}),
       })
       .eq("id", bookingId);
 
@@ -393,6 +416,29 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
             </div>
           )}
         </button>
+
+        {aiBusy && (
+          <p className="text-xs text-muted-foreground -mt-4 mb-4">🤖 KI analysiert Tacho…</p>
+        )}
+        {!aiBusy && aiRecognition && (
+          <p className="text-xs text-muted-foreground -mt-4 mb-4">
+            🤖 KI hat erkannt:&nbsp;
+            {aiRecognition.km !== null ? `${aiRecognition.km.toLocaleString("de-DE")} km` : "Kilometerstand nicht lesbar"}
+            {aiRecognition.fuelPercent !== null ? ` · Tank ${aiRecognition.fuelPercent}%` : ""}
+            {aiRecognition.confidence === "low" ? " (unsicher – bitte prüfen)" : " – bitte prüfen"}
+          </p>
+        )}
+
+        <label className="text-sm font-medium text-foreground">Tankstand (Ende, in %)</label>
+        <input
+          type="number"
+          min={0}
+          max={100}
+          value={endFuelPercent}
+          onChange={(e) => setEndFuelPercent(e.target.value)}
+          placeholder="z.B. 75"
+          className="mt-1 mb-6 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+        />
 
         <button
           disabled={!endKm || !odometerPhoto}
