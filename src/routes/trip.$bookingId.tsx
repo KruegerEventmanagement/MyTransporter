@@ -55,8 +55,8 @@ function TripPage() {
             start_date: d.startDate,
             start_hour: d.startHour,
             pickup_code: d.pickup_code,
-            vehicle_name: "Fiat Ducato L4H2",
-            vehicle_plate: "B-MT 1234",
+            vehicle_name: d.vehicleName ?? "",
+            vehicle_plate: d.vehiclePlate ?? "",
             start_km: 42850,
           });
         }
