@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UeberUnsRouteImport } from './routes/ueber-uns'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ProfilRouteImport } from './routes/profil'
 import { Route as PartnerRouteImport } from './routes/partner'
@@ -25,6 +26,11 @@ import { Route as BuchungBookingIdRouteImport } from './routes/buchung.$bookingI
 import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
 
+const UeberUnsRoute = UeberUnsRouteImport.update({
+  id: '/ueber-uns',
+  path: '/ueber-uns',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/partner': typeof PartnerRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/ueber-uns': typeof UeberUnsRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/partner': typeof PartnerRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/ueber-uns': typeof UeberUnsRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/partner': typeof PartnerRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/ueber-uns': typeof UeberUnsRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/profil'
     | '/sitemap.xml'
+    | '/ueber-uns'
     | '/auth/confirm'
     | '/buchung/$bookingId'
     | '/checkout/return'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/profil'
     | '/sitemap.xml'
+    | '/ueber-uns'
     | '/auth/confirm'
     | '/buchung/$bookingId'
     | '/checkout/return'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/profil'
     | '/sitemap.xml'
+    | '/ueber-uns'
     | '/auth/confirm'
     | '/buchung/$bookingId'
     | '/checkout/return'
@@ -219,6 +231,7 @@ export interface RootRouteChildren {
   PartnerRoute: typeof PartnerRoute
   ProfilRoute: typeof ProfilRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  UeberUnsRoute: typeof UeberUnsRoute
   AuthConfirmRoute: typeof AuthConfirmRoute
   BuchungBookingIdRoute: typeof BuchungBookingIdRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
@@ -228,6 +241,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/ueber-uns': {
+      id: '/ueber-uns'
+      path: '/ueber-uns'
+      fullPath: '/ueber-uns'
+      preLoaderRoute: typeof UeberUnsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -347,6 +367,7 @@ const rootRouteChildren: RootRouteChildren = {
   PartnerRoute: PartnerRoute,
   ProfilRoute: ProfilRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  UeberUnsRoute: UeberUnsRoute,
   AuthConfirmRoute: AuthConfirmRoute,
   BuchungBookingIdRoute: BuchungBookingIdRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
@@ -356,3 +377,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

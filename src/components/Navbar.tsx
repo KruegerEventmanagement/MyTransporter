@@ -114,6 +114,12 @@ export function Navbar() {
           >
             Partner werden
           </Link>
+          <Link
+            to="/ueber-uns"
+            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Über uns
+          </Link>
           {!isLoggedIn ? (
             <>
               <button

@@ -93,7 +93,52 @@ export const PLAN_CATALOG: PlanEntry[] = [
 ];
 
 export function getPlanById(planId: string): PlanEntry | null {
-  return PLAN_CATALOG.find((p) => p.id === planId) ?? null;
+  const direct = PLAN_CATALOG.find((p) => p.id === planId);
+  if (direct) return direct;
+  const m = /^week_x(\d+)$/.exec(planId);
+  if (m) {
+    const n = Math.max(1, parseInt(m[1], 10));
+    const base = PLAN_CATALOG.find((p) => p.id === "multi_7d");
+    if (!base) return null;
+    const days = n * 7;
+    return {
+      ...base,
+      id: planId,
+      label: `${n} × 7 Tage Wochenmiete (${days} Tage)`,
+      shortLabel: `${n}× Wochenmiete`,
+      days,
+      durationHours: days * 24,
+      price: base.price * n,
+      freeKm: base.freeKm * n,
+      returnRule: `Rückgabe nach ${days} Tagen zur gleichen Uhrzeit`,
+      idealFor: n > 1 ? `Längere Miete: ${n} volle Wochen` : base.idealFor,
+      highlight: undefined,
+      highlightLabel: undefined,
+    };
+  }
+  return null;
+}
+
+/**
+ * Liefert die für eine Tagesanzahl + Startstunde verfügbaren Tarife.
+ * 1 Tag → alle Eintagestarife (gefiltert nach Startzeit).
+ * 2-7 Tage → genau der passende Mehrtagestarif.
+ * 8+ Tage → ein dynamisches Wochenpaket mit ceil(days/7) × Wochenmiete.
+ */
+export function getAvailablePlans(rangeDays: number, startHour: number | null): PlanEntry[] {
+  if (rangeDays <= 0) return [];
+  let candidates: PlanEntry[];
+  if (rangeDays === 1) {
+    candidates = PLAN_CATALOG.filter((p) => p.days === 1);
+  } else if (rangeDays >= 2 && rangeDays <= 7) {
+    candidates = PLAN_CATALOG.filter((p) => p.days === rangeDays);
+  } else {
+    const n = Math.ceil(rangeDays / 7);
+    const synth = getPlanById(`week_x${n}`);
+    candidates = synth ? [synth] : [];
+  }
+  if (startHour === null) return candidates;
+  return candidates.filter((p) => isStartHourAllowed(p.id, startHour));
 }
 
 /** Liefert das exakte Rückgabe-Datum/-Uhrzeit für einen Tarif. */
