@@ -4,6 +4,7 @@ import { TariffSection } from "@/components/TariffSection";
 import { AdvantagesSection } from "@/components/AdvantagesSection";
 import { CompareSection } from "@/components/CompareSection";
 import { BookingInfoSection } from "@/components/BookingInfoSection";
+import { AddonPackagesSection } from "@/components/AddonPackagesSection";
 
 export const Route = createFileRoute("/ueber-uns")({
   head: () => ({
@@ -41,6 +42,7 @@ function UeberUnsPage() {
         </div>
       </section>
       <TariffSection />
+      <AddonPackagesSection />
       <AdvantagesSection />
       <CompareSection />
       <BookingInfoSection />
