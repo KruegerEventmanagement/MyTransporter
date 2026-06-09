@@ -6,6 +6,7 @@ import { notifyAdmin } from "@/lib/admin-notify";
 import { getCheckoutSessionDetails } from "@/lib/payments.functions";
 import { sendBookingConfirmation } from "@/lib/booking-emails.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
+import { getPlanById } from "@/lib/booking-rules";
 
 export const Route = createFileRoute("/checkout/return")({
   validateSearch: (search: Record<string, unknown>): { session_id?: string } => ({
@@ -46,8 +47,9 @@ function CheckoutReturn() {
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         const { data: userData } = await supabase.auth.getUser();
 
-        const freeKmFor = (planId: string) =>
-          planId === "6h" ? 300 : planId === "24h" ? 500 : 0;
+        const planEntry = getPlanById(pending.planId);
+        const freeKm = planEntry?.freeKm ?? (pending.planId === "6h" ? 300 : pending.planId === "24h" ? 500 : 0);
+        const kmPriceCents = planEntry?.extraKmCents ?? 90;
 
         // Stripe-Session abrufen, um Customer + PaymentMethod zu speichern
         let stripeIds: {
@@ -81,8 +83,8 @@ function CheckoutReturn() {
               start_hour: pending.startHour,
               pickup_code: code,
               status: "paid",
-              free_km: freeKmFor(pending.planId),
-              km_price_cents: 90,
+              free_km: freeKm,
+              km_price_cents: kmPriceCents,
               stripe_customer_id: stripeIds.customerId,
               stripe_payment_intent_id: stripeIds.paymentIntentId,
               stripe_payment_method_id: stripeIds.paymentMethodId,

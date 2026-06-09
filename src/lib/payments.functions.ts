@@ -4,13 +4,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createStripeClient, getStripeErrorMessage, type StripeEnv } from "@/lib/stripe.server";
 
-type PlanKey = "rent_6h" | "rent_24h" | "rent_km";
+import { getPlanById } from "@/lib/booking-rules";
 
-const PLAN_PRICING: Record<PlanKey, { rent: number; label: string }> = {
-  rent_6h: { rent: 100_00, label: "Transporter-Miete · 6 Stunden" },
-  rent_24h: { rent: 150_00, label: "Transporter-Miete · 24 Stunden" },
-  rent_km: { rent: 0, label: "Transporter-Miete · Nur Kilometer (0,90 €/km)" },
-};
 const DEPOSIT_CENTS = 200_00;
 
 type CheckoutSessionResult = { clientSecret: string } | { error: string };
@@ -23,15 +18,15 @@ function assertStripeEnvironment(environment: StripeEnv) {
 
 export const createBookingCheckout = createServerFn({ method: "POST" })
   .inputValidator((data: {
-    plan: PlanKey;
+    plan: string;
     customerEmail?: string;
     userId?: string;
     returnUrl: string;
     environment: StripeEnv;
   }) => {
-    if (!["rent_6h", "rent_24h", "rent_km"].includes(data.plan)) {
-      throw new Error("Invalid plan");
-    }
+    const planId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;
+    const plan = getPlanById(planId);
+    if (!plan && planId !== "km") throw new Error("Invalid plan");
     if (!data.returnUrl) throw new Error("returnUrl fehlt");
     assertStripeEnvironment(data.environment);
     return data;
@@ -39,7 +34,11 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<CheckoutSessionResult> => {
     try {
       const stripe = createStripeClient(data.environment);
-      const plan = PLAN_PRICING[data.plan];
+      const planId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;
+      const planEntry = getPlanById(planId);
+      const plan = planEntry
+        ? { rent: planEntry.price * 100, label: `Transporter-Miete · ${planEntry.label}` }
+        : { rent: 0, label: "Transporter-Miete · Nur Kilometer (0,90 €/km)" };
 
     const line_items: Array<{
       price_data: {

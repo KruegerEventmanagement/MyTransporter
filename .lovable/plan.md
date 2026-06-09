@@ -1,78 +1,84 @@
-## Ziel
+# Buchung: Datumsbereich-Picker + neue Tarifstruktur
 
-Die Werbeflächen sollen wie auf dem hochgeladenen, beklebten Sponsoren-Transporter aussehen: dicht aneinander, vollständig auf dem Blech, **mit echten Karosserie-Konturen** (Schrägen an der Fahrertür zum Radkasten, Dreiecks-Ecke oben über der Tür, Heckecke nach hinten verjüngt). Keine Flächen mehr über Scheinwerfern, Reifen, Plastik oder in der Luft.
+## Was sich ändert
 
-## Was sich konkret ändert
+### 1. Buchungsablauf (Schritt 1 „Datum & Uhrzeit")
 
-Datei: `src/lib/partner-zones.ts` — komplett neu mit echten Polygonen statt `rect()`-Helper.
+Statt **ein Datum + Uhrzeit** wählt der Kunde jetzt wie bei einer Urlaubsbuchung **einen Datumsbereich**:
 
-### Fahrerseite (van-driver.jpg, 1536×1024) — 11 Zonen
+- Erster Klick = Startdatum, zweiter Klick = Enddatum.
+- Eintägige Buchung: zweimal auf den gleichen Tag klicken (z. B. 15. → 15.).
+- Mehrtägige Buchung: 15. → 18. = 4 Tage in einem Rutsch.
+- Erst **danach** wird die Startuhrzeit gewählt (Rückgabezeit ergibt sich automatisch aus dem Tarif, bleibt wie bisher).
+- Belegte Tage und vergangene Tage bleiben deaktiviert. Ein Bereich, der einen belegten Tag enthält, ist nicht auswählbar.
 
-Aus dem Foto abgeleitete Karosserie-Grenzen (van schaut nach links):
-- Vorderer Radkasten-Bogen: x ≈ 220–380, oben y ≈ 670
-- Fahrertür: x ≈ 380–555, unten endet am schwarzen Sill (y ≈ 720)
-- Großer Laderaum-Block: x ≈ 555–1370, oben y ≈ 295, unten y ≈ 720
-- Hinterer Radkasten-Bogen: x ≈ 1175–1340
-- Hintere Eckverjüngung: ab x ≈ 1370 geht die Karosserie schräg nach oben
+### 2. Neue Tarifstruktur (Schritt 2)
 
-Neue Zonen:
+Tarife werden basierend auf der Tagesanzahl gefiltert.
 
-- **D1 — Fahrertür (Trapez mit Rundung)**: Polygon mit Punkten, die unten dem Radkasten-Bogen folgen (5 Punkte, abgeschrägte vordere Unterkante), oben unter dem Fenster gerade.
-- **D2 — Dreieck oben hinter Fahrerfenster**: 3-Punkt-Polygon im Eck (B-Säule-Bereich), füllt die kleine Dreiecksfläche oberhalb der Tür / hinter dem Fenster.
-- **D3–D6 — obere Lade-Reihe (4 Kacheln)**: gleichmäßige Rechtecke ca. 200×195 px, y 295→490, x 555→1365.
-- **D7–D10 — untere Lade-Reihe (4 Kacheln)**: gleichmäßige Rechtecke ca. 200×220 px, y 490→715, x 555→1365.
-- **D11 — Heckeck-Streifen (Polygon mit Schräge)**: schmale Fläche x 1370→1455, oben verjüngt (oben breiter, unten schmaler, folgt dem hinteren Aufstieg der Karosserie).
+**Eintagestarife** (Start = Ende):
 
-→ 11 Zonen statt vorher 16. Keine Zonen mehr über Scheinwerfer (D16 entfällt), keine schwebenden D1/D2 vor der Tür.
+| Tarif | Preis | Inklusive | Dauer |
+|---|---|---|---|
+| 3 h Express | 39 € | 100 km | 3 Stunden |
+| 6 h Umzug Mini | 59 € | 200 km | 6 Stunden |
+| 24 h Umzugstag ★ Beliebtester Tarif | 89 € | 300 km | 24 Stunden |
+| 24 h Langstrecke ★ Bester Kilometer-Deal | 119 € | 500 km | 24 Stunden |
 
-### Beifahrerseite (van-passenger.jpg, 1536×1024) — 11 Zonen, gespiegelt
+**Mehrtagestarife** (passend zur gewählten Tagesanzahl):
 
-Van schaut nach rechts. Schiebetür-Mitte (x ≈ 740) wird **nicht** als separate Naht behandelt — Werbung darf über die Schiebetür-Naht laufen (so wie auf dem Referenzfoto auch).
+| Tage | Tarif | Preis | Inklusive | Tagespreis |
+|---|---|---|---|---|
+| 2 | Kurzprojekt | 159 € | 600 km | 79,50 €/Tag |
+| 3 | Umzug Plus ★ Beliebt für Umzüge | 219 € | 900 km | 73,00 €/Tag |
+| 4 | Renovierungs-Tarif | 289 € | 1.100 km | 72,25 €/Tag |
+| 5 | Projektwoche Mini | 349 € | 1.300 km | 69,80 €/Tag |
+| 6 | Projektwoche | 399 € | 1.400 km | 66,50 €/Tag |
+| 7 | Wochenmiete ★ Bester Tagespreis | 449 € | 1.500 km | 64,14 €/Tag |
 
-- **P1 — Beifahrertür (Trapez mit Rundung)**: spiegelverkehrt zu D1, vordere Unterkante folgt dem rechten Radkasten.
-- **P2 — Dreieck oben hinter Beifahrerfenster**: spiegelverkehrt zu D2.
-- **P3–P6 — obere Lade-Reihe (4 Kacheln)**.
-- **P7–P10 — untere Lade-Reihe (4 Kacheln)**.
-- **P11 — Heckeck-Streifen (Polygon mit Schräge)** auf der linken Bildseite (hintere Fahrzeugseite).
+Mehrkilometer: 0,39 € (Eintagestarife), 0,35 € (2–6 Tage), 0,29 € (Wochenmiete). Kaution 200 € bleibt.
 
-### Heck (van-rear.jpg, 1024×1024) — 4 Zonen
+Bei mehr als 7 Tagen: Hinweis „Bitte kontaktiere uns für längere Mieten".
 
-Über den Fenstern und unter den Fenstern, jeweils 2 Spalten (links/rechts der Mittelnaht). Die Bereiche neben den Rückleuchten werden **weggelassen** (zu schmal und Plastik-nah).
-- **R1, R2** — Header über den beiden Fenstern (y 175→260).
-- **R3, R4** — Türpanele unter den Fenstern, oberhalb des schwarzen Stoßfängers (y 480→700, x von Rückleuchten-Innenkante bis Mittelnaht/andere Seite).
+### 3. Neue Sektion auf der Startseite: „Großer L4H2-Transporter zum fairen Preis"
 
-### Front (van-front.jpg, 1024×1024) — 2 Zonen
+Unter dem Hero / über der Buchung wird ein neuer Tarifbereich eingebaut:
 
-- **F1 — Dachstreifen** über der Windschutzscheibe (Trapez, oben schmaler wegen Dachrundung): x 280→745, y 150→220.
-- **F2 — Motorhaube** zwischen Scheinwerfern, über dem Kühlergrill: leicht trapezförmig (oben schmaler), x 295→730, y 460→555. **Geht nicht** über die schwarzen Scheinwerfer-Plastikteile.
+- **Überschrift**: „Großer L4H2-Transporter zum fairen Preis"
+- **Unterüberschrift**: „Mehr Platz, faire Kilometer und transparente Preise – perfekt für Umzug, Möbeltransport, Entrümpelung und Großeinkäufe."
+- **4 Eintagestarif-Karten** mit Highlights für „Beliebtester Tarif" (89 €) und „Bester Kilometer-Deal" (119 €).
+- **Mehrtagestarife** als kompakte, aufklappbare Liste/Tabelle mit Tagespreis-Spalte, Hervorhebung 3 Tage („Beliebt für Umzüge") und 7 Tage („Bester Tagespreis").
+- Jeder Tarif bekommt einen Button „Verfügbarkeit prüfen" → scrollt zum Buchungsbereich.
 
-## Polygon-Geometrie (Beispiel D1 Fahrertür)
+### 4. Neue Sektion „Warum MyTransporter?"
 
-Statt `rect(380, 510, 175, 210)` jetzt 6-Punkt-Polygon:
-```text
-"380,510 555,510 555,720 430,720 395,705 380,665"
-```
-- Vordere Unterkante (395,705 → 380,665) schmiegt sich an die Radkasten-Rundung
-- Hintere Kante senkrecht zur B-Säule
+Vorteilsbereich mit Punkten: L4H2 lang & hoch · viel Ladevolumen · 300/500 km inklusive · sauber aufbereitet · neue Bremsen/Reifen/Federn · zuverlässig · ideal für Leonberg, Stuttgart und Umgebung. Ehrlich-positive Formulierung („nicht neu, aber technisch gepflegt").
 
-Ähnlich für D2 (Dreieck): `"380,295 555,295 555,400"` — Dreieck, das den Bereich unter der Dachrundung über der Tür füllt.
+### 5. Neue Sektion „Fair vergleichen"
+
+Kurzer Vergleichshinweis (keine Konkurrenz-Namen): „Viele Anbieter wirken im Grundpreis günstig, haben aber oft nur wenige Kilometer inklusive. Bei MyTransporter bekommst du einen großen L4H2-Transporter mit fairen Kilometerpaketen."
+
+### 6. Neue Sektion „Gut zu wissen"
+
+Hinweisbereich: Kaution nach Absprache · Führerschein & Ausweis · Übergabe mit Fotos und Protokoll · vollgetankt zurück · besenrein · Rauchen verboten · Auslandsfahrten nur nach Absprache · Baustoffe nur mit Schutzplane.
 
 ## Technische Details
 
-- `polygonAreaPx` (Shoelace) funktioniert bereits für beliebige Polygone → Preisberechnung automatisch korrekt für neue Formen.
-- `pxPerMeter` Werte bleiben: Driver/Passenger 220, Rear 297, Front 366.
-- `TransporterPhotoDiagram.tsx` rendert bereits `<polygon points={...}>` → keine Komponenten-Änderung nötig.
-- `src/routes/partner.tsx` Default-Selektion bleibt auf erstem Zonen-Code (jetzt "D1" Fahrertür statt "D4").
-- Inquiry-Formular und Server-Funktion sind bereits dynamisch (akzeptieren beliebige Zonen-Codes) → keine Änderung.
+- **`src/lib/booking-rules.ts`**: Neue `PLAN_CATALOG`-Konstante mit allen 10 Tarifen (4 Eintages, 6 Mehrtages). `computePlanReturn` erweitert: Mehrtagestarife = Start + n×24 h. `isStartHourAllowed` berücksichtigt nur 3h/6h-Endzeit-Begrenzung.
+- **`src/components/BookingSection.tsx`**:
+  - `date: Date | undefined` → `range: { from?: Date; to?: Date }`, `Calendar mode="range"`.
+  - `disabled` blockt Bereiche, die einen belegten Tag enthalten (mit `slotsForVehicle` prüfen).
+  - Tarif-Filterung nach `tageAnzahl = differenceInCalendarDays(to, from) + 1`.
+  - Startuhrzeit-Auswahl bleibt im selben Step nach Datumsbereich-Wahl sichtbar.
+  - Preisberechnung + Rückgabe-Anzeige auf neue Tarife umstellen.
+  - `AUTH_BOOKING_DRAFT_KEY` speichert jetzt `{from, to, startHour, selectedPlan}`.
+- **Neue Komponente `src/components/TariffSection.tsx`**: Tarif-Übersicht für die Landingpage (Eintages-Karten + Mehrtages-Tabelle).
+- **Neue Komponenten `AdvantagesSection.tsx`, `CompareSection.tsx`, `BookingInfoSection.tsx`**: kleine, statische Inhalts-Sektionen im monochromen Stil.
+- **`src/routes/index.tsx`**: Neue Sektionen unter dem Hero einbauen.
+- **`src/lib/payments.functions.ts` / Checkout**: Preisbetrag wird im Buchungsdraft mitgegeben, daher passt der bestehende Mechanismus, sobald `selectedPlan` die neuen Preise liefert. Plan-Keys werden auf `rent_3h | rent_6h | rent_24h_short | rent_24h_long | rent_multi_{n}d` erweitert (Mapping in `BookingSection`).
+- **`booking-emails.functions.ts` / Trip-Anzeigen**: Tarif-Labels werden aus `PLAN_CATALOG` gelesen, keine hartkodierten Strings mehr.
 
-## Ergebnis
+## Was nicht geändert wird
 
-- 28 Zonen total (11+11+4+2) statt 38, aber **deckungsgleich mit Karosserie**.
-- Tür ist ein Trapez mit abgerundeter Vorderkante zum Radkasten.
-- Dreiecks-Zone oben über der Tür (wie im Referenzfoto die kleinen Sponsoren-Aufkleber im oberen Eck).
-- Heckeck verjüngt sich nach oben.
-- Keine Zone mehr über Reifen, Scheinwerfern, Plastik-Sill oder Stoßfängern.
-
-## Geänderte Dateien
-- `src/lib/partner-zones.ts` (Komplett-Rewrite mit Polygonen)
-- `src/routes/partner.tsx` (Default-Zone "D1")
+- Belegt-Slot-Logik, Auth-Flow, Stripe-Checkout-Mechanik, PreDrive/ActiveDrive/Return-Komponenten.
+- Design bleibt strikt monochrom (Schwarz/Weiß/Grau, Fredoka), keine neuen Farben.

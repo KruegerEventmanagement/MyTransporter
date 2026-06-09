@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import { de } from "date-fns/locale";
-import { Car, ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Key, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { createBookingCheckout } from "@/lib/payments.functions";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
@@ -15,16 +15,9 @@ import { ActiveDriveScreen } from "./ActiveDriveScreen";
 import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
 import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
-import { computePlanReturn } from "@/lib/booking-rules";
+import { computePlanReturn, PLAN_CATALOG, DEPOSIT_EUR, isStartHourAllowed } from "@/lib/booking-rules";
 
-const PRICING = [
-  { id: "6h", hours: 6, price: 100, freeKm: 300, label: "6 Stunden", returnRule: "Rückgabe bis spätestens 22:00 Uhr" },
-  { id: "24h", hours: 24, price: 150, freeKm: 500, label: "24 Stunden", returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit" },
-  { id: "km", hours: 0, price: 0, freeKm: 0, label: "Nur Kilometer", returnRule: "Rückgabe am selben Tag bis spätestens 22:00 Uhr" },
-];
-
-const DEPOSIT = 200;
-const KM_PRICE = 0.9;
+const DEPOSIT = DEPOSIT_EUR;
 
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8:00 - 20:00 (letzte Buchung 20 Uhr)
 
@@ -60,9 +53,9 @@ const RESEND_LAST_SENT_KEY = "mt_resend_last_sent";
 
 export function BookingSection() {
   const [step, setStep] = useState(0);
-  const [date, setDate] = useState<Date | undefined>();
+  const [range, setRange] = useState<{ from?: Date; to?: Date } | undefined>();
   const [startHour, setStartHour] = useState<number | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authUser, setAuthUser] = useState<{ id: string; email?: string } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
@@ -107,6 +100,56 @@ export function BookingSection() {
   const slotsForVehicle = busySlots.filter(
     (s) => !currentPlate || !s.vehiclePlate || s.vehiclePlate === currentPlate,
   );
+
+  // Convenience: range start/end + day count
+  const rangeFrom = range?.from;
+  const rangeTo = range?.to ?? range?.from;
+  const rangeDays = rangeFrom && rangeTo ? differenceInCalendarDays(rangeTo, rangeFrom) + 1 : 0;
+  const date = rangeFrom; // bestehender Code unten verwendet `date` als Startdatum
+
+  // Set belegter Tage (YYYY-MM-DD), basierend auf slotsForVehicle
+  const busyDateSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of slotsForVehicle) {
+      const bs = new Date(s.start);
+      const be = new Date(s.end);
+      const d = new Date(bs.getFullYear(), bs.getMonth(), bs.getDate());
+      while (d.getTime() < be.getTime()) {
+        set.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+        d.setDate(d.getDate() + 1);
+      }
+    }
+    return set;
+  }, [slotsForVehicle]);
+
+  const dayKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  const handleRangeSelect = (next: { from?: Date; to?: Date } | undefined) => {
+    if (!next?.from) {
+      setRange(undefined);
+      return;
+    }
+    // Wenn ein Range gewählt wurde, prüfen ob ein Tag drin belegt ist
+    if (next.to) {
+      const start = next.from < next.to ? next.from : next.to;
+      const end = next.from < next.to ? next.to : next.from;
+      const cursor = new Date(start);
+      while (cursor.getTime() <= end.getTime()) {
+        if (busyDateSet.has(dayKey(cursor))) {
+          // Ungültig → nur Startdatum übernehmen
+          setRange({ from: next.from, to: undefined });
+          setSelectedPlanId(null);
+          return;
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      setRange({ from: start, to: end });
+    } else {
+      setRange({ from: next.from, to: undefined });
+    }
+    setSelectedPlanId(null);
+  };
 
   // Prüft, ob [start, start+hours) sich mit einer belegten Periode überschneidet
   const overlapsBusy = (startMs: number, hours: number) => {
@@ -199,13 +242,19 @@ export function BookingSection() {
         const savedDraft = localStorage.getItem(AUTH_BOOKING_DRAFT_KEY);
         if (savedDraft) {
           const draft = JSON.parse(savedDraft) as {
-            date?: string;
+            from?: string;
+            to?: string;
             startHour?: number | null;
-            selectedPlan?: number | null;
+            selectedPlanId?: string | null;
           };
-          if (draft.date) setDate(new Date(draft.date));
+          if (draft.from) {
+            setRange({
+              from: new Date(draft.from),
+              to: draft.to ? new Date(draft.to) : new Date(draft.from),
+            });
+          }
           if (typeof draft.startHour === "number") setStartHour(draft.startHour);
-          if (typeof draft.selectedPlan === "number") setSelectedPlan(draft.selectedPlan);
+          if (typeof draft.selectedPlanId === "string") setSelectedPlanId(draft.selectedPlanId);
         }
       } catch {
         localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
@@ -267,9 +316,10 @@ export function BookingSection() {
     localStorage.setItem(
       AUTH_BOOKING_DRAFT_KEY,
       JSON.stringify({
-        date: date?.toISOString(),
+        from: rangeFrom?.toISOString(),
+        to: rangeTo?.toISOString(),
         startHour,
-        selectedPlan,
+        selectedPlanId,
       }),
     );
     const { data, error } = await supabase.auth.signUp({
@@ -343,21 +393,25 @@ export function BookingSection() {
     localStorage.setItem(RESEND_LAST_SENT_KEY, String(now));
   };
 
-  const canProceedStep0 = date !== undefined && startHour !== null;
-  const canProceedStep1 = selectedPlan !== null;
+  const canProceedStep0 = rangeFrom !== undefined && rangeTo !== undefined && startHour !== null;
+  const canProceedStep1 = selectedPlanId !== null;
 
-  // Filter available plans based on start hour
-  const availablePlans = PRICING.filter((plan) => {
+  // Tarife passend zur gewählten Tagesanzahl
+  const availablePlans = PLAN_CATALOG.filter((plan) => {
+    if (rangeDays <= 0) return true;
+    if (rangeDays === 1) return plan.days === 1;
+    return plan.days === rangeDays;
+  }).filter((plan) => {
     if (startHour === null) return true;
-    if (plan.id === "6h") return startHour + 6 <= 22;
-    return true;
+    return isStartHourAllowed(plan.id, startHour);
   });
+
+  const selectedPlanEntry = selectedPlanId ? PLAN_CATALOG.find((p) => p.id === selectedPlanId) ?? null : null;
 
   // Return info for selected plan
   const getReturnInfo = () => {
-    if (selectedPlan === null || startHour === null || !date) return null;
-    const plan = PRICING[selectedPlan];
-    const ret = computePlanReturn(plan.id, date, startHour);
+    if (!selectedPlanEntry || startHour === null || !date) return null;
+    const ret = computePlanReturn(selectedPlanEntry.id, date, startHour);
     const sameDay =
       ret.getDate() === date.getDate() &&
       ret.getMonth() === date.getMonth() &&
@@ -366,19 +420,13 @@ export function BookingSection() {
       ? "am selben Tag"
       : `am ${format(ret, "EEEE, d. MMMM", { locale: de })}`;
     const timeStr = format(ret, "HH:mm", { locale: de });
-    if (plan.id === "6h") {
+    if (selectedPlanEntry.durationHours < 24) {
       return { valid: true, msg: `Rückgabe ${dayStr} bis ${timeStr} Uhr` };
     }
-    if (plan.id === "24h") {
-      return { valid: true, msg: `Rückgabe ${dayStr} bis ${timeStr} Uhr (genau 24 h)` };
-    }
-    // km
-    return { valid: true, msg: `Rückgabe heute bis spätestens ${timeStr} Uhr` };
+    return { valid: true, msg: `Rückgabe ${dayStr} bis ${timeStr} Uhr` };
   };
 
-  const total = selectedPlan !== null && PRICING[selectedPlan].price > 0
-    ? PRICING[selectedPlan].price + DEPOSIT
-    : selectedPlan !== null ? DEPOSIT : null;
+  const total = selectedPlanEntry ? selectedPlanEntry.price + DEPOSIT : null;
 
   const [paid, setPaid] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
@@ -396,14 +444,7 @@ export function BookingSection() {
   // Wenn Registrierung übersprungen wird, mappen wir step 4/5 auf Stepper-Position 3/4
   const stepperIndex = registrationComplete && step >= 3 ? step - 1 : step;
 
-  const planKey: "rent_6h" | "rent_24h" | "rent_km" | null =
-    selectedPlan === null
-      ? null
-      : PRICING[selectedPlan].id === "6h"
-      ? "rent_6h"
-      : PRICING[selectedPlan].id === "24h"
-      ? "rent_24h"
-      : "rent_km";
+  const planKey: string | null = selectedPlanEntry ? `rent_${selectedPlanEntry.id}` : null;
 
   return (
     <section id="booking" className="py-6 px-3 sm:px-4 overflow-x-hidden">
@@ -436,29 +477,47 @@ export function BookingSection() {
 
             <div className="flex flex-col items-center">
               <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
+                mode="range"
+                selected={range as { from: Date | undefined; to: Date | undefined }}
+                onSelect={handleRangeSelect}
+                numberOfMonths={1}
                 locale={de}
                 disabled={(d) => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
-                  return d < today;
+                  if (d < today) return true;
+                  return busyDateSet.has(dayKey(d));
                 }}
                 className="rounded-3xl border border-border p-8 shadow-lg pointer-events-auto text-lg [--cell-size:3.5rem]"
               />
 
-              {date && (
+              {rangeFrom && !rangeTo && (
+                <p className="mt-4 text-sm text-muted-foreground text-center">
+                  Startdatum: <strong className="text-foreground">{format(rangeFrom, "PPP", { locale: de })}</strong> · Wähle jetzt das Enddatum (für 1 Tag: erneut auf denselben Tag klicken)
+                </p>
+              )}
+              {rangeFrom && rangeTo && (
+                <p className="mt-4 text-sm text-muted-foreground text-center">
+                  Zeitraum: <strong className="text-foreground">{format(rangeFrom, "PPP", { locale: de })}</strong>
+                  {rangeDays > 1 && (
+                    <> bis <strong className="text-foreground">{format(rangeTo, "PPP", { locale: de })}</strong></>
+                  )}
+                  {" "}· {rangeDays} {rangeDays === 1 ? "Tag" : "Tage"}
+                </p>
+              )}
+
+              {rangeFrom && rangeTo && (
                 <div className="mt-8 w-full max-w-md">
                   <p className="text-sm font-medium text-foreground mb-3">
-                    Startzeit am {format(date, "PPP", { locale: de })}
+                    Startzeit am {format(rangeFrom, "PPP", { locale: de })}
                   </p>
                   {(() => {
                     const now = new Date();
+                    const d = rangeFrom!;
                     const isToday =
-                      date.getFullYear() === now.getFullYear() &&
-                      date.getMonth() === now.getMonth() &&
-                      date.getDate() === now.getDate();
+                      d.getFullYear() === now.getFullYear() &&
+                      d.getMonth() === now.getMonth() &&
+                      d.getDate() === now.getDate();
                     const currentHour = now.getHours();
                     // Späteste Abholung: 20:00 Uhr (LATEST_START_HOUR)
                     const canStartNow = isToday && currentHour >= 8 && currentHour <= 20;
@@ -470,7 +529,7 @@ export function BookingSection() {
                         {canStartNow && (
                           <button
                             onClick={() => setStartHour(currentHour)}
-                            disabled={isHourBusy(date, currentHour)}
+                            disabled={isHourBusy(d, currentHour)}
                             className={`mb-3 w-full py-3 px-4 rounded-xl text-sm font-bold transition-all ${
                               startHour === currentHour
                                 ? "bg-accent text-accent-foreground shadow-md"
@@ -484,7 +543,7 @@ export function BookingSection() {
                         {visibleHours.length > 0 ? (
                           <div className="grid grid-cols-5 gap-2">
                             {visibleHours.map((h) => {
-                              const busy = isHourBusy(date, h);
+                              const busy = isHourBusy(d, h);
                               return (
                                 <button
                                   key={h}
@@ -537,16 +596,15 @@ export function BookingSection() {
 
             <div className="space-y-4">
               {availablePlans.map((plan) => {
-                const idx = PRICING.findIndex((p) => p.id === plan.id);
                 const blocked = isPlanBlocked(plan.id);
                 return (
                 <button
                   key={plan.id}
-                  onClick={() => !blocked && setSelectedPlan(idx)}
+                  onClick={() => !blocked && setSelectedPlanId(plan.id)}
                   disabled={blocked}
                   title={blocked ? "Zeitraum überschneidet sich mit einer bestehenden Buchung" : undefined}
                   className={`w-full p-6 rounded-2xl border-2 text-left transition-all ${
-                    selectedPlan === idx
+                    selectedPlanId === plan.id
                       ? "border-accent bg-accent/5 shadow-md"
                       : blocked
                       ? "border-border opacity-40 cursor-not-allowed"
@@ -555,46 +613,46 @@ export function BookingSection() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-lg font-medium text-foreground">{plan.label}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-lg font-medium text-foreground">{plan.label}</p>
+                        {plan.highlightLabel && (
+                          <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-foreground text-background font-semibold">
+                            {plan.highlightLabel}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">{plan.returnRule}</p>
                       {plan.freeKm > 0 && (
-                        <p className="text-xs text-foreground/80 mt-1">{plan.freeKm} km inklusive · danach 0,90 €/km</p>
+                        <p className="text-xs text-foreground/80 mt-1">{plan.freeKm.toLocaleString("de-DE")} km inklusive · danach {(plan.extraKmCents / 100).toFixed(2).replace(".", ",")} €/km</p>
                       )}
                       {blocked && (
                         <p className="text-xs text-destructive mt-1">In diesem Zeitraum bereits gebucht</p>
                       )}
                     </div>
-                    {plan.price > 0 ? (
-                      <p className="text-2xl font-bold text-foreground">{plan.price} €</p>
-                    ) : (
-                      <p className="text-2xl font-bold text-foreground">0,90 €<span className="text-sm font-normal">/km</span></p>
-                    )}
+                    <p className="text-2xl font-bold text-foreground whitespace-nowrap">{plan.price} €</p>
                   </div>
+                  {plan.days > 1 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      ≈ {(plan.price / plan.days).toFixed(2).replace(".", ",")} € pro Tag
+                    </p>
+                  )}
                 </button>
                 );
               })}
+              {availablePlans.length === 0 && (
+                <div className="p-6 rounded-2xl border border-border bg-secondary text-center text-sm text-muted-foreground">
+                  Für {rangeDays} Tage bieten wir online keinen Standardtarif an. Bitte kontaktiere uns – wir machen dir ein individuelles Angebot.
+                </div>
+              )}
             </div>
 
             {/* Return time validation */}
-            {selectedPlan !== null && getReturnInfo() && (
+            {selectedPlanEntry && getReturnInfo() && (
               <div className={`mt-4 p-4 rounded-xl ${getReturnInfo()!.valid ? "bg-secondary" : "bg-destructive/10 border border-destructive/30"}`}>
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
                   <p className={`text-sm ${getReturnInfo()!.valid ? "text-muted-foreground" : "text-destructive"}`}>
                     {getReturnInfo()!.msg}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Kilometer extra info */}
-            {selectedPlan === 2 && (
-              <div className="mt-4 p-4 rounded-xl bg-accent/5 border border-accent/20">
-                <div className="flex items-center gap-2">
-                  <Car className="w-4 h-4 text-accent" />
-                  <p className="text-sm text-muted-foreground">
-                    Kilometer werden per Foto des Kilometerstands (Start & Ende) von unserer KI berechnet. Mindestbetrag: 100 €.
-                    Vorab werden pauschal 50 € berechnet. Fährst du weniger, wird dir die Differenz erstattet. Fährst du mehr, zahlst du den Restbetrag nach.
                   </p>
                 </div>
               </div>
@@ -724,10 +782,7 @@ export function BookingSection() {
                   <p className="text-3xl font-bold">{total} €</p>
                 </div>
                 <p className="text-sm opacity-80 mt-1">
-                  {PRICING[selectedPlan!].price > 0
-                    ? `inkl. ${PRICING[selectedPlan!].price} € Miete + ${DEPOSIT} € Kaution`
-                    : `${DEPOSIT} € Kaution + 0,90 €/km (wird beim Checkout berechnet)`
-                  }
+                  {selectedPlanEntry && `inkl. ${selectedPlanEntry.price} € Miete + ${DEPOSIT} € Kaution`}
                 </p>
               </div>
             )}
@@ -1037,10 +1092,7 @@ export function BookingSection() {
                   <p className="text-3xl font-bold">{total} €</p>
                 </div>
                 <p className="text-sm opacity-80 mt-1">
-                  {PRICING[selectedPlan!].price > 0
-                    ? `${PRICING[selectedPlan!].price} € Miete + ${DEPOSIT} € Kaution`
-                    : `${DEPOSIT} € Kaution · Kilometerkosten werden nach Fahrt berechnet`
-                  }
+                  {selectedPlanEntry && `${selectedPlanEntry.price} € Miete + ${DEPOSIT} € Kaution`}
                 </p>
               </div>
             )}
@@ -1049,13 +1101,13 @@ export function BookingSection() {
               <button
                 onClick={async () => {
                   // Pending Booking für /checkout/return persistieren
-                  if (typeof window !== "undefined" && date && startHour !== null && selectedPlan !== null) {
+                  if (typeof window !== "undefined" && date && startHour !== null && selectedPlanEntry) {
                     localStorage.setItem(
                       "mt_pending_booking",
                       JSON.stringify({
-                        planId: PRICING[selectedPlan].id,
-                        planLabel: PRICING[selectedPlan].label,
-                        planPrice: PRICING[selectedPlan].price,
+                        planId: selectedPlanEntry.id,
+                        planLabel: selectedPlanEntry.label,
+                        planPrice: selectedPlanEntry.price,
                         startDate: format(date, "yyyy-MM-dd"),
                         startHour,
                         email: regForm.email,
