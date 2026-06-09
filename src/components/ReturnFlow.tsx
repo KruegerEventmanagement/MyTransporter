@@ -564,7 +564,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
         )}
 
         <button
-          disabled={!receiptUrl}
+          disabled={!receiptUrl || (!!addons && addons.length > 0 && !addonsReturned)}
           onClick={handleFinish}
           className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
         >
