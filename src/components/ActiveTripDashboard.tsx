@@ -7,7 +7,9 @@ import { de } from "date-fns/locale";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import { computePlanReturn } from "@/lib/booking-rules";
 
-const GOOGLE_MAPS_API_KEY = "AIzaSyAidsYmswSyYosN9yKXswFF3RtJxk8pclc";
+const GOOGLE_MAPS_API_KEY =
+  (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined) ||
+  "AIzaSyAidsYmswSyYosN9yKXswFF3RtJxk8pclc";
 
 // Monochromer Karten-Style passend zur Marke
 const MONOCHROME_STYLE: google.maps.MapTypeStyle[] = [
