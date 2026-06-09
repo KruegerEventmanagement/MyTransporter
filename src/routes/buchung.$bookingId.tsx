@@ -36,6 +36,8 @@ interface Booking {
   extra_km_charge_cents: number | null;
   km_price_cents: number | null;
   free_km: number | null;
+  addons: Array<{ id: string; label: string; price_cents: number }> | null;
+  addons_total_cents: number | null;
 }
 
 interface TripPhoto {
