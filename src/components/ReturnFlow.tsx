@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from "react";
 import { Camera, Check, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
+import { useServerFn } from "@tanstack/react-start";
+import { recognizeOdometer } from "@/lib/odometer-ai.functions";
 
 const TEST_MODE_ADMIN_EMAIL = "krueger.christian96@gmx.de";
 
@@ -41,6 +43,10 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
   const [returnCode, setReturnCode] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [aiRecognition, setAiRecognition] = useState<{ km: number | null; fuelPercent: number | null; confidence: string } | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [endFuelPercent, setEndFuelPercent] = useState<string>("");
+  const recognize = useServerFn(recognizeOdometer);
   const [kmSummary, setKmSummary] = useState<{
     driven: number;
     free: number;
@@ -131,6 +137,22 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
           setDamagePhotos((prev) => [...prev, viewUrl]);
         } else if (currentTarget.kind === "odometer") {
           setOdometerPhoto(viewUrl);
+          setAiBusy(true);
+          setAiRecognition(null);
+          try {
+            const result = await recognize({ data: { photoPath: path, bookingId, phase: "end" } });
+            setAiRecognition({ km: result.km, fuelPercent: result.fuelPercent, confidence: result.confidence });
+            if (result.km !== null && result.confidence !== "low") {
+              setEndKm(String(result.km));
+            }
+            if (result.fuelPercent !== null && result.confidence !== "low") {
+              setEndFuelPercent(String(result.fuelPercent));
+            }
+          } catch (err) {
+            console.warn("Odometer-KI nicht verfügbar", err);
+          } finally {
+            setAiBusy(false);
+          }
         } else {
           setReceiptUrl(viewUrl);
         }
