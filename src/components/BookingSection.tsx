@@ -101,10 +101,13 @@ export function BookingSection() {
     (s) => !currentPlate || !s.vehiclePlate || s.vehiclePlate === currentPlate,
   );
 
-  // Convenience: range start/end + day count
+  // Convenience: range start/end + Nächtezahl
+  // Wichtig: 1 Nacht = 1 Tag. Selber Tag (0 Nächte) = Tagesmiete (<24h).
   const rangeFrom = range?.from;
   const rangeTo = range?.to ?? range?.from;
-  const rangeDays = rangeFrom && rangeTo ? differenceInCalendarDays(rangeTo, rangeFrom) + 1 : 0;
+  const nights = rangeFrom && rangeTo ? differenceInCalendarDays(rangeTo, rangeFrom) : -1;
+  // Für UI-Anzeige: 0 Nächte → "Tagesmiete", sonst N Tage = N Nächte
+  const rangeDays = nights; // semantisch = Nächte
   const date = rangeFrom; // bestehender Code unten verwendet `date` als Startdatum
 
   // Set belegter Tage (YYYY-MM-DD), basierend auf slotsForVehicle
@@ -400,8 +403,8 @@ export function BookingSection() {
   const canProceedStep0 = rangeFrom !== undefined && rangeTo !== undefined;
   const canProceedStep1 = startHour !== null && selectedPlanId !== null;
 
-  // Tarife passend zur gewählten Tagesanzahl + Startstunde
-  const availablePlans = getAvailablePlans(rangeDays, startHour);
+  // Tarife passend zur gewählten Nächtezahl + Startstunde
+  const availablePlans = getAvailablePlans(nights, startHour);
 
   const selectedPlanEntry = selectedPlanId ? getPlanById(selectedPlanId) : null;
 
@@ -490,16 +493,18 @@ export function BookingSection() {
 
               {rangeFrom && !rangeTo && (
                 <p className="mt-4 text-sm text-muted-foreground text-center">
-                  Startdatum: <strong className="text-foreground">{format(rangeFrom, "PPP", { locale: de })}</strong> · Wähle jetzt das Enddatum (für 1 Tag: erneut auf denselben Tag klicken)
+                  Startdatum: <strong className="text-foreground">{format(rangeFrom, "PPP", { locale: de })}</strong> · Wähle jetzt das Enddatum (für Tagesmiete unter 24h: erneut auf denselben Tag klicken)
                 </p>
               )}
               {rangeFrom && rangeTo && (
                 <p className="mt-4 text-sm text-muted-foreground text-center">
                   Zeitraum: <strong className="text-foreground">{format(rangeFrom, "PPP", { locale: de })}</strong>
-                  {rangeDays > 1 && (
+                  {nights >= 1 && (
                     <> bis <strong className="text-foreground">{format(rangeTo, "PPP", { locale: de })}</strong></>
                   )}
-                  {" "}· {rangeDays} {rangeDays === 1 ? "Tag" : "Tage"}
+                  {" "}· {nights === 0
+                    ? "Tagesmiete (3h/6h)"
+                    : `${nights} ${nights === 1 ? "Tag" : "Tage"} (${nights} ${nights === 1 ? "Nacht" : "Nächte"})`}
                 </p>
               )}
             </div>
@@ -523,7 +528,8 @@ export function BookingSection() {
             {rangeFrom && (
               <p className="text-center text-sm text-muted-foreground mb-6">
                 am {format(rangeFrom, "PPPP", { locale: de })}
-                {rangeDays > 1 && <> · {rangeDays} Tage</>}
+                {nights === 0 && <> · Tagesmiete</>}
+                {nights >= 1 && <> · {nights} {nights === 1 ? "Tag" : "Tage"}</>}
               </p>
             )}
 
@@ -647,6 +653,11 @@ export function BookingSection() {
                 </div>
               )}
                 </div>
+                {nights === 1 && availablePlans.length > 0 && (
+                  <p className="mt-3 text-xs text-muted-foreground text-center">
+                    Rückgabe am Folgetag zur gleichen Uhrzeit. Brauchst du länger? Wähle im Kalender mehr Tage.
+                  </p>
+                )}
               </>
             )}
 
