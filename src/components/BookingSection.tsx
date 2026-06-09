@@ -493,16 +493,18 @@ export function BookingSection() {
 
               {rangeFrom && !rangeTo && (
                 <p className="mt-4 text-sm text-muted-foreground text-center">
-                  Startdatum: <strong className="text-foreground">{format(rangeFrom, "PPP", { locale: de })}</strong> · Wähle jetzt das Enddatum (für 1 Tag: erneut auf denselben Tag klicken)
+                  Startdatum: <strong className="text-foreground">{format(rangeFrom, "PPP", { locale: de })}</strong> · Wähle jetzt das Enddatum (für Tagesmiete unter 24h: erneut auf denselben Tag klicken)
                 </p>
               )}
               {rangeFrom && rangeTo && (
                 <p className="mt-4 text-sm text-muted-foreground text-center">
                   Zeitraum: <strong className="text-foreground">{format(rangeFrom, "PPP", { locale: de })}</strong>
-                  {rangeDays > 1 && (
+                  {nights >= 1 && (
                     <> bis <strong className="text-foreground">{format(rangeTo, "PPP", { locale: de })}</strong></>
                   )}
-                  {" "}· {rangeDays} {rangeDays === 1 ? "Tag" : "Tage"}
+                  {" "}· {nights === 0
+                    ? "Tagesmiete (3h/6h)"
+                    : `${nights} ${nights === 1 ? "Tag" : "Tage"} (${nights} ${nights === 1 ? "Nacht" : "Nächte"})`}
                 </p>
               )}
             </div>
@@ -526,7 +528,8 @@ export function BookingSection() {
             {rangeFrom && (
               <p className="text-center text-sm text-muted-foreground mb-6">
                 am {format(rangeFrom, "PPPP", { locale: de })}
-                {rangeDays > 1 && <> · {rangeDays} Tage</>}
+                {nights === 0 && <> · Tagesmiete</>}
+                {nights >= 1 && <> · {nights} {nights === 1 ? "Tag" : "Tage"}</>}
               </p>
             )}
 
