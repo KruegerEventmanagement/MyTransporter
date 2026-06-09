@@ -27,6 +27,7 @@ interface Booking {
   free_km?: number | null;
   km_price_cents?: number | null;
   addons?: Array<{ id: string; label: string; price_cents: number }> | null;
+  status?: string | null;
 }
 
 function TripPage() {
@@ -73,6 +74,12 @@ function TripPage() {
       if (data) {
         setBooking(data as Booking);
         if (data.start_km) setStartKm(data.start_km);
+        // Phase aus Buchungsstatus ableiten, damit ein Reload während aktiver
+        // Fahrt oder Rückgabe nicht zurück auf "Schlüssel abholen" springt.
+        const status = (data as { status?: string | null }).status;
+        if (status === "active") setPhase("active");
+        else if (status === "returning") setPhase("return");
+        else if (status === "completed" || status === "cancelled") setPhase("done");
       }
       setLoading(false);
     };
