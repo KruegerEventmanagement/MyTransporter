@@ -49,6 +49,10 @@ export type Database = {
       }
       bookings: {
         Row: {
+          ai_end_fuel_percent: number | null
+          ai_end_km: number | null
+          ai_start_fuel_percent: number | null
+          ai_start_km: number | null
           created_at: string
           deposit: number
           deposit_deducted_cents: number | null
@@ -88,6 +92,10 @@ export type Database = {
           vehicle_plate: string
         }
         Insert: {
+          ai_end_fuel_percent?: number | null
+          ai_end_km?: number | null
+          ai_start_fuel_percent?: number | null
+          ai_start_km?: number | null
           created_at?: string
           deposit?: number
           deposit_deducted_cents?: number | null
@@ -127,6 +135,10 @@ export type Database = {
           vehicle_plate?: string
         }
         Update: {
+          ai_end_fuel_percent?: number | null
+          ai_end_km?: number | null
+          ai_start_fuel_percent?: number | null
+          ai_start_km?: number | null
           created_at?: string
           deposit?: number
           deposit_deducted_cents?: number | null
