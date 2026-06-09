@@ -1,91 +1,78 @@
-
 ## Ziel
 
-Nach jedem Tacho-Foto (Pre-Drive & Return) erkennt die KI automatisch:
-- **Kilometerstand** (z. B. 42850)
-- **Tankstand** in Prozent (z. B. 75 %)
+Zwei optionale Zusatzpakete als echte Add-Ons in den Buchungsflow integrieren (Auswahl, Bezahlung, Speicherung, Anzeige) und zusätzlich eine schöne Marketing-Sektion auf `/ueber-uns` unter den Tarifen einbauen.
 
-Der erkannte Wert wird ins jeweilige Eingabefeld geschrieben. Der Nutzer **sieht den Wert und kann ihn vor dem Bestätigen manuell korrigieren** (Sicherheit gegen Falscherkennung).
+## Pakete (zentrale Quelle der Wahrheit)
 
-Beim Rückgabe-Foto vergleicht das System Start- vs. End-KM, berechnet Mehrkilometer automatisch und der Admin kann (wie bisher in `chargeBookingExtra`) die Karte off-session belasten.
+Neu: `src/lib/addons.ts`
+- `sicher_transport` – „Sicher-Transport Paket", 19 €, Badge „Beliebtestes Zusatzpaket"
+- `profi_umzug` – „Profi-Umzug Paket", 49 €, Badge „Bester Komfort"
+- Inhalte, Beschreibung und Button-Text exakt wie vom User vorgegeben.
 
-## Standard-Entscheidungen (da übersprungen)
+So bleibt es eine Quelle, die UI, Checkout, DB-Snapshot und Admin nutzen.
 
-- **Umfang**: Tacho + Tankstand erkennen (ein Foto-Aufruf, eine KI-Antwort)
-- **UX**: KI-Wert wird vorgeschlagen, Eingabefeld bleibt editierbar
-- **Modell**: `google/gemini-2.5-flash` (multimodal, schnell, günstig — bewährt für solche Erkennungen)
+## 1. Neuer Schritt im Buchungsflow ("Zusatzpakete")
 
-## Architektur
+In `src/components/BookingSection.tsx`:
 
-```
-Browser (PreDriveFlow / ReturnFlow)
-   │ Foto hochgeladen → Storage-Pfad
-   ▼
-createServerFn: recognizeOdometer({ photoPath })
-   │ signed URL erstellen
-   │ Lovable AI Gateway: gemini-2.5-flash mit Bild + Prompt
-   │ strukturierte Antwort: { km: number|null, fuelPercent: number|null, confidence: "low"|"med"|"high" }
-   ▼
-UI: Felder werden vorausgefüllt, "KI hat erkannt: 42.850 km / 75% – bitte prüfen"
-```
+- Neuen Step „Zusatzpakete" zwischen aktuellem Step 2 (Fahrzeug) und Bezahlung einfügen.
+  - Stepper-Titel werden um „Zubehör" erweitert.
+  - Step-Indizes verschieben sich um 1 (alle `setStep`-Aufrufe + Conditional-Renderings entsprechend angepasst).
+- State: `const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([])`. Mehrfachauswahl möglich; beide Pakete können kombiniert werden. Optional bleibt „weiter ohne Zubehör" erlaubt.
+- UI: zwei große Karten (mobil-optimiert), Badges, Inhaltsliste (Check-Icons), Preis, Toggle-Button „Paket hinzufügen" / „Hinzugefügt – entfernen".
+- Unter den Karten: Hinweistext (Verfügbarkeit / Rückgabe / Ersatzkosten) + Vertrauenshinweis (genau die vom User formulierten Texte).
+- Gesamtbetrag (`total`) wird neu berechnet:  
+  `total = plan.price + DEPOSIT + Summe(addons.price)`  
+  Wird in der Summary auf Step Fahrzeug, Zubehör und Bezahlen angezeigt, mit Aufschlüsselung „Miete + Zubehör + Kaution".
 
-## Änderungen im Code
+## 2. Stripe-Checkout um Add-On-Line-Items erweitern
 
-### 1. Neue Server Function
-**Datei**: `src/lib/odometer-ai.functions.ts`
-- `recognizeOdometer({ photoPath, bookingId })`
-- Auth-geschützt via `requireSupabaseAuth`
-- Lädt Bild als Base64 oder signed URL aus `trip-photos` Bucket
-- Ruft Lovable AI Gateway (Provider-Helper aus `ai-sdk-lovable-gateway`)
-- Strukturierte Ausgabe via Zod-Schema: `{ km, fuelPercent, confidence, reasoning }`
-- Speichert Erkennungswerte in neuer Spalte (siehe Migration unten) – auch wenn der Nutzer korrigiert, bleibt der KI-Originalwert nachvollziehbar.
+`src/lib/payments.functions.ts` → `createBookingCheckout`:
+- Neue Eingabe `addonIds: string[]` (validiert gegen `addons.ts`).
+- Für jedes gewähltes Add-On ein zusätzliches `line_item` (Name + Preis aus zentraler Definition).
+- `metadata.addonIds` mitspeichern (für Webhooks / Debugging).
 
-### 2. AI Gateway Helper (falls noch nicht vorhanden)
-**Datei**: `src/lib/ai-gateway.server.ts` – exportiert `createLovableAiGatewayProvider(LOVABLE_API_KEY)`.
+In `BookingSection` werden `addonIds` beim Start des Checkouts mit übergeben und zusammen mit Preis/Label in `mt_pending_booking` (localStorage) abgelegt.
 
-### 3. PreDriveFlow.tsx
-- Nach erfolgreichem Tacho-Foto-Upload: `recognizeOdometer` aufrufen
-- Spinner/„KI analysiert..." anzeigen
-- Bei Erfolg: `setStartKm(String(km))` + Hinweis-Banner „KI: 42.850 km erkannt – bitte prüfen"
-- Bei Fehler/null: stillschweigend ignorieren, Nutzer tippt manuell
+## 3. DB-Migration: Add-Ons auf der Buchung speichern
 
-### 4. ReturnFlow.tsx
-- Gleiche Logik nach `kind: "odometer"` für End-KM
-- Tankstand: neues Feld unter dem Tacho-Foto („Tankstand bei Rückgabe: 75 %") + Korrekturmöglichkeit
+Neue Felder auf `public.bookings`:
+- `addons jsonb not null default '[]'` – Snapshot `[{ id, label, price_cents }]`
+- `addons_total_cents integer not null default 0`
 
-### 5. Datenbank-Migration
-Neue Spalten in `bookings`:
-- `ai_start_km` int – KI-Originalerkennung Start
-- `ai_end_km` int – KI-Originalerkennung Ende
-- `ai_start_fuel_percent` int – Tank Start
-- `ai_end_fuel_percent` int – Tank Ende
+(Keine separate Tabelle, weil der Inhalt sich pro Buchung nicht ändert und so der Audit-Snapshot stabil bleibt.)
 
-So bleibt nachvollziehbar, was die KI gesehen hat vs. was der Nutzer eingetragen hat (wichtig bei Streit über Mehrkilometer).
+## 4. Buchung anlegen mit Add-Ons
 
-### 6. Admin-Sicht (`src/routes/admin.tsx`)
-- In der Buchungs-Detailansicht beide Werte nebeneinander anzeigen: „KI: 42.920 km · Nutzer: 42.920 km" (grün wenn identisch, gelb bei Abweichung).
-- Auch das Tacho-Foto direkt verlinken (vorhanden in `trip_photos`).
+`src/routes/checkout.return.tsx`:
+- `pending` um `addons` (Array `{id, label, priceCents}`) erweitern.
+- Beim `bookings.insert` zusätzlich `addons` und `addons_total_cents` setzen.
+- E-Mail-Bestätigung (`booking-emails.functions.ts`): Add-Ons-Block in die Buchungsbestätigung aufnehmen (Liste + Summe).
 
-## Technisches
+## 5. Anzeige in relevanten Bereichen
 
-- Lovable AI Gateway ist bereits konfiguriert (`LOVABLE_API_KEY` ist gesetzt).
-- Bild wird als signed URL übergeben (1 h gültig), Gemini lädt sie selbst.
-- Strukturierte Ausgabe via AI SDK `Output.object` mit Zod-Schema – kein manuelles JSON-Parsing.
-- Tankstand-Erkennung ist ungenauer als KM (analoge Anzeigen variieren stark). Bei `confidence: "low"` wird der Wert NICHT vorausgefüllt, nur als Hinweis angezeigt.
-- Bei `429`/`402` vom Gateway: Toast „KI-Erkennung temporär nicht verfügbar – bitte manuell eintragen", Foto-Flow läuft normal weiter.
-- Kosten: ~0,001 € pro Erkennung. Bei ~10 Buchungen/Tag = vernachlässigbar.
+- `src/routes/buchung.$bookingId.tsx` (Kundenansicht der Buchung): Block „Gebuchtes Zubehör" mit Inhalt der Pakete + Erinnerungshinweis (Vollständige & unbeschädigte Rückgabe).
+- `src/routes/trip.$bookingId.tsx` (während der Fahrt) und `src/components/ScheduledTripView.tsx`: kompakte Liste der gebuchten Pakete, damit der Fahrer weiß, was im Transporter dabei ist.
+- `src/components/ReturnFlow.tsx`: vor Finish ein Hinweisscreen „Bitte Zubehör vollständig zurückgeben" mit Liste; Pflicht-Checkbox „Zubehör vollständig & unbeschädigt zurückgegeben".
+- `src/routes/admin.tsx`: in der Buchungsliste/Detailansicht die gebuchten Add-Ons + `addons_total_cents` anzeigen (für Vorbereitung der Übergabe).
 
-## Was NICHT in diesem Plan ist (separat besprechen)
+## 6. Marketing-Sektion auf /ueber-uns
 
-- Automatisches Auslösen von `chargeBookingExtra` direkt nach Rückgabe (aktuell manuell durch Admin) – würde ich aus Sicherheitsgründen erst nach erfolgreichem Test der Erkennung machen.
-- Schadens-Erkennung aus den 8 Außenfotos (deutlich aufwendiger, eigener Plan).
-- Tankbeleg-OCR (Betrag/Liter) – wäre nice-to-have, jetzt nicht im Scope.
+Neu: `src/components/AddonPackagesSection.tsx`
+- Überschrift „Praktische Zusatzpakete für deinen Transport" + Unterüberschrift wie vorgegeben.
+- Zwei Karten (gleiche Komponente wie im Buchungs-Step, ohne Auswahl-State), Badges „Beliebtestes Zusatzpaket" / „Bester Komfort".
+- Hinweistext + Vertrauenshinweis (exakt die vom User gelieferten Texte).
+- Mobile-first: Single Column auf Mobil, 2-Spalten ab `md`, lesbare Typo (Fredoka, schwarz/weiß/grau gemäß Design-Memory – keine Farb-Akzente).
+- Einbindung in `src/routes/ueber-uns.tsx` direkt unter `<TariffSection />`.
 
-## Reihenfolge der Umsetzung
+## 7. Konsistenz / Designsystem
 
-1. Migration für neue `ai_*` Spalten
-2. AI Gateway Helper + Server Function
-3. PreDriveFlow Integration + UI-Hinweis
-4. ReturnFlow Integration + Tank-Feld
-5. Admin-Ansicht: KI- vs. Nutzer-Werte anzeigen
-6. Manueller Test mit echtem Tacho-Foto über Admin-Account
+- Strikt Schwarz/Weiß/Grau, Buttons schwarz mit weißer Schrift, abgerundete Karten wie restliche Sektionen.
+- Karten responsiv (`grid-cols-1 md:grid-cols-2 gap-6`), Inhaltsliste mit `lucide-react` Check-Icons.
+
+## Technischer Überblick (für später)
+
+- Neue Datei: `src/lib/addons.ts` (typed const + Helper `getAddonById`, `sumAddonsCents`).
+- Migration: ergänzt `addons jsonb`, `addons_total_cents int` auf `bookings`.
+- Edits: `BookingSection.tsx`, `payments.functions.ts`, `checkout.return.tsx`, `booking-emails.functions.ts`, `buchung.$bookingId.tsx`, `trip.$bookingId.tsx`, `ScheduledTripView.tsx`, `ReturnFlow.tsx`, `admin.tsx`, `ueber-uns.tsx`.
+- Neu: `src/components/AddonPackagesSection.tsx` (+ optional `AddonPackageCard.tsx` für Wiederverwendung in Buchungs-Step und Marketing-Sektion).

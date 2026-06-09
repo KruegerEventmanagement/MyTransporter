@@ -49,6 +49,8 @@ export type Database = {
       }
       bookings: {
         Row: {
+          addons: Json
+          addons_total_cents: number
           ai_end_fuel_percent: number | null
           ai_end_km: number | null
           ai_start_fuel_percent: number | null
@@ -92,6 +94,8 @@ export type Database = {
           vehicle_plate: string
         }
         Insert: {
+          addons?: Json
+          addons_total_cents?: number
           ai_end_fuel_percent?: number | null
           ai_end_km?: number | null
           ai_start_fuel_percent?: number | null
@@ -135,6 +139,8 @@ export type Database = {
           vehicle_plate?: string
         }
         Update: {
+          addons?: Json
+          addons_total_cents?: number
           ai_end_fuel_percent?: number | null
           ai_end_km?: number | null
           ai_start_fuel_percent?: number | null
