@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/agb")({
   head: () => ({
     meta: [
-      { title: "AGB – MyTransporter" },
+      { title: "AGB, MyTransporter" },
       { name: "description", content: "Allgemeine Geschäftsbedingungen der MyTransporter UG" },
     ],
   }),

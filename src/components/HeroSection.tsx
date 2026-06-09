@@ -15,7 +15,7 @@ export function HeroSection() {
         <button
           type="button"
           onClick={handleLogoClick}
-          aria-label="Zur Startseite – Datum und Uhrzeit auswählen"
+          aria-label="Zur Startseite, Datum und Uhrzeit auswählen"
           className="cursor-pointer bg-transparent border-0 p-0 transition-transform hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground rounded-md"
         >
           <img

@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/impressum")({
   head: () => ({
     meta: [
-      { title: "Impressum – MyTransporter" },
+      { title: "Impressum, MyTransporter" },
       { name: "description", content: "Impressum der MyTransporter UG (haftungsbeschränkt)" },
     ],
   }),

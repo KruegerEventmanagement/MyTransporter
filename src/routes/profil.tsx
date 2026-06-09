@@ -174,7 +174,7 @@ function ProfilePage() {
           </Link>
         )}
 
-        {/* Anstehende Fahrten – mit direkter Stornier-Möglichkeit */}
+        {/* Anstehende Fahrten, mit direkter Stornier-Möglichkeit */}
         {stats.upcoming.length > 0 && (
           <section>
             <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1">
@@ -296,7 +296,7 @@ function BookingRow({ booking: b, onCancelled }: { booking: Booking; onCancelled
           {Number(b.plan_price).toFixed(2)} € <span className="text-muted-foreground">({b.plan_label})</span>
         </InfoLine>
         <InfoLine icon={<RouteIcon className="w-3 h-3" />} label="Kilometer">
-          {km !== null ? `${km} km` : "–"}
+          {km !== null ? `${km} km` : "-"}
         </InfoLine>
       </div>
 
@@ -362,8 +362,8 @@ function BookingRow({ booking: b, onCancelled }: { booking: Booking; onCancelled
           <p className="text-xs text-muted-foreground">
             Stornogebühr: <span className="text-foreground font-bold">{fee.toFixed(2)} €</span>{" "}
             {fee === 0
-              ? "(kostenlos – mehr als 12 h vor Abfahrt)"
-              : "(max. 12 € – 1 € bei 12 h, +1 € pro Stunde näher an Abfahrt)"}
+              ? "(kostenlos, mehr als 12 h vor Abfahrt)"
+              : "(max. 12 €, 1 € bei 12 h, +1 € pro Stunde näher an Abfahrt)"}
           </p>
           {error && <p className="text-xs text-destructive">{error}</p>}
           <div className="flex gap-2 pt-1">

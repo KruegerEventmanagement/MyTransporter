@@ -140,7 +140,7 @@ function AdminDashboard() {
     checkAdmin();
   }, []);
 
-  // Wake-Lock anfragen, sobald Admin eingeloggt ist – iPad-Bildschirm bleibt an.
+  // Wake-Lock anfragen, sobald Admin eingeloggt ist, iPad-Bildschirm bleibt an.
   useEffect(() => {
     if (!isAdmin) return;
     const requestWakeLock = async () => {
@@ -270,7 +270,7 @@ function AdminDashboard() {
           setNotifications((prev) => [n, ...prev]);
           if (lastNotificationId.current !== n.id) {
             lastNotificationId.current = n.id;
-            // Großes Popup für jede neue Benachrichtigung – iPad-tauglich
+            // Großes Popup für jede neue Benachrichtigung, iPad-tauglich
             setAlertNotification(n);
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
               try {
@@ -498,7 +498,7 @@ function AdminDashboard() {
           <ul className="space-y-2">
             {bookings.map((b) => {
               const p = profilesById[b.user_id];
-              const name = [p?.first_name, p?.last_name].filter(Boolean).join(" ") || p?.email || "—";
+              const name = [p?.first_name, p?.last_name].filter(Boolean).join(" ") || p?.email || "-";
               return (
                 <li key={b.id}>
                   <button
@@ -764,7 +764,7 @@ function CustomerDetail({
             className="flex items-center gap-2 text-sm hover:underline"
           >
             <Mail className="w-4 h-4 text-muted-foreground" />
-            {customer.profile?.email || "—"}
+            {customer.profile?.email || "-"}
           </a>
           <a
             href={`tel:${customer.profile?.phone ?? ""}`}
@@ -856,8 +856,8 @@ function CustomerDetail({
                       <div className="grid grid-cols-4 gap-2 text-sm">
                         <Stat label="Preis" value={`${b.plan_price} €`} />
                         <Stat label="Kaution" value={`${b.deposit} €`} />
-                        <Stat label="Start-KM" value={b.start_km ?? "–"} />
-                        <Stat label="End-KM" value={b.end_km ?? "–"} />
+                        <Stat label="Start-KM" value={b.start_km ?? "-"} />
+                        <Stat label="End-KM" value={b.end_km ?? "-"} />
                       </div>
 
                       <SettlementPanel booking={b} onChanged={onReloadBookings} />
@@ -1119,7 +1119,7 @@ function SettlementPanel({
       <div className="rounded-xl bg-secondary p-3">
         <p className="text-xs text-muted-foreground">Mehrkilometer-Forderung</p>
         <p className="text-lg font-bold">
-          {extraOwedCents > 0 ? `${(extraOwedCents / 100).toFixed(2)} €` : "—"}
+          {extraOwedCents > 0 ? `${(extraOwedCents / 100).toFixed(2)} €` : "-"}
           {booking.extra_km != null && booking.extra_km > 0 && (
             <span className="ml-2 text-xs font-normal text-muted-foreground">
               ({booking.extra_km} km × 0,90 €)
@@ -1153,7 +1153,7 @@ function SettlementPanel({
             Abgerechnet am{" "}
             {booking.deposit_released_at
               ? format(new Date(booking.deposit_released_at), "dd.MM.yyyy HH:mm", { locale: de })
-              : "–"}
+              : "-"}
             {booking.deposit_deducted_cents != null && (
               <>
                 {" · einbehalten "}

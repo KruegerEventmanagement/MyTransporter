@@ -124,7 +124,7 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
     setPhase(isComplete ? "verified" : "idle");
   };
 
-  // Idle state — button
+  // Idle state, button
   if (phase === "idle" || phase === "verified") {
     return (
       <button

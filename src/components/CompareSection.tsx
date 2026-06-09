@@ -6,7 +6,7 @@ export function CompareSection() {
         <p className="mt-4 text-muted-foreground leading-relaxed">
           Viele Anbieter wirken im Grundpreis günstig, haben aber oft nur wenige Kilometer
           inklusive. Bei MyTransporter bekommst du einen <strong className="text-foreground">großen
-          L4H2-Transporter</strong> mit fairen Kilometerpaketen – ideal für echte Umzüge und Transporte.
+          L4H2-Transporter</strong> mit fairen Kilometerpaketen, ideal für echte Umzüge und Transporte.
         </p>
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
           <div className="rounded-xl border border-border p-4">

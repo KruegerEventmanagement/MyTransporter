@@ -220,7 +220,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
             onClick={() => setCodeShown(true)}
             className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
           >
-            Schlüssel erhalten – weiter <ChevronRight className="w-5 h-5 inline" />
+            Schlüssel erhalten, weiter <ChevronRight className="w-5 h-5 inline" />
           </button>
         </div>
       ) : (
@@ -298,7 +298,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
             <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" /> Schäden am Fahrzeug
             </p>
-            <p className="text-xs text-muted-foreground mb-3">Optional – bis zu 4 Fotos</p>
+            <p className="text-xs text-muted-foreground mb-3">Optional, bis zu 4 Fotos</p>
             <div className="grid grid-cols-4 gap-2">
               {Array.from({ length: 4 }).map((_, idx) => {
                 const url = damagePhotos[idx];

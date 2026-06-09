@@ -15,13 +15,13 @@ export const Route = createFileRoute("/partner")({
       {
         name: "description",
         content:
-          "Werde Werbepartner von MyTransporter in Leonberg & Stuttgart. Miete eine Magnetfolien-Werbefläche an unserem Transporter – flexibel, lackschonend, mobil sichtbar.",
+          "Werde Werbepartner von MyTransporter in Leonberg & Stuttgart. Miete eine Magnetfolien-Werbefläche an unserem Transporter, flexibel, lackschonend, mobil sichtbar.",
       },
       { property: "og:title", content: "Partner werden | MyTransporter" },
       {
         property: "og:description",
         content:
-          "Sponsor & Werbepartner werden: über 25 Magnetfolien-Werbeflächen am Transporter – ab 29 € / Monat.",
+          "Sponsor & Werbepartner werden: über 25 Magnetfolien-Werbeflächen am Transporter, ab 29 € / Monat.",
       },
     ],
     links: [{ rel: "canonical", href: "https://www.mytransporter.org/partner" }],
@@ -67,7 +67,7 @@ function PartnerPage() {
             Werbeflächen am Transporter
           </h1>
           <p className="mt-4 text-base md:text-lg text-muted-foreground leading-relaxed animate-fade-in-up animate-delay-200">
-            Über 25 buchbare Plätze – vom Hauptsponsor bis zum Mini-Spot. Lass dein Unternehmen täglich
+            Über 25 buchbare Plätze, vom Hauptsponsor bis zum Mini-Spot. Lass dein Unternehmen täglich
             durch Leonberg, Stuttgart, Böblingen und die ganze Region fahren. Hochwertige Magnetfolie,
             jederzeit austauschbar und lackschonend.
           </p>
@@ -95,7 +95,7 @@ function PartnerPage() {
             Werbeflächen am Transporter
           </h2>
           <p className="text-center text-sm text-muted-foreground mb-6">
-            Optimierte Flächenaufteilung für maximale Sichtbarkeit – Citroën Jumper / Peugeot Boxer L4H3.
+            Optimierte Flächenaufteilung für maximale Sichtbarkeit, Citroën Jumper / Peugeot Boxer L4H3.
           </p>
           <TransporterPhotoDiagram highlight={selected} onSelect={handleSelect} />
         </div>
@@ -143,7 +143,7 @@ function PartnerPage() {
             {[
               { n: 1, t: "Anfrage senden", d: "Wähle Fläche und Laufzeit, schick uns dein Motiv oder deine Wünsche." },
               { n: 2, t: "Angebot & Produktion", d: "Du bekommst ein verbindliches Angebot. Wir produzieren die Magnetfolie." },
-              { n: 3, t: "Folie wird montiert", d: "Wir bringen die Folie am Transporter an – deine Werbung läuft." },
+              { n: 3, t: "Folie wird montiert", d: "Wir bringen die Folie am Transporter an, deine Werbung läuft." },
             ].map((s) => (
               <div key={s.n} className="p-5 rounded-2xl bg-card border border-border">
                 <div className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center font-bold">
@@ -164,7 +164,7 @@ function PartnerPage() {
             Jetzt unverbindlich anfragen
           </h2>
           <p className="mt-3 text-center text-muted-foreground">
-            Schick uns deine Anfrage – wir melden uns innerhalb von 1–2 Werktagen mit einem konkreten Angebot.
+            Schick uns deine Anfrage, wir melden uns innerhalb von 1-2 Werktagen mit einem konkreten Angebot.
           </p>
           <div className="mt-8">
             <PartnerInquiryForm selectedPackage={selected} onPackageChange={setSelected} />

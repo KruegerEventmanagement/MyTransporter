@@ -174,7 +174,7 @@ function BookingDetailPage() {
               {booking.plan_label}
             </InfoLine>
             <InfoLine icon={<RouteIcon className="w-3 h-3" />} label="Gefahrene km">
-              {km !== null ? `${km} km` : "–"}
+              {km !== null ? `${km} km` : "-"}
             </InfoLine>
             <InfoLine icon={<Hash className="w-3 h-3" />} label="Abhol-Code">
               <span className="font-mono">{booking.pickup_code}</span>
@@ -212,9 +212,9 @@ function BookingDetailPage() {
                     Erstattung auf die ursprüngliche Zahlungsmethode (Stripe-Vorgang{" "}
                     <span className="font-mono">{booking.deposit_refund_id}</span>)
                     {booking.deposit_released_at && (
-                      <> – ausgelöst am {format(new Date(booking.deposit_released_at), "dd.MM.yyyy HH:mm", { locale: de })} Uhr</>
+                      <>, ausgelöst am {format(new Date(booking.deposit_released_at), "dd.MM.yyyy HH:mm", { locale: de })} Uhr</>
                     )}
-                    . Gutschrift erfolgt je nach Bank innerhalb von 3–10 Werktagen.
+                    . Gutschrift erfolgt je nach Bank innerhalb von 3-10 Werktagen.
                   </p>
                 )}
               </>
@@ -230,7 +230,7 @@ function BookingDetailPage() {
                 />
               </>
             ) : (
-              <PaymentLine label="Kaution-Status" value="Einbehalten – Erstattung nach Rückgabe" />
+              <PaymentLine label="Kaution-Status" value="Einbehalten, Erstattung nach Rückgabe" />
             )}
           </div>
         </section>

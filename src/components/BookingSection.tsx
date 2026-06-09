@@ -210,7 +210,7 @@ export function BookingSection() {
   const displayVehicle = currentVehicle
     ? {
         name: currentVehicle.name || `${currentVehicle.brand ?? ""} ${currentVehicle.model ?? ""}`.trim() || "Fahrzeug",
-        plate: currentVehicle.plate || "—",
+        plate: currentVehicle.plate || "-",
         photo: currentVehicle.photo_urls?.[0] ?? fiatDucato,
         fuel: currentVehicle.fuel_type ?? VEHICLE.fuel,
         payload: currentVehicle.payload_kg ? `${currentVehicle.payload_kg.toLocaleString("de-DE")} kg` : VEHICLE.payload,
@@ -234,7 +234,7 @@ export function BookingSection() {
     return () => window.removeEventListener("mt:go-to-booking-start", handler);
   }, []);
 
-  // Subscribe to auth changes — wenn User per Magic Link / Bestätigung zurückkommt
+  // Subscribe to auth changes, wenn User per Magic Link / Bestätigung zurückkommt
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const returnedFromEmailConfirmation = searchParams.get("email_confirmed") === "1";
@@ -694,7 +694,7 @@ export function BookingSection() {
             <p className="text-center text-muted-foreground text-lg mb-2">Dein Fahrzeug</p>
             {vehicles.length > 1 && (
               <p className="text-center text-xs text-muted-foreground mb-6">
-                {vehicleIdx + 1} / {vehicles.length} – wische oder nutze die Pfeile
+                {vehicleIdx + 1} / {vehicles.length}, wische oder nutze die Pfeile
               </p>
             )}
 

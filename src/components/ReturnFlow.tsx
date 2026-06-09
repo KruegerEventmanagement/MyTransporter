@@ -164,7 +164,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
   })();
   const cameraHint =
     currentTarget?.kind === "receipt"
-      ? "Beleg in den Rahmen legen – wird automatisch gescannt"
+      ? "Beleg in den Rahmen legen, wird automatisch gescannt"
       : "Richte das Fahrzeug an der Vorlage aus";
 
   const handleSubmitKm = async () => {
@@ -288,7 +288,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
           <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" /> Schäden?
           </p>
-          <p className="text-xs text-muted-foreground mb-3">Optional – bis zu 4 Fotos von neuen Schäden</p>
+          <p className="text-xs text-muted-foreground mb-3">Optional, bis zu 4 Fotos von neuen Schäden</p>
           <div className="grid grid-cols-4 gap-2">
             {Array.from({ length: 4 }).map((_, idx) => {
               const url = damagePhotos[idx];
@@ -416,7 +416,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
         />
         <h3 className="text-xl font-bold text-foreground mb-2">Tankbeleg scannen</h3>
         <p className="text-sm text-muted-foreground mb-6">
-          Lege den Tankbeleg gut sichtbar in den Rahmen – das Foto wird automatisch wie ein Scan in S/W aufbereitet.
+          Lege den Tankbeleg gut sichtbar in den Rahmen, das Foto wird automatisch wie ein Scan in S/W aufbereitet.
         </p>
 
         {kmSummary && (

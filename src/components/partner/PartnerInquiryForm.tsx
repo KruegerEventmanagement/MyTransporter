@@ -57,7 +57,7 @@ export function PartnerInquiryForm({ selectedPackage, onPackageChange }: Props) 
         </div>
         <h3 className="mt-4 text-lg font-semibold text-foreground">Danke für deine Anfrage!</h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          Wir melden uns innerhalb von 1–2 Werktagen bei dir mit einem konkreten Angebot.
+          Wir melden uns innerhalb von 1-2 Werktagen bei dir mit einem konkreten Angebot.
         </p>
       </div>
     );

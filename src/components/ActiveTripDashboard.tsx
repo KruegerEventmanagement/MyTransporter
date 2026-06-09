@@ -473,11 +473,11 @@ export function ActiveTripDashboard({
                 </div>
                 <div className="p-2.5 rounded-2xl bg-secondary text-center">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Dauer</p>
-                  <p className="text-sm font-bold">{routeInfo?.duration || "—"}</p>
+                  <p className="text-sm font-bold">{routeInfo?.duration || "-"}</p>
                 </div>
                 <div className="p-2.5 rounded-2xl bg-secondary text-center">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Distanz</p>
-                  <p className="text-sm font-bold">{routeInfo?.distance || "—"}</p>
+                  <p className="text-sm font-bold">{routeInfo?.distance || "-"}</p>
                 </div>
               </div>
               <div className="flex gap-2">

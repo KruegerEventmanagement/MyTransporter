@@ -16,7 +16,7 @@ export function TariffSection() {
             Großer L4H2-Transporter zum fairen Preis
           </h2>
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-            Mehr Platz, faire Kilometer und transparente Preise – perfekt für Umzug,
+            Mehr Platz, faire Kilometer und transparente Preise, perfekt für Umzug,
             Möbeltransport, Entrümpelung und Großeinkäufe.
           </p>
         </div>

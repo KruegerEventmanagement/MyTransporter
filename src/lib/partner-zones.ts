@@ -31,7 +31,7 @@ function rect(code: string, view: ViewId, x: number, y: number, w: number, h: nu
   };
 }
 
-// ---------- Linke Seite (driver) — 970 x 425 ----------
+// ---------- Linke Seite (driver), 970 x 425 ----------
 const driverZones: Zone[] = [
   rect("S1",  "driver", 200,  55,  85, 55),
   rect("S2",  "driver", 290,  55, 465, 55),
@@ -51,7 +51,7 @@ const driverZones: Zone[] = [
   rect("S16", "driver", 662, 278,   95, 38),
 ];
 
-// ---------- Rechte Seite (passenger) — 975 x 420 ----------
+// ---------- Rechte Seite (passenger), 975 x 420 ----------
 const passengerZones: Zone[] = [
   rect("R1",  "passenger",  65,  50, 140, 55),
   rect("R2",  "passenger", 215,  50, 380, 55),
@@ -70,13 +70,13 @@ const passengerZones: Zone[] = [
   rect("R15", "passenger", 495, 286, 130, 38),
 ];
 
-// ---------- Vorderseite (front) — 385 x 420 ----------
+// ---------- Vorderseite (front), 385 x 420 ----------
 const frontZones: Zone[] = [
   rect("F0", "front",  98,  70, 188, 110), // Windschutzscheibe
   rect("F1", "front", 110, 290, 175,  65), // Motorhaube
 ];
 
-// ---------- Rückseite (rear) — 395 x 420 ----------
+// ---------- Rückseite (rear), 395 x 420 ----------
 const rearZones: Zone[] = [
   rect("B1", "rear",  98,  55, 110, 65),
   rect("B2", "rear", 215,  55, 100, 65),
