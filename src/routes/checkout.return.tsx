@@ -7,6 +7,7 @@ import { getCheckoutSessionDetails } from "@/lib/payments.functions";
 import { sendBookingConfirmation } from "@/lib/booking-emails.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { getPlanById } from "@/lib/booking-rules";
+import type { BookingAddonSnapshot } from "@/lib/addons";
 
 export const Route = createFileRoute("/checkout/return")({
   validateSearch: (search: Record<string, unknown>): { session_id?: string } => ({
@@ -42,7 +43,11 @@ function CheckoutReturn() {
           startHour: number;
           vehicleName?: string;
           vehiclePlate?: string;
+          addons?: BookingAddonSnapshot[];
         };
+
+        const addons = Array.isArray(pending.addons) ? pending.addons : [];
+        const addonsTotalCents = addons.reduce((s, a) => s + (a.price_cents ?? 0), 0);
 
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         const { data: userData } = await supabase.auth.getUser();
@@ -112,6 +117,8 @@ function CheckoutReturn() {
               stripe_payment_method_id: stripeIds.paymentMethodId,
               ...(vehicleName ? { vehicle_name: vehicleName } : {}),
               ...(vehiclePlate ? { vehicle_plate: vehiclePlate } : {}),
+              addons,
+              addons_total_cents: addonsTotalCents,
             })
             .select()
             .single();
