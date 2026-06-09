@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 import { Calendar } from "@/components/ui/calendar";
-import { format, differenceInCalendarDays, addDays } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { createBookingCheckout } from "@/lib/payments.functions";
