@@ -26,6 +26,7 @@ interface Booking {
   start_km: number | null;
   free_km?: number | null;
   km_price_cents?: number | null;
+  addons?: Array<{ id: string; label: string; price_cents: number }> | null;
 }
 
 function TripPage() {
@@ -112,6 +113,7 @@ function TripPage() {
         vehiclePlate={booking.vehicle_plate}
         planLabel={booking.plan_label}
         unlockAt={unlockAt}
+        addons={booking.addons ?? undefined}
       />
     );
   }
@@ -150,6 +152,7 @@ function TripPage() {
             startKm={booking.start_km ?? startKm}
             freeKm={booking.free_km ?? (booking.plan_id === "6h" ? 300 : booking.plan_id === "24h" ? 500 : 0)}
             kmPriceCents={booking.km_price_cents ?? 90}
+            addons={booking.addons ?? undefined}
             onComplete={() => setPhase("done")}
           />
         </main>

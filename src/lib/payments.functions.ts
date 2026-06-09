@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createStripeClient, getStripeErrorMessage, type StripeEnv } from "@/lib/stripe.server";
 
 import { getPlanById } from "@/lib/booking-rules";
+import { getAddonById } from "@/lib/addons";
 
 const DEPOSIT_CENTS = 200_00;
 
@@ -23,12 +24,23 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     userId?: string;
     returnUrl: string;
     environment: StripeEnv;
+    addonIds?: string[];
   }) => {
     const planId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;
     const plan = getPlanById(planId);
     if (!plan && planId !== "km") throw new Error("Invalid plan");
     if (!data.returnUrl) throw new Error("returnUrl fehlt");
     assertStripeEnvironment(data.environment);
+    if (data.addonIds) {
+      if (!Array.isArray(data.addonIds) || data.addonIds.length > 5) {
+        throw new Error("Ungültige Zusatzpakete");
+      }
+      for (const id of data.addonIds) {
+        if (typeof id !== "string" || !getAddonById(id)) {
+          throw new Error(`Unbekanntes Zusatzpaket: ${id}`);
+        }
+      }
+    }
     return data;
   })
   .handler(async ({ data }): Promise<CheckoutSessionResult> => {
@@ -58,6 +70,19 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
         quantity: 1,
       });
     }
+    const addonIds = data.addonIds ?? [];
+    for (const id of addonIds) {
+      const a = getAddonById(id);
+      if (!a) continue;
+      line_items.push({
+        price_data: {
+          currency: "eur",
+          product_data: { name: `Zusatzpaket · ${a.name}` },
+          unit_amount: a.priceEur * 100,
+        },
+        quantity: 1,
+      });
+    }
     line_items.push({
       price_data: {
         currency: "eur",
@@ -78,7 +103,13 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
           description: plan.rent > 0 ? `${plan.label} + Kaution` : "Transporter-Miete · Kaution",
           setup_future_usage: "off_session",
         },
-        ...(data.userId && { metadata: { userId: data.userId, plan: data.plan } }),
+        ...(data.userId && {
+          metadata: {
+            userId: data.userId,
+            plan: data.plan,
+            ...(addonIds.length > 0 && { addonIds: addonIds.join(",") }),
+          },
+        }),
       });
 
       if (!session.client_secret) throw new Error("Stripe hat kein Checkout-Token zurückgegeben");

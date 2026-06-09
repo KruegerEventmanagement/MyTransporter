@@ -36,6 +36,8 @@ interface Booking {
   extra_km_charge_cents: number | null;
   km_price_cents: number | null;
   free_km: number | null;
+  addons: Array<{ id: string; label: string; price_cents: number }> | null;
+  addons_total_cents: number | null;
 }
 
 interface TripPhoto {
@@ -187,6 +189,13 @@ function BookingDetailPage() {
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Zahlung</h2>
           <div className="space-y-2 text-sm">
             <PaymentLine label="Miete" value={`${Number(booking.plan_price).toFixed(2)} €`} />
+            {Array.isArray(booking.addons) && booking.addons.map((a) => (
+              <PaymentLine
+                key={a.id}
+                label={`Zusatzpaket · ${a.label}`}
+                value={`${(a.price_cents / 100).toFixed(2)} €`}
+              />
+            ))}
             <PaymentLine label="Kaution" value={`${Number(booking.deposit).toFixed(2)} €`} />
             {booking.extra_km_charge_cents != null && booking.extra_km_charge_cents > 0 && (
               <PaymentLine
@@ -234,6 +243,24 @@ function BookingDetailPage() {
             )}
           </div>
         </section>
+
+        {/* Zusatzpakete – Inhalt */}
+        {Array.isArray(booking.addons) && booking.addons.length > 0 && (
+          <section className="rounded-2xl bg-card border border-border p-4">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Gebuchtes Zubehör</h2>
+            <ul className="space-y-2 text-sm">
+              {booking.addons.map((a) => (
+                <li key={a.id} className="flex items-center justify-between">
+                  <span className="text-foreground">{a.label}</span>
+                  <span className="text-muted-foreground">{(a.price_cents / 100).toFixed(2)} €</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Bitte das Zubehör vollständig und unbeschädigt zurückgeben. Bei Verlust oder Beschädigung können Ersatzkosten entstehen.
+            </p>
+          </section>
+        )}
 
         {/* Notizen / Vermerke */}
         {booking.remarks && (

@@ -16,6 +16,8 @@ import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
 import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
 import { computePlanReturn, getPlanById, getAvailablePlans, DEPOSIT_EUR } from "@/lib/booking-rules";
+import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot } from "@/lib/addons";
+import { AddonPackageCard } from "./AddonPackageCard";
 
 const DEPOSIT = DEPOSIT_EUR;
 
@@ -83,6 +85,14 @@ export function BookingSection() {
   const [vehicles, setVehicles] = useState<DbVehicle[]>([]);
   const [vehicleIdx, setVehicleIdx] = useState(0);
   const [busySlots, setBusySlots] = useState<BusySlot[]>([]);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
+
+  const toggleAddon = (id: string) => {
+    setSelectedAddonIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+  const addonsTotal = sumAddonsEur(selectedAddonIds);
 
   useEffect(() => {
     let alive = true;
@@ -426,7 +436,7 @@ export function BookingSection() {
     return { valid: true, msg: `Rückgabe ${dayStr} bis ${timeStr} Uhr` };
   };
 
-  const total = selectedPlanEntry ? selectedPlanEntry.price + DEPOSIT : null;
+  const total = selectedPlanEntry ? selectedPlanEntry.price + addonsTotal + DEPOSIT : null;
 
   const [paid, setPaid] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
@@ -439,8 +449,8 @@ export function BookingSection() {
   const startBookingCheckout = useServerFn(createBookingCheckout);
 
   const stepTitles = registrationComplete
-    ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug", "Bezahlen", "Fahrt"]
-    : ["Datum", "Uhrzeit & Tarif", "Fahrzeug", "Registrierung", "Bezahlen", "Fahrt"];
+    ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Bezahlen", "Fahrt"]
+    : ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Registrierung", "Bezahlen", "Fahrt"];
   // Wenn Registrierung übersprungen wird, mappen wir step 4/5 auf Stepper-Position 3/4
   const stepperIndex = registrationComplete && step >= 3 ? step - 1 : step;
 
@@ -789,6 +799,32 @@ export function BookingSection() {
               )}
             </div>
 
+            {/* Optionale Zusatzpakete */}
+            <div className="mt-12">
+              <div className="text-center mb-6">
+                <h3 className="text-xl sm:text-2xl font-bold text-foreground">
+                  Praktische Zusatzpakete
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground max-w-xl mx-auto">
+                  Damit dein Umzug einfacher, sicherer und stressfreier wird – optional zubuchbar.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                {ADDONS.map((addon) => (
+                  <AddonPackageCard
+                    key={addon.id}
+                    addon={addon}
+                    selected={selectedAddonIds.includes(addon.id)}
+                    onToggle={toggleAddon}
+                  />
+                ))}
+              </div>
+              <p className="mt-6 text-xs text-muted-foreground text-center">{ADDON_NOTE}</p>
+              <div className="mt-4 rounded-xl border border-border bg-secondary/50 p-4">
+                <p className="text-xs text-foreground text-center">{ADDON_TRUST}</p>
+              </div>
+            </div>
+
             {/* Summary */}
             {total !== null && (
               <div className="mt-6 p-6 rounded-2xl bg-primary text-primary-foreground">
@@ -797,7 +833,10 @@ export function BookingSection() {
                   <p className="text-3xl font-bold">{total} €</p>
                 </div>
                 <p className="text-sm opacity-80 mt-1">
-                  {selectedPlanEntry && `inkl. ${selectedPlanEntry.price} € Miete + ${DEPOSIT} € Kaution`}
+                  {selectedPlanEntry &&
+                    `inkl. ${selectedPlanEntry.price} € Miete${
+                      addonsTotal > 0 ? ` + ${addonsTotal} € Zubehör` : ""
+                    } + ${DEPOSIT} € Kaution`}
                 </p>
               </div>
             )}
@@ -1131,6 +1170,7 @@ export function BookingSection() {
                         phone: regForm.phone,
                         vehicleName: displayVehicle.name || undefined,
                         vehiclePlate: displayVehicle.plate || undefined,
+                        addons: buildAddonSnapshot(selectedAddonIds),
                       })
                     );
                    }
@@ -1146,6 +1186,7 @@ export function BookingSection() {
                           userId: authUser?.id,
                          returnUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
                          environment: getStripeEnvironment(),
+                          addonIds: selectedAddonIds,
                        },
                      });
                      if ("error" in result) throw new Error(result.error);

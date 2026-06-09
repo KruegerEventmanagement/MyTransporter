@@ -67,6 +67,8 @@ interface Booking {
   ai_end_km?: number | null;
   ai_start_fuel_percent?: number | null;
   ai_end_fuel_percent?: number | null;
+  addons?: Array<{ id: string; label: string; price_cents: number }> | null;
+  addons_total_cents?: number | null;
 }
 interface Profile {
   id: string;
@@ -517,6 +519,11 @@ function AdminDashboard() {
                       <p className="text-xs text-muted-foreground truncate">
                         {b.vehicle_plate} · {b.plan_label} · {b.start_date} {b.start_hour}:00
                       </p>
+                      {Array.isArray(b.addons) && b.addons.length > 0 && (
+                        <p className="text-[11px] text-foreground mt-0.5 truncate">
+                          📦 {b.addons.map((a) => a.label).join(", ")}
+                        </p>
+                      )}
                     </div>
                     <StatusBadge status={b.status} />
                   </button>
@@ -1131,6 +1138,24 @@ function SettlementPanel({
         <Wallet className="w-4 h-4" />
         <h3 className="text-sm font-semibold">Kaution & Mehrkilometer</h3>
       </div>
+
+      {/* Zusatzpakete */}
+      {Array.isArray(booking.addons) && booking.addons.length > 0 && (
+        <div className="rounded-xl bg-secondary p-3">
+          <p className="text-xs text-muted-foreground mb-1">Gebuchte Zusatzpakete</p>
+          <ul className="text-sm space-y-1">
+            {booking.addons.map((a) => (
+              <li key={a.id} className="flex items-center justify-between">
+                <span>📦 {a.label}</span>
+                <span className="text-muted-foreground">{(a.price_cents / 100).toFixed(2)} €</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-muted-foreground mt-2">
+            Summe: <strong>{((booking.addons_total_cents ?? 0) / 100).toFixed(2)} €</strong> · vor Übergabe bereitlegen, bei Rückgabe auf Vollständigkeit prüfen.
+          </p>
+        </div>
+      )}
 
       {/* Mehrkilometer */}
       <div className="rounded-xl bg-secondary p-3">

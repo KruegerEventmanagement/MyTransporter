@@ -28,12 +28,13 @@ interface ReturnFlowProps {
   startKm?: number | null;
   freeKm?: number | null;
   kmPriceCents?: number | null;
+  addons?: Array<{ id: string; label: string; price_cents: number }>;
   onComplete: (returnCode: string) => void;
 }
 
 type ReturnStep = "photos" | "km" | "receipt" | "code" | "done";
 
-export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, onComplete }: ReturnFlowProps) {
+export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, addons, onComplete }: ReturnFlowProps) {
   const [returnStep, setReturnStep] = useState<ReturnStep>("photos");
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [interiorPhoto, setInteriorPhoto] = useState<string | null>(null);
@@ -47,6 +48,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
   const [aiRecognition, setAiRecognition] = useState<{ km: number | null; fuelPercent: number | null; confidence: string } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [endFuelPercent, setEndFuelPercent] = useState<string>("");
+  const [addonsReturned, setAddonsReturned] = useState(false);
   const recognize = useServerFn(recognizeOdometer);
   const [kmSummary, setKmSummary] = useState<{
     driven: number;
@@ -541,8 +543,28 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, o
           </button>
         )}
 
+        {addons && addons.length > 0 && (
+          <div className="mb-4 rounded-2xl border border-border bg-secondary/50 p-4">
+            <p className="text-sm font-medium text-foreground mb-2">Gebuchtes Zubehör zurückgeben</p>
+            <ul className="text-xs text-muted-foreground space-y-1 mb-3">
+              {addons.map((a) => (
+                <li key={a.id}>• {a.label}</li>
+              ))}
+            </ul>
+            <label className="flex items-start gap-2 text-xs text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={addonsReturned}
+                onChange={(e) => setAddonsReturned(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>Zubehör vollständig &amp; unbeschädigt zurückgegeben</span>
+            </label>
+          </div>
+        )}
+
         <button
-          disabled={!receiptUrl}
+          disabled={!receiptUrl || (!!addons && addons.length > 0 && !addonsReturned)}
           onClick={handleFinish}
           className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
         >

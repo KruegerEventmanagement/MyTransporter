@@ -65,7 +65,7 @@ export const sendBookingConfirmation = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: booking, error } = await supabaseAdmin
       .from("bookings")
-      .select("id, user_id, vehicle_name, vehicle_plate, plan_id, plan_label, start_date, start_hour, pickup_code")
+      .select("id, user_id, vehicle_name, vehicle_plate, plan_id, plan_label, start_date, start_hour, pickup_code, addons, addons_total_cents")
       .eq("id", data.bookingId)
       .maybeSingle();
     if (error || !booking) throw new Error("Buchung nicht gefunden");
@@ -98,6 +98,20 @@ export const sendBookingConfirmation = createServerFn({ method: "POST" })
           <p style="margin:0 0 4px;"><strong>Abholung:</strong> ${startStr} Uhr</p>
           <p style="margin:0;"><strong>Rückgabe spätestens:</strong> ${returnStr} Uhr</p>
         </div>
+
+        ${(() => {
+          const addons = Array.isArray(booking.addons) ? (booking.addons as Array<{ id: string; label: string; price_cents: number }>) : [];
+          if (addons.length === 0) return "";
+          const totalEur = ((booking.addons_total_cents ?? 0) / 100).toFixed(2);
+          const items = addons
+            .map((a) => `<li>${a.label} · <strong>${(a.price_cents / 100).toFixed(2)} €</strong></li>`)
+            .join("");
+          return `
+            <h3 style="margin:24px 0 8px;font-size:16px;">Gebuchtes Zubehör</h3>
+            <ul style="padding-left:20px;line-height:1.6;margin:0 0 8px;">${items}</ul>
+            <p style="margin:0;font-size:13px;color:#555;">Summe Zubehör: <strong>${totalEur} €</strong>. Bitte vollständig &amp; unbeschädigt zurückgeben.</p>
+          `;
+        })()}
 
         <h3 style="margin:24px 0 8px;font-size:16px;">So geht es weiter</h3>
         <ol style="padding-left:20px;line-height:1.6;">
