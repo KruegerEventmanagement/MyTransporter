@@ -329,17 +329,6 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
                 </div>
               )}
             </button>
-            {aiBusy && (
-              <p className="text-xs text-muted-foreground mt-2">🤖 KI analysiert Tacho…</p>
-            )}
-            {!aiBusy && aiRecognition && (
-              <p className="text-xs text-muted-foreground mt-2">
-                🤖 KI hat erkannt:&nbsp;
-                {aiRecognition.km !== null ? `${aiRecognition.km.toLocaleString("de-DE")} km` : "Kilometerstand nicht lesbar"}
-                {aiRecognition.fuelPercent !== null ? ` · Tank ${aiRecognition.fuelPercent}%` : ""}
-                {aiRecognition.confidence === "low" ? " (unsicher – bitte prüfen)" : " – bitte prüfen"}
-              </p>
-            )}
           </div>
 
           {/* Schäden */}
