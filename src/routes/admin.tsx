@@ -142,7 +142,22 @@ function AdminDashboard() {
       setPushState("unsupported");
       return;
     }
-    isSubscribedOnThisDevice().then((sub) => setPushState(sub ? "on" : "off"));
+    const restore = async () => {
+      // Wenn Berechtigung schon erteilt: still wiederherstellen.
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        const ok = await ensurePushSubscribed();
+        setPushState(ok ? "on" : (await isSubscribedOnThisDevice()) ? "on" : "off");
+        return;
+      }
+      const sub = await isSubscribedOnThisDevice();
+      setPushState(sub ? "on" : "off");
+    };
+    restore();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") restore();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [isAdmin]);
 
   const handleTogglePush = async () => {
