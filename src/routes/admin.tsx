@@ -278,10 +278,30 @@ function AdminDashboard() {
       // kurzer Ping zur Bestätigung
       playBeep();
       setSoundEnabled(true);
+      try { localStorage.setItem("admin_sound_on", "1"); } catch {}
     } catch {
       setSoundEnabled(false);
     }
   };
+
+  // Signalton-Schalter aus localStorage wiederherstellen.
+  useEffect(() => {
+    if (!isAdmin) return;
+    try {
+      if (localStorage.getItem("admin_sound_on") === "1") {
+        setSoundEnabled(true);
+        const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+        if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
+        // Resume klappt ohne Geste evtl. nicht – beim ersten Tap auf der Seite ist er dann scharf.
+        audioCtxRef.current.resume().catch(() => {});
+        const resumeOnGesture = () => {
+          audioCtxRef.current?.resume().catch(() => {});
+        };
+        window.addEventListener("pointerdown", resumeOnGesture, { once: true });
+        window.addEventListener("keydown", resumeOnGesture, { once: true });
+      }
+    } catch {}
+  }, [isAdmin]);
 
   // Beep läuft, solange ein Alert-Popup offen ist.
   useEffect(() => {
