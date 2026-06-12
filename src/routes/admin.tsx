@@ -32,6 +32,7 @@ import {
   disablePushOnThisDevice,
   isSubscribedOnThisDevice,
   pushSupported,
+  ensurePushSubscribed,
 } from "@/lib/push-client";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { toast } from "sonner";
@@ -141,7 +142,22 @@ function AdminDashboard() {
       setPushState("unsupported");
       return;
     }
-    isSubscribedOnThisDevice().then((sub) => setPushState(sub ? "on" : "off"));
+    const restore = async () => {
+      // Wenn Berechtigung schon erteilt: still wiederherstellen.
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        const ok = await ensurePushSubscribed();
+        setPushState(ok ? "on" : (await isSubscribedOnThisDevice()) ? "on" : "off");
+        return;
+      }
+      const sub = await isSubscribedOnThisDevice();
+      setPushState(sub ? "on" : "off");
+    };
+    restore();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") restore();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [isAdmin]);
 
   const handleTogglePush = async () => {
@@ -262,10 +278,30 @@ function AdminDashboard() {
       // kurzer Ping zur Bestätigung
       playBeep();
       setSoundEnabled(true);
+      try { localStorage.setItem("admin_sound_on", "1"); } catch {}
     } catch {
       setSoundEnabled(false);
     }
   };
+
+  // Signalton-Schalter aus localStorage wiederherstellen.
+  useEffect(() => {
+    if (!isAdmin) return;
+    try {
+      if (localStorage.getItem("admin_sound_on") === "1") {
+        setSoundEnabled(true);
+        const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+        if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
+        // Resume klappt ohne Geste evtl. nicht – beim ersten Tap auf der Seite ist er dann scharf.
+        audioCtxRef.current.resume().catch(() => {});
+        const resumeOnGesture = () => {
+          audioCtxRef.current?.resume().catch(() => {});
+        };
+        window.addEventListener("pointerdown", resumeOnGesture, { once: true });
+        window.addEventListener("keydown", resumeOnGesture, { once: true });
+      }
+    } catch {}
+  }, [isAdmin]);
 
   // Beep läuft, solange ein Alert-Popup offen ist.
   useEffect(() => {
@@ -461,7 +497,14 @@ function AdminDashboard() {
               </button>
             )}
             <button
-              onClick={() => (soundEnabled ? setSoundEnabled(false) : enableSound())}
+              onClick={() => {
+                if (soundEnabled) {
+                  setSoundEnabled(false);
+                  try { localStorage.removeItem("admin_sound_on"); } catch {}
+                } else {
+                  enableSound();
+                }
+              }}
               className={`rounded-full px-3 py-2 text-xs font-medium flex items-center gap-1.5 ${
                 soundEnabled ? "bg-foreground text-background" : "bg-secondary"
               }`}
