@@ -4,7 +4,8 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { notifyAdmin } from "@/lib/admin-notify";
 import { getCheckoutSessionDetails } from "@/lib/payments.functions";
-import { sendBookingConfirmation } from "@/lib/booking-emails.functions";
+import { sendBookingConfirmation, sendAdminBookingNotification } from "@/lib/booking-emails.functions";
+import { sendAdminPush } from "@/lib/push.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { getPlanById } from "@/lib/booking-rules";
 import type { BookingAddonSnapshot } from "@/lib/addons";
@@ -138,6 +139,19 @@ function CheckoutReturn() {
           sendBookingConfirmation({ data: { bookingId } }).catch((e) =>
             console.warn("Buchungsbestätigung konnte nicht gesendet werden:", e),
           );
+          // Admin-E-Mail (still im Hintergrund)
+          sendAdminBookingNotification({ data: { bookingId } }).catch((e) =>
+            console.warn("Admin-Mail konnte nicht gesendet werden:", e),
+          );
+          // Admin-Push aufs Handy (still im Hintergrund)
+          sendAdminPush({
+            data: {
+              title: "Neue Buchung",
+              body: `${pending.planLabel} · Start ${pending.startDate} ${String(pending.startHour).padStart(2, "0")}:00 · Code ${code}`,
+              url: "/admin",
+              tag: `booking-${bookingId}`,
+            },
+          }).catch((e) => console.warn("Admin-Push fehlgeschlagen:", e));
         } else {
           // Demo-Fallback ohne Auth
           bookingId = "demo-" + Date.now();

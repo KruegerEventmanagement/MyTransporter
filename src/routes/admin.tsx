@@ -26,6 +26,13 @@ import { AdminLogin } from "@/components/admin/AdminLogin";
 import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
 import { useServerFn } from "@tanstack/react-start";
 import { chargeBookingExtra, settleDeposit } from "@/lib/payments.functions";
+import { sendTestAdminPush } from "@/lib/push.functions";
+import {
+  enablePushOnThisDevice,
+  disablePushOnThisDevice,
+  isSubscribedOnThisDevice,
+  pushSupported,
+} from "@/lib/push-client";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { toast } from "sonner";
 
@@ -125,6 +132,41 @@ function AdminDashboard() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const beepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
+  const [pushState, setPushState] = useState<"unknown" | "off" | "on" | "unsupported" | "busy">("unknown");
+  const triggerTestPush = useServerFn(sendTestAdminPush);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    if (!pushSupported()) {
+      setPushState("unsupported");
+      return;
+    }
+    isSubscribedOnThisDevice().then((sub) => setPushState(sub ? "on" : "off"));
+  }, [isAdmin]);
+
+  const handleTogglePush = async () => {
+    if (pushState === "unsupported" || pushState === "busy") return;
+    setPushState("busy");
+    if (pushState === "on") {
+      await disablePushOnThisDevice();
+      setPushState("off");
+      toast.success("Push deaktiviert");
+      return;
+    }
+    const res = await enablePushOnThisDevice();
+    if (res.ok) {
+      setPushState("on");
+      toast.success("Push aktiviert", { description: "Du bekommst jetzt Buchungen aufs Handy." });
+      try {
+        await triggerTestPush({});
+      } catch (e) {
+        console.warn(e);
+      }
+    } else {
+      setPushState("off");
+      toast.error("Push konnte nicht aktiviert werden", { description: res.reason });
+    }
+  };
 
   const checkAdmin = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -405,6 +447,19 @@ function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {pushState !== "unsupported" && (
+              <button
+                onClick={handleTogglePush}
+                disabled={pushState === "busy" || pushState === "unknown"}
+                className={`rounded-full px-3 py-2 text-xs font-medium flex items-center gap-1.5 ${
+                  pushState === "on" ? "bg-foreground text-background" : "bg-secondary"
+                }`}
+                title="Push-Benachrichtigungen auf dieses Gerät"
+              >
+                {pushState === "on" ? <BellRing className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
+                {pushState === "on" ? "Push an" : pushState === "busy" ? "…" : "Push aktivieren"}
+              </button>
+            )}
             <button
               onClick={() => (soundEnabled ? setSoundEnabled(false) : enableSound())}
               className={`rounded-full px-3 py-2 text-xs font-medium flex items-center gap-1.5 ${

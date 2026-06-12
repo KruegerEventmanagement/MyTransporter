@@ -1,38 +1,52 @@
-## Zwei Aufgaben
+Christian (Admin-Account `kroega.christian96@gmx.de`) bekommt ab sofort bei jeder neuen Buchung **zwei** Benachrichtigungen:
 
-### 1. Bug-Fix: `/trip/{id}` ignoriert `booking.status`
+1. **E-Mail** an seine Admin-Adresse – sofort, mit allen Buchungsdetails.
+2. **Push-Benachrichtigung** auf das Handy – über die bereits installierte MyTransporter-PWA (Web-Push). Funktioniert auf Android und auf iOS ab Version 16.4, sobald die App einmal zum Home-Screen hinzugefügt und Push erlaubt wurde.
 
-**Problem:** `src/routes/trip.$bookingId.tsx` initialisiert `phase` immer auf `"pre"`. Eine Buchung mit Status `active` oder `returning` zeigt fälschlicherweise wieder Abhol-Code / Pre-Drive.
+---
 
-**Fix:** Phase aus `booking.status` ableiten (in einem `useEffect` nach dem Laden):
-- `active` → `phase = "active"`
-- `returning` → `phase = "return"`
-- `completed` / `cancelled` → `phase = "done"`
-- sonst → `"pre"` (default)
+## 1. Admin-E-Mail bei Buchung
 
-Eine Datei, ~10 Zeilen.
+- Neue Server-Funktion `sendAdminBookingNotification` (in `src/lib/booking-emails.functions.ts`), die parallel zur bestehenden Kundenbestätigung läuft.
+- Empfänger: Admin-E-Mail aus Umgebungsvariable (`ADMIN_NOTIFY_EMAIL`, Default `kroega.christian96@gmx.de`).
+- Inhalt: Kunde (Name/E-Mail/Tel), Fahrzeug, Tarif, Start-/Rückgabezeit, Zubehör, Abholcode, direkter Link `/admin`.
+- Aufruf in `src/routes/checkout.return.tsx` direkt nach `sendBookingConfirmation` (im Hintergrund, blockiert nichts).
+- Versand-Provider: bestehender Resend-Account (`RESEND_API_KEY` ist schon konfiguriert).
 
-### 2. Stripe von Sandbox → Live umschalten
+## 2. Push-Benachrichtigungen aufs Handy (Web Push / PWA)
 
-**Status laut Go-Live-Check:** Alle 5 Schritte abgeschlossen, Live-Keys provisioniert.
+### Einrichtung (einmalig)
 
-**Aktuelles Problem:** `src/lib/stripe.ts` hat den Sandbox-Publishable-Key (`pk_test_...`) hardcoded und fällt darauf zurück, weil `VITE_PAYMENTS_CLIENT_TOKEN` nicht gesetzt ist. Der Server-Side-Stripe-Client wählt das Environment basierend auf dem an `createBookingCheckout` übergebenen `environment`-Parameter — der wiederum aus dem Client kommt (`getStripeEnvironment()` schaut auf das Prefix des Client-Tokens). Solange der Client-Token `pk_test_` bleibt, läuft alles im Sandbox-Modus.
+- VAPID-Schlüsselpaar generieren und als Secrets `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` (mailto) ablegen.
+- Neue Tabelle `push_subscriptions` (user_id, endpoint, p256dh, auth, user_agent, created_at) mit RLS: User darf nur eigene Subscriptions schreiben/lesen, Service-Role pusht.
+- Service-Worker `public/sw.js` um `push`- und `notificationclick`-Listener erweitern (öffnet `/admin`).
+- Manifest/Worker-Registration ist bereits vorhanden (PWA läuft), nur Push-Handling kommt dazu.
 
-**Was ich brauche von dir:** den Live-Publishable-Key deines Stripe-Accounts (beginnt mit `pk_live_...`). Diesen findest du in deinem Stripe-Dashboard unter:
-**Developers → API keys → Standard keys → Publishable key** (im Live-Modus, nicht Sandbox).
+### UI im Admin-Bereich
 
-**Was ich dann mache:**
-1. Den `pk_live_...` als Fallback in `src/lib/stripe.ts` setzen (oder besser: als `VITE_PAYMENTS_CLIENT_TOKEN` in `.env` schreiben, damit Sandbox/Live einfach umschaltbar bleibt für spätere Tests).
-2. Verifizieren, dass `getStripeEnvironment()` `'live'` zurückgibt → Server nutzt `STRIPE_LIVE_API_KEY` und `PAYMENTS_LIVE_WEBHOOK_SECRET`.
-3. Webhook-URL in Stripe Live-Modus prüfen — Lovable hat sie automatisch beim Provisioning angelegt, aber wir verifizieren, dass `/api/public/...` Webhook-Endpoint die `?env=live` Query bekommt.
-4. Projekt publishen (Frontend-Änderungen brauchen das Publish-Klick).
+- In `src/routes/admin.tsx` neuer Button **„Push aktivieren“**:
+  - Fragt Browser-Permission ab.
+  - Ruft `serviceWorker.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: VAPID_PUBLIC })` auf.
+  - Speichert Subscription in `push_subscriptions`.
+- Status-Anzeige („aktiv auf diesem Gerät / nicht aktiv“) und Test-Push-Button.
 
-**Wichtig:** Sobald live, werden echte Karten belastet. Empfehlung: erste echte Test-Buchung mit deiner eigenen Karte und kleinem Betrag, dann Geld zurückerstatten.
+### Auslösung beim Buchungs-Ereignis
 
-### Reihenfolge in der nächsten Runde (Build-Mode)
-1. Trip-Bug fixen (kann ich sofort)
-2. Auf deinen `pk_live_...` warten
-3. Stripe-Client umstellen
-4. Publishen
+- Neue Server-Funktion `sendAdminPush({ title, body, url })`:
+  - Holt alle Subscriptions von Usern mit Rolle `admin` (`has_role`).
+  - Sendet Web-Push via `web-push`-Library mit VAPID-Auth.
+  - Bei `410 Gone` Subscription automatisch löschen.
+- Aufruf parallel zur Admin-Mail in `checkout.return.tsx`.
 
-**Bitte poste deinen Live-Publishable-Key** (`pk_live_...`) — der ist öffentlich/safe und darf im Frontend stehen.
+## Wichtige Hinweise für dich
+
+- **iPhone**: Push funktioniert nur, wenn du die Seite **einmal über „Zum Home-Bildschirm“ hinzufügst** und dann in der so installierten App Push erlaubst. Safari-Tab allein bekommt keine Push-Nachrichten.
+- **Erste Aktivierung**: Du musst dich nach dem Deployment einmal auf dem Handy einloggen, in den Admin-Bereich gehen und „Push aktivieren“ tippen. Danach kommen die Pushs automatisch.
+- **Backup**: Selbst wenn Push mal scheitert (Browser zu, Permission entzogen), bekommst du die E-Mail in jedem Fall.
+
+## Technische Details
+
+- Bibliothek: `web-push` (Node-kompatibel, läuft im Worker-SSR-Runtime).
+- Migration: `push_subscriptions`-Tabelle + GRANTs + RLS-Policies.
+- Keine Änderung am bestehenden Customer-Email- oder Stripe-Flow.
+- Reihenfolge im Checkout-Return (unverändert blockierend): Buchung anlegen → danach im Hintergrund Kunden-Mail, Admin-Mail, Admin-Push.
