@@ -150,3 +150,63 @@ export const sendBookingConfirmation = createServerFn({ method: "POST" })
 
     return { sent };
   });
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+export const sendAdminBookingNotification = createServerFn({ method: "POST" })
+  .inputValidator((data: { bookingId: string }) => {
+    if (!data?.bookingId || typeof data.bookingId !== "string") {
+      throw new Error("bookingId fehlt");
+    }
+    return data;
+  })
+  .handler(async ({ data }) => {
+    const { data: booking } = await supabaseAdmin
+      .from("bookings")
+      .select("id, user_id, vehicle_name, vehicle_plate, plan_label, plan_price, start_date, start_hour, pickup_code, addons, addons_total_cents")
+      .eq("id", data.bookingId)
+      .maybeSingle();
+    if (!booking) return { sent: false, reason: "booking_not_found" };
+
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("email, first_name, last_name, phone")
+      .eq("id", booking.user_id)
+      .maybeSingle();
+
+    const startStr = fmtDate(booking.start_date, booking.start_hour);
+    const customerName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Unbekannt";
+    const addons = Array.isArray(booking.addons)
+      ? (booking.addons as Array<{ id: string; label: string; price_cents: number }>)
+      : [];
+    const addonsHtml = addons.length === 0
+      ? "<em>keins</em>"
+      : addons.map((a) => `${escapeHtml(a.label)} (${(a.price_cents / 100).toFixed(2)} €)`).join(", ");
+
+    const html = `
+      <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:auto;padding:24px;color:#111;">
+        <h2 style="margin:0 0 16px;">🚐 Neue Buchung</h2>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <tr><td style="padding:6px 0;color:#666;width:140px;">Kunde</td><td><strong>${escapeHtml(customerName)}</strong></td></tr>
+          <tr><td style="padding:6px 0;color:#666;">E-Mail</td><td>${escapeHtml(profile?.email ?? "-")}</td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Telefon</td><td>${escapeHtml(profile?.phone ?? "-")}</td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Fahrzeug</td><td>${escapeHtml(booking.vehicle_name)} · ${escapeHtml(booking.vehicle_plate)}</td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Tarif</td><td>${escapeHtml(booking.plan_label)} · ${Number(booking.plan_price).toFixed(2)} €</td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Abholung</td><td><strong>${startStr} Uhr</strong></td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Abhol-Code</td><td><code style="background:#f5f5f5;padding:2px 6px;border-radius:4px;">${escapeHtml(booking.pickup_code)}</code></td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Zubehör</td><td>${addonsHtml}</td></tr>
+        </table>
+        <p style="margin:24px 0;">
+          <a href="https://www.mytransporter.org/admin" style="background:#000;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:600;display:inline-block;">Im Admin öffnen</a>
+        </p>
+      </div>`;
+
+    const sent = await sendEmail(
+      ADMIN_EMAIL,
+      `🚐 Neue Buchung · ${customerName} · ${startStr}`,
+      html,
+    );
+    return { sent };
+  });
