@@ -1,21 +1,37 @@
-Ich richte alles automatisch ein, damit du sofort per E-Mail und Handy-Push benachrichtigt wirst, wenn jemand bucht.
+## Problem
 
-## Was passiert
+Im Admin-Bereich gehen nach jedem Seiten-Aktualisieren zwei Schalter wieder auf "aus":
 
-1. **VAPID-Schlüssel selbst generieren** – Ich erzeuge die nötigen Push-Schlüssel automatisch (kein manuelles Eingeben nötig). Der öffentliche Schlüssel kommt in den Code, der private wird als verschlüsseltes Secret `VAPID_PRIVATE_KEY` hinterlegt.
-2. **Admin-Mail fix** – `kroega.christian96@gmx.de` wird fest im Code als Empfänger der Buchungs-Benachrichtigungen verankert (kein Secret nötig).
-3. **Push-System aktiv schalten** – Die bereits vorbereitete Infrastruktur (Service Worker, Datenbank-Tabelle, Button im Admin-Bereich) wird scharfgeschaltet.
+1. **Signalton** (`soundEnabled`) — wird nur im React-State gehalten, geht beim Reload verloren.
+2. **Push aktivieren** — kann auf iPad/iOS verloren gehen, wenn der Service-Worker das Push-Abo zwischendurch wegwirft.
 
-## Was du danach machen musst (einmalig, 1 Minute)
+Du willst: einmal anschalten → bleibt für immer an, auf Handy und iPad, auch nach Reload.
 
-1. Auf deinem Handy `mytransporter.org` im Browser öffnen, eingeloggt als Christian.
-2. Seite zum Home-Bildschirm hinzufügen (Safari: Teilen → "Zum Home-Bildschirm"; Chrome: Menü → "App installieren").
-3. Die installierte App öffnen, in den Admin-Bereich gehen und einmal auf **"Push aktivieren"** tippen → Benachrichtigungen erlauben.
+## Was ich ändere
 
-Danach: Bei jeder neuen Buchung sofort Push aufs Handy + Mail an dein Postfach.
+### 1. Signalton-Schalter merken
+
+- Beim Klick auf "Signalton aktivieren" zusätzlich `localStorage.setItem("admin_sound_on", "1")` setzen.
+- Beim Laden der Admin-Seite: wenn dieser Eintrag existiert, `AudioContext` automatisch wieder anlegen und `soundEnabled = true` setzen.
+- Browser-Hinweis: iOS/Safari erlauben Audio nur nach einer Nutzer-Geste. Beim allerersten Reload nach dem Schließen des Browsers kann der Ton einen einzigen Tap brauchen, um die Audio-Engine wieder aufzuwecken — danach läuft er. Dafür zeige ich, wenn iOS den Auto-Start blockiert, einmalig einen kleinen Button "Ton entsperren". Der Schalter selbst bleibt aber „an".
+
+### 2. Push dauerhaft halten + automatisch wiederherstellen
+
+In `src/lib/push-client.ts` und `src/routes/admin.tsx`:
+
+- Neue Funktion `ensurePushSubscribed()`:
+  - Wenn `Notification.permission === "granted"` und in der Datenbank existiert für diesen User schon ein Push-Abo, **stilles** Re-Subscribe im Service-Worker (ohne erneuten Permission-Dialog) und Upsert in die Datenbank.
+  - So bleibt „Push an", auch wenn iOS/Android das lokale Abo verworfen hat.
+- Beim Laden der Admin-Seite wird `ensurePushSubscribed()` automatisch aufgerufen. Wenn es klappt → `pushState = "on"`.
+- Der Toggle „Push aktivieren" bleibt für den ersten Klick (Permission-Dialog) zuständig. Danach übernimmt die Wiederherstellung das automatisch.
+- Auf dem iPad zusätzlich: bei jedem Sichtbarwerden des Tabs (`visibilitychange → visible`) erneut `ensurePushSubscribed()` aufrufen, damit ein vom System weggeräumtes Abo sofort neu angemeldet wird.
+
+### 3. iPad-spezifischer Hinweis
+
+Auf iOS funktioniert Web-Push **nur**, wenn die Seite als PWA auf dem Home-Bildschirm installiert ist und aus dem App-Icon gestartet wurde. Das ist bei dir bereits eingerichtet. Wichtig fürs iPad: einmal über das App-Icon öffnen, einmal „Push aktivieren" tippen — danach erledigt die neue Auto-Wiederherstellung den Rest.
 
 ## Technische Details
 
-- `node` Script generiert VAPID-Keypair, public key landet in `src/lib/push-config.ts`, private key per `secrets--add_secret` (Wert wird automatisch eingetragen — du musst nichts kopieren).
-- Admin-Empfängermail hartkodiert in `src/lib/booking-emails.functions.ts` mit Fallback auf `kroega.christian96@gmx.de`.
-- Keine weiteren Code-Änderungen nötig — Implementierung aus dem letzten Schritt bleibt bestehen.
+- `src/routes/admin.tsx`: `useEffect` für Sound-Restore aus `localStorage`; `enableSound` schreibt in `localStorage`; neuer `useEffect` ruft `ensurePushSubscribed()` beim Mount + bei `visibilitychange`.
+- `src/lib/push-client.ts`: neue Export-Funktion `ensurePushSubscribed()`, die `Notification.permission === "granted"` prüft, das vorhandene oder ein neues `pushManager.subscribe(...)` holt und in `push_subscriptions` upserted — ohne UI-Toast bei Fehlern.
+- Keine Datenbank-Änderung nötig (`push_subscriptions` existiert bereits).
