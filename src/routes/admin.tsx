@@ -32,6 +32,7 @@ import {
   disablePushOnThisDevice,
   isSubscribedOnThisDevice,
   pushSupported,
+  ensurePushSubscribed,
 } from "@/lib/push-client";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { toast } from "sonner";
