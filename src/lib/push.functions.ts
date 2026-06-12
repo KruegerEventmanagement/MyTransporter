@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { VAPID_PUBLIC_KEY } from "@/lib/push-config";
 
 // Server-Push an alle Admin-Geräte. Wird vom Buchungs-Flow im Hintergrund aufgerufen.
 export const sendAdminPush = createServerFn({ method: "POST" })
@@ -13,10 +14,10 @@ export const sendAdminPush = createServerFn({ method: "POST" })
     };
   })
   .handler(async ({ data }) => {
-    const publicKey = process.env.VAPID_PUBLIC_KEY;
+    const publicKey = VAPID_PUBLIC_KEY;
     const privateKey = process.env.VAPID_PRIVATE_KEY;
     const subject = process.env.VAPID_SUBJECT || "mailto:info@mytransporter.org";
-    if (!publicKey || !privateKey) {
+    if (!privateKey) {
       console.warn("VAPID keys not configured, skipping push");
       return { sent: 0, skipped: true };
     }
