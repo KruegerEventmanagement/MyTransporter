@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computePlanReturn } from "@/lib/booking-rules";
 
 const FROM = process.env.RESEND_FROM_EMAIL || "MyTransporter <info@mytransporter.org>";
+const ADMIN_EMAIL = process.env.ADMIN_NOTIFY_EMAIL || "kroega.christian96@gmx.de";
 
 function fmtDate(date: string, hour: number): string {
   return new Date(`${date}T${String(hour).padStart(2, "0")}:00:00`).toLocaleString("de-DE", {
