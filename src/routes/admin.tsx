@@ -497,7 +497,14 @@ function AdminDashboard() {
               </button>
             )}
             <button
-              onClick={() => (soundEnabled ? setSoundEnabled(false) : enableSound())}
+              onClick={() => {
+                if (soundEnabled) {
+                  setSoundEnabled(false);
+                  try { localStorage.removeItem("admin_sound_on"); } catch {}
+                } else {
+                  enableSound();
+                }
+              }}
               className={`rounded-full px-3 py-2 text-xs font-medium flex items-center gap-1.5 ${
                 soundEnabled ? "bg-foreground text-background" : "bg-secondary"
               }`}
