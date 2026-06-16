@@ -41,7 +41,11 @@ export function Navbar() {
       }
     };
     supabase.auth.getSession().then(({ data }) => apply(data.session?.user ?? null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => apply(session?.user ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      // Nur auf echte Identitätswechsel reagieren – nicht auf TOKEN_REFRESHED / INITIAL_SESSION.
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      apply(session?.user ?? null);
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
 
