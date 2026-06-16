@@ -1,12 +1,21 @@
-# Live-Modus auch in der Vorschau
+## Problem
+In Schritt 4 (Bezahlung) zeigt die Zusammenfassung unter "Zu zahlen" nur `Miete + Kaution`, obwohl der angezeigte Gesamtbetrag bereits das ausgewählte Zubehör enthält. Dadurch wirkt es, als fehle das Zubehör.
 
-## Was geändert wird
-- In `.env.development` den Test-Token (`pk_test_…`) durch den bereits vorhandenen Live-Token (`pk_live_…`) aus `.env.production` ersetzen.
+In Schritt 3 ("Grundbetrag") wird das Zubehör bereits korrekt mit aufgelistet (`+ X € Zubehör`).
 
-## Auswirkung
-- Der orange „Test-Modus"-Banner verschwindet auch in der Lovable-Vorschau.
-- Zahlungen in der Vorschau sind ab sofort **echte Zahlungen** über dein Stripe-Konto (inkl. 200 € Kaution).
-- Live-Seite `mytransporter.org` bleibt unverändert im Live-Modus.
+## Änderung
+Datei: `src/components/BookingSection.tsx`, Zeile 1149.
 
-## Wichtig
-Testkarten wie `4242 4242 4242 4242` funktionieren in der Vorschau danach nicht mehr. Falls du selbst eine Buchung zum Testen machst, wird echtes Geld abgebucht und du musst es im Admin-Bereich wieder erstatten (Stripe-Gebühren fallen an).
+Die Aufschlüsselung in Schritt 4 wird an Schritt 3 angeglichen, sodass das Zubehör nur dann erscheint, wenn welches gewählt wurde:
+
+```
+{selectedPlanEntry && `${selectedPlanEntry.price} € Miete${
+  addonsTotal > 0 ? ` + ${addonsTotal} € Zubehör` : ""
+} + ${DEPOSIT} € Kaution`}
+```
+
+Der Gesamtbetrag (`total`) bleibt unverändert – er ist bereits korrekt berechnet (Miete + Zubehör + Kaution). Es ändert sich nur die Anzeige der Aufschlüsselung.
+
+## Keine weiteren Änderungen
+- Keine Logik-Änderungen, keine Stripe-Änderungen, keine Backend-Änderungen.
+- Tatsächlich abgebuchter Betrag bleibt identisch.
