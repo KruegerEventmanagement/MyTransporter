@@ -25,7 +25,7 @@ import { de } from "date-fns/locale";
 import { AdminLogin } from "@/components/admin/AdminLogin";
 import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
 import { useServerFn } from "@tanstack/react-start";
-import { chargeBookingExtra, settleDeposit } from "@/lib/payments.functions";
+import { chargeBookingExtra, settleDeposit, createAdminTestCheckout } from "@/lib/payments.functions";
 import { sendTestAdminPush } from "@/lib/push.functions";
 import {
   enablePushOnThisDevice,
@@ -34,7 +34,8 @@ import {
   pushSupported,
   ensurePushSubscribed,
 } from "@/lib/push-client";
-import { getStripeEnvironment } from "@/lib/stripe";
+import { getStripe, getStripeEnvironment } from "@/lib/stripe";
+import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
@@ -135,6 +136,32 @@ function AdminDashboard() {
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
   const [pushState, setPushState] = useState<"unknown" | "off" | "on" | "unsupported" | "busy">("unknown");
   const triggerTestPush = useServerFn(sendTestAdminPush);
+  const startAdminTestCheckout = useServerFn(createAdminTestCheckout);
+  const [testCheckoutSecret, setTestCheckoutSecret] = useState<string | null>(null);
+  const [testCheckoutBusy, setTestCheckoutBusy] = useState(false);
+
+  const handleStartTestCheckout = async () => {
+    setTestCheckoutBusy(true);
+    try {
+      const res = await startAdminTestCheckout({
+        data: {
+          environment: getStripeEnvironment(),
+          returnUrl: `${window.location.origin}/admin?test_payment=done`,
+        },
+      });
+      if ("error" in res) {
+        toast.error("Zahlungstest konnte nicht gestartet werden", { description: res.error });
+        return;
+      }
+      setTestCheckoutSecret(res.clientSecret);
+    } catch (e) {
+      toast.error("Fehler beim Starten des Zahlungstests", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      setTestCheckoutBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -633,6 +660,43 @@ function AdminDashboard() {
 
         {tab === "notifications" && (
           <>
+            <div className="mb-4 p-4 rounded-2xl border border-border bg-card">
+              <div className="flex items-center gap-2 mb-2">
+                <Wallet className="w-4 h-4" />
+                <h3 className="font-semibold text-sm">Zahlungstest (1 €)</h3>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Startet einen echten Stripe-Checkout über 1 €. Auf der Live-Seite wird
+                wirklich 1 € abgebucht – Erstattung jederzeit über Stripe möglich.
+              </p>
+              {!testCheckoutSecret ? (
+                <button
+                  onClick={handleStartTestCheckout}
+                  disabled={testCheckoutBusy}
+                  className="rounded-full bg-foreground text-background px-4 py-2 text-xs font-semibold disabled:opacity-60"
+                >
+                  {testCheckoutBusy ? "Wird gestartet…" : "1 € Testkauf starten"}
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="rounded-xl overflow-hidden border border-border">
+                    <EmbeddedCheckoutProvider
+                      stripe={getStripe()}
+                      options={{ clientSecret: testCheckoutSecret }}
+                    >
+                      <EmbeddedCheckout />
+                    </EmbeddedCheckoutProvider>
+                  </div>
+                  <button
+                    onClick={() => setTestCheckoutSecret(null)}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              )}
+            </div>
+
             {unreadCount > 0 && (
               <div className="flex justify-end mb-3">
                 <button
