@@ -48,7 +48,8 @@ function ProfilePage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const loadBookings = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) return;
     const { data } = await supabase
       .from("bookings")
@@ -61,7 +62,8 @@ function ProfilePage() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user) {
         navigate({ to: "/" });
         return;
