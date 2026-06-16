@@ -160,42 +160,6 @@ async function assertAdmin(supabase: {
   if (!data) throw new Error("Nicht autorisiert");
 }
 
-/** Admin-only: erstellt eine 1-€-Test-Zahlung, um den Checkout-Flow zu prüfen. */
-export const createAdminTestCheckout = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((data: { returnUrl: string; environment: StripeEnv }) => {
-    if (!data.returnUrl) throw new Error("returnUrl fehlt");
-    assertStripeEnvironment(data.environment);
-    return data;
-  })
-  .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
-    try {
-      await assertAdmin(context.supabase as never, context.userId);
-      const stripe = createStripeClient(data.environment);
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        ui_mode: "embedded_page",
-        line_items: [{
-          price_data: {
-            currency: "eur",
-            product_data: { name: "Zahlungstest (1 €)" },
-            unit_amount: 100,
-          },
-          quantity: 1,
-        }],
-        return_url: data.returnUrl,
-        payment_intent_data: {
-          description: "MyTransporter · Zahlungstest 1 €",
-        },
-        metadata: { kind: "admin_test", userId: context.userId },
-      });
-      if (!session.client_secret) throw new Error("Stripe hat kein Checkout-Token zurückgegeben");
-      return { clientSecret: session.client_secret };
-    } catch (error) {
-      return { error: getStripeErrorMessage(error) };
-    }
-  });
-
 /** Bucht Mehrkilometer (oder beliebigen Restbetrag) off-session von der gespeicherten Karte ab. */
 export const chargeBookingExtra = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
