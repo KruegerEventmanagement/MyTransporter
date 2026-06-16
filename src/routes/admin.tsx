@@ -25,7 +25,7 @@ import { de } from "date-fns/locale";
 import { AdminLogin } from "@/components/admin/AdminLogin";
 import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
 import { useServerFn } from "@tanstack/react-start";
-import { chargeBookingExtra, settleDeposit } from "@/lib/payments.functions";
+import { chargeBookingExtra, settleDeposit, createAdminTestCheckout } from "@/lib/payments.functions";
 import { sendTestAdminPush } from "@/lib/push.functions";
 import {
   enablePushOnThisDevice,
@@ -34,7 +34,8 @@ import {
   pushSupported,
   ensurePushSubscribed,
 } from "@/lib/push-client";
-import { getStripeEnvironment } from "@/lib/stripe";
+import { getStripe, getStripeEnvironment } from "@/lib/stripe";
+import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
