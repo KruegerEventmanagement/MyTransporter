@@ -136,6 +136,32 @@ function AdminDashboard() {
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
   const [pushState, setPushState] = useState<"unknown" | "off" | "on" | "unsupported" | "busy">("unknown");
   const triggerTestPush = useServerFn(sendTestAdminPush);
+  const startAdminTestCheckout = useServerFn(createAdminTestCheckout);
+  const [testCheckoutSecret, setTestCheckoutSecret] = useState<string | null>(null);
+  const [testCheckoutBusy, setTestCheckoutBusy] = useState(false);
+
+  const handleStartTestCheckout = async () => {
+    setTestCheckoutBusy(true);
+    try {
+      const res = await startAdminTestCheckout({
+        data: {
+          environment: getStripeEnvironment(),
+          returnUrl: `${window.location.origin}/admin?test_payment=done`,
+        },
+      });
+      if ("error" in res) {
+        toast.error("Zahlungstest konnte nicht gestartet werden", { description: res.error });
+        return;
+      }
+      setTestCheckoutSecret(res.clientSecret);
+    } catch (e) {
+      toast.error("Fehler beim Starten des Zahlungstests", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      setTestCheckoutBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!isAdmin) return;
