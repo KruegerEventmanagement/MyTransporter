@@ -1146,7 +1146,10 @@ export function BookingSection() {
                   <p className="text-3xl font-bold">{total} €</p>
                 </div>
                 <p className="text-sm opacity-80 mt-1">
-                  {selectedPlanEntry && `${selectedPlanEntry.price} € Miete + ${DEPOSIT} € Kaution`}
+                  {selectedPlanEntry &&
+                    `${selectedPlanEntry.price} € Miete${
+                      addonsTotal > 0 ? ` + ${addonsTotal} € Zubehör` : ""
+                    } + ${DEPOSIT} € Kaution`}
                 </p>
               </div>
             )}
