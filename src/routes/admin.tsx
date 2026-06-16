@@ -660,6 +660,43 @@ function AdminDashboard() {
 
         {tab === "notifications" && (
           <>
+            <div className="mb-4 p-4 rounded-2xl border border-border bg-card">
+              <div className="flex items-center gap-2 mb-2">
+                <Wallet className="w-4 h-4" />
+                <h3 className="font-semibold text-sm">Zahlungstest (1 €)</h3>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Startet einen echten Stripe-Checkout über 1 €. Auf der Live-Seite wird
+                wirklich 1 € abgebucht – Erstattung jederzeit über Stripe möglich.
+              </p>
+              {!testCheckoutSecret ? (
+                <button
+                  onClick={handleStartTestCheckout}
+                  disabled={testCheckoutBusy}
+                  className="rounded-full bg-foreground text-background px-4 py-2 text-xs font-semibold disabled:opacity-60"
+                >
+                  {testCheckoutBusy ? "Wird gestartet…" : "1 € Testkauf starten"}
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="rounded-xl overflow-hidden border border-border">
+                    <EmbeddedCheckoutProvider
+                      stripe={getStripe()}
+                      options={{ clientSecret: testCheckoutSecret }}
+                    >
+                      <EmbeddedCheckout />
+                    </EmbeddedCheckoutProvider>
+                  </div>
+                  <button
+                    onClick={() => setTestCheckoutSecret(null)}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              )}
+            </div>
+
             {unreadCount > 0 && (
               <div className="flex justify-end mb-3">
                 <button
