@@ -231,7 +231,7 @@ export const sendAdminBookingNotification = createServerFn({ method: "POST" })
       </div>`;
 
     const sent = await sendEmail(
-      ADMIN_EMAIL,
+      getAdminEmail(),
       `🚐 Neue Buchung · ${customerName} · ${startStr}`,
       html,
     );
@@ -260,7 +260,7 @@ export const sendAdminRegistrationNotification = createServerFn({ method: "POST"
         </p>
       </div>`;
     const sent = await sendEmail(
-      ADMIN_EMAIL,
+      getAdminEmail(),
       `👤 Neue Registrierung · ${name}`,
       html,
     );
