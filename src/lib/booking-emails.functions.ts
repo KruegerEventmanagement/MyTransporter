@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computePlanReturn } from "@/lib/booking-rules";
 
 const FROM = process.env.RESEND_FROM_EMAIL || "MyTransporter <info@mytransporter.org>";
-const ADMIN_EMAIL = process.env.ADMIN_NOTIFY_EMAIL || "krueger.christian96@gmx.de";
+const ADMIN_EMAIL = process.env.ADMIN_NOTIFY_EMAIL || "info@mytransporter.org";
 
 function fmtDate(date: string, hour: number): string {
   return new Date(`${date}T${String(hour).padStart(2, "0")}:00:00`).toLocaleString("de-DE", {
@@ -206,6 +206,35 @@ export const sendAdminBookingNotification = createServerFn({ method: "POST" })
     const sent = await sendEmail(
       ADMIN_EMAIL,
       `🚐 Neue Buchung · ${customerName} · ${startStr}`,
+      html,
+    );
+    return { sent };
+  });
+
+export const sendAdminRegistrationNotification = createServerFn({ method: "POST" })
+  .inputValidator((data: { email: string; firstName?: string; lastName?: string; phone?: string }) => {
+    if (!data?.email || typeof data.email !== "string") {
+      throw new Error("email fehlt");
+    }
+    return data;
+  })
+  .handler(async ({ data }) => {
+    const name = [data.firstName, data.lastName].filter(Boolean).join(" ") || "Unbekannt";
+    const html = `
+      <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:auto;padding:24px;color:#111;">
+        <h2 style="margin:0 0 16px;">👤 Neue Registrierung</h2>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <tr><td style="padding:6px 0;color:#666;width:140px;">Name</td><td><strong>${escapeHtml(name)}</strong></td></tr>
+          <tr><td style="padding:6px 0;color:#666;">E-Mail</td><td>${escapeHtml(data.email)}</td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Telefon</td><td>${escapeHtml(data.phone ?? "-")}</td></tr>
+        </table>
+        <p style="margin:24px 0;">
+          <a href="https://www.mytransporter.org/admin" style="background:#000;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:600;display:inline-block;">Im Admin öffnen</a>
+        </p>
+      </div>`;
+    const sent = await sendEmail(
+      ADMIN_EMAIL,
+      `👤 Neue Registrierung · ${name}`,
       html,
     );
     return { sent };

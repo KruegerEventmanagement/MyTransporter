@@ -96,6 +96,17 @@ export function Navbar() {
       setError(error.message);
       return;
     }
+    // Admin-Benachrichtigung über neue Registrierung (still im Hintergrund)
+    import("@/lib/booking-emails.functions").then(({ sendAdminRegistrationNotification }) =>
+      sendAdminRegistrationNotification({
+        data: {
+          email: form.email,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          phone: form.phone,
+        },
+      }).catch((e) => console.warn("Admin-Registrierungs-Mail fehlgeschlagen:", e)),
+    );
     if (data.user && !data.session) {
       setInfo("Bitte bestätige deine E-Mail-Adresse. Wir haben dir einen Link geschickt.");
     } else {

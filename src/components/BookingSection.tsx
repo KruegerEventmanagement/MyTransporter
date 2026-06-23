@@ -356,6 +356,17 @@ export function BookingSection() {
       setAuthError(error.message);
       return;
     }
+    // Admin-Benachrichtigung über neue Registrierung (still im Hintergrund)
+    import("@/lib/booking-emails.functions").then(({ sendAdminRegistrationNotification }) =>
+      sendAdminRegistrationNotification({
+        data: {
+          email: regForm.email,
+          firstName: regForm.firstName,
+          lastName: regForm.lastName,
+          phone: regForm.phone,
+        },
+      }).catch((e) => console.warn("Admin-Registrierungs-Mail fehlgeschlagen:", e)),
+    );
     if (data.user && !data.session) {
       // E-Mail-Bestätigung erforderlich
       setSignupEmailSent(regForm.email);
