@@ -2,8 +2,25 @@ import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computePlanReturn } from "@/lib/booking-rules";
 
-const FROM = process.env.RESEND_FROM_EMAIL || "MyTransporter <info@mytransporter.org>";
-const ADMIN_EMAIL = process.env.ADMIN_NOTIFY_EMAIL || "info@mytransporter.org";
+const DEFAULT_FROM = "MyTransporter <info@mytransporter.org>";
+const DEFAULT_ADMIN_EMAIL = "info@mytransporter.org";
+
+function isValidEmailish(v: string | undefined, max = 200): boolean {
+  if (!v) return false;
+  if (v.length > max) return false;
+  if (!v.includes("@")) return false;
+  return true;
+}
+
+function getFrom(): string {
+  const v = process.env.RESEND_FROM_EMAIL;
+  return isValidEmailish(v) ? (v as string) : DEFAULT_FROM;
+}
+
+function getAdminEmail(): string {
+  const v = process.env.ADMIN_NOTIFY_EMAIL;
+  return isValidEmailish(v, 320) ? (v as string) : DEFAULT_ADMIN_EMAIL;
+}
 
 function fmtDate(date: string, hour: number): string {
   return new Date(`${date}T${String(hour).padStart(2, "0")}:00:00`).toLocaleString("de-DE", {
@@ -44,13 +61,23 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
     console.warn("RESEND_API_KEY missing, Buchungsbestätigung wird nicht versendet");
     return false;
   }
+  const from = getFrom();
+  const safeTo = isValidEmailish(to, 320) ? to : DEFAULT_ADMIN_EMAIL;
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: FROM, to, subject, html }),
+    body: JSON.stringify({ from, to: safeTo, subject, html }),
   });
   if (!res.ok) {
-    console.error("Resend send failed", await res.text());
+    const errText = await res.text();
+    console.error("Resend send failed", res.status, errText);
+    try {
+      await supabaseAdmin.from("admin_notifications").insert({
+        type: "email_failed",
+        title: "E-Mail-Versand fehlgeschlagen",
+        body: `${subject} → ${safeTo} · ${res.status} · ${errText.slice(0, 400)}`,
+      });
+    } catch {}
     return false;
   }
   return true;
