@@ -16,7 +16,16 @@ export function Navbar() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "" });
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    password: "",
+    accountType: "private" as "private" | "business",
+    companyName: "",
+    vatId: "",
+  });
 
   useEffect(() => {
     const apply = async (user: { id?: string; email?: string | null; user_metadata?: Record<string, unknown> } | null) => {
@@ -53,7 +62,7 @@ export function Navbar() {
     setShowModal(null);
     setError(null);
     setInfo(null);
-    setForm({ firstName: "", lastName: "", email: "", phone: "", password: "" });
+    setForm({ firstName: "", lastName: "", email: "", phone: "", password: "", accountType: "private", companyName: "", vatId: "" });
   };
 
   const handleLogin = async () => {
@@ -88,6 +97,9 @@ export function Navbar() {
           first_name: form.firstName,
           last_name: form.lastName,
           phone: form.phone,
+          account_type: form.accountType,
+          company_name: form.accountType === "business" ? form.companyName : "",
+          vat_id: form.accountType === "business" ? form.vatId : "",
         },
       },
     });
@@ -104,6 +116,9 @@ export function Navbar() {
           firstName: form.firstName,
           lastName: form.lastName,
           phone: form.phone,
+          accountType: form.accountType,
+          companyName: form.accountType === "business" ? form.companyName : undefined,
+          vatId: form.accountType === "business" ? form.vatId : undefined,
         },
       }).catch((e) => console.warn("Admin-Registrierungs-Mail fehlgeschlagen:", e)),
     );
