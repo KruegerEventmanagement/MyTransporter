@@ -28,6 +28,7 @@ self.addEventListener("push", (event) => {
     tag: payload.tag || "mytransporter",
     renotify: true,
     requireInteraction: true,
+    silent: false,
     data: { url: payload.url || "/admin" },
     vibrate: [200, 100, 200],
   };
