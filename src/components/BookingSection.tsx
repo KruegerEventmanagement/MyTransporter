@@ -375,6 +375,9 @@ export function BookingSection() {
           firstName: regForm.firstName,
           lastName: regForm.lastName,
           phone: regForm.phone,
+          accountType: regForm.accountType,
+          companyName: regForm.accountType === "business" ? regForm.companyName : undefined,
+          vatId: regForm.accountType === "business" ? regForm.vatId : undefined,
         },
       }).catch((e) => console.warn("Admin-Registrierungs-Mail fehlgeschlagen:", e)),
     );
