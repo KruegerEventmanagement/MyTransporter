@@ -219,28 +219,37 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_type: string
+          company_name: string | null
           created_at: string
           email: string | null
           first_name: string | null
           id: string
           last_name: string | null
           phone: string | null
+          vat_id: string | null
         }
         Insert: {
+          account_type?: string
+          company_name?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           id: string
           last_name?: string | null
           phone?: string | null
+          vat_id?: string | null
         }
         Update: {
+          account_type?: string
+          company_name?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
           phone?: string | null
+          vat_id?: string | null
         }
         Relationships: []
       }
