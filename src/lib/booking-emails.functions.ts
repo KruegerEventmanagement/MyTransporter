@@ -56,7 +56,9 @@ function cancellationTable(): string {
     </table>`;
 }
 
-async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+type Attachment = { filename: string; content: string };
+
+async function sendEmail(to: string, subject: string, html: string, attachments?: Attachment[]): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn("RESEND_API_KEY missing, Buchungsbestätigung wird nicht versendet");
@@ -64,10 +66,12 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
   }
   const from = getFrom();
   const safeTo = isValidEmailish(to, 320) ? to : DEFAULT_ADMIN_EMAIL;
+  const body: Record<string, unknown> = { from, to: safeTo, subject, html };
+  if (attachments && attachments.length > 0) body.attachments = attachments;
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: safeTo, subject, html }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const errText = await res.text();
@@ -162,10 +166,28 @@ export const sendBookingConfirmation = createServerFn({ method: "POST" })
         <p style="color:#888;font-size:12px;margin:0;">MyTransporter · info@mytransporter.org</p>
       </div>`;
 
+    let invoiceAttachment: Attachment | undefined;
+    try {
+      const { generateBookingInvoicePdf } = await import("@/lib/invoice-pdf.server");
+      const inv = await generateBookingInvoicePdf(booking.id);
+      invoiceAttachment = { filename: inv.filename, content: inv.pdfBase64 };
+    } catch (e) {
+      console.warn("Rechnungs-PDF konnte nicht erzeugt werden:", e);
+      try {
+        await supabaseAdmin.from("admin_notifications").insert({
+          type: "invoice_failed",
+          title: "Rechnungs-PDF fehlgeschlagen",
+          body: `Buchung ${booking.id}: ${String((e as Error)?.message ?? e).slice(0, 300)}`,
+          booking_id: booking.id,
+        });
+      } catch {}
+    }
+
     const sent = await sendEmail(
       email,
       `MyTransporter · Buchungsbestätigung für ${startStr} Uhr`,
       html,
+      invoiceAttachment ? [invoiceAttachment] : undefined,
     );
 
     await supabaseAdmin.from("admin_notifications").insert({
