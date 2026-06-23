@@ -28,7 +28,7 @@ function invoiceNumber(bookingId: string, createdAt: string): string {
 export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pdfBase64: string; invoiceNo: string; filename: string }> {
   const { data: booking, error } = await supabaseAdmin
     .from("bookings")
-    .select("id, user_id, created_at, vehicle_name, vehicle_plate, plan_id, plan_label, plan_price, deposit, start_date, start_hour, pickup_code, addons, addons_total_cents")
+    .select("id, user_id, created_at, vehicle_name, vehicle_plate, plan_id, plan_label, plan_price, deposit, free_km, km_price_cents, start_date, start_hour, pickup_code, addons, addons_total_cents")
     .eq("id", bookingId)
     .maybeSingle();
   if (error || !booking) throw new Error("Buchung nicht gefunden");
