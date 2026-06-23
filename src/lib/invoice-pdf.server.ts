@@ -35,12 +35,15 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("email, first_name, last_name")
+    .select("email, first_name, last_name, account_type, company_name, vat_id")
     .eq("id", booking.user_id)
     .maybeSingle();
 
   const customerName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Kunde";
   const customerEmail = profile?.email ?? "";
+  const isBusiness = profile?.account_type === "business";
+  const companyName = (profile?.company_name ?? "").trim();
+  const vatId = (profile?.vat_id ?? "").trim();
   const addons: Addon[] = Array.isArray(booking.addons) ? (booking.addons as Addon[]) : [];
 
   // Beträge in Cent, brutto (so wurden sie kassiert). MwSt. 19% wird herausgerechnet.
@@ -112,8 +115,21 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   let cy = y + 28;
   page.drawText("Rechnung an", { x: left, y: cy, font: bold, size: 10, color: grey });
   cy -= 14;
-  page.drawText(customerName, { x: left, y: cy, font: bold, size: 11, color: black });
-  cy -= 13;
+  if (isBusiness && companyName) {
+    page.drawText(companyName, { x: left, y: cy, font: bold, size: 11, color: black });
+    cy -= 13;
+    if (customerName && customerName !== "Kunde") {
+      page.drawText(`z.Hd. ${customerName}`, { x: left, y: cy, font, size: 10, color: black });
+      cy -= 13;
+    }
+    if (vatId) {
+      page.drawText(`USt-IdNr.: ${vatId}`, { x: left, y: cy, font, size: 10, color: black });
+      cy -= 13;
+    }
+  } else {
+    page.drawText(customerName, { x: left, y: cy, font: bold, size: 11, color: black });
+    cy -= 13;
+  }
   if (customerEmail) {
     page.drawText(customerEmail, { x: left, y: cy, font, size: 10, color: black });
   }
