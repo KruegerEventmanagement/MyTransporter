@@ -1,11 +1,23 @@
-Ich behebe die Push-Benachrichtigungen so, dass du als eingeloggter Admin bei jeder neuen Buchung und jeder neuen Registrierung zuverlässig benachrichtigt wirst.
+Ich kümmere mich um zwei Dinge:
 
-Umsetzung:
-1. Einen zentralen Server-Trigger bauen: `sendAdminPush` wird nicht mehr nur aus dem Browser-Buchungsabschluss aufgerufen, sondern auch immer dann, wenn eine Admin-Benachrichtigung erstellt wird.
-2. Registrierung abdecken: Die bestehende Registrierungs-Benachrichtigung wird zusätzlich per Push an alle gespeicherten Admin-Geräte gesendet.
-3. Buchung abdecken: Jede erfolgreiche Buchung erzeugt weiterhin eine Admin-Benachrichtigung und löst darüber sicher eine Push-Nachricht aus; doppelte Pushs für dieselbe Buchung werden vermieden.
-4. Fehler sichtbar machen: Wenn kein Admin-Gerät abonniert ist, VAPID fehlt, oder ein Push-Versand fehlschlägt, wird das sauber geloggt und als Admin-Hinweis gespeichert, damit man den Grund sieht statt still nichts zu bekommen.
-5. Admin-Geräte stabil registrieren: Das Push-Abo auf jedem Admin-Gerät wird beim Öffnen des Admin-Bereichs automatisch erneuert/gespeichert, wenn die Berechtigung bereits erteilt ist.
-6. Service Worker aktualisieren: Push-Benachrichtigungen bleiben sichtbar, vibrieren wo unterstützt und werden beim Anklicken direkt zum Admin-Bereich führen.
+1. **E-Mails für die letzte Buchung jetzt nachschicken** — die Express-Buchung über 39 € vom 23.06., Abholung 25.06. 15:00 Uhr, Code OG312T. Du bekommst an `krueger.christian96@gmx.de` die normale Kundenbestätigung und an `info@mytransporter.org` die Admin-Benachrichtigung, beide so wie sie zukünftige Kunden sehen würden.
 
-Wichtige Einschränkung: Auf iPhone/iPad funktionieren echte Web-Push-Benachrichtigungen nur, wenn die Website zum Home-Bildschirm hinzugefügt wurde; eigene Benachrichtigungstöne kann iOS für Web-Push nicht erzwingen. Auf Laptop/Android/unterstützten Browsern wird der normale Systemton verwendet.
+2. **Rechnung als PDF anhängen** — ab sofort (und auch in der nachgeschickten Bestätigung oben) hängt an der Kundenbestätigung eine echte Rechnungs-PDF mit:
+   - Rechnungsnummer (abgeleitet aus Buchungs-ID + Datum)
+   - Rechnungs- und Leistungsdatum
+   - Kunde (Name + E-Mail)
+   - Anbieter (MyTransporter · info@mytransporter.org)
+   - Posten: Miete (Tarif-Label), gebuchtes Zubehör, Kaution (mit Hinweis „wird nach Rückgabe erstattet")
+   - Zwischensumme, MwSt-Hinweis (Kleinunternehmerregelung §19 UStG, falls nicht anders gewünscht), Gesamtbetrag, Zahlart „bereits per Karte bezahlt"
+   - Hinweis: Die Kaution ist Bestandteil der Zahlung, wird aber bei korrekter Rückgabe in voller Höhe erstattet.
+
+Technische Umsetzung (kurz):
+- Neue Server-Funktion `generateBookingInvoicePdf(bookingId)` erzeugt das PDF mit `pdf-lib` (läuft im Worker-Runtime).
+- `sendBookingConfirmation` hängt das PDF bei Resend als Attachment an und nennt es `MyTransporter-Rechnung-<Code>.pdf`.
+- Einmaliger Trigger für die aktuelle Buchung `f8f86b64…`: ich rufe nach dem Deploy `sendBookingConfirmation` + `sendAdminBookingNotification` einmal manuell auf, damit du beide Mails sofort im Postfach hast.
+
+Frage zur MwSt-Konfiguration: Soll auf der Rechnung
+- (A) **Kleinunternehmer** ausgewiesen werden („Gemäß §19 UStG wird keine Umsatzsteuer berechnet."), oder
+- (B) **19 % MwSt.** mit ausgewiesener Steuer auf den Mietanteil (Kaution bleibt steuerfrei)?
+
+Wenn du nichts angibst, nehme ich Variante A (Kleinunternehmer), das passt zur typischen Setup-Größe — du kannst es jederzeit umstellen.
