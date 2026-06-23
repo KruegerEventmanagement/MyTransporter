@@ -42,10 +42,25 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   const customerName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Kunde";
   const customerEmail = profile?.email ?? "";
   const addons: Addon[] = Array.isArray(booking.addons) ? (booking.addons as Addon[]) : [];
-  const addonsTotal = (booking.addons_total_cents ?? 0) / 100;
-  const rent = Number(booking.plan_price ?? 0);
-  const deposit = Number(booking.deposit ?? 0);
-  const total = rent + addonsTotal + deposit;
+
+  // Beträge in Cent, brutto (so wurden sie kassiert). MwSt. 19% wird herausgerechnet.
+  const VAT_RATE = 0.19;
+  const rentGrossC = Math.round(Number(booking.plan_price ?? 0) * 100);
+  const depositGrossC = Math.round(Number(booking.deposit ?? 0) * 100);
+  const addonItems = addons.map((a) => ({ label: a.label, grossC: a.price_cents }));
+
+  const splitVat = (grossC: number) => {
+    const netC = Math.round(grossC / (1 + VAT_RATE));
+    const vatC = grossC - netC;
+    return { netC, vatC, grossC };
+  };
+  const rentSplit = splitVat(rentGrossC);
+  const addonSplits = addonItems.map((a) => ({ label: a.label, ...splitVat(a.grossC) }));
+  const serviceNetC = rentSplit.netC + addonSplits.reduce((s, a) => s + a.netC, 0);
+  const serviceVatC = rentSplit.vatC + addonSplits.reduce((s, a) => s + a.vatC, 0);
+  const serviceGrossC = rentSplit.grossC + addonSplits.reduce((s, a) => s + a.grossC, 0);
+  const totalC = serviceGrossC + depositGrossC;
+  const toEur = (c: number) => c / 100;
 
   const startStr = fmtDateTime(booking.start_date, booking.start_hour);
   const ret = computePlanReturn(booking.plan_id, new Date(`${booking.start_date}T00:00:00`), booking.start_hour);
@@ -75,6 +90,8 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   page.drawText("info@mytransporter.org", { x: left, y, font, size: 10, color: grey });
   y -= 12;
   page.drawText("www.mytransporter.org", { x: left, y, font, size: 10, color: grey });
+  y -= 12;
+  page.drawText("USt-IdNr.: wird ergänzt", { x: left, y, font, size: 10, color: grey });
 
   y -= 30;
   page.drawLine({ start: { x: left, y }, end: { x: right, y }, color: line, thickness: 1 });
@@ -114,30 +131,39 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   y -= 13;
   page.drawText(`Rückgabe spätestens: ${returnStr}`, { x: left, y, font, size: 10, color: black });
 
-  // Items table
+  // Items table mit Spalten: Position · Netto · MwSt 19% · Brutto
+  const colNetX = 330;
+  const colVatX = 410;
+  const colGrossX = right; // rechtsbündig
+
   y -= 28;
   page.drawText("Position", { x: left, y, font: bold, size: 10, color: grey });
-  page.drawText("Betrag", { x: right - bold.widthOfTextAtSize("Betrag", 10), y, font: bold, size: 10, color: grey });
+  const drawRight = (text: string, x: number, yy: number, f = font, size = 10, color = grey) => {
+    page.drawText(text, { x: x - f.widthOfTextAtSize(text, size), y: yy, font: f, size, color });
+  };
+  drawRight("Netto", colNetX, y, bold);
+  drawRight("MwSt 19%", colVatX, y, bold);
+  drawRight("Brutto", colGrossX, y, bold);
   y -= 6;
   page.drawLine({ start: { x: left, y }, end: { x: right, y }, color: line, thickness: 1 });
 
-  const row = (label: string, amount: number, opts?: { sub?: string }) => {
+  const itemRow = (label: string, netC: number | null, vatC: number | null, grossC: number, opts?: { sub?: string }) => {
     y -= 18;
     page.drawText(label, { x: left, y, font, size: 11, color: black });
-    const a = fmtEur(amount);
-    page.drawText(a, { x: right - font.widthOfTextAtSize(a, 11), y, font, size: 11, color: black });
+    drawRight(netC == null ? "—" : fmtEur(toEur(netC)), colNetX, y, font, 11, black);
+    drawRight(vatC == null ? "—" : fmtEur(toEur(vatC)), colVatX, y, font, 11, black);
+    drawRight(fmtEur(toEur(grossC)), colGrossX, y, font, 11, black);
     if (opts?.sub) {
       y -= 12;
       page.drawText(opts.sub, { x: left, y, font, size: 9, color: grey });
     }
   };
 
-  row(`Miete · ${booking.plan_label}`, rent);
-  for (const a of addons) {
-    row(`Zubehör · ${a.label}`, a.price_cents / 100);
+  itemRow(`Miete · ${booking.plan_label}`, rentSplit.netC, rentSplit.vatC, rentSplit.grossC);
+  for (const a of addonSplits) {
+    itemRow(`Zubehör · ${a.label}`, a.netC, a.vatC, a.grossC);
   }
-  row("Kaution", deposit, { sub: "Wird nach beanstandungsfreier Rückgabe vollständig erstattet." });
-  // Free km hint
+  itemRow("Kaution", null, null, depositGrossC, { sub: "Umsatzsteuerfrei gemäß § 10 UStG · wird nach beanstandungsfreier Rückgabe vollständig erstattet." });
   if (booking.free_km != null) {
     y -= 14;
     page.drawText(`Inklusive ${booking.free_km} Freikilometer · darüber ${((booking.km_price_cents ?? 0) / 100).toFixed(2)} € / km`, { x: left, y, font, size: 9, color: grey });
@@ -146,20 +172,31 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   y -= 14;
   page.drawLine({ start: { x: left, y }, end: { x: right, y }, color: line, thickness: 1 });
 
-  // Total
-  y -= 22;
-  page.drawText("Gesamtbetrag", { x: left, y, font: bold, size: 13, color: black });
-  const totalStr = fmtEur(total);
-  page.drawText(totalStr, { x: right - bold.widthOfTextAtSize(totalStr, 13), y, font: bold, size: 13, color: black });
+  // Summenblock
+  const sumRow = (label: string, amountC: number, opts?: { bold?: boolean; size?: number }) => {
+    y -= opts?.bold ? 22 : 16;
+    const f = opts?.bold ? bold : font;
+    const s = opts?.size ?? (opts?.bold ? 13 : 11);
+    page.drawText(label, { x: left, y, font: f, size: s, color: black });
+    const a = fmtEur(toEur(amountC));
+    page.drawText(a, { x: right - f.widthOfTextAtSize(a, s), y, font: f, size: s, color: black });
+  };
+  sumRow("Zwischensumme netto (Miete + Zubehör)", serviceNetC);
+  sumRow("zzgl. 19% USt.", serviceVatC);
+  sumRow("Bruttobetrag Leistung", serviceGrossC);
+  sumRow("Kaution (umsatzsteuerfrei, § 10 UStG)", depositGrossC);
+  sumRow("Gesamtbetrag", totalC, { bold: true });
 
-  y -= 18;
+  y -= 16;
   page.drawText("Bereits bezahlt per Kreditkarte / Stripe", { x: left, y, font, size: 10, color: grey });
 
-  // VAT note (Kleinunternehmer)
+  // VAT note
   y -= 28;
   page.drawText("Hinweis zur Umsatzsteuer", { x: left, y, font: bold, size: 10, color: black });
   y -= 13;
-  page.drawText("Gemäß § 19 UStG wird keine Umsatzsteuer berechnet (Kleinunternehmerregelung).", { x: left, y, font, size: 9, color: grey });
+  page.drawText("Im ausgewiesenen Brutto der Leistung sind 19% Umsatzsteuer enthalten.", { x: left, y, font, size: 9, color: grey });
+  y -= 12;
+  page.drawText("Die Kaution ist gemäß § 10 UStG nicht umsatzsteuerbar und wird vollständig erstattet.", { x: left, y, font, size: 9, color: grey });
 
   // Footer
   page.drawText("Vielen Dank für deine Buchung bei MyTransporter.", { x: left, y: 60, font, size: 10, color: black });
