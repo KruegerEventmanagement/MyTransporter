@@ -230,19 +230,57 @@ export function Navbar() {
 
             <div className="space-y-3">
               {showModal === "register" && (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, accountType: "private" })}
+                      className={`py-2 rounded-xl border text-sm font-medium transition-colors ${form.accountType === "private" ? "bg-foreground text-background border-foreground" : "bg-background text-foreground border-border hover:bg-muted"}`}
+                    >
+                      Privat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, accountType: "business" })}
+                      className={`py-2 rounded-xl border text-sm font-medium transition-colors ${form.accountType === "business" ? "bg-foreground text-background border-foreground" : "bg-background text-foreground border-border hover:bg-muted"}`}
+                    >
+                      Firma
+                    </button>
+                  </div>
+                  {form.accountType === "business" && (
+                    <>
+                      <input
+                        type="text"
+                        value={form.companyName}
+                        onChange={(e) => setForm({ ...form, companyName: e.target.value })}
+                        placeholder="Firmenname"
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                      />
+                      <input
+                        type="text"
+                        value={form.vatId}
+                        onChange={(e) => setForm({ ...form, vatId: e.target.value })}
+                        placeholder="USt-IdNr. (optional)"
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                      />
+                    </>
+                  )}
+                </>
+              )}
+              {showModal === "register" && (
                 <div className="grid grid-cols-2 gap-3">
                   <input
                     type="text"
                     value={form.firstName}
                     onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                    placeholder="Vorname"
+                    placeholder={form.accountType === "business" ? "Vorname (Ansprechp.)" : "Vorname"}
                     className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   />
                   <input
                     type="text"
                     value={form.lastName}
                     onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                    placeholder="Nachname"
+                    placeholder={form.accountType === "business" ? "Nachname (Ansprechp.)" : "Nachname"}
                     className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   />
                 </div>
@@ -285,7 +323,13 @@ export function Navbar() {
 
               <button
                 onClick={showModal === "login" ? handleLogin : handleRegister}
-                disabled={loading || !form.email || !form.password || (showModal === "register" && (!form.firstName || !form.lastName))}
+                disabled={
+                  loading ||
+                  !form.email ||
+                  !form.password ||
+                  (showModal === "register" && (!form.firstName || !form.lastName)) ||
+                  (showModal === "register" && form.accountType === "business" && !form.companyName)
+                }
                 className="w-full rounded-xl bg-accent py-2.5 text-accent-foreground font-medium text-sm transition-all hover:bg-accent/90 flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? "Bitte warten…" : showModal === "login" ? "Einloggen" : "Registrieren"}
