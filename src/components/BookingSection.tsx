@@ -61,7 +61,15 @@ export function BookingSection() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authUser, setAuthUser] = useState<{ id: string; email?: string } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
-  const [regForm, setRegForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
+  const [regForm, setRegForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    accountType: "private" as "private" | "business",
+    companyName: "",
+    vatId: "",
+  });
   const [regPassword, setRegPassword] = useState("");
   const [regPasswordConfirm, setRegPasswordConfirm] = useState("");
   const [showRegPassword, setShowRegPassword] = useState(false);
@@ -348,6 +356,9 @@ export function BookingSection() {
           first_name: regForm.firstName,
           last_name: regForm.lastName,
           phone: regForm.phone,
+          account_type: regForm.accountType,
+          company_name: regForm.accountType === "business" ? regForm.companyName : "",
+          vat_id: regForm.accountType === "business" ? regForm.vatId : "",
         },
       },
     });
