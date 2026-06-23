@@ -1095,7 +1095,7 @@ export function BookingSection() {
                           <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
                         )}
                         <button
-                          disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !regPasswordConfirm || !docsScanned || authLoading}
+                          disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !regPasswordConfirm || !docsScanned || authLoading || (regForm.accountType === "business" && !regForm.companyName)}
                           onClick={handleSignUp}
                           className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
                         >
