@@ -1,23 +1,40 @@
-Ich kümmere mich um zwei Dinge:
+## Änderung Rechnungs-PDF: 19% MwSt. ausweisen
 
-1. **E-Mails für die letzte Buchung jetzt nachschicken** — die Express-Buchung über 39 € vom 23.06., Abholung 25.06. 15:00 Uhr, Code OG312T. Du bekommst an `krueger.christian96@gmx.de` die normale Kundenbestätigung und an `info@mytransporter.org` die Admin-Benachrichtigung, beide so wie sie zukünftige Kunden sehen würden.
+In `src/lib/invoice-pdf.server.ts`:
 
-2. **Rechnung als PDF anhängen** — ab sofort (und auch in der nachgeschickten Bestätigung oben) hängt an der Kundenbestätigung eine echte Rechnungs-PDF mit:
-   - Rechnungsnummer (abgeleitet aus Buchungs-ID + Datum)
-   - Rechnungs- und Leistungsdatum
-   - Kunde (Name + E-Mail)
-   - Anbieter (MyTransporter · info@mytransporter.org)
-   - Posten: Miete (Tarif-Label), gebuchtes Zubehör, Kaution (mit Hinweis „wird nach Rückgabe erstattet")
-   - Zwischensumme, MwSt-Hinweis (Kleinunternehmerregelung §19 UStG, falls nicht anders gewünscht), Gesamtbetrag, Zahlart „bereits per Karte bezahlt"
-   - Hinweis: Die Kaution ist Bestandteil der Zahlung, wird aber bei korrekter Rückgabe in voller Höhe erstattet.
+1. **Beträge als Brutto behandeln** (so wurden sie bereits gezahlt) und MwSt. herausrechnen:
+   - Miete brutto: `plan_price` → netto = brutto / 1,19 · MwSt. = brutto − netto
+   - Zubehör brutto: pro Position gleich aufteilen
+   - **Kaution: keine MwSt.** (echte Sicherheitsleistung, kein Leistungsentgelt) – bleibt unverändert
+2. **Positionsliste umbauen** in eine kleine Tabelle mit Spalten: Position · Netto · MwSt 19% · Brutto. Kaution-Zeile zeigt nur Brutto, MwSt-Spalte „—".
+3. **Summenblock**:
+   ```
+   Zwischensumme netto (Miete + Zubehör)
+   zzgl. 19% USt.
+   Bruttobetrag Leistung
+   Kaution (umsatzsteuerfrei, § 10 UStG)
+   Gesamtbetrag (bereits per Karte bezahlt)
+   ```
+4. **Hinweis „§ 19 UStG / Kleinunternehmer" entfernen** und ersetzen durch: „Im ausgewiesenen Brutto sind 19% Umsatzsteuer enthalten. Die Kaution ist gemäß § 10 UStG nicht umsatzsteuerbar und wird nach beanstandungsfreier Rückgabe vollständig erstattet."
+5. **Steuernummer/USt-IdNr.-Zeile** im Header-Footer: Platzhalter `USt-IdNr.: <wird ergänzt>` – falls du sie schon hast, sag mir die Nummer, dann trage ich sie fest ein (rechtlich Pflichtangabe auf MwSt-Rechnungen).
+6. **Rundung**: alle Beträge auf 2 Nachkommastellen, in Cent rechnen um Rundungsdifferenzen zu vermeiden.
 
-Technische Umsetzung (kurz):
-- Neue Server-Funktion `generateBookingInvoicePdf(bookingId)` erzeugt das PDF mit `pdf-lib` (läuft im Worker-Runtime).
-- `sendBookingConfirmation` hängt das PDF bei Resend als Attachment an und nennt es `MyTransporter-Rechnung-<Code>.pdf`.
-- Einmaliger Trigger für die aktuelle Buchung `f8f86b64…`: ich rufe nach dem Deploy `sendBookingConfirmation` + `sendAdminBookingNotification` einmal manuell auf, damit du beide Mails sofort im Postfach hast.
+Keine Änderung an `booking-emails.functions.ts` nötig – die PDF wird weiterhin automatisch angehängt.
 
-Frage zur MwSt-Konfiguration: Soll auf der Rechnung
-- (A) **Kleinunternehmer** ausgewiesen werden („Gemäß §19 UStG wird keine Umsatzsteuer berechnet."), oder
-- (B) **19 % MwSt.** mit ausgewiesener Steuer auf den Mietanteil (Kaution bleibt steuerfrei)?
+## Optional: Test-Mail neu schicken
 
-Wenn du nichts angibst, nehme ich Variante A (Kleinunternehmer), das passt zur typischen Setup-Größe — du kannst es jederzeit umstellen.
+Nach dem Umbau einmalig die Buchung `f8f86b64-…` erneut an dich verschicken, damit du die neue Rechnung siehst.
+
+## Spam-Ordner – was wir tun können
+
+Ich kann am Code wenig drehen, aber an der Domain-Konfiguration. Mögliche Ursachen, wenn die Mail im Spam landet:
+
+- **SPF / DKIM / DMARC** für `mytransporter.org` bei Resend → wenn nicht alle drei „verified" sind, landet fast jede transaktionale Mail im Spam. Soll ich den aktuellen Status der Email-Domain prüfen?
+- **From-Adresse** `info@mytransporter.org` ist gut, **Reply-To** identisch – passt.
+- **PDF-Anhang + viele Links** triggert teilweise Spamfilter; kaum vermeidbar bei einer Rechnung.
+
+Wenn du willst, prüfe ich nach dem MwSt-Umbau zusätzlich den Domain-Status und melde, was noch fehlt (z.B. DMARC-Record).
+
+## Frage
+
+Soll auf der Rechnung eine **USt-IdNr.** oder **Steuernummer** stehen? Wenn ja, bitte einmal mitschicken – ohne diese Angabe ist eine MwSt-Rechnung formal unvollständig. Bis dahin setze ich einen Platzhalter.

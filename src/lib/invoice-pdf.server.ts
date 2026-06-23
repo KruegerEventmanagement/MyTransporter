@@ -42,10 +42,25 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   const customerName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Kunde";
   const customerEmail = profile?.email ?? "";
   const addons: Addon[] = Array.isArray(booking.addons) ? (booking.addons as Addon[]) : [];
-  const addonsTotal = (booking.addons_total_cents ?? 0) / 100;
-  const rent = Number(booking.plan_price ?? 0);
-  const deposit = Number(booking.deposit ?? 0);
-  const total = rent + addonsTotal + deposit;
+
+  // Beträge in Cent, brutto (so wurden sie kassiert). MwSt. 19% wird herausgerechnet.
+  const VAT_RATE = 0.19;
+  const rentGrossC = Math.round(Number(booking.plan_price ?? 0) * 100);
+  const depositGrossC = Math.round(Number(booking.deposit ?? 0) * 100);
+  const addonItems = addons.map((a) => ({ label: a.label, grossC: a.price_cents }));
+
+  const splitVat = (grossC: number) => {
+    const netC = Math.round(grossC / (1 + VAT_RATE));
+    const vatC = grossC - netC;
+    return { netC, vatC, grossC };
+  };
+  const rentSplit = splitVat(rentGrossC);
+  const addonSplits = addonItems.map((a) => ({ label: a.label, ...splitVat(a.grossC) }));
+  const serviceNetC = rentSplit.netC + addonSplits.reduce((s, a) => s + a.netC, 0);
+  const serviceVatC = rentSplit.vatC + addonSplits.reduce((s, a) => s + a.vatC, 0);
+  const serviceGrossC = rentSplit.grossC + addonSplits.reduce((s, a) => s + a.grossC, 0);
+  const totalC = serviceGrossC + depositGrossC;
+  const toEur = (c: number) => c / 100;
 
   const startStr = fmtDateTime(booking.start_date, booking.start_hour);
   const ret = computePlanReturn(booking.plan_id, new Date(`${booking.start_date}T00:00:00`), booking.start_hour);
@@ -75,6 +90,8 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   page.drawText("info@mytransporter.org", { x: left, y, font, size: 10, color: grey });
   y -= 12;
   page.drawText("www.mytransporter.org", { x: left, y, font, size: 10, color: grey });
+  y -= 12;
+  page.drawText("USt-IdNr.: wird ergänzt", { x: left, y, font, size: 10, color: grey });
 
   y -= 30;
   page.drawLine({ start: { x: left, y }, end: { x: right, y }, color: line, thickness: 1 });
