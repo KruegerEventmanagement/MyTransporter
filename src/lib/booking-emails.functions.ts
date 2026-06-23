@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computePlanReturn } from "@/lib/booking-rules";
+import { pushToAdmins } from "@/lib/push.functions";
 
 const DEFAULT_FROM = "MyTransporter <info@mytransporter.org>";
 const DEFAULT_ADMIN_EMAIL = "info@mytransporter.org";
@@ -235,6 +236,15 @@ export const sendAdminBookingNotification = createServerFn({ method: "POST" })
       `🚐 Neue Buchung · ${customerName} · ${startStr}`,
       html,
     );
+
+    // Push an alle Admin-Geräte (still im Hintergrund, Fehler werden in admin_notifications geloggt)
+    await pushToAdmins({
+      title: "Neue Buchung",
+      body: `${customerName} · ${booking.plan_label} · ${startStr}`,
+      url: "/admin",
+      tag: `booking-${booking.id}`,
+    }).catch((e) => console.warn("Admin-Push (Buchung) fehlgeschlagen:", e));
+
     return { sent };
   });
 
@@ -264,5 +274,13 @@ export const sendAdminRegistrationNotification = createServerFn({ method: "POST"
       `👤 Neue Registrierung · ${name}`,
       html,
     );
+
+    await pushToAdmins({
+      title: "Neue Registrierung",
+      body: `${name} · ${data.email}`,
+      url: "/admin",
+      tag: `signup-${data.email}`,
+    }).catch((e) => console.warn("Admin-Push (Registrierung) fehlgeschlagen:", e));
+
     return { sent };
   });
