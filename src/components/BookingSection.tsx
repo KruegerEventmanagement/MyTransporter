@@ -894,9 +894,50 @@ export function BookingSection() {
 
                     {/* Registration form */}
                     <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setRegForm({ ...regForm, accountType: "private" })}
+                          className={`py-2.5 rounded-xl border text-sm font-medium transition-colors ${regForm.accountType === "private" ? "bg-foreground text-background border-foreground" : "bg-background text-foreground border-border hover:bg-muted"}`}
+                        >
+                          Privatperson
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRegForm({ ...regForm, accountType: "business" })}
+                          className={`py-2.5 rounded-xl border text-sm font-medium transition-colors ${regForm.accountType === "business" ? "bg-foreground text-background border-foreground" : "bg-background text-foreground border-border hover:bg-muted"}`}
+                        >
+                          Firma
+                        </button>
+                      </div>
+                      {regForm.accountType === "business" && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-sm font-medium text-foreground">Firmenname</label>
+                            <input
+                              type="text"
+                              value={regForm.companyName}
+                              onChange={(e) => setRegForm({ ...regForm, companyName: e.target.value })}
+                              className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                              placeholder="Mustermann GmbH"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-foreground">USt-IdNr. <span className="text-muted-foreground font-normal">(optional)</span></label>
+                            <input
+                              type="text"
+                              value={regForm.vatId}
+                              onChange={(e) => setRegForm({ ...regForm, vatId: e.target.value })}
+                              className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                              placeholder="DE123456789"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">Die Rechnung wird auf die Firma ausgestellt. Vor- und Nachname dienen als Ansprechpartner.</p>
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-sm font-medium text-foreground">Vorname</label>
+                          <label className="text-sm font-medium text-foreground">{regForm.accountType === "business" ? "Vorname (Ansprechpartner)" : "Vorname"}</label>
                           <input
                             type="text"
                             value={regForm.firstName}
@@ -906,7 +947,7 @@ export function BookingSection() {
                           />
                         </div>
                         <div>
-                          <label className="text-sm font-medium text-foreground">Nachname</label>
+                          <label className="text-sm font-medium text-foreground">{regForm.accountType === "business" ? "Nachname (Ansprechpartner)" : "Nachname"}</label>
                           <input
                             type="text"
                             value={regForm.lastName}
