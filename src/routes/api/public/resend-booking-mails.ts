@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/api/public/_resend-booking-mails")({
+export const Route = createFileRoute("/api/public/resend-booking-mails")({
   server: {
     handlers: {
       POST: async ({ request }) => {
