@@ -21,7 +21,7 @@ export const Route = createFileRoute("/partner")({
       {
         property: "og:description",
         content:
-          "Sponsor & Werbepartner werden: über 25 Magnetfolien-Werbeflächen am Transporter, ab 29 € / Monat.",
+          "Sponsor & Werbepartner werden: über 25 Magnetfolien-Werbeflächen am Transporter, ab 29 € netto / Monat (zzgl. 19% MwSt., B2B).",
       },
     ],
     links: [{ rel: "canonical", href: "https://www.mytransporter.org/partner" }],

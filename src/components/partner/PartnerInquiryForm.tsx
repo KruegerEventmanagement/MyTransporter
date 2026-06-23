@@ -88,7 +88,7 @@ export function PartnerInquiryForm({ selectedPackage, onPackageChange }: Props) 
             <optgroup key={v} label={VIEWS[v].label}>
               {PACKAGES_BY_VIEW[v].map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.code} · {p.sizeLabel} · {p.monthly} €/Mon.
+                  {p.code} · {p.sizeLabel} · {p.monthly} € netto/Mon.
                 </option>
               ))}
             </optgroup>

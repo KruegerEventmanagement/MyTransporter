@@ -271,7 +271,7 @@ export const sendAdminBookingNotification = createServerFn({ method: "POST" })
   });
 
 export const sendAdminRegistrationNotification = createServerFn({ method: "POST" })
-  .inputValidator((data: { email: string; firstName?: string; lastName?: string; phone?: string }) => {
+  .inputValidator((data: { email: string; firstName?: string; lastName?: string; phone?: string; accountType?: "private" | "business"; companyName?: string; vatId?: string }) => {
     if (!data?.email || typeof data.email !== "string") {
       throw new Error("email fehlt");
     }
@@ -279,10 +279,13 @@ export const sendAdminRegistrationNotification = createServerFn({ method: "POST"
   })
   .handler(async ({ data }) => {
     const name = [data.firstName, data.lastName].filter(Boolean).join(" ") || "Unbekannt";
+    const isBusiness = data.accountType === "business";
     const html = `
       <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:auto;padding:24px;color:#111;">
-        <h2 style="margin:0 0 16px;">👤 Neue Registrierung</h2>
+        <h2 style="margin:0 0 16px;">${isBusiness ? "🏢" : "👤"} Neue Registrierung ${isBusiness ? "(Firma)" : "(Privat)"}</h2>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          ${isBusiness ? `<tr><td style="padding:6px 0;color:#666;width:140px;">Firma</td><td><strong>${escapeHtml(data.companyName ?? "-")}</strong></td></tr>` : ""}
+          ${isBusiness && data.vatId ? `<tr><td style="padding:6px 0;color:#666;">USt-IdNr.</td><td>${escapeHtml(data.vatId)}</td></tr>` : ""}
           <tr><td style="padding:6px 0;color:#666;width:140px;">Name</td><td><strong>${escapeHtml(name)}</strong></td></tr>
           <tr><td style="padding:6px 0;color:#666;">E-Mail</td><td>${escapeHtml(data.email)}</td></tr>
           <tr><td style="padding:6px 0;color:#666;">Telefon</td><td>${escapeHtml(data.phone ?? "-")}</td></tr>
@@ -293,7 +296,7 @@ export const sendAdminRegistrationNotification = createServerFn({ method: "POST"
       </div>`;
     const sent = await sendEmail(
       getAdminEmail(),
-      `👤 Neue Registrierung · ${name}`,
+      `${isBusiness ? "🏢" : "👤"} Neue Registrierung · ${isBusiness ? (data.companyName || name) : name}`,
       html,
     );
 
