@@ -491,7 +491,7 @@ function AdminDashboard() {
                 className={`rounded-full px-3 py-2 text-xs font-medium flex items-center gap-1.5 ${
                   pushState === "on" ? "bg-foreground text-background" : "bg-secondary"
                 }`}
-                title="Push-Benachrichtigungen auf dieses Gerät"
+                title="Push-Benachrichtigungen auf dieses Gerät. iPhone/iPad: nur möglich, wenn die Seite zum Home-Bildschirm hinzugefügt wurde."
               >
                 {pushState === "on" ? <BellRing className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
                 {pushState === "on" ? "Push an" : pushState === "busy" ? "…" : "Push aktivieren"}
