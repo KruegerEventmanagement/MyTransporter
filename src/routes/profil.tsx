@@ -7,6 +7,7 @@ import { de } from "date-fns/locale";
 import { useServerFn } from "@tanstack/react-start";
 import { cancelBookingWithRefund } from "@/lib/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
+import { DocumentScanner } from "@/components/DocumentScanner";
 
 export const Route = createFileRoute("/profil")({
   head: () => ({ meta: [{ title: "MyTransporter · Profil" }] }),
@@ -46,6 +47,18 @@ function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [docTypes, setDocTypes] = useState<Set<string>>(new Set());
+
+  const loadDocs = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) return;
+    const { data } = await supabase
+      .from("user_documents")
+      .select("doc_type")
+      .eq("user_id", user.id);
+    if (data) setDocTypes(new Set(data.map((d: { doc_type: string }) => d.doc_type)));
+  };
 
   const loadBookings = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -81,6 +94,11 @@ function ProfilePage() {
         .eq("user_id", user.id)
         .eq("role", "admin");
       if (mounted) setIsAdmin(!!roles && roles.length > 0);
+      const { data: docs } = await supabase
+        .from("user_documents")
+        .select("doc_type")
+        .eq("user_id", user.id);
+      if (mounted && docs) setDocTypes(new Set(docs.map((d: { doc_type: string }) => d.doc_type)));
       setLoading(false);
     })();
     return () => { mounted = false; };
@@ -152,6 +170,37 @@ function ProfilePage() {
       </header>
 
       <div className="max-w-3xl mx-auto px-4 mt-6 space-y-6">
+        {/* Verifizierungs-Banner */}
+        {(() => {
+          const idComplete = docTypes.has("id_front") && docTypes.has("id_back");
+          const licComplete = docTypes.has("license_front") && docTypes.has("license_back");
+          if (idComplete && licComplete) return null;
+          return (
+            <div className="rounded-2xl border border-border bg-secondary p-3 text-xs text-foreground">
+              Bitte Ausweis und Führerschein hochladen, damit du Buchungen abschließen kannst.
+            </div>
+          );
+        })()}
+
+        {/* Verifizierung */}
+        <section>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1">
+            Verifizierung
+          </h2>
+          <div className="space-y-3">
+            <DocumentScanner
+              documentType="id"
+              isComplete={docTypes.has("id_front") && docTypes.has("id_back")}
+              onComplete={loadDocs}
+            />
+            <DocumentScanner
+              documentType="license"
+              isComplete={docTypes.has("license_front") && docTypes.has("license_back")}
+              onComplete={loadDocs}
+            />
+          </div>
+        </section>
+
         {/* Statistiken */}
         <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard icon={<RouteIcon className="w-4 h-4" />} label="Fahrten" value={String(stats.totalTrips)} />

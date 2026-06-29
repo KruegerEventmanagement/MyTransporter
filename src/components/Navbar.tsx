@@ -3,7 +3,7 @@ import { User, X, ChevronRight, Eye, EyeOff, Route as RouteIcon, Shield } from "
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
-const AUTH_CONFIRM_URL = `${typeof window !== "undefined" ? window.location.origin : ""}/`;
+const AUTH_CONFIRM_URL = `${typeof window !== "undefined" ? window.location.origin : "https://www.mytransporter.org"}/auth/confirm`;
 
 export function Navbar() {
   const [showModal, setShowModal] = useState<"login" | "register" | null>(null);
