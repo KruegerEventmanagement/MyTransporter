@@ -212,9 +212,17 @@ export function Navbar() {
       </nav>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-card rounded-3xl border border-border shadow-2xl w-full max-w-sm p-6 animate-fade-in-up relative">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+        >
+          <form
+            onSubmit={(e) => { e.preventDefault(); (showModal === "login" ? handleLogin : handleRegister)(); }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-card rounded-3xl border border-border shadow-2xl w-full max-w-sm p-6 animate-fade-in-up relative"
+          >
             <button
+              type="button"
               onClick={closeModal}
               className="absolute top-4 right-4 w-8 h-8 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
             >
@@ -254,14 +262,16 @@ export function Navbar() {
                         value={form.companyName}
                         onChange={(e) => setForm({ ...form, companyName: e.target.value })}
                         placeholder="Firmenname"
-                        className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                        autoComplete="organization"
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                       />
                       <input
                         type="text"
                         value={form.vatId}
                         onChange={(e) => setForm({ ...form, vatId: e.target.value })}
                         placeholder="USt-IdNr. (optional)"
-                        className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                        autoComplete="off"
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                       />
                     </>
                   )}
@@ -274,14 +284,16 @@ export function Navbar() {
                     value={form.firstName}
                     onChange={(e) => setForm({ ...form, firstName: e.target.value })}
                     placeholder={form.accountType === "business" ? "Vorname (Ansprechp.)" : "Vorname"}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                    autoComplete="given-name"
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   />
                   <input
                     type="text"
                     value={form.lastName}
                     onChange={(e) => setForm({ ...form, lastName: e.target.value })}
                     placeholder={form.accountType === "business" ? "Nachname (Ansprechp.)" : "Nachname"}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                    autoComplete="family-name"
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   />
                 </div>
               )}
@@ -290,7 +302,9 @@ export function Navbar() {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="E-Mail"
-                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                autoComplete={showModal === "login" ? "username" : "email"}
+                inputMode="email"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
               />
               {showModal === "register" && (
                 <input
@@ -298,7 +312,9 @@ export function Navbar() {
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   placeholder="Telefonnummer"
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               )}
               <div className="relative">
@@ -307,7 +323,8 @@ export function Navbar() {
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   placeholder="Passwort"
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                  autoComplete={showModal === "login" ? "current-password" : "new-password"}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 pr-10 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                 />
                 <button
                   type="button"
@@ -322,7 +339,7 @@ export function Navbar() {
               {info && <p className="text-xs text-foreground bg-secondary p-2 rounded-lg">{info}</p>}
 
               <button
-                onClick={showModal === "login" ? handleLogin : handleRegister}
+                type="submit"
                 disabled={
                   loading ||
                   !form.email ||
