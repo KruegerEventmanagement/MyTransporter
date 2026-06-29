@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useServerFn } from "@tanstack/react-start";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 import { Calendar } from "@/components/ui/calendar";
@@ -56,6 +57,7 @@ const RESEND_LAST_SENT_KEY = "mt_resend_last_sent";
 
 export function BookingSection() {
   const [step, setStep] = useState(0);
+  const [liabilityAccepted, setLiabilityAccepted] = useState(false);
   const [range, setRange] = useState<{ from?: Date; to?: Date } | undefined>();
   const [startHour, setStartHour] = useState<number | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -1335,7 +1337,22 @@ export function BookingSection() {
             )}
 
             {verified && !showCheckout && !paid && planKey && (
+              <>
+                <label className="mt-8 flex items-start gap-3 text-left rounded-2xl border border-border bg-secondary p-4 cursor-pointer">
+                  <Checkbox
+                    checked={liabilityAccepted}
+                    onCheckedChange={(v) => setLiabilityAccepted(v === true)}
+                    className="mt-1"
+                  />
+                  <span className="text-sm text-foreground">
+                    <span className="font-bold block mb-1">Versicherung / Haftung erklärt und verstanden</span>
+                    <span className="text-muted-foreground">
+                      Der Mieter bestätigt, dass das Mietfahrzeug keine Teilkasko und keine Vollkasko hat. Bei erheblichen selbstverschuldeten Schäden trägt der Mieter den tatsächlichen Fahrzeugschaden bis maximal 1.000,00 Euro pro Schadensfall. Ist der tatsächliche Schaden niedriger, wird nur der niedrigere Schaden berechnet. Notwendige, tatsächlich angefallene Nebenkosten, z. B. Gutachterkosten, Abschleppkosten, Bergungskosten, Standkosten oder behördliche Gebühren, kommen zusätzlich hinzu.
+                    </span>
+                  </span>
+                </label>
               <button
+                disabled={!liabilityAccepted}
                 onClick={async () => {
                   // Pending Booking für /checkout/return persistieren
                   if (typeof window !== "undefined" && date && startHour !== null && selectedPlanEntry) {
@@ -1387,6 +1404,7 @@ export function BookingSection() {
               >
                 Sicher bezahlen
               </button>
+              </>
             )}
 
             {showCheckout && !paid && planKey && (
