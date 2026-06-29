@@ -1,39 +1,46 @@
-## Was geändert wird
+# Verifizierungs-Gate vor der Bezahlung
 
-### 1. Auto-Login nach E-Mail-Bestätigung
+## Ziel
+Eine Person kann erst bezahlen, wenn Ausweis (Vorder- + Rückseite) und Führerschein (Vorder- + Rückseite) hochgeladen sind. Die gewählte Zeit/Fahrzeug-Kombi wird beim Erreichen des Verifizierungs-Schritts für **15 Minuten** reserviert. Nach erfolgreichem Scan geht's automatisch weiter zur Bezahlung. Erinnerungs-E-Mails (Abholcode, Fahrtbeginn) laufen weiter wie bisher.
 
-Aktuell wird man nach Klick auf den Bestätigungslink zur Startseite (`/?email_confirmed=1#booking`) zurückgeschickt und muss sich nochmal einloggen.
+## Ablauf im Booking-Flow
+Neuer Schritt **„Verifizierung"** wird zwischen „Fahrzeug & Zubehör" und „Bezahlen" eingeschoben — aber nur, wenn der eingeloggte User noch keine 4 Dokumente in `user_documents` hat. Wer schon verifiziert ist, überspringt den Schritt komplett (kein zusätzlicher Klick).
 
-Änderung:
-- Beide Registrierungs-Stellen (`Navbar.tsx` und `BookingSection.tsx`) setzen `emailRedirectTo` einheitlich auf `https://www.mytransporter.org/auth/confirm`.
-- Auf `/auth/confirm` wird nach erfolgreichem `exchangeCodeForSession` / `verifyOtp` die Session geprüft. Wenn eine Session existiert (= eingeloggt), wird direkt auf `/profil` weitergeleitet. Nur als Fallback (keine Session zustande gekommen) wird wie bisher auf die Startseite mit Login-Hinweis geleitet.
-- Kurze Erfolgsmeldung „E-Mail bestätigt – du bist eingeloggt" vor dem Redirect.
+Stepper neu:
+- Nicht eingeloggt: Datum → Uhrzeit/Tarif → Fahrzeug → Registrierung → **Verifizierung** → Bezahlen → Fahrt
+- Eingeloggt, unverifiziert: Datum → Uhrzeit/Tarif → Fahrzeug → **Verifizierung** → Bezahlen → Fahrt
+- Eingeloggt, verifiziert: wie bisher (kein Extra-Schritt)
 
-### 2. Ausweis- und Führerschein-Prozess sichtbar machen
+Im Verifizierungs-Schritt:
+- Zwei `DocumentScanner`-Karten (ID + Führerschein, wie auf `/profil`)
+- Großer Countdown „Reservierung läuft in **mm:ss** ab"
+- Sobald beide Dokumente komplett sind → automatisch weiter zu „Bezahlen"
+- Läuft der Timer ab, bevor Bezahlung gestartet wurde: Hinweis „Reservierung abgelaufen", Schritt zurück auf „Uhrzeit & Tarif", Slot wird wieder frei (Reservierung wird gelöscht)
 
-Aktuell taucht der Scanner nur im Buchungs-Flow auf. Wer sich nur registriert, sieht ihn nie.
+## 15-Minuten-Reservierung (technisch)
+Neue Tabelle `booking_holds`:
+- `vehicle_id`, `start_date`, `start_hour`, `plan_id`, `user_id`, `expires_at` (= jetzt + 15 min)
+- Eindeutigkeit: aktive Hold pro `(vehicle_id, start_date, start_hour)` blockt andere Holds und Buchungen
+- RLS: User darf eigene Hold sehen/löschen; Admin/Service Role alles
+- GRANTs für `authenticated` + `service_role`
 
-Änderung im Profil (`/profil`):
-- Neuer Abschnitt „Verifizierung" oben auf der Profilseite mit zwei Karten:
-  - Personalausweis (Vorder- + Rückseite)
-  - Führerschein (Vorder- + Rückseite)
-- Wenn in `user_documents` bereits Einträge für `id_front`, `id_back`, `license_front`, `license_back` existieren, wird die Karte als „✓ verifiziert" dargestellt; sonst startet der vorhandene `DocumentScanner`.
-- Solange noch nicht beide Dokumente vollständig sind, erscheint oben auf der Profilseite ein kompakter Hinweis-Banner („Bitte Ausweis und Führerschein hochladen, um Buchungen abschließen zu können").
+Verfügbarkeitslogik (`src/lib/availability.functions.ts`) berücksichtigt zusätzlich aktive, nicht abgelaufene Holds anderer User → Slot ist während der 15 min für andere blockiert.
 
-Im Buchungs-Flow (`BookingSection.tsx`) ändert sich nichts an der Logik – wer die Dokumente schon im Profil hochgeladen hat, sieht dort automatisch den „verifiziert"-Status und kann direkt weiter.
+Hold wird angelegt, sobald der Verifizierungs-Schritt betreten wird (oder direkt vor Stripe-Checkout, falls schon verifiziert) und beim erfolgreichen Bezahlen/Stornieren wieder entfernt. Abgelaufene Holds werden serverseitig beim nächsten Verfügbarkeits-Check ignoriert; ein leichter Cleanup-Cron (täglich) räumt alte Zeilen weg.
 
-## Technische Details
+## Bezahlung serverseitig absichern
+`createBookingCheckout` (in `src/lib/payments.functions.ts`) bekommt zwei zusätzliche Prüfungen:
+1. User hat in `user_documents` alle vier `doc_type`-Einträge (`id_front`, `id_back`, `license_front`, `license_back`). Sonst Fehler „Bitte zuerst Ausweis und Führerschein hochladen".
+2. Es existiert eine eigene, noch gültige `booking_holds`-Zeile für genau dieses Fahrzeug+Datum+Stunde. Sonst Fehler „Reservierung abgelaufen, bitte Zeit neu wählen".
 
-- `src/components/Navbar.tsx`: `AUTH_CONFIRM_URL` zeigt auf `https://www.mytransporter.org/auth/confirm` (statt nur `origin + "/"`).
-- `src/routes/auth.confirm.tsx`: Nach Bestätigung `supabase.auth.getUser()` prüfen; wenn User → `window.location.replace("/profil")`. Fallback bei fehlender Session → bisheriger Redirect.
-- `src/routes/profil.tsx`:
-  - Neuer State für vorhandene Dokumente: `select` auf `user_documents` (Spalte `doc_type` für den eingeloggten User).
-  - Neue Section „Verifizierung" mit zwei `<DocumentScanner documentType="id" />` und `<DocumentScanner documentType="license" />`.
-  - Banner oben einblenden, solange nicht alle vier `doc_type`-Werte vorhanden sind.
-- Keine Datenbankänderungen nötig – Tabelle `user_documents` und Bucket `user-documents` existieren bereits.
+Damit ist das Gate auch dann dicht, wenn jemand die UI umgeht.
 
-## Was NICHT geändert wird
+## UI-Hinweise außerhalb des Buchungsflows
+- Auf `/profil` bleibt das bisherige Banner; Wording wird klarer: „Ohne hochgeladenen Ausweis und Führerschein kannst du keine Buchung abschließen."
+- Erinnerungs-E-Mails (Abholcode etc.) bleiben unverändert.
 
-- Keine Pflicht-Sperre an anderen Stellen (Buchung bleibt wie sie ist).
-- Keine Änderung am bestehenden Scanner-UI/Upload-Verhalten.
-- Keine neuen Mails oder Templates.
+## Technische Details (für später)
+- Migration: `booking_holds` (Tabelle + GRANTs + RLS + Index auf `(vehicle_id, start_date, start_hour, expires_at)`), Cleanup-Funktion `delete from booking_holds where expires_at < now()` als pg_cron-Job 1× täglich.
+- Server-Fns: `createBookingHold`, `releaseBookingHold`, beide mit `requireSupabaseAuth`; `getAvailability` erweitert um Hold-Check.
+- Client: neuer `step === 3.5`-Zustand wird sauber als eigener `step`-Index abgebildet (Stepper-Mapping in `BookingSection.tsx` anpassen), Countdown via `setInterval`, Auto-Advance wenn beide Doc-Typ-Paare vollständig sind.
+- Sicherheitscheck in `createBookingCheckout`: SELECT auf `user_documents` (RLS auf eigenen User) und auf `booking_holds`.

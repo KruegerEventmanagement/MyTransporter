@@ -177,7 +177,7 @@ function ProfilePage() {
           if (idComplete && licComplete) return null;
           return (
             <div className="rounded-2xl border border-border bg-secondary p-3 text-xs text-foreground">
-              Bitte Ausweis und Führerschein hochladen, damit du Buchungen abschließen kannst.
+              Ohne hochgeladenen Ausweis und Führerschein kannst du keine Buchung abschließen.
             </div>
           );
         })()}

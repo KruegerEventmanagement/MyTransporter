@@ -6,6 +6,7 @@ import { format, differenceInCalendarDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { createBookingCheckout } from "@/lib/payments.functions";
+import { createBookingHold, releaseBookingHold } from "@/lib/booking-holds.functions";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
@@ -472,10 +473,86 @@ export function BookingSection() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const startBookingCheckout = useServerFn(createBookingCheckout);
+  const startBookingHold = useServerFn(createBookingHold);
+  const dropBookingHold = useServerFn(releaseBookingHold);
+
+  // ----- Verifizierungs-Gate + 15-Min-Reservierung -----
+  const [docTypes, setDocTypes] = useState<Set<string>>(new Set());
+  const verified =
+    docTypes.has("id_front") && docTypes.has("id_back") &&
+    docTypes.has("license_front") && docTypes.has("license_back");
+  const [holdExpiresAt, setHoldExpiresAt] = useState<number | null>(null);
+  const [holdError, setHoldError] = useState<string | null>(null);
+  const [holdNow, setHoldNow] = useState<number>(Date.now());
+
+  const refreshDocs = async () => {
+    if (!authUser?.id) return;
+    const { data } = await supabase
+      .from("user_documents")
+      .select("doc_type")
+      .eq("user_id", authUser.id);
+    if (data) setDocTypes(new Set(data.map((d: { doc_type: string }) => d.doc_type)));
+  };
+
+  // Dokumente beim Login/Step-Wechsel laden
+  useEffect(() => { refreshDocs(); }, [authUser?.id]);
+
+  // Beim Betreten von Schritt 4 (Bezahlen/Verifizierung): Hold anlegen
+  useEffect(() => {
+    if (step !== 4) return;
+    if (!authUser?.id || !selectedPlanEntry || !date || startHour === null) return;
+    let cancelled = false;
+    setHoldError(null);
+    refreshDocs();
+    startBookingHold({
+      data: {
+        vehicleId: currentVehicle?.id ?? null,
+        vehiclePlate: displayVehicle.plate || null,
+        planId: selectedPlanEntry.id,
+        startDate: format(date, "yyyy-MM-dd"),
+        startHour,
+      },
+    })
+      .then((res) => {
+        if (cancelled) return;
+        setHoldExpiresAt(new Date(res.expiresAt).getTime());
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setHoldError(e instanceof Error ? e.message : "Reservierung fehlgeschlagen");
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, authUser?.id]);
+
+  // Tick für Countdown
+  useEffect(() => {
+    if (step !== 4 || !holdExpiresAt) return;
+    const id = setInterval(() => setHoldNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [step, holdExpiresAt]);
+
+  const holdSecondsLeft = holdExpiresAt
+    ? Math.max(0, Math.floor((holdExpiresAt - holdNow) / 1000))
+    : null;
+  const holdExpired = holdSecondsLeft !== null && holdSecondsLeft === 0;
+
+  // Bei Ablauf: Hold freigeben, zurück auf Zeit/Tarif
+  useEffect(() => {
+    if (!holdExpired || step !== 4 || paid || showCheckout) return;
+    if (date && startHour !== null) {
+      dropBookingHold({
+        data: { startDate: format(date, "yyyy-MM-dd"), startHour },
+      }).catch(() => {});
+    }
+    setHoldExpiresAt(null);
+    setStep(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [holdExpired]);
 
   const stepTitles = registrationComplete
-    ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Bezahlen", "Fahrt"]
-    : ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Registrierung", "Bezahlen", "Fahrt"];
+    ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", verified ? "Bezahlen" : "Verifizierung", "Fahrt"]
+    : ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Registrierung", verified ? "Bezahlen" : "Verifizierung", "Fahrt"];
   // Wenn Registrierung übersprungen wird, mappen wir step 4/5 auf Stepper-Position 3/4
   const stepperIndex = registrationComplete && step >= 3 ? step - 1 : step;
 
@@ -1200,12 +1277,49 @@ export function BookingSection() {
             <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-6">
               <CreditCard className="w-8 h-8 text-accent" />
             </div>
-            <h3 className="text-2xl font-bold text-foreground">Bezahlung</h3>
+            <h3 className="text-2xl font-bold text-foreground">
+              {verified ? "Bezahlung" : "Verifizierung"}
+            </h3>
             <p className="mt-2 text-muted-foreground">
-              Schließe deine Buchung ab und bezahle sicher.
+              {verified
+                ? "Schließe deine Buchung ab und bezahle sicher."
+                : "Bitte scanne deinen Ausweis und Führerschein, um die Buchung abzuschließen."}
             </p>
 
-            {total !== null && (
+            {/* Countdown der 15-Minuten-Reservierung */}
+            {holdSecondsLeft !== null && !paid && (
+              <div className="mt-6 rounded-2xl bg-secondary p-4 text-sm text-foreground">
+                Dein Zeitfenster ist für{" "}
+                <span className="font-bold">
+                  {String(Math.floor(holdSecondsLeft / 60)).padStart(2, "0")}:
+                  {String(holdSecondsLeft % 60).padStart(2, "0")}
+                </span>{" "}
+                Minuten reserviert.
+              </div>
+            )}
+            {holdError && (
+              <div className="mt-4 rounded-2xl bg-secondary p-3 text-xs text-destructive">
+                {holdError}
+              </div>
+            )}
+
+            {/* Verifizierungs-Block — vor der Bezahlung */}
+            {!verified && !paid && (
+              <div className="mt-6 space-y-3 text-left">
+                <DocumentScanner
+                  documentType="id"
+                  isComplete={docTypes.has("id_front") && docTypes.has("id_back")}
+                  onComplete={refreshDocs}
+                />
+                <DocumentScanner
+                  documentType="license"
+                  isComplete={docTypes.has("license_front") && docTypes.has("license_back")}
+                  onComplete={refreshDocs}
+                />
+              </div>
+            )}
+
+            {verified && total !== null && (
               <div className="mt-8 p-6 rounded-2xl bg-primary text-primary-foreground">
                 <div className="flex items-center justify-between">
                   <p className="text-lg">Zu zahlen</p>
@@ -1220,7 +1334,7 @@ export function BookingSection() {
               </div>
             )}
 
-            {!showCheckout && !paid && planKey && (
+            {verified && !showCheckout && !paid && planKey && (
               <button
                 onClick={async () => {
                   // Pending Booking für /checkout/return persistieren
@@ -1256,6 +1370,9 @@ export function BookingSection() {
                          returnUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
                          environment: getStripeEnvironment(),
                           addonIds: selectedAddonIds,
+                          vehiclePlate: displayVehicle.plate || null,
+                          startDate: date ? format(date, "yyyy-MM-dd") : undefined,
+                          startHour: startHour ?? undefined,
                        },
                      });
                      if ("error" in result) throw new Error(result.error);

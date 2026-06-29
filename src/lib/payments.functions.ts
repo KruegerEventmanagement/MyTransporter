@@ -17,7 +17,10 @@ function assertStripeEnvironment(environment: StripeEnv) {
   }
 }
 
+const REQUIRED_DOC_TYPES = ["id_front", "id_back", "license_front", "license_back"] as const;
+
 export const createBookingCheckout = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: {
     plan: string;
     customerEmail?: string;
@@ -25,6 +28,9 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     returnUrl: string;
     environment: StripeEnv;
     addonIds?: string[];
+    vehiclePlate?: string | null;
+    startDate?: string;
+    startHour?: number;
   }) => {
     const planId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;
     const plan = getPlanById(planId);
@@ -43,8 +49,34 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     }
     return data;
   })
-  .handler(async ({ data }): Promise<CheckoutSessionResult> => {
+  .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
     try {
+      // 1) Verifizierungs-Gate: Ausweis + Führerschein müssen hochgeladen sein
+      const { data: docs } = await context.supabase
+        .from("user_documents")
+        .select("doc_type")
+        .eq("user_id", context.userId);
+      const have = new Set((docs ?? []).map((d: { doc_type: string }) => d.doc_type));
+      const missing = REQUIRED_DOC_TYPES.filter((t) => !have.has(t));
+      if (missing.length > 0) {
+        return { error: "Bitte zuerst Ausweis und Führerschein hochladen, bevor du bezahlen kannst." };
+      }
+
+      // 2) Aktive Reservierung für genau diesen Slot muss bestehen
+      if (data.startDate && typeof data.startHour === "number") {
+        const { data: holds } = await context.supabase
+          .from("booking_holds")
+          .select("id, expires_at")
+          .eq("user_id", context.userId)
+          .eq("start_date", data.startDate)
+          .eq("start_hour", data.startHour)
+          .gt("expires_at", new Date().toISOString())
+          .limit(1);
+        if (!holds || holds.length === 0) {
+          return { error: "Deine 15-Minuten-Reservierung ist abgelaufen. Bitte wähle dein Zeitfenster neu." };
+        }
+      }
+
       const stripe = createStripeClient(data.environment);
       const planId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;
       const planEntry = getPlanById(planId);
