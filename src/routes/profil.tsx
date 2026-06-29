@@ -170,6 +170,37 @@ function ProfilePage() {
       </header>
 
       <div className="max-w-3xl mx-auto px-4 mt-6 space-y-6">
+        {/* Verifizierungs-Banner */}
+        {(() => {
+          const idComplete = docTypes.has("id_front") && docTypes.has("id_back");
+          const licComplete = docTypes.has("license_front") && docTypes.has("license_back");
+          if (idComplete && licComplete) return null;
+          return (
+            <div className="rounded-2xl border border-border bg-secondary p-3 text-xs text-foreground">
+              Bitte Ausweis und Führerschein hochladen, damit du Buchungen abschließen kannst.
+            </div>
+          );
+        })()}
+
+        {/* Verifizierung */}
+        <section>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1">
+            Verifizierung
+          </h2>
+          <div className="space-y-3">
+            <DocumentScanner
+              documentType="id"
+              isComplete={docTypes.has("id_front") && docTypes.has("id_back")}
+              onComplete={loadDocs}
+            />
+            <DocumentScanner
+              documentType="license"
+              isComplete={docTypes.has("license_front") && docTypes.has("license_back")}
+              onComplete={loadDocs}
+            />
+          </div>
+        </section>
+
         {/* Statistiken */}
         <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard icon={<RouteIcon className="w-4 h-4" />} label="Fahrten" value={String(stats.totalTrips)} />
