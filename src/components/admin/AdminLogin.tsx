@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { LogIn } from "lucide-react";
+import { LogIn, ArrowLeft } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import logoImage from "@/assets/logo.png";
 
 interface Props {
   onSuccess: () => void;
@@ -27,6 +29,21 @@ export function AdminLogin({ onSuccess }: Props) {
   return (
     <main className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="max-w-sm w-full">
+        <Link
+          to="/"
+          className="flex flex-col items-center mb-6 group"
+          aria-label="Zur Startseite"
+        >
+          <img
+            src={logoImage}
+            alt="MyTransporter Logo"
+            className="w-40 mb-2 transition-transform group-hover:scale-[1.02]"
+          />
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+            <ArrowLeft className="w-3 h-3" />
+            Zurück zur Startseite
+          </span>
+        </Link>
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
             <LogIn className="w-8 h-8 text-foreground" />
