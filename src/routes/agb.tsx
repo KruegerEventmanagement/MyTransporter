@@ -88,9 +88,12 @@ function AgbPage() {
           </div>
 
           <div>
-            <h2 className="font-bold text-lg text-foreground mb-2">§ 9 Versicherung und Selbstbeteiligung</h2>
-            <p>Das Fahrzeug ist haftpflicht- sowie vollkaskoversichert. Im Schadensfall trägt der Mieter (Fahrer) eine Selbstbeteiligung in Höhe von 1.500 € pro Schadensereignis. Dies gilt unabhängig davon, ob der Schaden selbst verschuldet wurde, durch Dritte verursacht wurde und kein Verursacher ermittelt werden kann (z. B. Parkrempler ohne Zeugen) oder durch Vandalismus, Diebstahl oder Wildunfall entstanden ist.</p>
-            <p className="mt-2">Bei grob fahrlässiger oder vorsätzlicher Verursachung eines Schadens, bei Verstoß gegen die Mietbedingungen (z. B. Fahren unter Alkohol- oder Drogeneinfluss, nicht berechtigter Fahrer, Überladung) sowie bei Fahrerflucht entfällt der Versicherungsschutz und der Mieter haftet in voller Höhe des entstandenen Schadens.</p>
+            <h2 className="font-bold text-lg text-foreground mb-2">§ 9 Versicherung und Haftung</h2>
+            <p className="mb-2"><strong>Versicherungsschutz:</strong> Das Mietfahrzeug ist kraftfahrzeug-haftpflichtversichert. Für das Mietfahrzeug besteht keine Teilkasko- und keine Vollkaskoversicherung. Der Mieter wurde hierauf vor Vertragsschluss ausdrücklich hingewiesen. Selbstverschuldete Schäden am Mietfahrzeug sind daher nicht durch eine Kaskoversicherung des Vermieters abgesichert.</p>
+            <p className="mb-2"><strong>Haftung bei selbstverschuldeten Schäden:</strong> Der Mieter haftet für alle während der Mietzeit durch ihn oder einen berechtigten Fahrer schuldhaft verursachten Schäden am Mietfahrzeug nach den gesetzlichen Vorschriften. Bei erheblichen selbstverschuldeten Schäden am Mietfahrzeug, insbesondere Unfall-, Karosserie-, Front-, Heck-, Dach-, Unterboden-, Tür-, Leuchten-, Spiegel-, Verkleidungs-, Innenraum- oder Ladegutschäden, haftet der Mieter bei einfacher Fahrlässigkeit für den tatsächlich entstandenen Fahrzeugschaden bis zu einem Höchstbetrag von 1.000,00 Euro pro Schadensfall. Ist der tatsächlich entstandene Fahrzeugschaden geringer, ist nur der geringere tatsächliche Schaden zu ersetzen. Die Schadenshöhe kann insbesondere durch Rechnung, Kostenvoranschlag, Gutachten oder sonstige geeignete Nachweise festgestellt werden.</p>
+            <p className="mb-2"><strong>Nebenkosten des Schadensfalls:</strong> Zusätzlich zum Fahrzeugschaden trägt der Mieter alle durch den Schadensfall verursachten notwendigen Nebenkosten, insbesondere Abschleppkosten, Bergungskosten, Standkosten, Sicherstellungskosten, Gutachterkosten, Rückführungskosten, Reinigungs- und Entsorgungskosten sowie behördliche Gebühren, soweit diese Kosten durch den Mieter oder einen berechtigten Fahrer schuldhaft verursacht wurden und tatsächlich angefallen sind. Dem Mieter bleibt ausdrücklich der Nachweis gestattet, dass kein Schaden, ein wesentlich geringerer Schaden oder geringere Nebenkosten entstanden sind.</p>
+            <p className="mb-2"><strong>Ausnahme bei grobem Fehlverhalten:</strong> Bei vorsätzlicher oder grob fahrlässiger Schadensverursachung, Alkohol- oder Drogeneinfluss, Unfallflucht, unerlaubter Fahrerüberlassung, Überladung, Falschbetankung, Nutzung entgegen dem Mietvertrag oder Verletzung der Unfallmeldepflichten haftet der Mieter nach den gesetzlichen Vorschriften bis zur vollen Schadenshöhe. Die Begrenzung auf 1.000,00 Euro gilt in diesen Fällen nicht.</p>
+            <p>Die Kaution beträgt 200 Euro. Die Kaution ist keine Haftungsbegrenzung. Offene Forderungen, insbesondere Reinigung, Nachbetankung, Mehrkilometer, Schäden, Bußgelder, Bearbeitungskosten oder sonstige Nachbelastungen, können mit der Kaution verrechnet werden. Übersteigende Beträge bleiben zusätzlich zahlbar.</p>
           </div>
 
           <div>
@@ -98,7 +101,7 @@ function AgbPage() {
             <p>Es gilt das Recht der Bundesrepublik Deutschland. Gerichtsstand ist Leonberg. Sollten einzelne Bestimmungen unwirksam sein, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.</p>
           </div>
 
-          <p className="text-xs text-muted-foreground mt-8">Stand: Mai 2026</p>
+          <p className="text-xs text-muted-foreground mt-8">Stand: Juni 2026</p>
         </div>
       </div>
     </main>
