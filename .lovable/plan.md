@@ -1,35 +1,43 @@
-## Ziel
-Paragraph 4 „Preise und Tarife“ auf der AGB-Seite (`src/routes/agb.tsx`) mit den aktuellen Miettarifen und Zusatzpaketen aus dem Code abgleichen und überschreiben.
+## Problem
 
-## Aktuelle Datenlage (aus dem Code)
-Die zentrale Tarifquelle ist `src/lib/booking-rules.ts` (`PLAN_CATALOG`):
+Auf iPhone zeigt das Banner „Als App installieren" nur den Hinweis „Teilen-Symbol → Zum Home-Bildschirm" — es passiert beim Tippen nichts. iOS Safari unterstützt `beforeinstallprompt` nicht, daher kann der Browser keinen automatischen Installationsdialog öffnen. Aktuell hat der iOS-Pfad gar keinen klickbaren Button, nur Text.
 
-| Tarif | Preis | Freikilometer | Mehrkilometer |
-| --- | --- | --- | --- |
-| 3 Stunden Express | 39 € | 100 km | 0,39 €/km |
-| 6 Stunden Umzug Mini | 59 € | 200 km | 0,39 €/km |
-| 24 Stunden Umzugstag | 89 € | 300 km | 0,39 €/km |
-| 24 Stunden Langstrecke | 119 € | 500 km | 0,39 €/km |
-| 2 Tage Kurzprojekt | 159 € | 600 km | 0,35 €/km |
-| 3 Tage Umzug Plus | 219 € | 900 km | 0,35 €/km |
-| 4 Tage Renovierungs-Tarif | 289 € | 1.100 km | 0,35 €/km |
-| 5 Tage Projektwoche Mini | 349 € | 1.300 km | 0,35 €/km |
-| 6 Tage Projektwoche | 399 € | 1.400 km | 0,35 €/km |
-| 7 Tage Wochenmiete | 449 € | 1.500 km | 0,29 €/km |
-| Reiner Kilometer-Tarif | 0,90 €/km | – | Mindestbetrag 100 € |
+Auf Android/Desktop-Chrome funktioniert es zwar, aber wenn `beforeinstallprompt` noch nicht gefeuert hat (z. B. PWA-Kriterien noch nicht erfüllt, oder User hat es schon mal dismissed), passiert ebenfalls nichts.
 
-Zusatzpakete aus `src/lib/addons.ts`:
-- Sicher-Transport Paket: 19 €
-- Profi-Umzug Paket: 49 €
+## Lösung
 
-Kaution: 200 € (bleibt unverändert in § 3).
+`src/components/InstallBanner.tsx` so umbauen, dass es auf jedem System eine sinnvolle, klickbare Aktion gibt:
 
-## Vorgehen
-1. In `src/routes/agb.tsx` den bisherigen § 4 „Preise und Tarife“ (Zeilen 50–57) ersetzen durch eine aktuelle Liste mit den Tarifen, Freikilometern und Mehrkilometerpreisen.
-2. Optional Zusatzpakete und den reinen Kilometer-Tarif als separate Unterpunkte ergänzen, damit die AGB vollständig alle aktuellen Preisbestandteile abbildet.
-3. Formulierung juristisch neutral halten („Preise verstehen sich pro Mietvorgang, inklusive der angegebenen Freikilometer, zzgl. 19 % MwSt.“, falls anwendbar) und Rückgaberegeln aus dem Tarifkatalog übernehmen.
-4. Abschließend im Preview die AGB-Seite kurz visuell prüfen.
+1. **Android/Desktop mit nativem Prompt**: Wie bisher — Button „Installieren" ruft `prompt.prompt()` auf.
+2. **iOS (iPhone/iPad Safari)**: Button „Anleitung" öffnet eine visuelle Schritt-für-Schritt-Anleitung als Modal mit:
+   - Schritt 1: Teilen-Symbol antippen (mit Icon-Darstellung)
+   - Schritt 2: „Zum Home-Bildschirm" wählen
+   - Schritt 3: „Hinzufügen" tippen
+   - Hinweis: Funktioniert nur in Safari, nicht in Chrome/Firefox auf iOS → wenn In-App-Browser oder Chrome iOS erkannt, zusätzlicher Hinweis „Bitte in Safari öffnen".
+3. **Android ohne nativen Prompt** (z. B. Firefox Android, oder schon dismissed): Anleitung mit „Menü → Zum Startbildschirm hinzufügen".
+4. **Desktop ohne nativen Prompt**: Anleitung mit Adressleisten-Icon / Browser-Menü.
 
-## Ausgeschlossen (kann separat angegangen werden)
-- Änderungen an FAQ, Startseite oder anderen Marketingtexten, obwohl dort teilweise ebenfalls noch die alten Preise (100 €/150 €) stehen.
-- Technische Tariflogik in `booking-rules.ts` bleibt unverändert.
+### PWA-Voraussetzungen prüfen
+
+Damit die Installation überhaupt klappt, müssen Manifest + Icons korrekt sein. Ich prüfe und ergänze falls nötig:
+- `public/manifest.json`: `display: "standalone"`, `start_url`, `scope`, `name`, `short_name`, `theme_color`, `background_color`, mindestens `192x192` und `512x512` Icons (maskable).
+- `apple-touch-icon` (180×180) im `<head>` ist bereits in `__root.tsx` referenziert — Datei-Existenz verifizieren.
+- iOS-spezifische Meta-Tags ergänzen (falls fehlen): `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `apple-mobile-web-app-title`.
+
+### Detection-Logik
+
+- iOS: `/iPad|iPhone|iPod/.test(ua)` + Safari (kein CriOS/FxiOS) → nativer Add-to-Home-Screen-Flow möglich.
+- iOS Chrome/Firefox: Hinweis „in Safari öffnen".
+- Bereits installiert (standalone): Banner ausblenden (bereits implementiert).
+- Im Lovable-Iframe: Banner ausblenden (bereits implementiert).
+
+### UI
+
+Modal nutzt bestehendes `Dialog` aus `@/components/ui/dialog`, monochrome Design (schwarz/weiß/grau) gemäß Memory.
+
+## Geänderte Dateien
+
+- `src/components/InstallBanner.tsx` — Button für iOS hinzufügen, Anleitungs-Modal, bessere Detection
+- `public/manifest.json` — prüfen/ergänzen (Icons, display, scope)
+- `src/routes/__root.tsx` — iOS-Meta-Tags ergänzen falls fehlend
+- ggf. neue Icon-Assets in `public/` falls keine 192/512 vorhanden
