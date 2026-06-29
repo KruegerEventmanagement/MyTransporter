@@ -127,6 +127,13 @@ function CheckoutReturn() {
             return;
           }
           bookingId = booking.id;
+          // Reservierungs-Hold freigeben — die Buchung blockiert den Slot nun selbst
+          await supabase
+            .from("booking_holds")
+            .delete()
+            .eq("user_id", userData.user.id)
+            .eq("start_date", pending.startDate)
+            .eq("start_hour", pending.startHour);
           notifyAdmin({
             type: "booking_created",
             title: "Neue Buchung",
