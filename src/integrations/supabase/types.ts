@@ -47,6 +47,50 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_holds: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          plan_id: string
+          start_date: string
+          start_hour: number
+          user_id: string
+          vehicle_id: string | null
+          vehicle_plate: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          plan_id: string
+          start_date: string
+          start_hour: number
+          user_id: string
+          vehicle_id?: string | null
+          vehicle_plate?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          plan_id?: string
+          start_date?: string
+          start_hour?: number
+          user_id?: string
+          vehicle_id?: string | null
+          vehicle_plate?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_holds_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           addons: Json
@@ -494,6 +538,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      delete_expired_booking_holds: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
