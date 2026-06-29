@@ -3,7 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-const RETURN_URL = "https://www.mytransporter.org/?email_confirmed=1#booking";
+const PROFILE_URL = "/profil";
+const FALLBACK_URL = "/?email_confirmed=1#booking";
 
 export const Route = createFileRoute("/auth/confirm")({
   head: () => ({
@@ -47,10 +48,16 @@ function AuthConfirmPage() {
 
       if (!active) return;
 
-      setMessage("E-Mail bestätigt. Du wirst zurück zur Buchung geleitet …");
+      const { data: userData } = await supabase.auth.getUser();
+      const isLoggedIn = !!userData.user;
+      setMessage(
+        isLoggedIn
+          ? "E-Mail bestätigt – du bist eingeloggt. Weiterleitung …"
+          : "E-Mail bestätigt. Du wirst weitergeleitet …",
+      );
       window.history.replaceState(null, "", "/auth/confirm");
       window.setTimeout(() => {
-        window.location.replace(RETURN_URL);
+        window.location.replace(isLoggedIn ? PROFILE_URL : FALLBACK_URL);
       }, 600);
     };
 
