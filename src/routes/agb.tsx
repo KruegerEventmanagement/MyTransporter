@@ -48,11 +48,21 @@ function AgbPage() {
 
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">§ 4 Preise und Tarife</h2>
+            <p className="mb-2">Alle Preise verstehen sich in Euro und enthalten die gesetzliche Umsatzsteuer von 19 %. Die Mietpreise gelten je gebuchtem Mietzeitraum und Transporter inklusive der angegebenen Freikilometer.</p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>6-Stunden-Tarif: 100 € inklusive 300 Freikilometern (Rückgabe bis spätestens 22:00 Uhr).</li>
-              <li>24-Stunden-Tarif: 150 € inklusive 500 Freikilometern (Rückgabe zwischen 08:00 und 22:00 Uhr).</li>
-              <li>Jeder über das jeweilige Freikilometer-Kontingent hinaus gefahrene Kilometer wird mit 0,90 € berechnet.</li>
+              <li>3-Stunden-Tarif „Express": 39 € inklusive 100 Freikilometern (Rückgabe nach 3 Stunden).</li>
+              <li>6-Stunden-Tarif „Umzug Mini": 59 € inklusive 200 Freikilometern (Rückgabe nach 6 Stunden).</li>
+              <li>24-Stunden-Tarif „Umzugstag": 89 € inklusive 300 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
+              <li>24-Stunden-Tarif „Langstrecke": 119 € inklusive 500 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
+              <li>2-Tage-Tarif „Kurzprojekt": 159 € inklusive 600 Freikilometern.</li>
+              <li>3-Tage-Tarif „Umzug Plus": 219 € inklusive 900 Freikilometern.</li>
+              <li>4-Tage-Tarif „Renovierungs-Tarif": 289 € inklusive 1.100 Freikilometern.</li>
+              <li>5-Tage-Tarif „Projektwoche Mini": 349 € inklusive 1.300 Freikilometern.</li>
+              <li>6-Tage-Tarif „Projektwoche": 399 € inklusive 1.400 Freikilometern.</li>
+              <li>7-Tage-Tarif „Wochenmiete": 449 € inklusive 1.500 Freikilometern.</li>
+              <li>Jeder über das jeweilige Freikilometer-Kontingent hinaus gefahrene Kilometer wird mit 0,39 € berechnet; bei Mehrtagestarifen ab 2 Tagen mit 0,35 €, bei der 7-Tage-Wochenmiete mit 0,29 €.</li>
               <li>Reiner Kilometer-Tarif: 0,90 € pro gefahrenem Kilometer (Mindestbetrag 100 €).</li>
+              <li>Optionale Zusatzpakete: „Sicher-Transport Paket" 19 €, „Profi-Umzug Paket" 49 €.</li>
             </ul>
           </div>
 
