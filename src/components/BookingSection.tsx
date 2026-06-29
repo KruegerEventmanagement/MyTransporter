@@ -1400,7 +1400,7 @@ export function BookingSection() {
                       setCheckoutClientSecret(null);
                    }
                 }}
-                className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
+                className="mt-4 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
               >
                 Sicher bezahlen
               </button>
