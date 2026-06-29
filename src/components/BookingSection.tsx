@@ -1277,12 +1277,49 @@ export function BookingSection() {
             <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-6">
               <CreditCard className="w-8 h-8 text-accent" />
             </div>
-            <h3 className="text-2xl font-bold text-foreground">Bezahlung</h3>
+            <h3 className="text-2xl font-bold text-foreground">
+              {verified ? "Bezahlung" : "Verifizierung"}
+            </h3>
             <p className="mt-2 text-muted-foreground">
-              Schließe deine Buchung ab und bezahle sicher.
+              {verified
+                ? "Schließe deine Buchung ab und bezahle sicher."
+                : "Bitte scanne deinen Ausweis und Führerschein, um die Buchung abzuschließen."}
             </p>
 
-            {total !== null && (
+            {/* Countdown der 15-Minuten-Reservierung */}
+            {holdSecondsLeft !== null && !paid && (
+              <div className="mt-6 rounded-2xl bg-secondary p-4 text-sm text-foreground">
+                Dein Zeitfenster ist für{" "}
+                <span className="font-bold">
+                  {String(Math.floor(holdSecondsLeft / 60)).padStart(2, "0")}:
+                  {String(holdSecondsLeft % 60).padStart(2, "0")}
+                </span>{" "}
+                Minuten reserviert.
+              </div>
+            )}
+            {holdError && (
+              <div className="mt-4 rounded-2xl bg-secondary p-3 text-xs text-destructive">
+                {holdError}
+              </div>
+            )}
+
+            {/* Verifizierungs-Block — vor der Bezahlung */}
+            {!verified && !paid && (
+              <div className="mt-6 space-y-3 text-left">
+                <DocumentScanner
+                  documentType="id"
+                  isComplete={docTypes.has("id_front") && docTypes.has("id_back")}
+                  onComplete={refreshDocs}
+                />
+                <DocumentScanner
+                  documentType="license"
+                  isComplete={docTypes.has("license_front") && docTypes.has("license_back")}
+                  onComplete={refreshDocs}
+                />
+              </div>
+            )}
+
+            {verified && total !== null && (
               <div className="mt-8 p-6 rounded-2xl bg-primary text-primary-foreground">
                 <div className="flex items-center justify-between">
                   <p className="text-lg">Zu zahlen</p>
@@ -1297,7 +1334,7 @@ export function BookingSection() {
               </div>
             )}
 
-            {!showCheckout && !paid && planKey && (
+            {verified && !showCheckout && !paid && planKey && (
               <button
                 onClick={async () => {
                   // Pending Booking für /checkout/return persistieren
@@ -1333,6 +1370,9 @@ export function BookingSection() {
                          returnUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
                          environment: getStripeEnvironment(),
                           addonIds: selectedAddonIds,
+                          vehiclePlate: displayVehicle.plate || null,
+                          startDate: date ? format(date, "yyyy-MM-dd") : undefined,
+                          startHour: startHour ?? undefined,
                        },
                      });
                      if ("error" in result) throw new Error(result.error);
