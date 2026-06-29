@@ -7,6 +7,7 @@ import { de } from "date-fns/locale";
 import { useServerFn } from "@tanstack/react-start";
 import { cancelBookingWithRefund } from "@/lib/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
+import { DocumentScanner } from "@/components/DocumentScanner";
 
 export const Route = createFileRoute("/profil")({
   head: () => ({ meta: [{ title: "MyTransporter · Profil" }] }),
@@ -46,6 +47,18 @@ function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [docTypes, setDocTypes] = useState<Set<string>>(new Set());
+
+  const loadDocs = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) return;
+    const { data } = await supabase
+      .from("user_documents")
+      .select("doc_type")
+      .eq("user_id", user.id);
+    if (data) setDocTypes(new Set(data.map((d: { doc_type: string }) => d.doc_type)));
+  };
 
   const loadBookings = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -81,6 +94,11 @@ function ProfilePage() {
         .eq("user_id", user.id)
         .eq("role", "admin");
       if (mounted) setIsAdmin(!!roles && roles.length > 0);
+      const { data: docs } = await supabase
+        .from("user_documents")
+        .select("doc_type")
+        .eq("user_id", user.id);
+      if (mounted && docs) setDocTypes(new Set(docs.map((d: { doc_type: string }) => d.doc_type)));
       setLoading(false);
     })();
     return () => { mounted = false; };
