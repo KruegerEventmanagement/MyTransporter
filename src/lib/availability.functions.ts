@@ -16,9 +16,7 @@ export const getBusySlots = createServerFn({ method: "GET" })
       .select("vehicle_plate, plan_id, start_date, start_hour, status")
       .in("status", ["paid", "active", "in_progress", "picked_up"]);
     if (error) throw new Error(error.message);
-    if (!data) return [];
-
-    return data
+    const bookingSlots = (data ?? [])
       .filter((b) => b.start_date && b.start_hour !== null)
       .map((b) => {
         const start = new Date(`${b.start_date}T${String(b.start_hour).padStart(2, "0")}:00:00`);
@@ -29,4 +27,24 @@ export const getBusySlots = createServerFn({ method: "GET" })
           end: end.toISOString(),
         };
       });
+
+    // Aktive, nicht abgelaufene Reservierungen blockieren das Zeitfenster ebenfalls
+    const { data: holds } = await supabaseAdmin
+      .from("booking_holds")
+      .select("vehicle_plate, plan_id, start_date, start_hour, expires_at")
+      .gt("expires_at", new Date().toISOString());
+
+    const holdSlots = (holds ?? [])
+      .filter((h) => h.start_date && h.start_hour !== null)
+      .map((h) => {
+        const start = new Date(`${h.start_date}T${String(h.start_hour).padStart(2, "0")}:00:00`);
+        const end = computePlanReturn(h.plan_id, start, h.start_hour as number);
+        return {
+          vehiclePlate: h.vehicle_plate ?? "",
+          start: start.toISOString(),
+          end: end.toISOString(),
+        };
+      });
+
+    return [...bookingSlots, ...holdSlots];
   });
