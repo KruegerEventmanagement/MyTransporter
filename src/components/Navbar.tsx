@@ -361,7 +361,7 @@ export function Navbar() {
                 <>Bereits registriert? <button onClick={() => { setShowModal("login"); setError(null); setInfo(null); }} className="font-medium text-accent hover:underline">Einloggen</button></>
               )}
             </p>
-          </div>
+          </form>
         </div>
       )}
     </>
