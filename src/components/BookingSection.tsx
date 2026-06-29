@@ -6,6 +6,7 @@ import { format, differenceInCalendarDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { createBookingCheckout } from "@/lib/payments.functions";
+import { createBookingHold, releaseBookingHold } from "@/lib/booking-holds.functions";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
@@ -472,10 +473,86 @@ export function BookingSection() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const startBookingCheckout = useServerFn(createBookingCheckout);
+  const startBookingHold = useServerFn(createBookingHold);
+  const dropBookingHold = useServerFn(releaseBookingHold);
+
+  // ----- Verifizierungs-Gate + 15-Min-Reservierung -----
+  const [docTypes, setDocTypes] = useState<Set<string>>(new Set());
+  const verified =
+    docTypes.has("id_front") && docTypes.has("id_back") &&
+    docTypes.has("license_front") && docTypes.has("license_back");
+  const [holdExpiresAt, setHoldExpiresAt] = useState<number | null>(null);
+  const [holdError, setHoldError] = useState<string | null>(null);
+  const [holdNow, setHoldNow] = useState<number>(Date.now());
+
+  const refreshDocs = async () => {
+    if (!authUser?.id) return;
+    const { data } = await supabase
+      .from("user_documents")
+      .select("doc_type")
+      .eq("user_id", authUser.id);
+    if (data) setDocTypes(new Set(data.map((d: { doc_type: string }) => d.doc_type)));
+  };
+
+  // Dokumente beim Login/Step-Wechsel laden
+  useEffect(() => { refreshDocs(); }, [authUser?.id]);
+
+  // Beim Betreten von Schritt 4 (Bezahlen/Verifizierung): Hold anlegen
+  useEffect(() => {
+    if (step !== 4) return;
+    if (!authUser?.id || !selectedPlanEntry || !date || startHour === null) return;
+    let cancelled = false;
+    setHoldError(null);
+    refreshDocs();
+    startBookingHold({
+      data: {
+        vehicleId: currentVehicle?.id ?? null,
+        vehiclePlate: displayVehicle.plate || null,
+        planId: selectedPlanEntry.id,
+        startDate: format(date, "yyyy-MM-dd"),
+        startHour,
+      },
+    })
+      .then((res) => {
+        if (cancelled) return;
+        setHoldExpiresAt(new Date(res.expiresAt).getTime());
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setHoldError(e instanceof Error ? e.message : "Reservierung fehlgeschlagen");
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, authUser?.id]);
+
+  // Tick für Countdown
+  useEffect(() => {
+    if (step !== 4 || !holdExpiresAt) return;
+    const id = setInterval(() => setHoldNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [step, holdExpiresAt]);
+
+  const holdSecondsLeft = holdExpiresAt
+    ? Math.max(0, Math.floor((holdExpiresAt - holdNow) / 1000))
+    : null;
+  const holdExpired = holdSecondsLeft !== null && holdSecondsLeft === 0;
+
+  // Bei Ablauf: Hold freigeben, zurück auf Zeit/Tarif
+  useEffect(() => {
+    if (!holdExpired || step !== 4 || paid || showCheckout) return;
+    if (date && startHour !== null) {
+      dropBookingHold({
+        data: { startDate: format(date, "yyyy-MM-dd"), startHour },
+      }).catch(() => {});
+    }
+    setHoldExpiresAt(null);
+    setStep(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [holdExpired]);
 
   const stepTitles = registrationComplete
-    ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Bezahlen", "Fahrt"]
-    : ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Registrierung", "Bezahlen", "Fahrt"];
+    ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", verified ? "Bezahlen" : "Verifizierung", "Fahrt"]
+    : ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Registrierung", verified ? "Bezahlen" : "Verifizierung", "Fahrt"];
   // Wenn Registrierung übersprungen wird, mappen wir step 4/5 auf Stepper-Position 3/4
   const stepperIndex = registrationComplete && step >= 3 ? step - 1 : step;
 
