@@ -77,6 +77,11 @@ export async function pushToAdmins(input: {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           payload,
+          {
+            TTL: 3600,
+            urgency: "high",
+            topic: (data.tag ?? "mt").slice(0, 32),
+          },
         );
         sent++;
       } catch (e: unknown) {
