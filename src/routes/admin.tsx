@@ -344,6 +344,11 @@ function AdminDashboard() {
       )
       .on(
         "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        () => loadAll()
+      )
+      .on(
+        "postgres_changes",
         { event: "INSERT", schema: "public", table: "trip_photos" },
         () => loadAll()
       )
@@ -385,6 +390,10 @@ function AdminDashboard() {
 
   const customers = useMemo(() => {
     const map = new Map<string, { profile: Profile | undefined; bookings: Booking[] }>();
+    // Jeden registrierten User aufnehmen – auch ohne Buchung
+    profiles.forEach((p) => {
+      map.set(p.id, { profile: p, bookings: [] });
+    });
     bookings.forEach((b) => {
       const cur = map.get(b.user_id) ?? { profile: profilesById[b.user_id], bookings: [] };
       cur.bookings.push(b);
