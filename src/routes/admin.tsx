@@ -344,6 +344,11 @@ function AdminDashboard() {
       )
       .on(
         "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        () => loadAll()
+      )
+      .on(
+        "postgres_changes",
         { event: "INSERT", schema: "public", table: "trip_photos" },
         () => loadAll()
       )
