@@ -1,43 +1,34 @@
-## Problem
+## Ziel
+Push-Benachrichtigungen müssen zuverlässig und sofort kommen bei:
+1. **Neuer Buchung** (läuft schon teilweise, aber nicht „aggressiv" genug)
+2. **Neuer Registrierung** (fehlt komplett als Push – aktuell nur DB-Eintrag in `admin_notifications`)
 
-Auf iPhone zeigt das Banner „Als App installieren" nur den Hinweis „Teilen-Symbol → Zum Home-Bildschirm" — es passiert beim Tippen nichts. iOS Safari unterstützt `beforeinstallprompt` nicht, daher kann der Browser keinen automatischen Installationsdialog öffnen. Aktuell hat der iOS-Pfad gar keinen klickbaren Button, nur Text.
+## Was geändert wird
 
-Auf Android/Desktop-Chrome funktioniert es zwar, aber wenn `beforeinstallprompt` noch nicht gefeuert hat (z. B. PWA-Kriterien noch nicht erfüllt, oder User hat es schon mal dismissed), passiert ebenfalls nichts.
+### 1. Push bei neuer Registrierung
+Aktuell legt der DB-Trigger `handle_new_user` nur eine Zeile in `admin_notifications` an. Kein Push.
+- **Migration**: neuen DB-Trigger ergänzen, der per `pg_net` (HTTP) eine interne Public-Route aufruft, sobald in `admin_notifications` ein Eintrag mit `type = 'user_registered'` oder `type = 'booking_created'` landet. Ruft `/api/public/hooks/notify-admin` mit Service-Role-Token auf.
+- **Neue Route** `src/routes/api/public/hooks/notify-admin.ts`: validiert Token, ruft `pushToAdmins(...)` mit passendem Titel/Body/URL.
+- Damit ist Push komplett serverseitig garantiert – auch wenn der Browser des Kunden zwischendurch abstürzt.
 
-## Lösung
+### 2. Push „aggressiver"
+In `src/lib/push.functions.ts` (`pushToAdmins`) und `public/sw.js`:
+- `urgency: 'high'` und `TTL: 3600` an `webpush.sendNotification` (sofortige Zustellung statt Sammeln).
+- **Eindeutige `tag`** pro Event (statt fester Tag → vorherige Push wird sonst überschrieben). Bei Buchung: `booking-<id>`, bei Registrierung: `signup-<userId>`.
+- Längeres Vibrationsmuster `[400, 150, 400, 150, 400]`.
+- `requireInteraction: true` bleibt – Benachrichtigung bleibt sichtbar bis weggeklickt.
+- Doppelte Zustellung: bei `booking_created` zusätzlich ein zweiter Push nach ~10 s mit anderem Tag, falls der erste nicht angeklickt wurde (DB-Notiz „nicht gelesen" reicht für Erkennung – sonst einfach zweimal senden mit Delay).
+- Im SW: `silent: false`, klarer Titel `🚨 Neue Buchung` / `👤 Neue Registrierung`.
 
-`src/components/InstallBanner.tsx` so umbauen, dass es auf jedem System eine sinnvolle, klickbare Aktion gibt:
+### 3. Bestehende Aufrufe konsolidieren
+- Doppelte Aufrufstellen (`checkout.return.tsx` clientseitig + Mail-Funktion serverseitig) bleiben als Fallback, aber Tag wird vereinheitlicht damit nicht mehrere Pushs gegenseitig überschrieben werden.
 
-1. **Android/Desktop mit nativem Prompt**: Wie bisher — Button „Installieren" ruft `prompt.prompt()` auf.
-2. **iOS (iPhone/iPad Safari)**: Button „Anleitung" öffnet eine visuelle Schritt-für-Schritt-Anleitung als Modal mit:
-   - Schritt 1: Teilen-Symbol antippen (mit Icon-Darstellung)
-   - Schritt 2: „Zum Home-Bildschirm" wählen
-   - Schritt 3: „Hinzufügen" tippen
-   - Hinweis: Funktioniert nur in Safari, nicht in Chrome/Firefox auf iOS → wenn In-App-Browser oder Chrome iOS erkannt, zusätzlicher Hinweis „Bitte in Safari öffnen".
-3. **Android ohne nativen Prompt** (z. B. Firefox Android, oder schon dismissed): Anleitung mit „Menü → Zum Startbildschirm hinzufügen".
-4. **Desktop ohne nativen Prompt**: Anleitung mit Adressleisten-Icon / Browser-Menü.
+## Geänderte / neue Dateien
+- `supabase/migrations/<neu>.sql` – Trigger auf `admin_notifications` + pg_net call
+- `src/routes/api/public/hooks/notify-admin.ts` – neue Public-Route
+- `src/lib/push.functions.ts` – urgency, TTL, eindeutiger Tag, Titel-Emojis, Re-Send bei Buchung
+- `public/sw.js` – kleinere Anpassung (Titel/Tag aus Payload, längere Vibration)
 
-### PWA-Voraussetzungen prüfen
-
-Damit die Installation überhaupt klappt, müssen Manifest + Icons korrekt sein. Ich prüfe und ergänze falls nötig:
-- `public/manifest.json`: `display: "standalone"`, `start_url`, `scope`, `name`, `short_name`, `theme_color`, `background_color`, mindestens `192x192` und `512x512` Icons (maskable).
-- `apple-touch-icon` (180×180) im `<head>` ist bereits in `__root.tsx` referenziert — Datei-Existenz verifizieren.
-- iOS-spezifische Meta-Tags ergänzen (falls fehlen): `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `apple-mobile-web-app-title`.
-
-### Detection-Logik
-
-- iOS: `/iPad|iPhone|iPod/.test(ua)` + Safari (kein CriOS/FxiOS) → nativer Add-to-Home-Screen-Flow möglich.
-- iOS Chrome/Firefox: Hinweis „in Safari öffnen".
-- Bereits installiert (standalone): Banner ausblenden (bereits implementiert).
-- Im Lovable-Iframe: Banner ausblenden (bereits implementiert).
-
-### UI
-
-Modal nutzt bestehendes `Dialog` aus `@/components/ui/dialog`, monochrome Design (schwarz/weiß/grau) gemäß Memory.
-
-## Geänderte Dateien
-
-- `src/components/InstallBanner.tsx` — Button für iOS hinzufügen, Anleitungs-Modal, bessere Detection
-- `public/manifest.json` — prüfen/ergänzen (Icons, display, scope)
-- `src/routes/__root.tsx` — iOS-Meta-Tags ergänzen falls fehlend
-- ggf. neue Icon-Assets in `public/` falls keine 192/512 vorhanden
+## Nicht enthalten
+- Kein Sound-Loop (iOS erlaubt das nicht aus dem SW; Sound im Admin-Dashboard läuft bereits separat).
+- Keine SMS-Benachrichtigung (separates Thema, kostenpflichtig).

@@ -30,7 +30,7 @@ self.addEventListener("push", (event) => {
     requireInteraction: true,
     silent: false,
     data: { url: payload.url || "/admin" },
-    vibrate: [200, 100, 200],
+    vibrate: [400, 150, 400, 150, 400, 150, 600],
   };
 
   event.waitUntil(self.registration.showNotification(payload.title, options));
