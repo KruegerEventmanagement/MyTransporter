@@ -1,9 +1,30 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Camera, X, RotateCcw, CheckCircle, Loader2, AlertTriangle } from "lucide-react";
+import { Camera, X, RotateCcw, CheckCircle, Loader2, AlertTriangle, Zap, ZapOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { verifyIdDocument } from "@/lib/id-verify.functions";
 
 type ScanSide = "front" | "back";
-type ScanPhase = "idle" | "camera" | "scanning" | "verifying" | "verified" | "error";
+type ScanPhase =
+  | "idle"
+  | "camera"
+  | "countdown"
+  | "capturing"
+  | "verifying"
+  | "verified"
+  | "error"
+  | "rejected";
+
+const REASON_MSG: Record<string, (side: ScanSide, docName: string, extracted?: string | null, profile?: string) => string> = {
+  blurry: (side, name) => `Bild zu unscharf. Bitte ruhig halten, gutes Licht und ${side === "front" ? "Vorderseite" : "Rückseite"} vom ${name} erneut scannen.`,
+  wrong_document_type: (_side, name) => `Das erkannte Dokument passt nicht. Bitte einen echten ${name} halten (keine andere Karte).`,
+  wrong_side: (side, name) => `Falsche Seite. Bitte ${side === "front" ? "Vorderseite" : "Rückseite"} vom ${name} zeigen.`,
+  not_authentic: (_side, name) => `Sicherheitsmerkmale des ${name}s sind nicht erkennbar. Bitte Original vor neutralem Hintergrund fotografieren.`,
+  name_mismatch: (_side, _name, extracted, profile) =>
+    `Name auf dem Dokument (${extracted ?? "unbekannt"}) stimmt nicht mit deinem Profil (${profile ?? "?"}) überein.`,
+  profile_incomplete: () => `Bitte ergänze zuerst Vor- und Nachname in deinem Profil.`,
+  ai_error: () => `Die KI-Prüfung ist fehlgeschlagen. Bitte erneut versuchen.`,
+};
 
 interface DocumentScannerProps {
   documentType: "license" | "id";
@@ -20,10 +41,15 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
   const [phase, setPhase] = useState<ScanPhase>(isComplete ? "verified" : "idle");
   const [side, setSide] = useState<ScanSide>("front");
   const [frontDone, setFrontDone] = useState(false);
-  const [verifyProgress, setVerifyProgress] = useState(0);
+  const [countdown, setCountdown] = useState(3);
+  const [progressStep, setProgressStep] = useState<0 | 1 | 2 | 3 | 4>(0);
+  const [rejectMsg, setRejectMsg] = useState<string>("");
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchAvailable, setTorchAvailable] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const verifyFn = useServerFn(verifyIdDocument);
 
   const label = DOC_LABELS[documentType];
 
@@ -32,96 +58,203 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
+    setTorchOn(false);
+    setTorchAvailable(false);
   }, []);
 
   const startCamera = useCallback(async () => {
     setPhase("camera");
+    setRejectMsg("");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 },
+        },
       });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
+      // Autofokus + Torch-Erkennung (best effort)
+      const track = stream.getVideoTracks()[0];
+      try {
+        const caps = (track.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { focusMode?: string[]; torch?: boolean };
+        const advanced: MediaTrackConstraintSet[] = [];
+        if (caps.focusMode?.includes("continuous")) advanced.push({ focusMode: "continuous" } as MediaTrackConstraintSet);
+        if (advanced.length) await track.applyConstraints({ advanced });
+        if (caps.torch) setTorchAvailable(true);
+      } catch {
+        /* ignore */
+      }
     } catch {
       setPhase("error");
     }
   }, []);
 
+  const toggleTorch = useCallback(async () => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const next = !torchOn;
+      await track.applyConstraints({ advanced: [{ torch: next } as MediaTrackConstraintSet] });
+      setTorchOn(next);
+    } catch {
+      setTorchAvailable(false);
+    }
+  }, [torchOn]);
+
   useEffect(() => {
     return () => stopCamera();
   }, [stopCamera]);
 
-  const captureAndVerify = useCallback(async () => {
-    setPhase("scanning");
+  // Schärfe-Heuristik: Laplacian-Varianz auf zentralem 200×200-Ausschnitt.
+  const checkSharpness = useCallback((canvas: HTMLCanvasElement): number => {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return 0;
+    const size = 200;
+    const cx = Math.max(0, Math.floor((canvas.width - size) / 2));
+    const cy = Math.max(0, Math.floor((canvas.height - size) / 2));
+    const img = ctx.getImageData(cx, cy, size, size);
+    const gray = new Float32Array(size * size);
+    for (let i = 0; i < size * size; i++) {
+      const r = img.data[i * 4];
+      const g = img.data[i * 4 + 1];
+      const b = img.data[i * 4 + 2];
+      gray[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+    }
+    let sum = 0;
+    let sumSq = 0;
+    let n = 0;
+    for (let y = 1; y < size - 1; y++) {
+      for (let x = 1; x < size - 1; x++) {
+        const i = y * size + x;
+        const lap = -4 * gray[i] + gray[i - 1] + gray[i + 1] + gray[i - size] + gray[i + size];
+        sum += lap;
+        sumSq += lap * lap;
+        n++;
+      }
+    }
+    const mean = sum / n;
+    return sumSq / n - mean * mean;
+  }, []);
+
+  const runCapture = useCallback(async () => {
+    setPhase("capturing");
+    setProgressStep(1);
     try {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      if (video && canvas && video.videoWidth > 0) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const blob: Blob | null = await new Promise((resolve) =>
-          canvas.toBlob((b) => resolve(b), "image/jpeg", 0.85)
-        );
+      if (!video || !canvas || video.videoWidth === 0) {
+        throw new Error("Kamera nicht bereit");
+      }
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas-Kontext fehlt");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const sharpness = checkSharpness(canvas);
+      if (sharpness < 40) {
+        setRejectMsg("Bild zu unscharf. Bitte ruhig halten und erneut auslösen.");
+        setPhase("rejected");
+        return;
+      }
+
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+      const base64Only = dataUrl.split(",")[1] ?? "";
+
+      setProgressStep(2);
+      const result = await verifyFn({ data: { imageBase64: base64Only, docType: documentType, side } });
+
+      setProgressStep(3);
+
+      if (!result.ok) {
         const { data: { user } } = await supabase.auth.getUser();
-        if (blob && user) {
-          const docType = `${documentType}_${side}`; // e.g. license_front
-          const path = `${user.id}/${docType}_${Date.now()}.jpg`;
-          const { error: upErr } = await supabase.storage
-            .from("user-documents")
-            .upload(path, blob, { contentType: "image/jpeg", upsert: true });
-          if (!upErr) {
-            // Store the storage path; signed URLs are generated on demand
-            await supabase.from("user_documents").insert({
-              user_id: user.id,
-              doc_type: docType,
-              photo_url: path,
-            });
-          }
-        }
+        const { data: profile } = user
+          ? await supabase.from("profiles").select("first_name, last_name").eq("id", user.id).maybeSingle()
+          : { data: null as { first_name: string | null; last_name: string | null } | null };
+        const profileName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || undefined;
+        const fn = REASON_MSG[result.reason ?? "ai_error"] ?? REASON_MSG.ai_error;
+        setRejectMsg(fn(side, label.name, result.extractedName, profileName));
+        setPhase("rejected");
+        return;
+      }
+
+      // OK: Upload + DB-Insert
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Nicht angemeldet");
+      const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.95));
+      if (!blob) throw new Error("Bild konnte nicht erstellt werden");
+      const docTypeKey = `${documentType}_${side}`;
+      const path = `${user.id}/${docTypeKey}_${Date.now()}.jpg`;
+      const { error: upErr } = await supabase.storage
+        .from("user-documents")
+        .upload(path, blob, { contentType: "image/jpeg", upsert: true });
+      if (upErr) throw upErr;
+
+      await supabase.from("user_documents").insert({
+        user_id: user.id,
+        doc_type: docTypeKey,
+        photo_url: path,
+        ai_verified: true,
+        ai_document_class: result.documentClass,
+        ai_extracted_name: result.extractedName,
+        ai_reason: null,
+        verified_at: new Date().toISOString(),
+      });
+
+      setProgressStep(4);
+      stopCamera();
+
+      if (!frontDone) {
+        setFrontDone(true);
+        setSide("back");
+        setPhase("idle");
+      } else {
+        setPhase("verified");
+        onComplete();
       }
     } catch (err) {
-      console.error("Document upload error:", err);
+      console.error("Document verify error:", err);
+      setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");
+      setPhase("rejected");
     }
-    setTimeout(() => {
-      stopCamera();
-      setPhase("verifying");
-      setVerifyProgress(0);
-    }, 400);
-  }, [stopCamera, documentType, side]);
+  }, [checkSharpness, verifyFn, documentType, side, frontDone, label.name, onComplete, stopCamera]);
 
-  // AI verification progress simulation
+  // Countdown-Steuerung
   useEffect(() => {
-    if (phase !== "verifying") return;
-    const interval = setInterval(() => {
-      setVerifyProgress((p) => {
-        if (p >= 100) {
-          clearInterval(interval);
-          if (!frontDone) {
-            // Front done, need back
-            setFrontDone(true);
-            setSide("back");
-            setPhase("idle");
-          } else {
-            // Both sides done
-            setPhase("verified");
-            onComplete();
-          }
-          return 100;
-        }
-        return p + Math.random() * 15 + 5;
-      });
-    }, 200);
-    return () => clearInterval(interval);
-  }, [phase, frontDone, onComplete]);
+    if (phase !== "countdown") return;
+    if (countdown <= 0) {
+      void runCapture();
+      return;
+    }
+    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [phase, countdown, runCapture]);
+
+  const startCountdown = () => {
+    setCountdown(3);
+    setPhase("countdown");
+  };
 
   const handleClose = () => {
     stopCamera();
     setPhase(isComplete ? "verified" : "idle");
+    setRejectMsg("");
+  };
+
+  const retryFromRejected = () => {
+    setRejectMsg("");
+    setProgressStep(0);
+    if (streamRef.current) {
+      setPhase("camera");
+    } else {
+      void startCamera();
+    }
   };
 
   // Idle state, button
@@ -178,11 +311,17 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
           <p className="text-white font-medium text-sm">{label.name}</p>
           <p className="text-white/70 text-xs">{side === "front" ? "Vorderseite" : "Rückseite"}</p>
         </div>
-        <div className="w-10" />
+        {torchAvailable ? (
+          <button onClick={toggleTorch} className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
+            {torchOn ? <ZapOff className="w-5 h-5 text-white" /> : <Zap className="w-5 h-5 text-white" />}
+          </button>
+        ) : (
+          <div className="w-10" />
+        )}
       </div>
 
       {/* Camera view */}
-      {(phase === "camera" || phase === "scanning") && (
+      {(phase === "camera" || phase === "countdown" || phase === "capturing") && (
         <>
           <video
             ref={videoRef}
@@ -206,9 +345,13 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
               <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-2xl" />
               <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-2xl" />
 
-              {/* Scanning line animation */}
-              {phase === "scanning" && (
-                <div className="absolute inset-x-2 h-0.5 bg-accent animate-scan-line" />
+              {/* Countdown */}
+              {phase === "countdown" && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-white text-8xl font-bold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                    {countdown > 0 ? countdown : "📸"}
+                  </span>
+                </div>
               )}
             </div>
           </div>
@@ -216,20 +359,22 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
           {/* Instructions */}
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 pb-10">
             <p className="text-white text-center text-lg font-medium mb-2">
-              {phase === "scanning" 
-                ? "Dokument wird erfasst..."
-                : `Bitte ${side === "front" ? "Vorderseite" : "Rückseite"} des ${label.name}s in den Rahmen halten`}
+              {phase === "capturing"
+                ? "Bild wird aufgenommen..."
+                : phase === "countdown"
+                  ? "Ruhig halten..."
+                  : `Bitte ${side === "front" ? "Vorderseite" : "Rückseite"} des ${label.name}s in den Rahmen halten`}
             </p>
             <p className="text-white/60 text-center text-sm mb-6">
-              {phase === "scanning" 
-                ? "Bitte stillhalten"
-                : "Bitte Ausweis langsam schwenken · KI prüft Echtheit"}
+              {phase === "camera"
+                ? "Scharfstellen lassen, dann auslösen · KI prüft Dokument & Namen"
+                : "Bitte stillhalten für scharfes Bild"}
             </p>
 
             {phase === "camera" && (
               <div className="flex justify-center">
                 <button
-                  onClick={captureAndVerify}
+                  onClick={startCountdown}
                   className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-95 transition-transform"
                 >
                   <div className="w-14 h-14 rounded-full border-4 border-black/10" />
@@ -241,35 +386,50 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
       )}
 
       {/* Verifying state */}
-      {phase === "verifying" && (
-        <div className="flex-1 flex flex-col items-center justify-center px-8">
+      {(phase === "capturing" || phase === "verifying") && progressStep >= 1 && (
+        <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center px-8">
           <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mb-6">
             <Loader2 className="w-10 h-10 text-accent animate-spin" />
           </div>
-          <h3 className="text-white text-xl font-bold mb-2">KI-Verifizierung läuft</h3>
+          <h3 className="text-white text-xl font-bold mb-2">KI-Prüfung läuft</h3>
           <p className="text-white/60 text-center text-sm mb-8">
-            {side === "front" ? "Vorderseite" : "Rückseite"} wird auf Echtheit geprüft...
+            {side === "front" ? "Vorderseite" : "Rückseite"} wird analysiert.
           </p>
-
-          {/* Progress bar */}
-          <div className="w-full max-w-xs bg-white/10 rounded-full h-2 overflow-hidden">
-            <div
-              className="h-full bg-accent rounded-full transition-all duration-200"
-              style={{ width: `${Math.min(verifyProgress, 100)}%` }}
-            />
+          <div className="space-y-2 text-sm text-white/50">
+            <p className={progressStep >= 1 ? "text-white" : ""}>
+              {progressStep >= 1 ? "✓" : "○"} Bild aufgenommen
+            </p>
+            <p className={progressStep >= 2 ? "text-white" : ""}>
+              {progressStep >= 2 ? "✓" : "○"} KI analysiert Dokument
+            </p>
+            <p className={progressStep >= 3 ? "text-white" : ""}>
+              {progressStep >= 3 ? "✓" : "○"} Namensabgleich mit Profil
+            </p>
+            <p className={progressStep >= 4 ? "text-white" : ""}>
+              {progressStep >= 4 ? "✓" : "○"} Verifiziert
+            </p>
           </div>
-          <p className="text-white/40 text-xs mt-3">{Math.min(Math.round(verifyProgress), 100)}%</p>
+        </div>
+      )}
 
-          <div className="mt-8 space-y-2 text-sm text-white/50">
-            <p className={verifyProgress > 20 ? "text-white" : ""}>
-              {verifyProgress > 20 ? "✓" : "○"} Dokument erkannt
-            </p>
-            <p className={verifyProgress > 50 ? "text-white" : ""}>
-              {verifyProgress > 50 ? "✓" : "○"} Sicherheitsmerkmale prüfen
-            </p>
-            <p className={verifyProgress > 80 ? "text-white" : ""}>
-              {verifyProgress > 80 ? "✓" : "○"} Echtheit bestätigt
-            </p>
+      {/* Rejected state */}
+      {phase === "rejected" && (
+        <div className="flex-1 flex flex-col items-center justify-center px-8">
+          <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center mb-6">
+            <AlertTriangle className="w-10 h-10 text-destructive" />
+          </div>
+          <h3 className="text-white text-xl font-bold mb-2">Prüfung fehlgeschlagen</h3>
+          <p className="text-white/70 text-center text-sm mb-8 max-w-sm">{rejectMsg}</p>
+          <div className="flex gap-3">
+            <button onClick={handleClose} className="px-6 py-3 rounded-full bg-white/10 text-white font-medium">
+              Abbrechen
+            </button>
+            <button
+              onClick={retryFromRejected}
+              className="px-6 py-3 rounded-full bg-accent text-accent-foreground font-medium flex items-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" /> Erneut versuchen
+            </button>
           </div>
         </div>
       )}
