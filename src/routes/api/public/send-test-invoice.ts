@@ -7,11 +7,12 @@ export const Route = createFileRoute("/api/public/send-test-invoice")({
         // Fest verdrahtet: nur an den Betreiber, Design-Vorschau
         const to = "krueger.christian96@gmx.de";
         const bookingId: string | null = null;
+        void bookingId;
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { generateBookingInvoicePdf } = await import("@/lib/invoice-pdf.server");
 
-        let useId = bookingId;
+        let useId: string | null = bookingId;
         if (!useId) {
           const { data: prof } = await supabaseAdmin
             .from("profiles")
