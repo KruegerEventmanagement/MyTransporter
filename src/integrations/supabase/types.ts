@@ -364,25 +364,40 @@ export type Database = {
       }
       user_documents: {
         Row: {
+          ai_document_class: string | null
+          ai_extracted_name: string | null
+          ai_reason: string | null
+          ai_verified: boolean
           created_at: string
           doc_type: string
           id: string
           photo_url: string
           user_id: string
+          verified_at: string | null
         }
         Insert: {
+          ai_document_class?: string | null
+          ai_extracted_name?: string | null
+          ai_reason?: string | null
+          ai_verified?: boolean
           created_at?: string
           doc_type: string
           id?: string
           photo_url: string
           user_id: string
+          verified_at?: string | null
         }
         Update: {
+          ai_document_class?: string | null
+          ai_extracted_name?: string | null
+          ai_reason?: string | null
+          ai_verified?: boolean
           created_at?: string
           doc_type?: string
           id?: string
           photo_url?: string
           user_id?: string
+          verified_at?: string | null
         }
         Relationships: []
       }
