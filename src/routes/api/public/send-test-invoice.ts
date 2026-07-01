@@ -3,15 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/public/send-test-invoice")({
   server: {
     handlers: {
-      POST: async ({ request }) => {
-        const url = new URL(request.url);
-        const token = url.searchParams.get("token");
-        const expected = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        if (!token || !expected || token !== expected) {
-          return new Response("forbidden", { status: 403 });
-        }
-        const to = url.searchParams.get("to") ?? "krueger.christian96@gmx.de";
-        const bookingId = url.searchParams.get("bookingId");
+      POST: async () => {
+        // Fest verdrahtet: nur an den Betreiber, Design-Vorschau
+        const to = "krueger.christian96@gmx.de";
+        const bookingId: string | null = null;
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { generateBookingInvoicePdf } = await import("@/lib/invoice-pdf.server");
