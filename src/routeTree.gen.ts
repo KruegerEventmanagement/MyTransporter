@@ -24,6 +24,7 @@ import { Route as TripBookingIdRouteImport } from './routes/trip.$bookingId'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as BuchungBookingIdRouteImport } from './routes/buchung.$bookingId'
 import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
+import { Route as ApiPublicSendTestInvoiceRouteImport } from './routes/api/public/send-test-invoice'
 import { Route as ApiPublicResendBookingMailsRouteImport } from './routes/api/public/resend-booking-mails'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
 import { Route as ApiPublicHooksNotifyAdminRouteImport } from './routes/api/public/hooks/notify-admin'
@@ -103,6 +104,12 @@ const AuthConfirmRoute = AuthConfirmRouteImport.update({
   path: '/auth/confirm',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSendTestInvoiceRoute =
+  ApiPublicSendTestInvoiceRouteImport.update({
+    id: '/api/public/send-test-invoice',
+    path: '/api/public/send-test-invoice',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicResendBookingMailsRoute =
   ApiPublicResendBookingMailsRouteImport.update({
     id: '/api/public/resend-booking-mails',
@@ -139,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/resend-booking-mails': typeof ApiPublicResendBookingMailsRoute
+  '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
 }
@@ -159,6 +167,7 @@ export interface FileRoutesByTo {
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/resend-booking-mails': typeof ApiPublicResendBookingMailsRoute
+  '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
 }
@@ -180,6 +189,7 @@ export interface FileRoutesById {
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/resend-booking-mails': typeof ApiPublicResendBookingMailsRoute
+  '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
 }
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/trip/$bookingId'
     | '/api/public/resend-booking-mails'
+    | '/api/public/send-test-invoice'
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/send-reminders'
   fileRoutesByTo: FileRoutesByTo
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/trip/$bookingId'
     | '/api/public/resend-booking-mails'
+    | '/api/public/send-test-invoice'
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/send-reminders'
   id:
@@ -242,6 +254,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/trip/$bookingId'
     | '/api/public/resend-booking-mails'
+    | '/api/public/send-test-invoice'
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/send-reminders'
   fileRoutesById: FileRoutesById
@@ -263,6 +276,7 @@ export interface RootRouteChildren {
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   TripBookingIdRoute: typeof TripBookingIdRoute
   ApiPublicResendBookingMailsRoute: typeof ApiPublicResendBookingMailsRoute
+  ApiPublicSendTestInvoiceRoute: typeof ApiPublicSendTestInvoiceRoute
   ApiPublicHooksNotifyAdminRoute: typeof ApiPublicHooksNotifyAdminRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
 }
@@ -374,6 +388,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthConfirmRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/send-test-invoice': {
+      id: '/api/public/send-test-invoice'
+      path: '/api/public/send-test-invoice'
+      fullPath: '/api/public/send-test-invoice'
+      preLoaderRoute: typeof ApiPublicSendTestInvoiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/resend-booking-mails': {
       id: '/api/public/resend-booking-mails'
       path: '/api/public/resend-booking-mails'
@@ -415,6 +436,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutReturnRoute: CheckoutReturnRoute,
   TripBookingIdRoute: TripBookingIdRoute,
   ApiPublicResendBookingMailsRoute: ApiPublicResendBookingMailsRoute,
+  ApiPublicSendTestInvoiceRoute: ApiPublicSendTestInvoiceRoute,
   ApiPublicHooksNotifyAdminRoute: ApiPublicHooksNotifyAdminRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
 }
