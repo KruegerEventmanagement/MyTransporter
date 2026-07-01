@@ -99,6 +99,7 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
 
   // Header — Logo statt Text
   let logoDrawn = false;
+  let logoBottomY = y; // untere Kante des Logos, damit Text nicht überlappt
   try {
     let origin = "https://mytransporter.org";
     try {
@@ -113,9 +114,11 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
     if (logoRes.ok) {
       const logoBytes = new Uint8Array(await logoRes.arrayBuffer());
       const logoImg = await pdf.embedPng(logoBytes);
-      const logoH = 42;
+      const logoH = 48;
       const logoW = (logoImg.width / logoImg.height) * logoH;
-      page.drawImage(logoImg, { x: left, y: y - logoH + 16, width: logoW, height: logoH });
+      const logoY = y - logoH + 16;
+      page.drawImage(logoImg, { x: left, y: logoY, width: logoW, height: logoH });
+      logoBottomY = logoY;
       logoDrawn = true;
     }
   } catch {
@@ -123,10 +126,14 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   }
   if (!logoDrawn) {
     page.drawText("MyTransporter", { x: left, y, font: bold, size: 20, color: black });
+    logoBottomY = y - 4;
   }
   page.drawText("RECHNUNG", { x: right - bold.widthOfTextAtSize("RECHNUNG", 16), y, font: bold, size: 16, color: black });
-  y -= 18;
+  // Absenderblock beginnt unterhalb des Logos, damit nichts überlappt
+  y = logoBottomY - 14;
   page.drawText("Transporter-Vermietung", { x: left, y, font, size: 10, color: grey });
+  y -= 12;
+  page.drawText("Römerstraße 36, 71229 Leonberg", { x: left, y, font, size: 10, color: grey });
   y -= 12;
   page.drawText("info@mytransporter.org", { x: left, y, font, size: 10, color: grey });
   y -= 12;
@@ -134,7 +141,7 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   y -= 12;
   page.drawText("USt-IdNr.: DE328715703", { x: left, y, font, size: 10, color: grey });
 
-  y -= 30;
+  y -= 20;
   page.drawLine({ start: { x: left, y }, end: { x: right, y }, color: line, thickness: 1 });
 
   // Meta
