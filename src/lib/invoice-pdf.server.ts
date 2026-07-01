@@ -1,6 +1,8 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computePlanReturn } from "@/lib/booking-rules";
+import logoAsset from "@/assets/invoice-logo.png.asset.json";
+import { getRequest } from "@tanstack/react-start/server";
 
 type Addon = { id: string; label: string; price_cents: number };
 
@@ -38,6 +40,17 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
     .select("email, first_name, last_name, account_type, company_name, vat_id")
     .eq("id", booking.user_id)
     .maybeSingle();
+
+  // Fahrgestellnummer (VIN) aus vehicles per Kennzeichen holen
+  let vin: string | null = null;
+  if (booking.vehicle_plate) {
+    const { data: veh } = await supabaseAdmin
+      .from("vehicles")
+      .select("vin")
+      .eq("plate", booking.vehicle_plate)
+      .maybeSingle();
+    vin = (veh?.vin ?? null) as string | null;
+  }
 
   const customerName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Kunde";
   const customerEmail = profile?.email ?? "";
@@ -84,17 +97,42 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   const left = 50;
   const right = 545;
 
-  // Header
-  page.drawText("MyTransporter", { x: left, y, font: bold, size: 20, color: black });
+  // Header — Logo statt Text
+  let logoDrawn = false;
+  try {
+    let origin = "https://mytransporter.org";
+    try {
+      const req = getRequest();
+      const proto = req.headers.get("x-forwarded-proto") ?? "https";
+      const host = req.headers.get("host");
+      if (host) origin = `${proto}://${host}`;
+    } catch {
+      // kein Request-Kontext (z.B. Hintergrund-Job) — Fallback nutzen
+    }
+    const logoRes = await fetch(`${origin}${logoAsset.url}`);
+    if (logoRes.ok) {
+      const logoBytes = new Uint8Array(await logoRes.arrayBuffer());
+      const logoImg = await pdf.embedPng(logoBytes);
+      const logoH = 42;
+      const logoW = (logoImg.width / logoImg.height) * logoH;
+      page.drawImage(logoImg, { x: left, y: y - logoH + 16, width: logoW, height: logoH });
+      logoDrawn = true;
+    }
+  } catch {
+    // Fallback unten
+  }
+  if (!logoDrawn) {
+    page.drawText("MyTransporter", { x: left, y, font: bold, size: 20, color: black });
+  }
   page.drawText("RECHNUNG", { x: right - bold.widthOfTextAtSize("RECHNUNG", 16), y, font: bold, size: 16, color: black });
   y -= 18;
   page.drawText("Transporter-Vermietung", { x: left, y, font, size: 10, color: grey });
   y -= 12;
   page.drawText("info@mytransporter.org", { x: left, y, font, size: 10, color: grey });
   y -= 12;
-  page.drawText("www.mytransporter.org", { x: left, y, font, size: 10, color: grey });
+  page.drawText("mytransporter.org", { x: left, y, font, size: 10, color: grey });
   y -= 12;
-  page.drawText("USt-IdNr.: wird ergänzt", { x: left, y, font, size: 10, color: grey });
+  page.drawText("USt-IdNr.: DE328715703", { x: left, y, font, size: 10, color: grey });
 
   y -= 30;
   page.drawLine({ start: { x: left, y }, end: { x: right, y }, color: line, thickness: 1 });
@@ -142,6 +180,10 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   page.drawText("Leistungszeitraum", { x: left, y, font: bold, size: 11, color: black });
   y -= 16;
   page.drawText(`Fahrzeug: ${booking.vehicle_name} · ${booking.vehicle_plate}`, { x: left, y, font, size: 10, color: black });
+  if (vin) {
+    y -= 13;
+    page.drawText(`Fahrgestellnummer (FIN): ${vin}`, { x: left, y, font, size: 10, color: black });
+  }
   y -= 13;
   page.drawText(`Abholung: ${startStr}`, { x: left, y, font, size: 10, color: black });
   y -= 13;
@@ -179,7 +221,7 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   for (const a of addonSplits) {
     itemRow(`Zubehör · ${a.label}`, a.netC, a.vatC, a.grossC);
   }
-  itemRow("Kaution", null, null, depositGrossC, { sub: "Umsatzsteuerfrei gemäß § 10 UStG · wird nach beanstandungsfreier Rückgabe vollständig erstattet." });
+  itemRow("Kaution", null, null, depositGrossC);
   if (booking.free_km != null) {
     y -= 14;
     page.drawText(`Inklusive ${booking.free_km} Freikilometer · darüber ${((booking.km_price_cents ?? 0) / 100).toFixed(2)} € / km`, { x: left, y, font, size: 9, color: grey });
@@ -200,7 +242,7 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   sumRow("Zwischensumme netto (Miete + Zubehör)", serviceNetC);
   sumRow("zzgl. 19% USt.", serviceVatC);
   sumRow("Bruttobetrag Leistung", serviceGrossC);
-  sumRow("Kaution (umsatzsteuerfrei, § 10 UStG)", depositGrossC);
+  sumRow("Kaution", depositGrossC);
   sumRow("Gesamtbetrag", totalC, { bold: true });
 
   y -= 16;
@@ -211,12 +253,22 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   page.drawText("Hinweis zur Umsatzsteuer", { x: left, y, font: bold, size: 10, color: black });
   y -= 13;
   page.drawText("Im ausgewiesenen Brutto der Leistung sind 19% Umsatzsteuer enthalten.", { x: left, y, font, size: 9, color: grey });
+
+  // Hinweis zur Kaution
+  y -= 22;
+  page.drawText("Hinweis zur Kaution", { x: left, y, font: bold, size: 10, color: black });
+  y -= 13;
+  page.drawText("Bei beanstandungsfreier Rückgabe wird die Kaution vollständig erstattet.", { x: left, y, font, size: 9, color: grey });
   y -= 12;
-  page.drawText("Die Kaution ist gemäß § 10 UStG nicht umsatzsteuerbar und wird vollständig erstattet.", { x: left, y, font, size: 9, color: grey });
+  page.drawText("Bei Schäden, Verschmutzung, fehlendem Tankbeleg oder sonstigen Vertragsverstößen wird ein", { x: left, y, font, size: 9, color: grey });
+  y -= 11;
+  page.drawText("angemessener Betrag einbehalten und der verbleibende Rest anteilig zurückerstattet.", { x: left, y, font, size: 9, color: grey });
+  y -= 12;
+  page.drawText("Die Auszahlung der Kaution kann bis zu einer Woche dauern.", { x: left, y, font, size: 9, color: grey });
 
   // Footer
   page.drawText("Vielen Dank für deine Buchung bei MyTransporter.", { x: left, y: 60, font, size: 10, color: black });
-  page.drawText("MyTransporter · info@mytransporter.org · www.mytransporter.org", { x: left, y: 44, font, size: 9, color: grey });
+  page.drawText("MyTransporter · info@mytransporter.org · mytransporter.org", { x: left, y: 44, font, size: 9, color: grey });
 
   const bytes = await pdf.save();
   // base64 encode
