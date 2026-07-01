@@ -1,34 +1,29 @@
-## Ziel
-Push-Benachrichtigungen müssen zuverlässig und sofort kommen bei:
-1. **Neuer Buchung** (läuft schon teilweise, aber nicht „aggressiv" genug)
-2. **Neuer Registrierung** (fehlt komplett als Push – aktuell nur DB-Eintrag in `admin_notifications`)
+# Rechnungs-PDF überarbeiten
 
-## Was geändert wird
+Alle Änderungen in `src/lib/invoice-pdf.server.ts`. Das hochgeladene Logo (`ChatGPT_Image_6._Mai_2026_22_10_11_-_bearbeitet-2.png`) wird als Lovable-Asset abgelegt und ins PDF eingebettet.
 
-### 1. Push bei neuer Registrierung
-Aktuell legt der DB-Trigger `handle_new_user` nur eine Zeile in `admin_notifications` an. Kein Push.
-- **Migration**: neuen DB-Trigger ergänzen, der per `pg_net` (HTTP) eine interne Public-Route aufruft, sobald in `admin_notifications` ein Eintrag mit `type = 'user_registered'` oder `type = 'booking_created'` landet. Ruft `/api/public/hooks/notify-admin` mit Service-Role-Token auf.
-- **Neue Route** `src/routes/api/public/hooks/notify-admin.ts`: validiert Token, ruft `pushToAdmins(...)` mit passendem Titel/Body/URL.
-- Damit ist Push komplett serverseitig garantiert – auch wenn der Browser des Kunden zwischendurch abstürzt.
+## Änderungen im Header
+- Logo oben links statt Text „MyTransporter" (Höhe ~40px, proportional). Wird als Asset via `lovable-assets` hochgeladen und im Server-Handler per `fetch` + `embedPng` geladen.
+- `USt-IdNr.: wird ergänzt` → `USt-IdNr.: DE328715703`
+- `www.mytransporter.org` → `mytransporter.org` (im Header und im Footer)
 
-### 2. Push „aggressiver"
-In `src/lib/push.functions.ts` (`pushToAdmins`) und `public/sw.js`:
-- `urgency: 'high'` und `TTL: 3600` an `webpush.sendNotification` (sofortige Zustellung statt Sammeln).
-- **Eindeutige `tag`** pro Event (statt fester Tag → vorherige Push wird sonst überschrieben). Bei Buchung: `booking-<id>`, bei Registrierung: `signup-<userId>`.
-- Längeres Vibrationsmuster `[400, 150, 400, 150, 400]`.
-- `requireInteraction: true` bleibt – Benachrichtigung bleibt sichtbar bis weggeklickt.
-- Doppelte Zustellung: bei `booking_created` zusätzlich ein zweiter Push nach ~10 s mit anderem Tag, falls der erste nicht angeklickt wurde (DB-Notiz „nicht gelesen" reicht für Erkennung – sonst einfach zweimal senden mit Delay).
-- Im SW: `silent: false`, klarer Titel `🚨 Neue Buchung` / `👤 Neue Registrierung`.
+## Fahrzeugblock
+- Fahrgestellnummer (VIN) ergänzen. Wird aus `vehicles` per `vehicle_plate` nachgeladen und als eigene Zeile unter „Fahrzeug" ausgegeben: `Fahrgestellnummer (FIN): <vin>`. Falls keine VIN vorhanden, Zeile weglassen.
 
-### 3. Bestehende Aufrufe konsolidieren
-- Doppelte Aufrufstellen (`checkout.return.tsx` clientseitig + Mail-Funktion serverseitig) bleiben als Fallback, aber Tag wird vereinheitlicht damit nicht mehrere Pushs gegenseitig überschrieben werden.
+## Kaution / MwSt.-Text
+- Zeile unter Kaution `„Umsatzsteuerfrei gemäß § 10 UStG · wird nach beanstandungsfreier Rückgabe vollständig erstattet."` **entfernen**.
+- Zeile im Summenblock `„Kaution (umsatzsteuerfrei, § 10 UStG)"` → `„Kaution"`.
+- Neuer Hinweisblock „Kaution" unter dem Summenblock:
+  - Bei beanstandungsfreier Rückgabe wird die Kaution vollständig erstattet.
+  - Bei Schäden, Verschmutzung, fehlendem Tankbeleg oder anderen Vertragsverstößen wird der entstandene Betrag anteilig einbehalten; der Rest wird zurückerstattet.
+  - Die Auszahlung kann bis zu einer Woche dauern.
 
-## Geänderte / neue Dateien
-- `supabase/migrations/<neu>.sql` – Trigger auf `admin_notifications` + pg_net call
-- `src/routes/api/public/hooks/notify-admin.ts` – neue Public-Route
-- `src/lib/push.functions.ts` – urgency, TTL, eindeutiger Tag, Titel-Emojis, Re-Send bei Buchung
-- `public/sw.js` – kleinere Anpassung (Titel/Tag aus Payload, längere Vibration)
+## MwSt.-Hinweisblock
+- Zweite Zeile `„Die Kaution ist gemäß § 10 UStG nicht umsatzsteuerbar und wird vollständig erstattet."` **entfernen** (steht künftig im Kautions-Block ohne § 10).
 
-## Nicht enthalten
-- Kein Sound-Loop (iOS erlaubt das nicht aus dem SW; Sound im Admin-Dashboard läuft bereits separat).
-- Keine SMS-Benachrichtigung (separates Thema, kostenpflichtig).
+## Technisch
+- Neue Datei `src/assets/invoice-logo.png.asset.json` (Asset-Pointer für das hochgeladene Logo).
+- Im Server-Handler das Logo lazy per `fetch(logoUrl)` laden, `embedPng`, `page.drawImage(...)`. Fallback: bei Fehler wieder Text „MyTransporter" rendern, damit die Rechnung nie bricht.
+- VIN-Lookup: zusätzliche `supabaseAdmin.from("vehicles").select("vin").eq("plate", booking.vehicle_plate).maybeSingle()` neben dem bestehenden Booking-Fetch.
+
+Keine Änderungen an Emailversand, DB-Schema oder anderen Rechnungsdaten.
