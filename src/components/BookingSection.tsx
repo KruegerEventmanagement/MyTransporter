@@ -1388,6 +1388,7 @@ export function BookingSection() {
                          environment: getStripeEnvironment(),
                           addonIds: selectedAddonIds,
                           vehiclePlate: displayVehicle.plate || null,
+                          vehicleName: displayVehicle.name || null,
                           startDate: date ? format(date, "yyyy-MM-dd") : undefined,
                           startHour: startHour ?? undefined,
                        },

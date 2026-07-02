@@ -26,6 +26,7 @@ import { Route as BuchungBookingIdRouteImport } from './routes/buchung.$bookingI
 import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
 import { Route as ApiPublicSendTestInvoiceRouteImport } from './routes/api/public/send-test-invoice'
 import { Route as ApiPublicResendBookingMailsRouteImport } from './routes/api/public/resend-booking-mails'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
 import { Route as ApiPublicHooksNotifyAdminRouteImport } from './routes/api/public/hooks/notify-admin'
 
@@ -116,6 +117,12 @@ const ApiPublicResendBookingMailsRoute =
     path: '/api/public/resend-booking-mails',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSendRemindersRoute =
   ApiPublicHooksSendRemindersRouteImport.update({
     id: '/api/public/hooks/send-reminders',
@@ -149,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -170,6 +178,7 @@ export interface FileRoutesByTo {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -192,6 +201,7 @@ export interface FileRoutesById {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/send-reminders'
+    | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/send-reminders'
+    | '/api/public/payments/webhook'
   id:
     | '__root__'
     | '/'
@@ -257,6 +269,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/send-reminders'
+    | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -279,6 +292,7 @@ export interface RootRouteChildren {
   ApiPublicSendTestInvoiceRoute: typeof ApiPublicSendTestInvoiceRoute
   ApiPublicHooksNotifyAdminRoute: typeof ApiPublicHooksNotifyAdminRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -402,6 +416,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicResendBookingMailsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/send-reminders': {
       id: '/api/public/hooks/send-reminders'
       path: '/api/public/hooks/send-reminders'
@@ -439,6 +460,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSendTestInvoiceRoute: ApiPublicSendTestInvoiceRoute,
   ApiPublicHooksNotifyAdminRoute: ApiPublicHooksNotifyAdminRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
