@@ -118,9 +118,9 @@ export const verifyIdDocument = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-2.5-flash");
 
-    const dataUrl = data.imageBase64.startsWith("data:")
-      ? data.imageBase64
-      : `data:image/jpeg;base64,${data.imageBase64}`;
+    const imageData = data.imageBase64.startsWith("data:")
+      ? (data.imageBase64.split(",")[1] ?? data.imageBase64)
+      : data.imageBase64;
 
     const expectedType = data.docType === "id" ? "Personalausweis" : "Führerschein (Klasse B)";
     const expectedSide = data.side === "front" ? "Vorderseite" : "Rückseite";
@@ -151,7 +151,7 @@ export const verifyIdDocument = createServerFn({ method: "POST" })
                     `Erwarteter Dokumenttyp: ${expectedType}. Erwartete Seite: ${expectedSide}. ` +
                     `Prüfe, ob das Foto dazu passt. Vorderseiten müssen Namen enthalten; Rückseiten dürfen ohne Namen akzeptiert werden, wenn Dokumenttyp/Seite plausibel sind.`,
                 },
-                { type: "image", image: new URL(dataUrl) },
+                { type: "image", image: imageData, mediaType: "image/jpeg" },
               ],
             },
           ],
