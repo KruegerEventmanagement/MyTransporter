@@ -173,6 +173,7 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
       const base64Only = dataUrl.split(",")[1] ?? "";
 
       setProgressStep(2);
+      setPhase("verifying");
       const result = await verifyFn({ data: { imageBase64: base64Only, docType: documentType, side } });
 
       setProgressStep(3);
