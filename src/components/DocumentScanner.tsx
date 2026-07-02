@@ -50,6 +50,7 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const verifyFn = useServerFn(verifyIdDocument);
+  const runCaptureRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const label = DOC_LABELS[documentType];
 
@@ -225,16 +226,28 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
     }
   }, [checkSharpness, verifyFn, documentType, side, frontDone, label.name, onComplete, stopCamera]);
 
-  // Countdown-Steuerung
+  // Halte die aktuelle runCapture-Referenz stabil erreichbar, damit der
+  // Countdown-Effekt sie nicht in seinen Dependencies führen muss.
+  useEffect(() => {
+    runCaptureRef.current = runCapture;
+  }, [runCapture]);
+
+  // Countdown-Steuerung: einmaliges Interval pro Countdown-Phase, unabhängig
+  // von der Identität von runCapture (die sich bei jedem Render ändern kann).
   useEffect(() => {
     if (phase !== "countdown") return;
-    if (countdown <= 0) {
-      void runCapture();
-      return;
-    }
-    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [phase, countdown, runCapture]);
+    const interval = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(interval);
+          void runCaptureRef.current?.();
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [phase]);
 
   const startCountdown = () => {
     setCountdown(3);
