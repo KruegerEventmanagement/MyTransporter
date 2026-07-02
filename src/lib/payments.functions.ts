@@ -179,6 +179,35 @@ export const getCheckoutSessionDetails = createServerFn({ method: "POST" })
     };
   });
 
+/**
+ * Sucht die Buchung, die vom Stripe-Webhook für eine Checkout-Session angelegt
+ * wurde. Wird von /checkout/return zum Polling verwendet, damit die Seite
+ * unabhängig von LocalStorage funktioniert.
+ */
+export const getBookingBySessionId = createServerFn({ method: "POST" })
+  .inputValidator((data: { sessionId: string; environment: StripeEnv }) => {
+    if (!data.sessionId) throw new Error("sessionId fehlt");
+    assertStripeEnvironment(data.environment);
+    return data;
+  })
+  .handler(async ({ data }): Promise<{ bookingId: string | null; paymentStatus: string | null }> => {
+    const stripe = createStripeClient(data.environment);
+    const session = await stripe.checkout.sessions.retrieve(data.sessionId, {
+      expand: ["payment_intent"],
+    });
+    const pi = session.payment_intent as Stripe.PaymentIntent | null;
+    const paymentIntentId = pi?.id ?? null;
+    if (!paymentIntentId) {
+      return { bookingId: null, paymentStatus: session.payment_status ?? null };
+    }
+    const { data: booking } = await supabaseAdmin
+      .from("bookings")
+      .select("id")
+      .eq("stripe_payment_intent_id", paymentIntentId)
+      .maybeSingle();
+    return { bookingId: booking?.id ?? null, paymentStatus: session.payment_status ?? null };
+  });
+
 async function assertAdmin(supabase: {
   from: (t: string) => {
     select: (s: string) => {
