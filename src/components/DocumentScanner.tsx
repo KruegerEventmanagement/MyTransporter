@@ -267,9 +267,11 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
   const retryFromRejected = () => {
     setRejectMsg("");
     setProgressStep(0);
-    if (streamRef.current) {
+    const hasLiveStream = !!streamRef.current?.getVideoTracks().some((track) => track.readyState === "live");
+    if (hasLiveStream) {
       setPhase("camera");
     } else {
+      stopCamera();
       void startCamera();
     }
   };
