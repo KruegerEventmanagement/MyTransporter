@@ -37,6 +37,9 @@ export type IdVerifyResult = {
 function normalize(s: string): string {
   return s
     .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") // Diakritika
     .replace(/[ß]/g, "ss")
@@ -44,17 +47,45 @@ function normalize(s: string): string {
     .trim();
 }
 
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a) return b.length;
+  if (!b) return a.length;
+  const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  const curr = Array.from({ length: b.length + 1 }, () => 0);
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+    }
+    for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+  }
+  return prev[b.length];
+}
+
+function tokenMatches(expected: string, documentTokens: string[]): boolean {
+  const token = normalize(expected);
+  if (!token) return false;
+  return documentTokens.some((docToken) => {
+    if (!docToken) return false;
+    if (docToken === token) return true;
+    if (token.length >= 4 && (docToken.includes(token) || token.includes(docToken))) return true;
+    const maxDistance = Math.max(token.length, docToken.length) >= 7 ? 2 : 1;
+    return levenshtein(token, docToken) <= maxDistance;
+  });
+}
+
 function nameMatches(profileFirst: string, profileLast: string, docFirst: string | null, docLast: string | null): boolean {
   const pf = normalize(profileFirst);
   const pl = normalize(profileLast);
-  const df = docFirst ? normalize(docFirst) : "";
-  const dl = docLast ? normalize(docLast) : "";
-  const all = `${df} ${dl}`.trim();
-  if (!pf || !pl || !all) return false;
+  const all = `${docFirst ? normalize(docFirst) : ""} ${docLast ? normalize(docLast) : ""}`.trim();
+  const documentTokens = all.split(" ").filter(Boolean);
+  if (!pf || !pl || documentTokens.length === 0) return false;
   const firstTokens = pf.split(" ").filter(Boolean);
   // Mindestens ein Vorname aus dem Profil muss im Dokument stehen
-  const firstOk = firstTokens.some((t) => all.includes(t));
-  const lastOk = all.includes(pl);
+  const firstOk = firstTokens.some((t) => tokenMatches(t, documentTokens));
+  const lastOk = tokenMatches(pl, documentTokens);
   return firstOk && lastOk;
 }
 
@@ -77,50 +108,63 @@ export const verifyIdDocument = createServerFn({ method: "POST" })
       .select("first_name, last_name")
       .eq("id", context.userId)
       .maybeSingle();
-    const first = (profile?.first_name ?? "").trim();
-    const last = (profile?.last_name ?? "").trim();
+    const claimsMetadata = ((context.claims as { user_metadata?: Record<string, unknown> } | undefined)?.user_metadata ?? {}) as {
+      first_name?: string;
+      last_name?: string;
+    };
+    const first = (profile?.first_name ?? claimsMetadata.first_name ?? "").trim();
+    const last = (profile?.last_name ?? claimsMetadata.last_name ?? "").trim();
 
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-2.5-flash");
 
-    const dataUrl = data.imageBase64.startsWith("data:")
-      ? data.imageBase64
-      : `data:image/jpeg;base64,${data.imageBase64}`;
+    const imageData = data.imageBase64.startsWith("data:")
+      ? (data.imageBase64.split(",")[1] ?? data.imageBase64)
+      : data.imageBase64;
 
     const expectedType = data.docType === "id" ? "Personalausweis" : "Führerschein (Klasse B)";
     const expectedSide = data.side === "front" ? "Vorderseite" : "Rückseite";
 
     let ai;
-    try {
-      const res = await generateText({
-        model,
-        experimental_output: Output.object({ schema: AiSchema }),
-        messages: [
-          {
-            role: "system",
-            content:
-              "Du bist ein forensischer Prüfer für Ausweisdokumente. Analysiere das gezeigte Foto sehr sorgfältig. " +
-              "Gib NIEMALS looksAuthentic=true zurück, wenn das Dokument offensichtlich keine amtliche ID ist (z.B. Kunden-, Bonus-, Sauna-, Spielkarte, Visitenkarte, handbeschrieben, ausgedruckte Kopie ohne Sicherheitsmerkmale). " +
-              "Extrahiere Vor- und Nachnamen exakt wie im Namensfeld (bei deutschen Ausweisen: 'Name' = Nachname, 'Vornamen' = Vorname). " +
-              "Bewerte Schärfe streng — wenn Text nicht sicher lesbar ist, setze blurry=true.",
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text:
-                  `Erwarteter Dokumenttyp: ${expectedType}. Erwartete Seite: ${expectedSide}. ` +
-                  `Prüfe, ob das gezeigte Foto exakt dazu passt, und extrahiere Name/Nummer/Ablaufdatum.`,
-              },
-              { type: "image", image: new URL(dataUrl) },
-            ],
-          },
-        ],
-      });
-      ai = res.experimental_output;
-    } catch (err) {
-      console.error("[id-verify] AI-Aufruf fehlgeschlagen", err);
+    let lastError: unknown = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const res = await generateText({
+          model,
+          experimental_output: Output.object({ schema: AiSchema }),
+          messages: [
+            {
+              role: "system",
+              content:
+                "Du bist ein forensischer Prüfer für Ausweisdokumente. Analysiere das gezeigte Foto sorgfältig, aber praxisnah für Smartphone-Fotos. " +
+                "Gib NIEMALS looksAuthentic=true zurück, wenn das Dokument offensichtlich keine amtliche ID ist (z.B. Kunden-, Bonus-, Sauna-, Spielkarte, Visitenkarte, handbeschrieben, ausgedruckte Kopie ohne Sicherheitsmerkmale). " +
+                "Akzeptiere aber echte amtliche Ausweise/Führerscheine auch dann, wenn Spiegelungen, Perspektive oder leichte Unschärfe vorhanden sind, solange Dokumenttyp und wichtige Angaben erkennbar sind. " +
+                "Bei deutschen Ausweisen gilt: 'Name' = Nachname, 'Vornamen' = Vorname. Bei Führerscheinen gilt Feld 1 = Nachname, Feld 2 = Vorname. " +
+                "Setze blurry=true nur, wenn Text und Dokumenttyp wirklich nicht zuverlässig erkennbar sind.",
+            },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text:
+                    `Erwarteter Dokumenttyp: ${expectedType}. Erwartete Seite: ${expectedSide}. ` +
+                    `Prüfe, ob das Foto dazu passt. Vorderseiten müssen Namen enthalten; Rückseiten dürfen ohne Namen akzeptiert werden, wenn Dokumenttyp/Seite plausibel sind.`,
+                },
+                { type: "image", image: imageData, mediaType: "image/jpeg" },
+              ],
+            },
+          ],
+        });
+        ai = res.experimental_output;
+        break;
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    if (!ai) {
+      console.error("[id-verify] AI-Aufruf fehlgeschlagen", lastError);
       return {
         ok: false,
         reason: "ai_error",
@@ -148,9 +192,14 @@ export const verifyIdDocument = createServerFn({ method: "POST" })
       return { ok: false, reason: "wrong_side", extractedName, documentClass: ai.documentClass, side: ai.side };
     }
 
-    if (!ai.looksAuthentic || !ai.securityFeaturesVisible) {
+    if (!ai.looksAuthentic) {
       return { ok: false, reason: "not_authentic", extractedName, documentClass: ai.documentClass, side: ai.side };
     }
+
+    // Sicherheitsmerkmale werden von der KI weiter bewertet, sind aber kein
+    // harter Ablehnungsgrund mehr. Auf echten Smartphone-Fotos verdecken
+    // Spiegelung, Winkel oder Blitz Hologramme/MRZ oft teilweise. Fake-Karten
+    // bleiben über documentClass + looksAuthentic gesperrt.
 
     // Nur Vorderseite: Namensabgleich mit Profil
     if (data.side === "front") {

@@ -1,17 +1,25 @@
-## Fix: Countdown im Ausweis-Scanner bleibt bei "3" hängen
+Plan zur sofortigen Behebung des ID-/Führerschein-Scan-Problems:
 
-### Ursache
-In `src/components/DocumentScanner.tsx` läuft der Countdown über einen `useEffect`, der `runCapture` in seinen Dependencies hat. `runCapture` wird bei jedem Render neu instanziert (via `useCallback` mit vielen Deps + `useServerFn`), und weil während der Countdown-Phase mehrere Re-Renders stattfinden, wird das `setTimeout` durch die Cleanup-Funktion jedes Mal sofort wieder abgebrochen, bevor die 1000 ms ablaufen. Ergebnis: "3" wird angezeigt, dekrementiert aber nie.
+1. **Fehlerursache im Scanner entschärfen**
+   - Die Prüfung soll nicht mehr bei normalen Foto-/KI-Unsicherheiten hart hängen bleiben.
+   - Kamera, Countdown und Retry bleiben aktiv und kehren sauber in den Kameramodus zurück.
+   - Bei Ablehnung wird eine konkrete, verständliche Ursache angezeigt statt nur allgemein „Prüfung fehlgeschlagen“.
 
-### Lösung
-Countdown von der `runCapture`-Referenz entkoppeln, sodass der Timer stabil weiterläuft:
+2. **KI-Prüfung robuster machen**
+   - Die KI-Validierung wird weniger fehleranfällig, aber weiterhin sicher:
+     - echte Ausweise/Führerscheine werden akzeptiert,
+     - Spaßkarten/Fremdkarten/Fakes werden weiter abgelehnt,
+     - Namensabgleich bleibt auf der Vorderseite Pflicht,
+     - Rückseiten werden nicht mehr fälschlich abgelehnt, nur weil dort nicht alle Sicherheitsmerkmale oder Namen sichtbar sind.
+   - Temporäre KI-/Gateway-Fehler bekommen automatische Wiederholung, bevor der Nutzer eine Fehlermeldung sieht.
 
-1. **`runCapture` in einem Ref spiegeln** (`runCaptureRef`), das per separatem Effekt aktuell gehalten wird.
-2. **Countdown-Effekt entkoppeln**: Dependencies nur `phase`. Intern per `setInterval` von 3 → 0 herunterzählen und beim Erreichen von 0 `runCaptureRef.current?.()` aufrufen. Das Interval sauber cleanen, wenn Phase wechselt.
-3. **State `countdown` bleibt** für die Anzeige, wird aber nur aus dem stabilen Interval-Effekt heraus gesetzt.
-4. **`startCountdown`** setzt weiterhin `countdown = 3` und `phase = "countdown"`.
+3. **Fotoqualität verbessern ohne Nutzer festzusetzen**
+   - Schärfeprüfung wird praktikabler eingestellt, damit iPhone/iPad-Kameras nicht ständig gute Bilder ablehnen.
+   - Wenn das Bild wirklich zu unscharf ist, bleibt der Nutzer direkt im flüssigen Retake-Prozess.
 
-### Betroffene Datei
-- `src/components/DocumentScanner.tsx` — Countdown-Effekt und ein neuer Ref-Sync-Effekt für `runCapture`.
+4. **Speichern zuverlässig machen**
+   - Nach erfolgreicher KI-Prüfung wird das Foto eindeutig gespeichert und der Verifizierungsstatus sauber aktualisiert.
+   - Doppelte/alte Scans sollen den neuen Scan nicht blockieren.
 
-Keine anderen Dateien, keine Server-/DB-Änderungen.
+5. **Abschlussprüfung**
+   - Danach prüfe ich den betroffenen Ablauf im Browser: Profil öffnen, Ausweis-Scan starten, Retry-Verhalten, Countdown, Kamerabild und Fehler-/Erfolgszustände.

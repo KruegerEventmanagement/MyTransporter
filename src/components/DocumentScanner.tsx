@@ -19,7 +19,7 @@ const REASON_MSG: Record<string, (side: ScanSide, docName: string, extracted?: s
   blurry: (side, name) => `Bild zu unscharf. Bitte ruhig halten, gutes Licht und ${side === "front" ? "Vorderseite" : "Rückseite"} vom ${name} erneut scannen.`,
   wrong_document_type: (_side, name) => `Das erkannte Dokument passt nicht. Bitte einen echten ${name} halten (keine andere Karte).`,
   wrong_side: (side, name) => `Falsche Seite. Bitte ${side === "front" ? "Vorderseite" : "Rückseite"} vom ${name} zeigen.`,
-  not_authentic: (_side, name) => `Sicherheitsmerkmale des ${name}s sind nicht erkennbar. Bitte Original vor neutralem Hintergrund fotografieren.`,
+  not_authentic: (_side, name) => `Das Original-${name} wurde nicht eindeutig erkannt. Bitte echte Karte gerade, hell und vollständig in den Rahmen halten.`,
   name_mismatch: (_side, _name, extracted, profile) =>
     `Name auf dem Dokument (${extracted ?? "unbekannt"}) stimmt nicht mit deinem Profil (${profile ?? "?"}) überein.`,
   profile_incomplete: () => `Bitte ergänze zuerst Vor- und Nachname in deinem Profil.`,
@@ -159,16 +159,21 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       const sharpness = checkSharpness(canvas);
-      if (sharpness < 40) {
-        setRejectMsg("Bild zu unscharf. Bitte ruhig halten und erneut auslösen.");
+      // Die lokale Schärfe-Heuristik darf nicht zu streng sein: echte Handy-
+      // Fotos mit Hologrammen/Reflexionen fallen sonst durch, obwohl die KI sie
+      // lesen kann. Nur wirklich komplett verwaschene Bilder werden lokal
+      // blockiert; alles andere geht in die KI-Prüfung.
+      if (sharpness < 12) {
+        setRejectMsg("Bild zu unscharf. Bitte näher ran, gutes Licht nutzen und erneut auslösen.");
         setPhase("rejected");
         return;
       }
 
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
       const base64Only = dataUrl.split(",")[1] ?? "";
 
       setProgressStep(2);
+      setPhase("verifying");
       const result = await verifyFn({ data: { imageBase64: base64Only, docType: documentType, side } });
 
       setProgressStep(3);
@@ -188,13 +193,13 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
       // OK: Upload + DB-Insert
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Nicht angemeldet");
-      const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.95));
+      const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9));
       if (!blob) throw new Error("Bild konnte nicht erstellt werden");
       const docTypeKey = `${documentType}_${side}`;
       const path = `${user.id}/${docTypeKey}_${Date.now()}.jpg`;
       const { error: upErr } = await supabase.storage
         .from("user-documents")
-        .upload(path, blob, { contentType: "image/jpeg", upsert: true });
+        .upload(path, blob, { contentType: "image/jpeg", upsert: false });
       if (upErr) throw upErr;
 
       await supabase.from("user_documents").insert({
@@ -263,9 +268,11 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
   const retryFromRejected = () => {
     setRejectMsg("");
     setProgressStep(0);
-    if (streamRef.current) {
+    const hasLiveStream = !!streamRef.current?.getVideoTracks().some((track) => track.readyState === "live");
+    if (hasLiveStream) {
       setPhase("camera");
     } else {
+      stopCamera();
       void startCamera();
     }
   };
@@ -447,7 +454,7 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
           <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center mb-6">
             <AlertTriangle className="w-10 h-10 text-destructive" />
           </div>
-          <h3 className="text-white text-xl font-bold mb-2">Prüfung fehlgeschlagen</h3>
+          <h3 className="text-white text-xl font-bold mb-2">Bitte erneut scannen</h3>
           <p className="text-white/70 text-center text-sm mb-8 max-w-sm">{rejectMsg}</p>
           <div className="flex gap-3">
             <button onClick={handleClose} className="px-6 py-3 rounded-full bg-white/10 text-white font-medium">

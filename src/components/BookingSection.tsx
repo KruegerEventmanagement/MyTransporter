@@ -89,9 +89,6 @@ export function BookingSection() {
   const [resendNow, setResendNow] = useState(Date.now());
   const [resendLoading, setResendLoading] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
-  const [docsScanned, setDocsScanned] = useState(false);
-  const [licenseScanned, setLicenseScanned] = useState(false);
-  const [idScanned, setIdScanned] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
   const [vehicles, setVehicles] = useState<DbVehicle[]>([]);
   const [vehicleIdx, setVehicleIdx] = useState(0);
@@ -492,7 +489,8 @@ export function BookingSection() {
     const { data } = await supabase
       .from("user_documents")
       .select("doc_type")
-      .eq("user_id", authUser.id);
+      .eq("user_id", authUser.id)
+      .eq("ai_verified", true);
     if (data) setDocTypes(new Set(data.map((d: { doc_type: string }) => d.doc_type)));
   };
 
@@ -1098,26 +1096,9 @@ export function BookingSection() {
                       </div>
                     </div>
 
-                    {/* Document scan section with camera + AI */}
-                    <div className="mt-8 space-y-3">
-                      <h4 className="font-medium text-foreground mb-4">Dokumente verifizieren</h4>
-                      <p className="text-xs text-muted-foreground mb-3 bg-secondary px-3 py-2 rounded-lg">Nur für Fahrer ab 25 Jahren</p>
-                      <DocumentScanner
-                        documentType="license"
-                        isComplete={licenseScanned}
-                        onComplete={() => {
-                          setLicenseScanned(true);
-                          if (idScanned) setDocsScanned(true);
-                        }}
-                      />
-                      <DocumentScanner
-                        documentType="id"
-                        isComplete={idScanned}
-                        onComplete={() => {
-                          setIdScanned(true);
-                          if (licenseScanned) setDocsScanned(true);
-                        }}
-                      />
+                    <div className="mt-8 rounded-2xl border border-border bg-secondary p-4 text-sm text-muted-foreground">
+                      Nach der E-Mail-Bestätigung kannst du Ausweis und Führerschein direkt im nächsten Schritt scannen.
+                      So ist dein Konto eindeutig verbunden und die KI-Prüfung läuft zuverlässig.
                     </div>
 
                     {signupEmailSent ? (
@@ -1174,7 +1155,7 @@ export function BookingSection() {
                           <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
                         )}
                         <button
-                          disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !regPasswordConfirm || !docsScanned || authLoading || (regForm.accountType === "business" && !regForm.companyName)}
+                          disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !regPasswordConfirm || authLoading || (regForm.accountType === "business" && !regForm.companyName)}
                           onClick={handleSignUp}
                           className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
                         >
