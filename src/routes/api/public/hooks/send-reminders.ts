@@ -15,8 +15,30 @@ interface BookingRow {
   reminder_30min_sent_at: string | null;
 }
 
+// start_date + start_hour represent Europe/Berlin wall time. The Worker
+// runtime is UTC, so a naive Date parse skews reminders by 1–2 hours and
+// they miss the send window. Compute the correct UTC instant by asking
+// Intl what the given wall time maps to in Berlin, then subtracting the
+// offset for that instant.
 function startTsOf(b: BookingRow): number {
-  return new Date(`${b.start_date}T${String(b.start_hour).padStart(2, "0")}:00:00`).getTime();
+  const [y, m, d] = b.start_date.split("-").map(Number);
+  const h = b.start_hour;
+  const utcGuess = Date.UTC(y, m - 1, d, h, 0, 0);
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Berlin",
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts = dtf.formatToParts(new Date(utcGuess));
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  const asBerlin = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  const offset = asBerlin - utcGuess;
+  return utcGuess - offset;
 }
 
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
