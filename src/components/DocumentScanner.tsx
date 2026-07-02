@@ -198,7 +198,7 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
       const path = `${user.id}/${docTypeKey}_${Date.now()}.jpg`;
       const { error: upErr } = await supabase.storage
         .from("user-documents")
-        .upload(path, blob, { contentType: "image/jpeg", upsert: true });
+        .upload(path, blob, { contentType: "image/jpeg", upsert: false });
       if (upErr) throw upErr;
 
       await supabase.from("user_documents").insert({
