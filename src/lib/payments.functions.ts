@@ -29,6 +29,7 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     environment: StripeEnv;
     addonIds?: string[];
     vehiclePlate?: string | null;
+    vehicleName?: string | null;
     startDate?: string;
     startHour?: number;
   }) => {
@@ -135,10 +136,16 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
           description: plan.rent > 0 ? `${plan.label} + Kaution` : "Transporter-Miete · Kaution",
           setup_future_usage: "off_session",
         },
-        ...(data.userId && {
+        ...(context.userId && {
+          client_reference_id: context.userId,
           metadata: {
-            userId: data.userId,
+            userId: context.userId,
             plan: data.plan,
+            planId,
+            ...(data.startDate && { startDate: data.startDate }),
+            ...(typeof data.startHour === "number" && { startHour: String(data.startHour) }),
+            ...(data.vehicleName && { vehicleName: String(data.vehicleName).slice(0, 200) }),
+            ...(data.vehiclePlate && { vehiclePlate: String(data.vehiclePlate).slice(0, 50) }),
             ...(addonIds.length > 0 && { addonIds: addonIds.join(",") }),
           },
         }),
