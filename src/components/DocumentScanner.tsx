@@ -257,6 +257,22 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
     }
   };
 
+  // Reattach an existing MediaStream to the <video> whenever we (re)enter
+  // the camera phase. Without this, retry after a rejection remounts the
+  // <video> element but never re-binds srcObject, leaving a black preview.
+  useEffect(() => {
+    if (phase !== "camera") return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream) return;
+    if (video.srcObject !== stream) {
+      video.srcObject = stream;
+    }
+    video.play().catch(() => {
+      /* ignore autoplay errors */
+    });
+  }, [phase]);
+
   // Idle state, button
   if (phase === "idle" || phase === "verified") {
     return (
