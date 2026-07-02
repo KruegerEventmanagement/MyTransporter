@@ -1098,26 +1098,9 @@ export function BookingSection() {
                       </div>
                     </div>
 
-                    {/* Document scan section with camera + AI */}
-                    <div className="mt-8 space-y-3">
-                      <h4 className="font-medium text-foreground mb-4">Dokumente verifizieren</h4>
-                      <p className="text-xs text-muted-foreground mb-3 bg-secondary px-3 py-2 rounded-lg">Nur für Fahrer ab 25 Jahren</p>
-                      <DocumentScanner
-                        documentType="license"
-                        isComplete={licenseScanned}
-                        onComplete={() => {
-                          setLicenseScanned(true);
-                          if (idScanned) setDocsScanned(true);
-                        }}
-                      />
-                      <DocumentScanner
-                        documentType="id"
-                        isComplete={idScanned}
-                        onComplete={() => {
-                          setIdScanned(true);
-                          if (licenseScanned) setDocsScanned(true);
-                        }}
-                      />
+                    <div className="mt-8 rounded-2xl border border-border bg-secondary p-4 text-sm text-muted-foreground">
+                      Nach der E-Mail-Bestätigung kannst du Ausweis und Führerschein direkt im nächsten Schritt scannen.
+                      So ist dein Konto eindeutig verbunden und die KI-Prüfung läuft zuverlässig.
                     </div>
 
                     {signupEmailSent ? (
