@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Camera, X, RotateCcw, CheckCircle, Loader2, AlertTriangle, Zap, ZapOff } from "lucide-react";
+import { Camera, X, RotateCcw, CheckCircle, AlertTriangle, Zap, ZapOff, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useServerFn } from "@tanstack/react-start";
-import { verifyIdDocument } from "@/lib/id-verify.functions";
 
 type ScanSide = "front" | "back";
 type ScanPhase =
@@ -10,21 +8,9 @@ type ScanPhase =
   | "camera"
   | "countdown"
   | "capturing"
-  | "verifying"
   | "verified"
   | "error"
   | "rejected";
-
-const REASON_MSG: Record<string, (side: ScanSide, docName: string, extracted?: string | null, profile?: string) => string> = {
-  blurry: (side, name) => `Bild zu unscharf. Bitte ruhig halten, gutes Licht und ${side === "front" ? "Vorderseite" : "Rückseite"} vom ${name} erneut scannen.`,
-  wrong_document_type: (_side, name) => `Das erkannte Dokument passt nicht. Bitte einen echten ${name} halten (keine andere Karte).`,
-  wrong_side: (side, name) => `Falsche Seite. Bitte ${side === "front" ? "Vorderseite" : "Rückseite"} vom ${name} zeigen.`,
-  not_authentic: (_side, name) => `Das Original-${name} wurde nicht eindeutig erkannt. Bitte echte Karte gerade, hell und vollständig in den Rahmen halten.`,
-  name_mismatch: (_side, _name, extracted, profile) =>
-    `Name auf dem Dokument (${extracted ?? "unbekannt"}) stimmt nicht mit deinem Profil (${profile ?? "?"}) überein.`,
-  profile_incomplete: () => `Bitte ergänze zuerst Vor- und Nachname in deinem Profil.`,
-  ai_error: () => `Die KI-Prüfung ist fehlgeschlagen. Bitte erneut versuchen.`,
-};
 
 interface DocumentScannerProps {
   documentType: "license" | "id";
@@ -42,14 +28,12 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
   const [side, setSide] = useState<ScanSide>("front");
   const [frontDone, setFrontDone] = useState(false);
   const [countdown, setCountdown] = useState(3);
-  const [progressStep, setProgressStep] = useState<0 | 1 | 2 | 3 | 4>(0);
   const [rejectMsg, setRejectMsg] = useState<string>("");
   const [torchOn, setTorchOn] = useState(false);
   const [torchAvailable, setTorchAvailable] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const verifyFn = useServerFn(verifyIdDocument);
   const runCaptureRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const label = DOC_LABELS[documentType];
@@ -112,40 +96,8 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
     return () => stopCamera();
   }, [stopCamera]);
 
-  // Schärfe-Heuristik: Laplacian-Varianz auf zentralem 200×200-Ausschnitt.
-  const checkSharpness = useCallback((canvas: HTMLCanvasElement): number => {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return 0;
-    const size = 200;
-    const cx = Math.max(0, Math.floor((canvas.width - size) / 2));
-    const cy = Math.max(0, Math.floor((canvas.height - size) / 2));
-    const img = ctx.getImageData(cx, cy, size, size);
-    const gray = new Float32Array(size * size);
-    for (let i = 0; i < size * size; i++) {
-      const r = img.data[i * 4];
-      const g = img.data[i * 4 + 1];
-      const b = img.data[i * 4 + 2];
-      gray[i] = 0.299 * r + 0.587 * g + 0.114 * b;
-    }
-    let sum = 0;
-    let sumSq = 0;
-    let n = 0;
-    for (let y = 1; y < size - 1; y++) {
-      for (let x = 1; x < size - 1; x++) {
-        const i = y * size + x;
-        const lap = -4 * gray[i] + gray[i - 1] + gray[i + 1] + gray[i - size] + gray[i + size];
-        sum += lap;
-        sumSq += lap * lap;
-        n++;
-      }
-    }
-    const mean = sum / n;
-    return sumSq / n - mean * mean;
-  }, []);
-
   const runCapture = useCallback(async () => {
     setPhase("capturing");
-    setProgressStep(1);
     try {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -158,39 +110,6 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
       if (!ctx) throw new Error("Canvas-Kontext fehlt");
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      const sharpness = checkSharpness(canvas);
-      // Die lokale Schärfe-Heuristik darf nicht zu streng sein: echte Handy-
-      // Fotos mit Hologrammen/Reflexionen fallen sonst durch, obwohl die KI sie
-      // lesen kann. Nur wirklich komplett verwaschene Bilder werden lokal
-      // blockiert; alles andere geht in die KI-Prüfung.
-      if (sharpness < 12) {
-        setRejectMsg("Bild zu unscharf. Bitte näher ran, gutes Licht nutzen und erneut auslösen.");
-        setPhase("rejected");
-        return;
-      }
-
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
-      const base64Only = dataUrl.split(",")[1] ?? "";
-
-      setProgressStep(2);
-      setPhase("verifying");
-      const result = await verifyFn({ data: { imageBase64: base64Only, docType: documentType, side } });
-
-      setProgressStep(3);
-
-      if (!result.ok) {
-        const { data: { user } } = await supabase.auth.getUser();
-        const { data: profile } = user
-          ? await supabase.from("profiles").select("first_name, last_name").eq("id", user.id).maybeSingle()
-          : { data: null as { first_name: string | null; last_name: string | null } | null };
-        const profileName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || undefined;
-        const fn = REASON_MSG[result.reason ?? "ai_error"] ?? REASON_MSG.ai_error;
-        setRejectMsg(fn(side, label.name, result.extractedName, profileName));
-        setPhase("rejected");
-        return;
-      }
-
-      // OK: Upload + DB-Insert
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Nicht angemeldet");
       const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9));
@@ -207,13 +126,9 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
         doc_type: docTypeKey,
         photo_url: path,
         ai_verified: true,
-        ai_document_class: result.documentClass,
-        ai_extracted_name: result.extractedName,
-        ai_reason: null,
         verified_at: new Date().toISOString(),
       });
 
-      setProgressStep(4);
       stopCamera();
 
       if (!frontDone) {
@@ -225,11 +140,11 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
         onComplete();
       }
     } catch (err) {
-      console.error("Document verify error:", err);
+      console.error("Document capture error:", err);
       setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");
       setPhase("rejected");
     }
-  }, [checkSharpness, verifyFn, documentType, side, frontDone, label.name, onComplete, stopCamera]);
+  }, [documentType, side, frontDone, onComplete, stopCamera]);
 
   // Halte die aktuelle runCapture-Referenz stabil erreichbar, damit der
   // Countdown-Effekt sie nicht in seinen Dependencies führen muss.
@@ -267,7 +182,6 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
 
   const retryFromRejected = () => {
     setRejectMsg("");
-    setProgressStep(0);
     const hasLiveStream = !!streamRef.current?.getVideoTracks().some((track) => track.readyState === "live");
     if (hasLiveStream) {
       setPhase("camera");
