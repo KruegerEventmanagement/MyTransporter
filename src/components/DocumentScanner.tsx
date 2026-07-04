@@ -335,30 +335,16 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
         </>
       )}
 
-      {/* Verifying state */}
-      {(phase === "capturing" || phase === "verifying") && progressStep >= 1 && (
+      {/* Uploading state */}
+      {phase === "capturing" && (
         <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center px-8">
           <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mb-6">
             <Loader2 className="w-10 h-10 text-accent animate-spin" />
           </div>
-          <h3 className="text-white text-xl font-bold mb-2">KI-Prüfung läuft</h3>
-          <p className="text-white/60 text-center text-sm mb-8">
-            {side === "front" ? "Vorderseite" : "Rückseite"} wird analysiert.
+          <h3 className="text-white text-xl font-bold mb-2">Foto wird gespeichert</h3>
+          <p className="text-white/60 text-center text-sm">
+            {side === "front" ? "Vorderseite" : "Rückseite"} wird hochgeladen.
           </p>
-          <div className="space-y-2 text-sm text-white/50">
-            <p className={progressStep >= 1 ? "text-white" : ""}>
-              {progressStep >= 1 ? "✓" : "○"} Bild aufgenommen
-            </p>
-            <p className={progressStep >= 2 ? "text-white" : ""}>
-              {progressStep >= 2 ? "✓" : "○"} KI analysiert Dokument
-            </p>
-            <p className={progressStep >= 3 ? "text-white" : ""}>
-              {progressStep >= 3 ? "✓" : "○"} Namensabgleich mit Profil
-            </p>
-            <p className={progressStep >= 4 ? "text-white" : ""}>
-              {progressStep >= 4 ? "✓" : "○"} Verifiziert
-            </p>
-          </div>
         </div>
       )}
 
