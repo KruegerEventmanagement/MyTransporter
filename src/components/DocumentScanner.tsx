@@ -317,7 +317,7 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
             </p>
             <p className="text-white/60 text-center text-sm mb-6">
               {phase === "camera"
-                ? "Scharfstellen lassen, dann auslösen · KI prüft Dokument & Namen"
+                ? "Scharfstellen lassen, dann auslösen"
                 : "Bitte stillhalten für scharfes Bild"}
             </p>
 
