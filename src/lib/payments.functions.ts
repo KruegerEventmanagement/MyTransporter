@@ -57,7 +57,6 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
         .from("user_documents")
         .select("doc_type")
         .eq("user_id", context.userId)
-        .eq("ai_verified", true);
       const have = new Set((docs ?? []).map((d: { doc_type: string }) => d.doc_type));
       const missing = REQUIRED_DOC_TYPES.filter((t) => !have.has(t));
       if (missing.length > 0) {

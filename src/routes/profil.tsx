@@ -57,7 +57,6 @@ function ProfilePage() {
       .from("user_documents")
       .select("doc_type")
       .eq("user_id", user.id)
-      .eq("ai_verified", true);
     if (data) setDocTypes(new Set(data.map((d: { doc_type: string }) => d.doc_type)));
   };
 
@@ -99,7 +98,6 @@ function ProfilePage() {
         .from("user_documents")
         .select("doc_type")
         .eq("user_id", user.id)
-        .eq("ai_verified", true);
       if (mounted && docs) setDocTypes(new Set(docs.map((d: { doc_type: string }) => d.doc_type)));
       setLoading(false);
     })();
