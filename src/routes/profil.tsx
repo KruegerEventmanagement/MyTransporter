@@ -56,7 +56,7 @@ function ProfilePage() {
     const { data } = await supabase
       .from("user_documents")
       .select("doc_type")
-      .eq("user_id", user.id)
+      .eq("user_id", user.id);
     if (data) setDocTypes(new Set(data.map((d: { doc_type: string }) => d.doc_type)));
   };
 
@@ -97,7 +97,7 @@ function ProfilePage() {
       const { data: docs } = await supabase
         .from("user_documents")
         .select("doc_type")
-        .eq("user_id", user.id)
+        .eq("user_id", user.id);
       if (mounted && docs) setDocTypes(new Set(docs.map((d: { doc_type: string }) => d.doc_type)));
       setLoading(false);
     })();
