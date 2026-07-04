@@ -489,8 +489,7 @@ export function BookingSection() {
     const { data } = await supabase
       .from("user_documents")
       .select("doc_type")
-      .eq("user_id", authUser.id)
-      .eq("ai_verified", true);
+      .eq("user_id", authUser.id);
     if (data) setDocTypes(new Set(data.map((d: { doc_type: string }) => d.doc_type)));
   };
 
