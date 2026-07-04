@@ -56,7 +56,7 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
       const { data: docs } = await context.supabase
         .from("user_documents")
         .select("doc_type")
-        .eq("user_id", context.userId)
+        .eq("user_id", context.userId);
       const have = new Set((docs ?? []).map((d: { doc_type: string }) => d.doc_type));
       const missing = REQUIRED_DOC_TYPES.filter((t) => !have.has(t));
       if (missing.length > 0) {
