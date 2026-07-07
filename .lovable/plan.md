@@ -1,25 +1,25 @@
-Plan zur sofortigen Behebung des ID-/Führerschein-Scan-Problems:
+## Zwei PDFs erstellen
 
-1. **Fehlerursache im Scanner entschärfen**
-   - Die Prüfung soll nicht mehr bei normalen Foto-/KI-Unsicherheiten hart hängen bleiben.
-   - Kamera, Countdown und Retry bleiben aktiv und kehren sauber in den Kameramodus zurück.
-   - Bei Ablehnung wird eine konkrete, verständliche Ursache angezeigt statt nur allgemein „Prüfung fehlgeschlagen“.
+**1. Rechnung (aktualisiert)** – `MyTransporter-Rechnung-MT-202607-EVENTK-v2.pdf`
+- Positionen unverändert bis "Miete nach Rabatt" (2.000 € netto / 380 € MwSt / 2.380 € brutto)
+- Zeile "Kaution": 200,00 € brutto (sichtbar)
+- Neue Zeile darunter: **"Sonderrabatt Kaution"** −200,00 €
+- Summenblock:
+  - Zwischensumme netto (Miete): 2.000,00 €
+  - zzgl. 19 % USt.: 380,00 €
+  - Bruttobetrag Leistung: 2.380,00 €
+  - Kaution: 200,00 €
+  - Sonderrabatt Kaution: −200,00 €
+  - **Gesamtbetrag: 2.380,00 €**
+- Hinweis-Absatz "Sonderrabatt Kaution": Kaution wird im Rahmen der Sondervereinbarung erlassen.
 
-2. **KI-Prüfung robuster machen**
-   - Die KI-Validierung wird weniger fehleranfällig, aber weiterhin sicher:
-     - echte Ausweise/Führerscheine werden akzeptiert,
-     - Spaßkarten/Fremdkarten/Fakes werden weiter abgelehnt,
-     - Namensabgleich bleibt auf der Vorderseite Pflicht,
-     - Rückseiten werden nicht mehr fälschlich abgelehnt, nur weil dort nicht alle Sicherheitsmerkmale oder Namen sichtbar sind.
-   - Temporäre KI-/Gateway-Fehler bekommen automatische Wiederholung, bevor der Nutzer eine Fehlermeldung sieht.
+**2. Angebot (neu)** – `MyTransporter-Angebot-AN-202607-EVENTK.pdf`
+- Identischer Aufbau wie die Rechnung, aber:
+  - Kopfzeile "ANGEBOT" statt "RECHNUNG"
+  - "Angebotsnummer" statt "Rechnungsnummer" (`AN-202607-EVENTK`)
+  - "Angebotsdatum" statt "Rechnungsdatum"
+  - Fußnote statt "Zahlbar innerhalb …": *"Dieses Angebot ist gültig bis 31.07.2026. Preise verstehen sich zzgl. gesetzlicher USt., wo ausgewiesen."*
+  - Freundlicher Abschluss: *"Wir freuen uns auf Ihre Rückmeldung."*
+- Alle Beträge, Kunde, Zeitraum, Rabattlogik identisch zur Rechnung.
 
-3. **Fotoqualität verbessern ohne Nutzer festzusetzen**
-   - Schärfeprüfung wird praktikabler eingestellt, damit iPhone/iPad-Kameras nicht ständig gute Bilder ablehnen.
-   - Wenn das Bild wirklich zu unscharf ist, bleibt der Nutzer direkt im flüssigen Retake-Prozess.
-
-4. **Speichern zuverlässig machen**
-   - Nach erfolgreicher KI-Prüfung wird das Foto eindeutig gespeichert und der Verifizierungsstatus sauber aktualisiert.
-   - Doppelte/alte Scans sollen den neuen Scan nicht blockieren.
-
-5. **Abschlussprüfung**
-   - Danach prüfe ich den betroffenen Ablauf im Browser: Profil öffnen, Ausweis-Scan starten, Retry-Verhalten, Countdown, Kamerabild und Fehler-/Erfolgszustände.
+Beide Dateien landen nach dem Rendern als Download-Artefakte in der Chat-Antwort. Anschließend visuelle QA (jede Seite als JPG prüfen).
