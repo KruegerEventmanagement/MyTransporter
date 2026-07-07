@@ -134,12 +134,6 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   page.drawText("Transporter-Vermietung", { x: left, y, font, size: 10, color: grey });
   y -= 12;
   page.drawText("Römerstraße 36, 71229 Leonberg", { x: left, y, font, size: 10, color: grey });
-  y -= 12;
-  page.drawText("info@mytransporter.org", { x: left, y, font, size: 10, color: grey });
-  y -= 12;
-  page.drawText("mytransporter.org", { x: left, y, font, size: 10, color: grey });
-  y -= 12;
-  page.drawText("USt-IdNr.: DE328715703", { x: left, y, font, size: 10, color: grey });
 
   y -= 20;
   page.drawLine({ start: { x: left, y }, end: { x: right, y }, color: line, thickness: 1 });
