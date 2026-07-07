@@ -176,9 +176,9 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   y -= 60;
   page.drawLine({ start: { x: left, y }, end: { x: right, y }, color: line, thickness: 1 });
 
-  // Leistungszeitraum
+  // Leistung
   y -= 22;
-  page.drawText("Leistungszeitraum", { x: left, y, font: bold, size: 11, color: black });
+  page.drawText("Leistung", { x: left, y, font: bold, size: 11, color: black });
   y -= 16;
   page.drawText(`Fahrzeug: ${booking.vehicle_name} · ${booking.vehicle_plate}`, { x: left, y, font, size: 10, color: black });
   if (vin) {
@@ -188,7 +188,7 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   y -= 13;
   page.drawText(`Abholung: ${startStr}`, { x: left, y, font, size: 10, color: black });
   y -= 13;
-  page.drawText(`Rückgabe spätestens: ${returnStr}`, { x: left, y, font, size: 10, color: black });
+  page.drawText(`Rückgabe: ${returnStr}`, { x: left, y, font, size: 10, color: black });
 
   // Items table mit Spalten: Position · Netto · MwSt 19% · Brutto
   const colNetX = 330;
