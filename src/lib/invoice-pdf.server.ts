@@ -134,12 +134,6 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   page.drawText("Transporter-Vermietung", { x: left, y, font, size: 10, color: grey });
   y -= 12;
   page.drawText("Römerstraße 36, 71229 Leonberg", { x: left, y, font, size: 10, color: grey });
-  y -= 12;
-  page.drawText("info@mytransporter.org", { x: left, y, font, size: 10, color: grey });
-  y -= 12;
-  page.drawText("mytransporter.org", { x: left, y, font, size: 10, color: grey });
-  y -= 12;
-  page.drawText("USt-IdNr.: DE328715703", { x: left, y, font, size: 10, color: grey });
 
   y -= 20;
   page.drawLine({ start: { x: left, y }, end: { x: right, y }, color: line, thickness: 1 });
@@ -182,9 +176,9 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   y -= 60;
   page.drawLine({ start: { x: left, y }, end: { x: right, y }, color: line, thickness: 1 });
 
-  // Leistungszeitraum
+  // Leistung
   y -= 22;
-  page.drawText("Leistungszeitraum", { x: left, y, font: bold, size: 11, color: black });
+  page.drawText("Leistung", { x: left, y, font: bold, size: 11, color: black });
   y -= 16;
   page.drawText(`Fahrzeug: ${booking.vehicle_name} · ${booking.vehicle_plate}`, { x: left, y, font, size: 10, color: black });
   if (vin) {
@@ -194,7 +188,7 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   y -= 13;
   page.drawText(`Abholung: ${startStr}`, { x: left, y, font, size: 10, color: black });
   y -= 13;
-  page.drawText(`Rückgabe spätestens: ${returnStr}`, { x: left, y, font, size: 10, color: black });
+  page.drawText(`Rückgabe: ${returnStr}`, { x: left, y, font, size: 10, color: black });
 
   // Items table mit Spalten: Position · Netto · MwSt 19% · Brutto
   const colNetX = 330;
@@ -273,9 +267,35 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   y -= 12;
   page.drawText("Die Auszahlung der Kaution kann bis zu einer Woche dauern.", { x: left, y, font, size: 9, color: grey });
 
-  // Footer
-  page.drawText("Vielen Dank für deine Buchung bei MyTransporter.", { x: left, y: 60, font, size: 10, color: black });
-  page.drawText("MyTransporter · info@mytransporter.org · mytransporter.org", { x: left, y: 44, font, size: 9, color: grey });
+  // Footer mit vollständigen Kontakt- und Bankdaten
+  const footerTop = 140;
+  page.drawLine({ start: { x: left, y: footerTop }, end: { x: right, y: footerTop }, color: line, thickness: 1 });
+  const colW = (right - left) / 3;
+  const c1 = left;
+  const c2 = left + colW;
+  const c3 = left + colW * 2;
+  let fy = footerTop - 14;
+  page.drawText("Kontakt", { x: c1, y: fy, font: bold, size: 9, color: black });
+  page.drawText("Unternehmen", { x: c2, y: fy, font: bold, size: 9, color: black });
+  page.drawText("Bankverbindung", { x: c3, y: fy, font: bold, size: 9, color: black });
+  fy -= 12;
+  page.drawText("MyTransporter", { x: c1, y: fy, font, size: 9, color: black });
+  page.drawText("Christian Krüger", { x: c2, y: fy, font, size: 9, color: black });
+  page.drawText("Christian Krüger", { x: c3, y: fy, font, size: 9, color: black });
+  fy -= 11;
+  page.drawText("Römerstraße 36", { x: c1, y: fy, font, size: 9, color: grey });
+  page.drawText("USt-IdNr.: DE328715703", { x: c2, y: fy, font, size: 9, color: grey });
+  page.drawText("Finom Payments", { x: c3, y: fy, font, size: 9, color: grey });
+  fy -= 11;
+  page.drawText("71229 Leonberg", { x: c1, y: fy, font, size: 9, color: grey });
+  page.drawText("mytransporter.org", { x: c2, y: fy, font, size: 9, color: grey });
+  page.drawText("IBAN: DE44 1001 8000 0164 8885 87", { x: c3, y: fy, font, size: 9, color: grey });
+  fy -= 11;
+  page.drawText("info@mytransporter.org", { x: c1, y: fy, font, size: 9, color: grey });
+  page.drawText("", { x: c2, y: fy, font, size: 9, color: grey });
+  page.drawText("BIC: FNOMDEB2", { x: c3, y: fy, font, size: 9, color: grey });
+
+  page.drawText("Vielen Dank für deine Buchung bei MyTransporter.", { x: left, y: 40, font, size: 10, color: black });
 
   const bytes = await pdf.save();
   // base64 encode
