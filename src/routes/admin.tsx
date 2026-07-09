@@ -1150,7 +1150,7 @@ const PHOTO_TYPE_LABELS: Record<string, string> = {
   tank_receipt: "Tankbeleg",
 };
 
-function PhotoGroup({ title, photos }: { title: string; photos: TripPhoto[] }) {
+function PhotoGroup({ title, photos, urls }: { title: string; photos: TripPhoto[]; urls?: Record<string, string> }) {
   if (photos.length === 0) return null;
   return (
     <div>
@@ -1158,16 +1158,18 @@ function PhotoGroup({ title, photos }: { title: string; photos: TripPhoto[] }) {
         <ImageIcon className="w-4 h-4" /> {title} ({photos.length})
       </p>
       <div className="grid grid-cols-3 gap-2">
-        {photos.map((ph) => (
+        {photos.map((ph) => {
+          const src = urls?.[ph.id] ?? ph.photo_url;
+          return (
           <a
             key={ph.id}
-            href={ph.photo_url}
+            href={src}
             target="_blank"
             rel="noreferrer"
             className="relative block"
           >
             <img
-              src={ph.photo_url}
+              src={src}
               alt={ph.photo_type}
               className="w-full aspect-square object-cover rounded-lg border border-border"
             />
@@ -1175,7 +1177,8 @@ function PhotoGroup({ title, photos }: { title: string; photos: TripPhoto[] }) {
               {PHOTO_TYPE_LABELS[ph.photo_type] ?? ph.photo_type}
             </span>
           </a>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
