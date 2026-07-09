@@ -237,6 +237,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
       bookingId,
     });
     setReturnCode(code);
+    setAwaitingAdmin(true);
     setReturnStep("code");
   };
 
