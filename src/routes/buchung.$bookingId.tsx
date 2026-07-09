@@ -342,6 +342,44 @@ function BookingDetailPage() {
             </div>
           )}
         </section>
+
+        {/* Ausweis- und Führerscheindokumente (nur Ansicht) */}
+        {documents.length > 0 && (
+          <section className="rounded-2xl bg-card border border-border p-4">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <ImageIcon className="w-3.5 h-3.5" /> Meine Ausweisdokumente ({documents.length})
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {documents.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => setLightbox(d.resolvedUrl)}
+                  className="group relative aspect-[1.586/1] overflow-hidden rounded-xl bg-secondary"
+                >
+                  {d.resolvedUrl ? (
+                    <img
+                      src={d.resolvedUrl}
+                      alt={DOC_LABELS[d.doc_type] ?? d.doc_type}
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                      Bild nicht verfügbar
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 bg-foreground/70 text-background text-[10px] px-2 py-1 truncate">
+                    {DOC_LABELS[d.doc_type] ?? d.doc_type}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Dokumente können nur im Profil bearbeitet werden.
+            </p>
+          </section>
+        )}
       </div>
 
       {/* Lightbox */}
