@@ -1029,14 +1029,17 @@ function CustomerDetail({
                                 !p.photo_type.startsWith("post_") &&
                                 p.photo_type !== "tank_receipt"
                             )}
+                            urls={photoUrls}
                           />
                           <PhotoGroup
                             title="Fahrzeug nach der Fahrt"
                             photos={bphotos.filter((p) => p.photo_type.startsWith("post_"))}
+                            urls={photoUrls}
                           />
                           <PhotoGroup
                             title="Tankbeleg"
                             photos={bphotos.filter((p) => p.photo_type === "tank_receipt")}
+                            urls={photoUrls}
                           />
                         </div>
                       )}
