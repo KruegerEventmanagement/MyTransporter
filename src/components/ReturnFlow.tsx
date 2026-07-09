@@ -80,6 +80,48 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
     return () => { mounted = false; };
   }, []);
 
+  // Auf Admin-Bestätigung warten: Realtime + Fallback-Polling auf bookings.status
+  useEffect(() => {
+    if (!awaitingAdmin || !returnCode) return;
+    let cancelled = false;
+
+    const finish = () => {
+      if (cancelled) return;
+      cancelled = true;
+      onComplete(returnCode);
+    };
+
+    const check = async () => {
+      const { data } = await supabase
+        .from("bookings")
+        .select("status")
+        .eq("id", bookingId)
+        .maybeSingle();
+      if (data?.status === "completed") finish();
+    };
+
+    check();
+    const poll = setInterval(check, 5000);
+
+    const channel = supabase
+      .channel(`booking-status-${bookingId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "bookings", filter: `id=eq.${bookingId}` },
+        (payload) => {
+          const next = (payload.new as { status?: string } | null)?.status;
+          if (next === "completed") finish();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      clearInterval(poll);
+      supabase.removeChannel(channel);
+    };
+  }, [awaitingAdmin, returnCode, bookingId, onComplete]);
+
   const allSidesTaken = PHOTO_SIDES.every((s) => photos[s.id]);
   const interiorTaken = !!interiorPhoto;
   const photosReady = allSidesTaken && interiorTaken;
