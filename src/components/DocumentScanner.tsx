@@ -8,6 +8,7 @@ type ScanPhase =
   | "camera"
   | "countdown"
   | "capturing"
+  | "preview"
   | "verified"
   | "error"
   | "rejected";
@@ -16,6 +17,7 @@ interface DocumentScannerProps {
   documentType: "license" | "id";
   onComplete: () => void;
   isComplete: boolean;
+  onReset?: () => void | Promise<void>;
 }
 
 const DOC_LABELS = {
@@ -23,7 +25,7 @@ const DOC_LABELS = {
   id: { name: "Personalausweis", icon: "🪪" },
 };
 
-export function DocumentScanner({ documentType, onComplete, isComplete }: DocumentScannerProps) {
+export function DocumentScanner({ documentType, onComplete, isComplete, onReset }: DocumentScannerProps) {
   const [phase, setPhase] = useState<ScanPhase>(isComplete ? "verified" : "idle");
   const [side, setSide] = useState<ScanSide>("front");
   const [frontDone, setFrontDone] = useState(false);
@@ -31,6 +33,8 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
   const [rejectMsg, setRejectMsg] = useState<string>("");
   const [torchOn, setTorchOn] = useState(false);
   const [torchAvailable, setTorchAvailable] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const pendingBlobRef = useRef<Blob | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -109,18 +113,32 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Canvas-Kontext fehlt");
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Nicht angemeldet");
       const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9));
       if (!blob) throw new Error("Bild konnte nicht erstellt werden");
+      pendingBlobRef.current = blob;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(blob));
+      setPhase("preview");
+    } catch (err) {
+      console.error("Document capture error:", err);
+      setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");
+      setPhase("rejected");
+    }
+  }, [previewUrl]);
+
+  const confirmUpload = useCallback(async () => {
+    const blob = pendingBlobRef.current;
+    if (!blob) return;
+    setPhase("capturing");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Nicht angemeldet");
       const docTypeKey = `${documentType}_${side}`;
       const path = `${user.id}/${docTypeKey}_${Date.now()}.jpg`;
       const { error: upErr } = await supabase.storage
         .from("user-documents")
         .upload(path, blob, { contentType: "image/jpeg", upsert: false });
       if (upErr) throw upErr;
-
       await supabase.from("user_documents").insert({
         user_id: user.id,
         doc_type: docTypeKey,
@@ -129,6 +147,11 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
         verified_at: new Date().toISOString(),
       });
 
+      pendingBlobRef.current = null;
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
       stopCamera();
 
       if (!frontDone) {
@@ -140,11 +163,20 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
         onComplete();
       }
     } catch (err) {
-      console.error("Document capture error:", err);
+      console.error("Document upload error:", err);
       setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");
       setPhase("rejected");
     }
-  }, [documentType, side, frontDone, onComplete, stopCamera]);
+  }, [documentType, side, frontDone, onComplete, stopCamera, previewUrl]);
+
+  const retakeFromPreview = useCallback(() => {
+    pendingBlobRef.current = null;
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+    setPhase("camera");
+  }, [previewUrl]);
 
   // Halte die aktuelle runCapture-Referenz stabil erreichbar, damit der
   // Countdown-Effekt sie nicht in seinen Dependencies führen muss.
@@ -176,6 +208,11 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
 
   const handleClose = () => {
     stopCamera();
+    pendingBlobRef.current = null;
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
     setPhase(isComplete ? "verified" : "idle");
     setRejectMsg("");
   };
@@ -210,42 +247,57 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
   // Idle state, button
   if (phase === "idle" || phase === "verified") {
     return (
-      <button
-        onClick={() => {
-          if (phase !== "verified") startCamera();
-        }}
-        disabled={phase === "verified"}
-        className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all ${
-          phase === "verified"
-            ? "border-border bg-secondary"
-            : "border-border bg-card hover:border-accent/50 hover:shadow-sm"
-        }`}
-      >
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-          phase === "verified" ? "bg-muted" : "bg-accent/10"
-        }`}>
-          {phase === "verified" ? (
-            <CheckCircle className="w-5 h-5 text-foreground" />
-          ) : (
-            <Camera className="w-5 h-5 text-accent" />
+      <div className="space-y-2">
+        <button
+          onClick={() => {
+            if (phase !== "verified") startCamera();
+          }}
+          disabled={phase === "verified"}
+          className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all ${
+            phase === "verified"
+              ? "border-border bg-secondary"
+              : "border-border bg-card hover:border-accent/50 hover:shadow-sm"
+          }`}
+        >
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            phase === "verified" ? "bg-muted" : "bg-accent/10"
+          }`}>
+            {phase === "verified" ? (
+              <CheckCircle className="w-5 h-5 text-foreground" />
+            ) : (
+              <Camera className="w-5 h-5 text-accent" />
+            )}
+          </div>
+          <div className="flex-1 text-left">
+            <p className="font-medium text-foreground">{label.name} scannen</p>
+            <p className="text-sm text-muted-foreground">
+              {phase === "verified"
+                ? "✓ Vorder- & Rückseite gespeichert"
+                : frontDone
+                  ? "Rückseite noch ausstehend"
+                  : "Vorder- und Rückseite fotografieren"}
+            </p>
+          </div>
+          {phase !== "verified" && (
+            <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-accent text-accent-foreground">
+              {frontDone ? "Weiter" : "Scannen"}
+            </span>
           )}
-        </div>
-        <div className="flex-1 text-left">
-          <p className="font-medium text-foreground">{label.name} scannen</p>
-          <p className="text-sm text-muted-foreground">
-            {phase === "verified"
-              ? "✓ Vorder- & Rückseite verifiziert"
-              : frontDone
-                ? "Rückseite noch ausstehend"
-                : "Vorder- und Rückseite fotografieren"}
-          </p>
-        </div>
-        {phase !== "verified" && (
-          <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-accent text-accent-foreground">
-            {frontDone ? "Weiter" : "Scannen"}
-          </span>
+        </button>
+        {phase === "verified" && onReset && (
+          <button
+            onClick={async () => {
+              await onReset();
+              setFrontDone(false);
+              setSide("front");
+              setPhase("idle");
+            }}
+            className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 py-1"
+          >
+            Erneut aufnehmen
+          </button>
         )}
-      </button>
+      </div>
     );
   }
 
@@ -345,6 +397,38 @@ export function DocumentScanner({ documentType, onComplete, isComplete }: Docume
           <p className="text-white/60 text-center text-sm">
             {side === "front" ? "Vorderseite" : "Rückseite"} wird hochgeladen.
           </p>
+        </div>
+      )}
+
+      {/* Preview state — user must confirm or retake */}
+      {phase === "preview" && previewUrl && (
+        <div className="absolute inset-0 bg-black flex flex-col">
+          <div className="flex-1 flex items-center justify-center p-4">
+            <img
+              src={previewUrl}
+              alt="Aufgenommenes Dokument"
+              className="max-w-full max-h-full object-contain rounded-2xl"
+            />
+          </div>
+          <div className="p-6 pb-10 bg-gradient-to-t from-black/90 to-transparent">
+            <p className="text-white text-center text-base font-medium mb-4">
+              Sieht das Bild gut aus?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={retakeFromPreview}
+                className="flex-1 px-4 py-3 rounded-full bg-white/15 text-white font-medium flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4" /> Erneut
+              </button>
+              <button
+                onClick={confirmUpload}
+                className="flex-1 px-4 py-3 rounded-full bg-accent text-accent-foreground font-medium flex items-center justify-center gap-2"
+              >
+                <CheckCircle className="w-4 h-4" /> Übernehmen
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

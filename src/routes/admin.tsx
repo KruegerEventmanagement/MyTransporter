@@ -98,6 +98,7 @@ interface UserDocument {
   doc_type: string;
   photo_url: string;
   created_at: string;
+  deleted_by_user_at?: string | null;
 }
 interface GpsPoint {
   latitude: number;
@@ -936,6 +937,11 @@ function CustomerDetail({
                   <span className="absolute bottom-1 left-1 right-1 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded truncate">
                     {docLabels[doc.doc_type] ?? doc.doc_type}
                   </span>
+                  {doc.deleted_by_user_at && (
+                    <span className="absolute top-1 right-1 text-[9px] bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded font-medium">
+                      Vom Nutzer entfernt
+                    </span>
+                  )}
                 </a>
               ))}
             </div>

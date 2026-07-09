@@ -369,6 +369,7 @@ export type Database = {
           ai_reason: string | null
           ai_verified: boolean
           created_at: string
+          deleted_by_user_at: string | null
           doc_type: string
           id: string
           photo_url: string
@@ -381,6 +382,7 @@ export type Database = {
           ai_reason?: string | null
           ai_verified?: boolean
           created_at?: string
+          deleted_by_user_at?: string | null
           doc_type: string
           id?: string
           photo_url: string
@@ -393,6 +395,7 @@ export type Database = {
           ai_reason?: string | null
           ai_verified?: boolean
           created_at?: string
+          deleted_by_user_at?: string | null
           doc_type?: string
           id?: string
           photo_url?: string
