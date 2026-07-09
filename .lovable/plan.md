@@ -1,18 +1,26 @@
-## Prüfung: Aktueller Zustand deckt die Anforderung bereits ab
+## Ziel
+Auf jeder Seite unten rechts einen kleinen, schwarzen Hilfe-Kreis einblenden. Klick öffnet eine kleine Sprechblase mit Kontaktdaten.
 
-Ich habe die drei betroffenen Stellen abgeglichen. Es sind **keine Änderungen** nötig:
+## Umsetzung
 
-### 1. Ausweis-/Führerscheinfotos – Nutzer kann löschen
-- **Profilseite (`/profil`)**: In der Sektion „Meine Dokumente" gibt es pro Dokument einen Trash-Button (`deleteDoc`). Dieser setzt `deleted_by_user_at = now()` – **Soft-Delete**, die Storage-Datei bleibt erhalten.
-- **Buchungs-Detailseite (`/buchung/:id`)**: Ausweis-/Führerscheinfotos werden angezeigt, **ohne Löschen-Button** – Bearbeitung nur über das Profil (Hinweistext ist bereits vorhanden).
+### Neue Komponente `src/components/HelpBubble.tsx`
+- Fixed unten rechts (`fixed bottom-4 right-4 z-50`, safe-area-inset für iOS).
+- Runder schwarzer Button (48×48 px), weißes `HelpCircle`-Icon aus `lucide-react`.
+- Klick togglet ein Popover darüber – weiße Karte, abgerundete Ecken, Schatten, `border-border`.
+- Inhalt:
+  - Überschrift „Benötigen Sie Hilfe?"
+  - Kurzer Text „Ich helfe Ihnen gerne persönlich weiter."
+  - Name: **Christian Krüger**
+  - Telefon als `tel:`-Link: **015236230118**
+  - E-Mail als `mailto:`-Link: **info@mytransporter.org**
+  - Schließen-Button (X) oben rechts.
+- Schließt bei Klick außerhalb und bei ESC.
+- Design passend zum Monochrom-Stil (schwarz/weiß/grau, Fredoka).
 
-### 2. Autofotos (Trip-Fotos) – nicht löschbar für Nutzer
-- Weder auf der Profilseite noch auf der Buchungs-Detailseite existiert eine Lösch-UI für `trip_photos`. Nutzer können sie also nicht entfernen.
+### Einbindung in `src/routes/__root.tsx`
+- `<HelpBubble />` direkt vor `<Outlet />` (bzw. am Ende des Layouts) rendern, damit sie auf allen Seiten sichtbar ist.
 
-### 3. Admin-Bereich – alles bleibt für immer
-- Die Admin-Ansicht (`/admin`) filtert `deleted_by_user_at` **nicht** heraus und markiert vom Nutzer entfernte Dokumente mit einem roten „Vom Nutzer entfernt"-Badge. Die Datensätze und Storage-Dateien bleiben unangetastet.
-- Trip-Fotos werden ohnehin nie gelöscht.
-
-## Wenn du zusätzlich möchtest
-
-Falls du meinst, dass der Löschen-Button irgendwo aktuell nicht auftaucht oder nicht funktioniert, sag mir bitte konkret, **wo** (z. B. „auf der Buchungs-Detailseite fehlt der Löschen-Button für den Ausweis") – dann passe ich das gezielt an.
+## Nicht Teil der Änderung
+- Keine Änderung am bestehenden Registrierungs- oder Buchungsflow.
+- Keine neue Backend-Logik.
+- Erscheint auch im Admin-/Trip-View (gewünscht, damit überall Hilfe erreichbar ist).
