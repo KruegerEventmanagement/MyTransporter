@@ -98,6 +98,7 @@ interface UserDocument {
   doc_type: string;
   photo_url: string;
   created_at: string;
+  deleted_by_user_at?: string | null;
 }
 interface GpsPoint {
   latitude: number;
