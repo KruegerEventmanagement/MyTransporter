@@ -26,7 +26,7 @@ const ODOMETER_ID = "pre_odometer";
 interface PreDriveFlowProps {
   bookingId: string;
   pickupCode: string;
-  onComplete: () => void;
+  onComplete: (startKm: number) => void;
 }
 
 export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlowProps) {
@@ -105,7 +105,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
     setPhotos(next);
     setInteriorPhoto(placeholder);
     setOdometerPhoto(placeholder);
-    if (!startKm) setStartKm("42850");
+    // kein Auto-Prefill mehr – der Nutzer muss echten Tachostand eintragen
   };
 
   const handleCapture = useCallback(
@@ -195,10 +195,11 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
 
   const handleStartDrive = async () => {
     if (!startKm) return;
+    const kmNum = parseInt(startKm);
     await supabase
       .from("bookings")
       .update({
-        start_km: parseInt(startKm),
+        start_km: kmNum,
         remarks: remarks || null,
         status: "active",
       })
@@ -209,7 +210,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
       body: `Buchung ${bookingId.slice(0, 8)} · Start-KM ${startKm}`,
       bookingId,
     });
-    onComplete();
+    onComplete(kmNum);
   };
 
   return (
