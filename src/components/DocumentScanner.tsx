@@ -247,42 +247,57 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
   // Idle state, button
   if (phase === "idle" || phase === "verified") {
     return (
-      <button
-        onClick={() => {
-          if (phase !== "verified") startCamera();
-        }}
-        disabled={phase === "verified"}
-        className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all ${
-          phase === "verified"
-            ? "border-border bg-secondary"
-            : "border-border bg-card hover:border-accent/50 hover:shadow-sm"
-        }`}
-      >
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-          phase === "verified" ? "bg-muted" : "bg-accent/10"
-        }`}>
-          {phase === "verified" ? (
-            <CheckCircle className="w-5 h-5 text-foreground" />
-          ) : (
-            <Camera className="w-5 h-5 text-accent" />
+      <div className="space-y-2">
+        <button
+          onClick={() => {
+            if (phase !== "verified") startCamera();
+          }}
+          disabled={phase === "verified"}
+          className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all ${
+            phase === "verified"
+              ? "border-border bg-secondary"
+              : "border-border bg-card hover:border-accent/50 hover:shadow-sm"
+          }`}
+        >
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            phase === "verified" ? "bg-muted" : "bg-accent/10"
+          }`}>
+            {phase === "verified" ? (
+              <CheckCircle className="w-5 h-5 text-foreground" />
+            ) : (
+              <Camera className="w-5 h-5 text-accent" />
+            )}
+          </div>
+          <div className="flex-1 text-left">
+            <p className="font-medium text-foreground">{label.name} scannen</p>
+            <p className="text-sm text-muted-foreground">
+              {phase === "verified"
+                ? "✓ Vorder- & Rückseite gespeichert"
+                : frontDone
+                  ? "Rückseite noch ausstehend"
+                  : "Vorder- und Rückseite fotografieren"}
+            </p>
+          </div>
+          {phase !== "verified" && (
+            <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-accent text-accent-foreground">
+              {frontDone ? "Weiter" : "Scannen"}
+            </span>
           )}
-        </div>
-        <div className="flex-1 text-left">
-          <p className="font-medium text-foreground">{label.name} scannen</p>
-          <p className="text-sm text-muted-foreground">
-            {phase === "verified"
-              ? "✓ Vorder- & Rückseite verifiziert"
-              : frontDone
-                ? "Rückseite noch ausstehend"
-                : "Vorder- und Rückseite fotografieren"}
-          </p>
-        </div>
-        {phase !== "verified" && (
-          <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-accent text-accent-foreground">
-            {frontDone ? "Weiter" : "Scannen"}
-          </span>
+        </button>
+        {phase === "verified" && onReset && (
+          <button
+            onClick={async () => {
+              await onReset();
+              setFrontDone(false);
+              setSide("front");
+              setPhase("idle");
+            }}
+            className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 py-1"
+          >
+            Erneut aufnehmen
+          </button>
         )}
-      </button>
+      </div>
     );
   }
 
@@ -382,6 +397,38 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
           <p className="text-white/60 text-center text-sm">
             {side === "front" ? "Vorderseite" : "Rückseite"} wird hochgeladen.
           </p>
+        </div>
+      )}
+
+      {/* Preview state — user must confirm or retake */}
+      {phase === "preview" && previewUrl && (
+        <div className="absolute inset-0 bg-black flex flex-col">
+          <div className="flex-1 flex items-center justify-center p-4">
+            <img
+              src={previewUrl}
+              alt="Aufgenommenes Dokument"
+              className="max-w-full max-h-full object-contain rounded-2xl"
+            />
+          </div>
+          <div className="p-6 pb-10 bg-gradient-to-t from-black/90 to-transparent">
+            <p className="text-white text-center text-base font-medium mb-4">
+              Sieht das Bild gut aus?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={retakeFromPreview}
+                className="flex-1 px-4 py-3 rounded-full bg-white/15 text-white font-medium flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4" /> Erneut
+              </button>
+              <button
+                onClick={confirmUpload}
+                className="flex-1 px-4 py-3 rounded-full bg-accent text-accent-foreground font-medium flex items-center justify-center gap-2"
+              >
+                <CheckCircle className="w-4 h-4" /> Übernehmen
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
