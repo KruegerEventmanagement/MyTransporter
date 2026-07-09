@@ -635,21 +635,21 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
         </div>
 
         <p className="text-xs text-muted-foreground mb-8">
-          Der Mitarbeiter bestätigt die Rückgabe. Danach ist deine Fahrt abgeschlossen.
+          Nenne diesen Code dem Mitarbeiter. Erst wenn er die Schlüsselübergabe
+          bestätigt, ist deine Fahrt beendet.
         </p>
 
         <button
-          onClick={() => {
-            if (returnCode) onComplete(returnCode);
-          }}
-          className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
+          disabled
+          className="w-full rounded-full bg-secondary py-4 text-muted-foreground font-medium text-lg flex items-center justify-center gap-2 cursor-not-allowed"
         >
-          Warte auf Bestätigung...
+          <span className="inline-block w-3 h-3 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin" />
+          Warte auf Bestätigung des Mitarbeiters…
         </button>
 
         <p className="text-xs text-muted-foreground mt-4">
-          Die Fahrt wird erst als abgeschlossen markiert, wenn der Mitarbeiter die Rückgabe bestätigt.
-          Bis dahin können Gebühren anfallen.
+          Sobald MyTransporter den Schlüssel entgegennimmt und bestätigt, wird die
+          Fahrt automatisch als abgeschlossen markiert und diese Seite aktualisiert.
         </p>
       </div>
     );
