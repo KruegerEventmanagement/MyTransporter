@@ -10,6 +10,7 @@ import {
 
 import appCss from "../styles.css?url";
 import { InstallBanner } from "@/components/InstallBanner";
+import { HelpBubble } from "@/components/HelpBubble";
 
 function NotFoundComponent() {
   return (
@@ -131,6 +132,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <InstallBanner />
       <Outlet />
+      <HelpBubble />
     </QueryClientProvider>
   );
 }
