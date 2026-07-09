@@ -36,6 +36,7 @@ import {
 } from "@/lib/push-client";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { toast } from "sonner";
+import { resolveTripPhotoUrl } from "@/lib/trip-photos";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
