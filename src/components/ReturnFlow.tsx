@@ -44,6 +44,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [returnCode, setReturnCode] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [awaitingAdmin, setAwaitingAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [aiRecognition, setAiRecognition] = useState<{ km: number | null; fuelPercent: number | null; confidence: string } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
@@ -78,6 +79,48 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
     })();
     return () => { mounted = false; };
   }, []);
+
+  // Auf Admin-Bestätigung warten: Realtime + Fallback-Polling auf bookings.status
+  useEffect(() => {
+    if (!awaitingAdmin || !returnCode) return;
+    let cancelled = false;
+
+    const finish = () => {
+      if (cancelled) return;
+      cancelled = true;
+      onComplete(returnCode);
+    };
+
+    const check = async () => {
+      const { data } = await supabase
+        .from("bookings")
+        .select("status")
+        .eq("id", bookingId)
+        .maybeSingle();
+      if (data?.status === "completed") finish();
+    };
+
+    check();
+    const poll = setInterval(check, 5000);
+
+    const channel = supabase
+      .channel(`booking-status-${bookingId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "bookings", filter: `id=eq.${bookingId}` },
+        (payload) => {
+          const next = (payload.new as { status?: string } | null)?.status;
+          if (next === "completed") finish();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      clearInterval(poll);
+      supabase.removeChannel(channel);
+    };
+  }, [awaitingAdmin, returnCode, bookingId, onComplete]);
 
   const allSidesTaken = PHOTO_SIDES.every((s) => photos[s.id]);
   const interiorTaken = !!interiorPhoto;
@@ -236,6 +279,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
       bookingId,
     });
     setReturnCode(code);
+    setAwaitingAdmin(true);
     setReturnStep("code");
   };
 
@@ -591,21 +635,21 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
         </div>
 
         <p className="text-xs text-muted-foreground mb-8">
-          Der Mitarbeiter bestätigt die Rückgabe. Danach ist deine Fahrt abgeschlossen.
+          Nenne diesen Code dem Mitarbeiter. Erst wenn er die Schlüsselübergabe
+          bestätigt, ist deine Fahrt beendet.
         </p>
 
         <button
-          onClick={() => {
-            if (returnCode) onComplete(returnCode);
-          }}
-          className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
+          disabled
+          className="w-full rounded-full bg-secondary py-4 text-muted-foreground font-medium text-lg flex items-center justify-center gap-2 cursor-not-allowed"
         >
-          Warte auf Bestätigung...
+          <span className="inline-block w-3 h-3 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin" />
+          Warte auf Bestätigung des Mitarbeiters…
         </button>
 
         <p className="text-xs text-muted-foreground mt-4">
-          Die Fahrt wird erst als abgeschlossen markiert, wenn der Mitarbeiter die Rückgabe bestätigt.
-          Bis dahin können Gebühren anfallen.
+          Sobald MyTransporter den Schlüssel entgegennimmt und bestätigt, wird die
+          Fahrt automatisch als abgeschlossen markiert und diese Seite aktualisiert.
         </p>
       </div>
     );

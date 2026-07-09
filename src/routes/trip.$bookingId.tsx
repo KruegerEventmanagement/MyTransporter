@@ -35,7 +35,7 @@ function TripPage() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [phase, setPhase] = useState<Phase>("pre");
   const [loading, setLoading] = useState(true);
-  const [startKm, setStartKm] = useState<number>(42850);
+  const [startKm, setStartKm] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -59,8 +59,9 @@ function TripPage() {
             pickup_code: d.pickup_code,
             vehicle_name: d.vehicleName ?? "",
             vehicle_plate: d.vehiclePlate ?? "",
-            start_km: 42850,
+            start_km: typeof d.startKm === "number" ? d.startKm : null,
           });
+          if (typeof d.startKm === "number") setStartKm(d.startKm);
         }
         setLoading(false);
         return;
@@ -132,7 +133,22 @@ function TripPage() {
           <PreDriveFlow
             bookingId={booking.id}
             pickupCode={booking.pickup_code}
-            onComplete={() => setPhase("active")}
+            onComplete={(km) => {
+              setStartKm(km);
+              // Demo-Buchung: Start-KM persistieren, damit ein Reload den Wert behält
+              if (bookingId.startsWith("demo-")) {
+                const raw = localStorage.getItem(`mt_demo_${bookingId}`);
+                if (raw) {
+                  try {
+                    const d = JSON.parse(raw);
+                    d.startKm = km;
+                    localStorage.setItem(`mt_demo_${bookingId}`, JSON.stringify(d));
+                  } catch {}
+                }
+              }
+              setBooking((prev) => (prev ? { ...prev, start_km: km } : prev));
+              setPhase("active");
+            }}
           />
         </main>
       )}
@@ -142,7 +158,7 @@ function TripPage() {
           bookingId={booking.id}
           startDate={startDate}
           startHour={booking.start_hour}
-          startKm={startKm}
+          startKm={booking.start_km ?? startKm ?? 0}
           vehicleName={booking.vehicle_name}
           vehiclePlate={booking.vehicle_plate}
           planLabel={booking.plan_label}
@@ -156,7 +172,7 @@ function TripPage() {
           <ReturnFlow
             bookingId={booking.id}
             planId={booking.plan_id}
-            startKm={booking.start_km ?? startKm}
+            startKm={booking.start_km ?? startKm ?? 0}
             freeKm={booking.free_km ?? (booking.plan_id === "6h" ? 300 : booking.plan_id === "24h" ? 500 : 0)}
             kmPriceCents={booking.km_price_cents ?? 90}
             addons={booking.addons ?? undefined}

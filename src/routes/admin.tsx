@@ -36,6 +36,7 @@ import {
 } from "@/lib/push-client";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { toast } from "sonner";
+import { resolveTripPhotoUrl } from "@/lib/trip-photos";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -799,6 +800,7 @@ function CustomerDetail({
   const [openBooking, setOpenBooking] = useState<string | null>(initialBookingId ?? null);
   const [documents, setDocuments] = useState<UserDocument[]>([]);
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const ids = customer.bookings.map((b) => b.id);
@@ -819,7 +821,15 @@ function CustomerDetail({
         .eq("user_id", customer.id)
         .order("created_at"),
     ]).then(async ([p, g, d]) => {
-      if (p.data) setPhotos(p.data as TripPhoto[]);
+      if (p.data) {
+        const rows = p.data as TripPhoto[];
+        setPhotos(rows);
+        // Signed URLs für den privaten trip-photos Bucket auflösen
+        const entries = await Promise.all(
+          rows.map(async (ph) => [ph.id, await resolveTripPhotoUrl(ph.photo_url)] as const)
+        );
+        setPhotoUrls(Object.fromEntries(entries));
+      }
       if (g.data) setGps(g.data as GpsPoint[]);
       if (d.data) {
         const docs = d.data as UserDocument[];
@@ -1019,14 +1029,17 @@ function CustomerDetail({
                                 !p.photo_type.startsWith("post_") &&
                                 p.photo_type !== "tank_receipt"
                             )}
+                            urls={photoUrls}
                           />
                           <PhotoGroup
                             title="Fahrzeug nach der Fahrt"
                             photos={bphotos.filter((p) => p.photo_type.startsWith("post_"))}
+                            urls={photoUrls}
                           />
                           <PhotoGroup
                             title="Tankbeleg"
                             photos={bphotos.filter((p) => p.photo_type === "tank_receipt")}
+                            urls={photoUrls}
                           />
                         </div>
                       )}
@@ -1137,7 +1150,7 @@ const PHOTO_TYPE_LABELS: Record<string, string> = {
   tank_receipt: "Tankbeleg",
 };
 
-function PhotoGroup({ title, photos }: { title: string; photos: TripPhoto[] }) {
+function PhotoGroup({ title, photos, urls }: { title: string; photos: TripPhoto[]; urls?: Record<string, string> }) {
   if (photos.length === 0) return null;
   return (
     <div>
@@ -1145,16 +1158,18 @@ function PhotoGroup({ title, photos }: { title: string; photos: TripPhoto[] }) {
         <ImageIcon className="w-4 h-4" /> {title} ({photos.length})
       </p>
       <div className="grid grid-cols-3 gap-2">
-        {photos.map((ph) => (
+        {photos.map((ph) => {
+          const src = urls?.[ph.id] ?? ph.photo_url;
+          return (
           <a
             key={ph.id}
-            href={ph.photo_url}
+            href={src}
             target="_blank"
             rel="noreferrer"
             className="relative block"
           >
             <img
-              src={ph.photo_url}
+              src={src}
               alt={ph.photo_type}
               className="w-full aspect-square object-cover rounded-lg border border-border"
             />
@@ -1162,7 +1177,8 @@ function PhotoGroup({ title, photos }: { title: string; photos: TripPhoto[] }) {
               {PHOTO_TYPE_LABELS[ph.photo_type] ?? ph.photo_type}
             </span>
           </a>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
