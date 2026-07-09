@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, Car, Wallet, Route as RouteIcon, Calendar, Hash, MapPin, X, Shield } from "lucide-react";
+import { ChevronLeft, Car, Wallet, Route as RouteIcon, Calendar, Hash, MapPin, X, Shield, Trash2, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useServerFn } from "@tanstack/react-start";
@@ -41,6 +41,20 @@ interface Profile {
   phone: string | null;
 }
 
+interface UserDoc {
+  id: string;
+  doc_type: string;
+  photo_url: string;
+  created_at: string;
+}
+
+const DOC_LABELS: Record<string, string> = {
+  id_front: "Personalausweis · Vorderseite",
+  id_back: "Personalausweis · Rückseite",
+  license_front: "Führerschein · Vorderseite",
+  license_back: "Führerschein · Rückseite",
+};
+
 function ProfilePage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -48,6 +62,8 @@ function ProfilePage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [docTypes, setDocTypes] = useState<Set<string>>(new Set());
+  const [docs, setDocs] = useState<UserDoc[]>([]);
+  const [docUrls, setDocUrls] = useState<Record<string, string>>({});
 
   const loadDocs = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -55,9 +71,45 @@ function ProfilePage() {
     if (!user) return;
     const { data } = await supabase
       .from("user_documents")
-      .select("doc_type")
-      .eq("user_id", user.id);
-    if (data) setDocTypes(new Set(data.map((d: { doc_type: string }) => d.doc_type)));
+      .select("id, doc_type, photo_url, created_at")
+      .eq("user_id", user.id)
+      .is("deleted_by_user_at", null)
+      .order("created_at");
+    if (data) {
+      const rows = data as UserDoc[];
+      setDocs(rows);
+      setDocTypes(new Set(rows.map((d) => d.doc_type)));
+      const entries = await Promise.all(
+        rows.map(async (d) => {
+          const { data: signed } = await supabase.storage
+            .from("user-documents")
+            .createSignedUrl(d.photo_url, 3600);
+          return [d.id, signed?.signedUrl ?? ""] as const;
+        })
+      );
+      setDocUrls(Object.fromEntries(entries));
+    }
+  };
+
+  const resetDocType = async (documentType: "id" | "license") => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) return;
+    await supabase
+      .from("user_documents")
+      .update({ deleted_by_user_at: new Date().toISOString() })
+      .eq("user_id", user.id)
+      .in("doc_type", [`${documentType}_front`, `${documentType}_back`])
+      .is("deleted_by_user_at", null);
+    await loadDocs();
+  };
+
+  const deleteDoc = async (id: string) => {
+    await supabase
+      .from("user_documents")
+      .update({ deleted_by_user_at: new Date().toISOString() })
+      .eq("id", id);
+    await loadDocs();
   };
 
   const loadBookings = async () => {
@@ -94,11 +146,7 @@ function ProfilePage() {
         .eq("user_id", user.id)
         .eq("role", "admin");
       if (mounted) setIsAdmin(!!roles && roles.length > 0);
-      const { data: docs } = await supabase
-        .from("user_documents")
-        .select("doc_type")
-        .eq("user_id", user.id);
-      if (mounted && docs) setDocTypes(new Set(docs.map((d: { doc_type: string }) => d.doc_type)));
+      if (mounted) await loadDocs();
       setLoading(false);
     })();
     return () => { mounted = false; };
@@ -192,14 +240,73 @@ function ProfilePage() {
               documentType="id"
               isComplete={docTypes.has("id_front") && docTypes.has("id_back")}
               onComplete={loadDocs}
+              onReset={() => resetDocType("id")}
             />
             <DocumentScanner
               documentType="license"
               isComplete={docTypes.has("license_front") && docTypes.has("license_back")}
               onComplete={loadDocs}
+              onReset={() => resetDocType("license")}
             />
           </div>
         </section>
+
+        {/* Meine Dokumente */}
+        {docs.length > 0 && (
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1">
+              Meine Dokumente
+            </h2>
+            <ul className="grid grid-cols-2 gap-2">
+              {docs.map((d) => (
+                <li
+                  key={d.id}
+                  className="rounded-2xl border border-border bg-card overflow-hidden"
+                >
+                  <div className="relative bg-secondary aspect-[1.586/1]">
+                    {docUrls[d.id] ? (
+                      <a href={docUrls[d.id]} target="_blank" rel="noreferrer">
+                        <img
+                          src={docUrls[d.id]}
+                          alt={DOC_LABELS[d.doc_type] ?? d.doc_type}
+                          className="w-full h-full object-cover"
+                        />
+                      </a>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <FileText className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2 flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-medium leading-tight truncate">
+                        {DOC_LABELS[d.doc_type] ?? d.doc_type}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {(() => {
+                          try {
+                            return format(new Date(d.created_at), "dd.MM.yyyy", { locale: de });
+                          } catch {
+                            return "";
+                          }
+                        })()}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => deleteDoc(d.id)}
+                      className="text-muted-foreground hover:text-destructive p-1 -m-1"
+                      aria-label="Dokument löschen"
+                      title="Dokument löschen"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* Statistiken */}
         <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
