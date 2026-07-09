@@ -1,0 +1,2 @@
+ALTER TABLE public.user_documents ADD COLUMN IF NOT EXISTS deleted_by_user_at timestamptz;
+CREATE POLICY "Users can update own documents" ON public.user_documents FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
