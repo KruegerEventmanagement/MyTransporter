@@ -44,6 +44,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [returnCode, setReturnCode] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [awaitingAdmin, setAwaitingAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [aiRecognition, setAiRecognition] = useState<{ km: number | null; fuelPercent: number | null; confidence: string } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
