@@ -47,6 +47,21 @@ interface TripPhoto {
   created_at: string;
 }
 
+interface UserDoc {
+  id: string;
+  doc_type: string;
+  photo_url: string;
+  created_at: string;
+  resolvedUrl: string;
+}
+
+const DOC_LABELS: Record<string, string> = {
+  id_front: "Personalausweis · Vorderseite",
+  id_back: "Personalausweis · Rückseite",
+  license_front: "Führerschein · Vorderseite",
+  license_back: "Führerschein · Rückseite",
+};
+
 const PHOTO_TYPE_LABEL: Record<string, string> = {
   exterior_front: "Außen vorne",
   exterior_back: "Außen hinten",
@@ -66,6 +81,7 @@ function BookingDetailPage() {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [photos, setPhotos] = useState<Array<TripPhoto & { resolvedUrl: string }>>([]);
+  const [documents, setDocuments] = useState<UserDoc[]>([]);
   const [lightbox, setLightbox] = useState<string | null>(null);
 
   useEffect(() => {
@@ -98,6 +114,25 @@ function BookingDetailPage() {
         const urls = await resolveTripPhotoUrls(ph.map((p) => p.photo_url));
         if (!mounted) return;
         setPhotos(ph.map((p, i) => ({ ...(p as TripPhoto), resolvedUrl: urls[i] })));
+      }
+
+      const { data: docs } = await supabase
+        .from("user_documents")
+        .select("id, doc_type, photo_url, created_at")
+        .eq("user_id", user.id)
+        .is("deleted_by_user_at", null)
+        .order("created_at", { ascending: true });
+      if (docs && docs.length) {
+        const signed = await Promise.all(
+          docs.map(async (d) => {
+            const { data } = await supabase.storage
+              .from("user-documents")
+              .createSignedUrl(d.photo_url, 3600);
+            return data?.signedUrl ?? "";
+          })
+        );
+        if (!mounted) return;
+        setDocuments(docs.map((d, i) => ({ ...(d as Omit<UserDoc, "resolvedUrl">), resolvedUrl: signed[i] })));
       }
       setLoading(false);
     })();
