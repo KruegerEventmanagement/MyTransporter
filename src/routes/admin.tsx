@@ -800,6 +800,7 @@ function CustomerDetail({
   const [openBooking, setOpenBooking] = useState<string | null>(initialBookingId ?? null);
   const [documents, setDocuments] = useState<UserDocument[]>([]);
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const ids = customer.bookings.map((b) => b.id);
@@ -820,7 +821,15 @@ function CustomerDetail({
         .eq("user_id", customer.id)
         .order("created_at"),
     ]).then(async ([p, g, d]) => {
-      if (p.data) setPhotos(p.data as TripPhoto[]);
+      if (p.data) {
+        const rows = p.data as TripPhoto[];
+        setPhotos(rows);
+        // Signed URLs für den privaten trip-photos Bucket auflösen
+        const entries = await Promise.all(
+          rows.map(async (ph) => [ph.id, await resolveTripPhotoUrl(ph.photo_url)] as const)
+        );
+        setPhotoUrls(Object.fromEntries(entries));
+      }
       if (g.data) setGps(g.data as GpsPoint[]);
       if (d.data) {
         const docs = d.data as UserDocument[];
