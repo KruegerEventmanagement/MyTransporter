@@ -6,7 +6,6 @@ type ScanSide = "front" | "back";
 type ScanPhase =
   | "idle"
   | "camera"
-  | "countdown"
   | "capturing"
   | "preview"
   | "verified"
