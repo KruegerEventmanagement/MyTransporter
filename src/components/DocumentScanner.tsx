@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Camera, X, RotateCcw, CheckCircle, AlertTriangle, Zap, ZapOff, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTapFocus } from "@/hooks/useTapFocus";
 
 type ScanSide = "front" | "back";
 type ScanPhase =
@@ -36,6 +37,7 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { focusPoint, handleTap } = useTapFocus(videoRef, streamRef);
 
   const label = DOC_LABELS[documentType];
 
@@ -296,12 +298,25 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
         <>
           <video
             ref={videoRef}
+            onPointerDown={handleTap}
             className="flex-1 object-cover"
             playsInline
             muted
             autoPlay
           />
           <canvas ref={canvasRef} className="hidden" />
+
+          {/* Tap-to-focus indicator */}
+          {focusPoint && (
+            <div
+              className="absolute pointer-events-none w-16 h-16 -ml-8 -mt-8 border-2 border-white rounded-md transition-opacity duration-200"
+              style={{
+                left: `${focusPoint.x}%`,
+                top: `${focusPoint.y}%`,
+                boxShadow: "0 0 0 9999px rgba(0,0,0,0.25)",
+              }}
+            />
+          )}
 
           {/* Card overlay guide */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
