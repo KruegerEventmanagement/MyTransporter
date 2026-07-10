@@ -66,6 +66,7 @@ export function CameraCapture({ open, title, hint, variant, onClose, onCapture, 
   const [ready, setReady] = useState(false);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [fileMode, setFileMode] = useState(false);
+  const { focusPoint, handleTap } = useTapFocus(videoRef, streamRef);
 
   useEffect(() => {
     if (!open) return;
