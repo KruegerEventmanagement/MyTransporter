@@ -1,18 +1,34 @@
-Countdown beim Dokumentenscan entfernen und manuellen Auslöser einbauen
+## Ziel
+Im `DocumentScanner` soll der Nutzer auf das Kamerabild tappen können, damit die Kamera an dieser Stelle fokussiert und das Dokument schärfer wird.
 
-Ziel: Beim Scannen von Führerschein und Personalausweis soll kein automatischer 3-2-1-Countdown mehr laufen. Stattdessen sieht der Nutzer sofort den Kamera-Auslöser und drückt selbst, sobald das Dokument richtig positioniert ist.
+## Umsetzung
 
-Änderungen in `src/components/DocumentScanner.tsx`:
-- Scan-Phase `"countdown"` entfernen (Typ, State, Effekt, UI).
-- `countdown`-State und der dazugehörige `setInterval`-Effekt werden gelöscht.
-- `startCountdown()` wird entfernt; der bisherige Auslöser-Button ruft direkt `runCapture()` auf.
-- Im Kamera-Overlay wird die große Countdown-Zahl entfernt.
-- Anleitungstext anpassen: Statt "Ruhig halten..." / Countdown-Text wird dauerhaft "Positionieren, dann Auslöser drücken" angezeigt.
-- Der weiße Auslöser-Knopf bleibt im unteren Bereich der Kamera-Ansicht sichtbar und ist jederzeit betätigbar.
-- `phase === "camera"` bleibt die einzige aktive Aufnahmephase vor dem Preview.
+### 1. Fokus-Handler in `src/components/DocumentScanner.tsx`
+- Ein `onPointerDown`/`onClick`-Handler auf dem `<video>`-Element registrieren.
+- Die Tap-Koordinaten relativ zum Video-Element berechnen (0–1 normiert).
+- Den aktiven `MediaStreamTrack` aus `streamRef.current` holen.
+- Falls das Gerät `focusMode: "manual"` und `pointsOfInterest` unterstützt:
+  - `focusMode: "manual"`
+  - `pointsOfInterest: [{ x, y }]`
+  - anschließend kurz danach wieder `focusMode: "continuous"` zurücksetzen, damit die Kamera danach weiter nachscharf.
+- Falls nicht unterstützt, wird der Tap visuell bestätigt, aber es passiert nichts weiter (graceful degradation).
 
-Nicht betroffen:
-- `CameraCapture.tsx` (für Fahrzeug-/Schaden-/Belegfotos) bleibt unverändert, da der Nutzer nur Dokumentenscan meinte.
-- Preview, Upload, Fehler- und Verifiziert-Zustände bleiben gleich.
+### 2. Visuelles Feedback
+- Einen kleinen Fokus-Ring (z. B. weißes Quadrat oder Kreuz) an der Tap-Position kurz einblenden.
+- Nach ca. 800 ms wieder ausblenden.
+- Der Ring darf nicht die Bedienung blockieren (`pointer-events-none`).
 
-Ergebnis: Nutzer positioniert das Dokument frei und drückt selbst auf den Auslöser. Keine automatische Aufnahme mehr.
+### 3. UX-Details
+- Der Klick auf das Video soll nicht versehentlich ein Foto auslösen – Auslöser bleibt der separate Shutter-Button.
+- Der bestehende Dokumenten-Rahmen-Overlay bleibt `pointer-events-none`, damit Taps durchgängig auf das Video durchkommen.
+- Der Fokus-Handler wird nur im `camera`-Phase aktiv sein.
+
+### 4. Optional: `CameraCapture.tsx`
+- Die gleiche Tap-to-Fokus-Logik kann optional auch auf das allgemeine Fahrzeug-/Schaden-Kamera-Overlay übertragen werden, falls gewünscht.
+
+## Dateien
+- `src/components/DocumentScanner.tsx` (Hauptänderung)
+- Optional: `src/components/CameraCapture.tsx`
+
+## Ergebnis
+Nutzer tippt auf die unscharfe Stelle des Dokuments → Kamera fokussiert dort → Dokument wird schärfer → danach wird wie gewohnt mit dem Auslöser fotografiert.
