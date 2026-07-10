@@ -28,7 +28,6 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
   const [phase, setPhase] = useState<ScanPhase>(isComplete ? "verified" : "idle");
   const [side, setSide] = useState<ScanSide>("front");
   const [frontDone, setFrontDone] = useState(false);
-  const [countdown, setCountdown] = useState(3);
   const [rejectMsg, setRejectMsg] = useState<string>("");
   const [torchOn, setTorchOn] = useState(false);
   const [torchAvailable, setTorchAvailable] = useState(false);
@@ -37,7 +36,6 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const runCaptureRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const label = DOC_LABELS[documentType];
 
