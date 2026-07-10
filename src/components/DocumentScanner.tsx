@@ -6,7 +6,6 @@ type ScanSide = "front" | "back";
 type ScanPhase =
   | "idle"
   | "camera"
-  | "countdown"
   | "capturing"
   | "preview"
   | "verified"
@@ -29,7 +28,6 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
   const [phase, setPhase] = useState<ScanPhase>(isComplete ? "verified" : "idle");
   const [side, setSide] = useState<ScanSide>("front");
   const [frontDone, setFrontDone] = useState(false);
-  const [countdown, setCountdown] = useState(3);
   const [rejectMsg, setRejectMsg] = useState<string>("");
   const [torchOn, setTorchOn] = useState(false);
   const [torchAvailable, setTorchAvailable] = useState(false);
@@ -38,7 +36,6 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const runCaptureRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const label = DOC_LABELS[documentType];
 
@@ -178,34 +175,6 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
     setPhase("camera");
   }, [previewUrl]);
 
-  // Halte die aktuelle runCapture-Referenz stabil erreichbar, damit der
-  // Countdown-Effekt sie nicht in seinen Dependencies führen muss.
-  useEffect(() => {
-    runCaptureRef.current = runCapture;
-  }, [runCapture]);
-
-  // Countdown-Steuerung: einmaliges Interval pro Countdown-Phase, unabhängig
-  // von der Identität von runCapture (die sich bei jedem Render ändern kann).
-  useEffect(() => {
-    if (phase !== "countdown") return;
-    const interval = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
-          clearInterval(interval);
-          void runCaptureRef.current?.();
-          return 0;
-        }
-        return c - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [phase]);
-
-  const startCountdown = () => {
-    setCountdown(3);
-    setPhase("countdown");
-  };
-
   const handleClose = () => {
     stopCamera();
     pendingBlobRef.current = null;
@@ -323,7 +292,7 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
       </div>
 
       {/* Camera view */}
-      {(phase === "camera" || phase === "countdown" || phase === "capturing") && (
+      {(phase === "camera" || phase === "capturing") && (
         <>
           <video
             ref={videoRef}
@@ -346,15 +315,6 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
               <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-2xl" />
               <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-2xl" />
               <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-2xl" />
-
-              {/* Countdown */}
-              {phase === "countdown" && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-white text-8xl font-bold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-                    {countdown > 0 ? countdown : "📸"}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -363,20 +323,16 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
             <p className="text-white text-center text-lg font-medium mb-2">
               {phase === "capturing"
                 ? "Bild wird aufgenommen..."
-                : phase === "countdown"
-                  ? "Ruhig halten..."
-                  : `Bitte ${side === "front" ? "Vorderseite" : "Rückseite"} des ${label.name}s in den Rahmen halten`}
+                : `Bitte ${side === "front" ? "Vorderseite" : "Rückseite"} des ${label.name}s in den Rahmen halten`}
             </p>
             <p className="text-white/60 text-center text-sm mb-6">
-              {phase === "camera"
-                ? "Scharfstellen lassen, dann auslösen"
-                : "Bitte stillhalten für scharfes Bild"}
+              Positionieren, dann Auslöser drücken
             </p>
 
             {phase === "camera" && (
               <div className="flex justify-center">
                 <button
-                  onClick={startCountdown}
+                  onClick={runCapture}
                   className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-95 transition-transform"
                 >
                   <div className="w-14 h-14 rounded-full border-4 border-black/10" />
