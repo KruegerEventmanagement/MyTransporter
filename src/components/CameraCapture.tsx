@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Camera as CameraIcon, RefreshCw } from "lucide-react";
+import { useTapFocus } from "@/hooks/useTapFocus";
 import silhouetteFront from "@/assets/silhouette-front.png";
 import silhouetteBack from "@/assets/silhouette-back.png";
 import silhouetteSide from "@/assets/silhouette-side.png";
