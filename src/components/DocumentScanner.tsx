@@ -175,34 +175,6 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
     setPhase("camera");
   }, [previewUrl]);
 
-  // Halte die aktuelle runCapture-Referenz stabil erreichbar, damit der
-  // Countdown-Effekt sie nicht in seinen Dependencies führen muss.
-  useEffect(() => {
-    runCaptureRef.current = runCapture;
-  }, [runCapture]);
-
-  // Countdown-Steuerung: einmaliges Interval pro Countdown-Phase, unabhängig
-  // von der Identität von runCapture (die sich bei jedem Render ändern kann).
-  useEffect(() => {
-    if (phase !== "countdown") return;
-    const interval = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
-          clearInterval(interval);
-          void runCaptureRef.current?.();
-          return 0;
-        }
-        return c - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [phase]);
-
-  const startCountdown = () => {
-    setCountdown(3);
-    setPhase("countdown");
-  };
-
   const handleClose = () => {
     stopCamera();
     pendingBlobRef.current = null;
