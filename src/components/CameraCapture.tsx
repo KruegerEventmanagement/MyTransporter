@@ -237,11 +237,24 @@ export function CameraCapture({ open, title, hint, variant, onClose, onCapture, 
       <div className="relative flex-1 overflow-hidden bg-black">
         <video
           ref={videoRef}
+          onPointerDown={handleTap}
           playsInline
           muted
           autoPlay
           className="absolute inset-0 w-full h-full object-cover"
         />
+
+        {/* Tap-to-focus indicator */}
+        {focusPoint && (
+          <div
+            className="absolute pointer-events-none w-16 h-16 -ml-8 -mt-8 border-2 border-white rounded-md transition-opacity duration-200"
+            style={{
+              left: `${focusPoint.x}%`,
+              top: `${focusPoint.y}%`,
+              boxShadow: "0 0 0 9999px rgba(0,0,0,0.25)",
+            }}
+          />
+        )}
 
         {/* Silhouette overlay (Carmera-Stil) */}
         {(() => {
