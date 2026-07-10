@@ -298,12 +298,25 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
         <>
           <video
             ref={videoRef}
+            onPointerDown={handleTap}
             className="flex-1 object-cover"
             playsInline
             muted
             autoPlay
           />
           <canvas ref={canvasRef} className="hidden" />
+
+          {/* Tap-to-focus indicator */}
+          {focusPoint && (
+            <div
+              className="absolute pointer-events-none w-16 h-16 -ml-8 -mt-8 border-2 border-white rounded-md transition-opacity duration-200"
+              style={{
+                left: `${focusPoint.x}%`,
+                top: `${focusPoint.y}%`,
+                boxShadow: "0 0 0 9999px rgba(0,0,0,0.25)",
+              }}
+            />
+          )}
 
           {/* Card overlay guide */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
