@@ -37,6 +37,7 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { focusPoint, handleTap } = useTapFocus(videoRef, streamRef);
 
   const label = DOC_LABELS[documentType];
 
