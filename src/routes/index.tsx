@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { HeroSection } from "@/components/HeroSection";
 import { BookingSection } from "@/components/BookingSection";
 import { Navbar } from "@/components/Navbar";
+import { AvailabilityNotice } from "@/components/AvailabilityNotice";
 
 export const Route = createFileRoute("/")({
   head: () => ({
