@@ -63,6 +63,7 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <main className="min-h-screen bg-background pt-12">
+      <AvailabilityNotice />
       <Navbar />
       <HeroSection />
       <h1 className="sr-only">Transporter mieten in Leonberg & Stuttgart</h1>
