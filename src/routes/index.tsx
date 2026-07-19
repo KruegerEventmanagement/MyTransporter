@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { HeroSection } from "@/components/HeroSection";
 import { BookingSection } from "@/components/BookingSection";
 import { Navbar } from "@/components/Navbar";
+import { AvailabilityNotice } from "@/components/AvailabilityNotice";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -62,6 +63,7 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <main className="min-h-screen bg-background pt-12">
+      <AvailabilityNotice />
       <Navbar />
       <HeroSection />
       <h1 className="sr-only">Transporter mieten in Leonberg & Stuttgart</h1>

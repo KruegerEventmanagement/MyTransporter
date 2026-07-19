@@ -1,34 +1,33 @@
 ## Ziel
-Im `DocumentScanner` soll der Nutzer auf das Kamerabild tappen können, damit die Kamera an dieser Stelle fokussiert und das Dokument schärfer wird.
+Sobald die Startseite geladen wird, erscheint eine große, zentrierte Benachrichtigung über dem geblurten Hintergrund. Sie informiert Besucher, dass aktuell alle Transporter bis zum 07.09. vermietet sind und keine Fahrzeuge verfügbar sind. Optionaler Hinweis auf möglichen Nachschub in 2–3 Wochen.
 
 ## Umsetzung
 
-### 1. Fokus-Handler in `src/components/DocumentScanner.tsx`
-- Ein `onPointerDown`/`onClick`-Handler auf dem `<video>`-Element registrieren.
-- Die Tap-Koordinaten relativ zum Video-Element berechnen (0–1 normiert).
-- Den aktiven `MediaStreamTrack` aus `streamRef.current` holen.
-- Falls das Gerät `focusMode: "manual"` und `pointsOfInterest` unterstützt:
-  - `focusMode: "manual"`
-  - `pointsOfInterest: [{ x, y }]`
-  - anschließend kurz danach wieder `focusMode: "continuous"` zurücksetzen, damit die Kamera danach weiter nachscharf.
-- Falls nicht unterstützt, wird der Tap visuell bestätigt, aber es passiert nichts weiter (graceful degradation).
+### 1. Neue Komponente `src/components/AvailabilityNotice.tsx`
+- Vollbild-Overlay (`fixed inset-0 z-50`) mit `backdrop-blur-xl` und halbtransparenter schwarzer/weißer Hintergrundfarbe.
+- Zentrierte Dialog-Box mit max. Breite (`max-w-lg`), großem Titel, kurzem Erklärungstext und einem einzigen Button „Verstanden".
+- Nutzt den bestehenden `Dialog` aus `src/components/ui/dialog.tsx` oder ein natives Overlay, falls der shadcn-Dialog zu klein ist.
+- Textvorschlag:
+  - Titel: „Aktuell keine Transporter verfügbar"
+  - Text: „Alle unsere Transporter sind leider bis zum 07.09.2026 vollständig vermietet. Eine Buchung ist daher derzeit nicht möglich. Eventuell wird in 2–3 Wochen wieder Nachschub verfügbar sein."
+  - Button schließt das Overlay und speichert die Entscheidung optional im `sessionStorage`, damit ein erneutes Öffnen innerhalb der Sitzung nicht stört.
 
-### 2. Visuelles Feedback
-- Einen kleinen Fokus-Ring (z. B. weißes Quadrat oder Kreuz) an der Tap-Position kurz einblenden.
-- Nach ca. 800 ms wieder ausblenden.
-- Der Ring darf nicht die Bedienung blockieren (`pointer-events-none`).
+### 2. Einbinden in `src/routes/index.tsx`
+- `<AvailabilityNotice />` direkt im `Index`-Component rendern.
+- Initial sichtbar (`open` per `useState(true)`), damit die Meldung sofort erscheint.
 
-### 3. UX-Details
-- Der Klick auf das Video soll nicht versehentlich ein Foto auslösen – Auslöser bleibt der separate Shutter-Button.
-- Der bestehende Dokumenten-Rahmen-Overlay bleibt `pointer-events-none`, damit Taps durchgängig auf das Video durchkommen.
-- Der Fokus-Handler wird nur im `camera`-Phase aktiv sein.
+### 3. Styling
+- Keine harten Farben – ausschließlich semantische Tokens (`bg-background/80`, `text-foreground`, `backdrop-blur-xl`, `border-border`).
+- Auf Mobilgeräten weiterhin zentriert mit ausreichend Padding (`px-4`).
+- Hintergrund hinter dem Overlay bleibt sichtbar, aber stark geblurrt.
 
-### 4. Optional: `CameraCapture.tsx`
-- Die gleiche Tap-to-Fokus-Logik kann optional auch auf das allgemeine Fahrzeug-/Schaden-Kamera-Overlay übertragen werden, falls gewünscht.
+### 4. Barrierefreiheit
+- `role="alertdialog"`, `aria-modal="true"`, Fokus-Trap über den bestehenden Dialog.
+- Schließen nur über den Button (kein Klick außerhalb), damit die Information nicht versehentlich übersehen wird.
 
 ## Dateien
-- `src/components/DocumentScanner.tsx` (Hauptänderung)
-- Optional: `src/components/CameraCapture.tsx`
+- `src/components/AvailabilityNotice.tsx` (neu)
+- `src/routes/index.tsx` (Einbindung)
 
 ## Ergebnis
-Nutzer tippt auf die unscharfe Stelle des Dokuments → Kamera fokussiert dort → Dokument wird schärfer → danach wird wie gewohnt mit dem Auslöser fotografiert.
+Jeder Besucher sieht sofort beim Öffnen der Website eine deutliche, zentrale Meldung über dem geblurten Hintergrund. Erst nach Klick auf „Verstanden" kann er die Seite normal nutzen.
