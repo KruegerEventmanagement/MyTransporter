@@ -1,33 +1,12 @@
 ## Ziel
-Sobald die Startseite geladen wird, erscheint eine große, zentrierte Benachrichtigung über dem geblurten Hintergrund. Sie informiert Besucher, dass aktuell alle Transporter bis zum 07.09. vermietet sind und keine Fahrzeuge verfügbar sind. Optionaler Hinweis auf möglichen Nachschub in 2–3 Wochen.
+Im Buchungs-Kalender (`src/components/BookingSection.tsx`, Step 0) alle Tage von heute bis einschließlich 07.09.2026 als nicht buchbar sperren und optisch mit einem roten X kennzeichnen.
 
-## Umsetzung
+## Änderungen
 
-### 1. Neue Komponente `src/components/AvailabilityNotice.tsx`
-- Vollbild-Overlay (`fixed inset-0 z-50`) mit `backdrop-blur-xl` und halbtransparenter schwarzer/weißer Hintergrundfarbe.
-- Zentrierte Dialog-Box mit max. Breite (`max-w-lg`), großem Titel, kurzem Erklärungstext und einem einzigen Button „Verstanden".
-- Nutzt den bestehenden `Dialog` aus `src/components/ui/dialog.tsx` oder ein natives Overlay, falls der shadcn-Dialog zu klein ist.
-- Textvorschlag:
-  - Titel: „Aktuell keine Transporter verfügbar"
-  - Text: „Alle unsere Transporter sind leider bis zum 07.09.2026 vollständig vermietet. Eine Buchung ist daher derzeit nicht möglich. Eventuell wird in 2–3 Wochen wieder Nachschub verfügbar sein."
-  - Button schließt das Overlay und speichert die Entscheidung optional im `sessionStorage`, damit ein erneutes Öffnen innerhalb der Sitzung nicht stört.
+**`src/components/BookingSection.tsx`**
+1. Konstante `UNAVAILABLE_UNTIL = new Date("2026-09-07")` (inkl. dieses Tages gesperrt, ab 08.09.2026 wieder buchbar).
+2. `disabled`-Funktion des `<Calendar>` erweitern: zusätzlich `true` zurückgeben, wenn `d <= UNAVAILABLE_UNTIL`.
+3. `modifiers={{ unavailable: (d) => d <= UNAVAILABLE_UNTIL && d >= today }}` und `modifiersClassNames={{ unavailable: "relative text-destructive line-through" }}` ergänzen, plus eine kleine CSS-Overlay-Klasse (rotes ✕) via `modifiersClassNames` mit Tailwind (`after:content-['✕'] after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-destructive after:font-bold`) – so erscheint über jedem gesperrten Tag ein rotes X.
+4. Kurze Hinweiszeile über/unter dem Kalender: „Alle Fahrzeuge bis 07.09.2026 ausgebucht – ab 08.09.2026 wieder verfügbar."
 
-### 2. Einbinden in `src/routes/index.tsx`
-- `<AvailabilityNotice />` direkt im `Index`-Component rendern.
-- Initial sichtbar (`open` per `useState(true)`), damit die Meldung sofort erscheint.
-
-### 3. Styling
-- Keine harten Farben – ausschließlich semantische Tokens (`bg-background/80`, `text-foreground`, `backdrop-blur-xl`, `border-border`).
-- Auf Mobilgeräten weiterhin zentriert mit ausreichend Padding (`px-4`).
-- Hintergrund hinter dem Overlay bleibt sichtbar, aber stark geblurrt.
-
-### 4. Barrierefreiheit
-- `role="alertdialog"`, `aria-modal="true"`, Fokus-Trap über den bestehenden Dialog.
-- Schließen nur über den Button (kein Klick außerhalb), damit die Information nicht versehentlich übersehen wird.
-
-## Dateien
-- `src/components/AvailabilityNotice.tsx` (neu)
-- `src/routes/index.tsx` (Einbindung)
-
-## Ergebnis
-Jeder Besucher sieht sofort beim Öffnen der Website eine deutliche, zentrale Meldung über dem geblurten Hintergrund. Erst nach Klick auf „Verstanden" kann er die Seite normal nutzen.
+Kein Backend-/Logik-Eingriff, reine Frontend-Anzeige, konsistent mit dem bestehenden `AvailabilityNotice`-Overlay.

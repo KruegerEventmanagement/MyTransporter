@@ -597,10 +597,29 @@ export function BookingSection() {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
                   if (d < today) return true;
+                  const unavailableUntil = new Date(2026, 8, 7);
+                  unavailableUntil.setHours(23, 59, 59, 999);
+                  if (d <= unavailableUntil) return true;
                   return busyDateSet.has(dayKey(d));
+                }}
+                modifiers={{
+                  unavailable: (d) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const unavailableUntil = new Date(2026, 8, 7);
+                    unavailableUntil.setHours(23, 59, 59, 999);
+                    return d >= today && d <= unavailableUntil;
+                  },
+                }}
+                modifiersClassNames={{
+                  unavailable:
+                    "relative !text-red-600 after:content-['✕'] after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-red-600 after:font-bold after:text-xl after:pointer-events-none",
                 }}
                 className="rounded-3xl border border-border p-8 shadow-lg pointer-events-auto text-lg [--cell-size:3.5rem]"
               />
+              <p className="mt-4 text-sm text-red-600 text-center font-medium">
+                Alle Fahrzeuge bis 07.09.2026 ausgebucht – ab 08.09.2026 wieder verfügbar.
+              </p>
 
               {rangeFrom && !rangeTo && (
                 <p className="mt-4 text-sm text-muted-foreground text-center">
