@@ -89,8 +89,11 @@ export function TransporterPhotoDiagram({ highlight }: Props) {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-lg font-bold text-foreground">{formatEuro(activePkg.monthly)}<span className="text-xs text-muted-foreground font-normal"> / Monat</span></div>
-            <div className="text-[11px] text-muted-foreground">bei 1 Jahr Laufzeit</div>
+            <div className="text-lg font-bold text-foreground">
+              <span className="text-sm font-normal text-muted-foreground line-through mr-1.5">{formatEuro(activePkg.listMonthly)}</span>
+              {formatEuro(activePkg.monthly)}<span className="text-xs text-muted-foreground font-normal"> netto / Monat</span>
+            </div>
+            <div className="text-[11px] text-muted-foreground">Aktionspreis bei 1 Jahr Laufzeit</div>
           </div>
         </div>
       )}
