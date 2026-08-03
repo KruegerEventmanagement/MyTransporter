@@ -1022,7 +1022,7 @@ export function BookingSection() {
                 <ChevronLeft className="w-5 h-5" /> Zurück
               </button>
               <button
-                onClick={() => setStep(registrationComplete ? 4 : 3)}
+                onClick={() => setStep(registrationComplete && docsReady ? 5 : 3)}
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg"
               >
                 Buchen & bezahlen <ChevronRight className="w-5 h-5" />
@@ -1031,8 +1031,82 @@ export function BookingSection() {
           </div>
         )}
 
-        {/* Step 3: Registration / Login */}
+        {/* Step 3: Verifizierung — Ausweis & Führerschein scannen (auch ohne Konto) */}
         {step === 3 && (
+          <div className="mt-12 max-w-lg mx-auto animate-fade-in-up">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-foreground">Verifizierung</h3>
+              <p className="mt-2 text-muted-foreground">
+                Scanne Ausweis und Führerschein – jeweils Vorder- und Rückseite.
+              </p>
+            </div>
+
+            <div className="mt-8 space-y-3">
+              <DocumentScanner
+                documentType="id"
+                mode={authUser?.id ? "upload" : "pending"}
+                onCapture={(scanSide, blob) =>
+                  handlePendingCapture(`id_${scanSide}` as PendingDocType, blob)
+                }
+                frontAlreadyDone={
+                  authUser?.id
+                    ? docTypes.has("id_front") && !docTypes.has("id_back")
+                    : pendingDocTypes.has("id_front") && !pendingDocTypes.has("id_back")
+                }
+                isComplete={
+                  authUser?.id
+                    ? docTypes.has("id_front") && docTypes.has("id_back")
+                    : pendingDocTypes.has("id_front") && pendingDocTypes.has("id_back")
+                }
+                onComplete={refreshDocs}
+              />
+              <DocumentScanner
+                documentType="license"
+                mode={authUser?.id ? "upload" : "pending"}
+                onCapture={(scanSide, blob) =>
+                  handlePendingCapture(`license_${scanSide}` as PendingDocType, blob)
+                }
+                frontAlreadyDone={
+                  authUser?.id
+                    ? docTypes.has("license_front") && !docTypes.has("license_back")
+                    : pendingDocTypes.has("license_front") && !pendingDocTypes.has("license_back")
+                }
+                isComplete={
+                  authUser?.id
+                    ? docTypes.has("license_front") && docTypes.has("license_back")
+                    : pendingDocTypes.has("license_front") && pendingDocTypes.has("license_back")
+                }
+                onComplete={refreshDocs}
+              />
+            </div>
+
+            {!authUser?.id && (
+              <div className="mt-6 rounded-2xl border border-border bg-secondary p-4 text-sm text-muted-foreground">
+                Deine Aufnahmen bleiben auf diesem Gerät gespeichert und werden direkt nach der
+                Registrierung automatisch deinem Konto zugeordnet.
+              </div>
+            )}
+
+            <div className="mt-8 flex justify-between gap-3">
+              <button
+                onClick={() => setStep(2)}
+                className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
+              >
+                <ChevronLeft className="w-5 h-5" /> Zurück
+              </button>
+              <button
+                disabled={!docsReady}
+                onClick={() => setStep(registrationComplete ? 5 : 4)}
+                className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                Weiter <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Registration / Login */}
+        {step === 4 && (
           <div className="mt-12 max-w-lg mx-auto animate-fade-in-up">
             {!registrationComplete ? (
               <>
