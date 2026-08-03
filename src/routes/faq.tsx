@@ -7,7 +7,7 @@ const FAQS = [
   },
   {
     q: "Was kostet die Transporter-Miete?",
-    a: "Bei MyTransporter mietest du einen Fiat Ducato L4H2 ab 100 € für 6 Stunden (inkl. 300 Freikilometern) oder ab 150 € für 24 Stunden (inkl. 500 Freikilometern). Jeder weitere Kilometer kostet 0,90 €. Alternativ gibt es eine reine Kilometer-Abrechnung zu 0,90 € pro Kilometer. Die Preise sind transparent, ohne versteckte Kosten und ideal für günstige Umzüge in Leonberg, Stuttgart und Umgebung.",
+    a: "Bei MyTransporter mietest du einen Fiat Ducato L4H2 ab 49 € für 3 Stunden (inkl. 100 Freikilometern), 69 € für 6 Stunden (inkl. 200 Freikilometern), 99 € für 24 Stunden (inkl. 300 Freikilometern) oder 129 € für 24 Stunden Langstrecke (inkl. 500 Freikilometern). Mehrtagestarife starten bei 169 € für 2 Tage, die Wochenmiete kostet 459 €. Jeder Kilometer über das Freikontingent hinaus kostet 0,39 € (ab 2 Tagen 0,35 €, bei der Wochenmiete 0,29 €). Alternativ gibt es eine reine Kilometer-Abrechnung zu 0,90 € pro Kilometer. Die Preise sind transparent, ohne versteckte Kosten und ideal für günstige Umzüge in Leonberg, Stuttgart und Umgebung.",
   },
   {
     q: "Gibt es eine Kaution?",
@@ -156,7 +156,7 @@ function FaqPage() {
 const SEO_BLOCKS = [
   {
     h: "Transporter mieten in Leonberg",
-    p: "MyTransporter ist deine lokale Transporter-Vermietung in Leonberg. Direkt in der Römerstraße 36 holst du deinen Fiat Ducato L4H2 ab, ideal für Umzüge, Möbeltransporte oder spontane Fahrten in der Region. Buchung online in unter 2 Minuten, transparente Preise ab 100 € inklusive 300 Freikilometern.",
+    p: "MyTransporter ist deine lokale Transporter-Vermietung in Leonberg. Direkt in der Römerstraße 36 holst du deinen Fiat Ducato L4H2 ab, ideal für Umzüge, Möbeltransporte oder spontane Fahrten in der Region. Buchung online in unter 2 Minuten, transparente Preise ab 49 € inklusive 100 Freikilometern.",
   },
   {
     h: "Transporter mieten in Stuttgart & Umgebung",
@@ -176,7 +176,7 @@ const SEO_BLOCKS = [
   },
   {
     h: "Preise & Kaution, alles transparent",
-    p: "6 Stunden für 100 € (300 Freikilometer inklusive), 24 Stunden für 150 € (500 Freikilometer inklusive) oder reine Kilometer-Abrechnung zu 0,90 € / km. Jeder zusätzliche Kilometer über das Freikontingent hinaus kostet 0,90 €. Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer und vollgetankter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
+    p: "3 Stunden für 49 € (100 Freikilometer), 6 Stunden für 69 € (200 Freikilometer), 24 Stunden für 99 € (300 Freikilometer) oder 129 € für die Langstrecke (500 Freikilometer). Mehrtagestarife: 2 Tage 169 €, 3 Tage 229 €, 4 Tage 299 €, 5 Tage 359 €, 6 Tage 409 €, 7 Tage 459 €. Alternativ reine Kilometer-Abrechnung zu 0,90 € / km. Mehrkilometer kosten 0,39 € (ab 2 Tagen 0,35 €, Wochenmiete 0,29 €). Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer und vollgetankter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
   },
   {
     h: "Ablauf der Vermietung",
