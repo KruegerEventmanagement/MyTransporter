@@ -62,23 +62,37 @@ function WerbungPage() {
       <section className="px-4 pt-8 pb-12">
         <div className="max-w-3xl mx-auto text-center">
           <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-secondary text-foreground border border-border">
-            <Sparkles className="w-3 h-3" />
-            Sponsoring & Werbung
+            <Megaphone className="w-3 h-3" />
+            Aktion: -30% auf alle Werbeflächen
           </span>
           <h1 className="mt-4 text-3xl md:text-5xl font-bold text-foreground animate-fade-in-up">
-            Werbeflächen am Transporter
+            Ihre Werbung durch die gesamte Region
           </h1>
           <p className="mt-4 text-base md:text-lg text-muted-foreground leading-relaxed animate-fade-in-up animate-delay-200">
-            Über 25 buchbare Plätze, vom Hauptsponsor bis zum Mini-Spot. Lass dein Unternehmen täglich
-            durch Leonberg, Stuttgart, Böblingen und die ganze Region fahren. Hochwertige Magnetfolie,
-            jederzeit austauschbar und lackschonend.
+            MyTransporter ist täglich unterwegs: Leonberg, Stuttgart, Böblingen, Sindelfingen,
+            Ludwigsburg – auf Wunsch Baden-Württemberg- und deutschlandweit. Ihre Werbung fährt mit
+            und wird bei Veranstaltungen, am Baumarkt, beim IKEA, vor Cafés und in Wohngebieten
+            gesehen. Jetzt schon ab 19 € netto im Monat.
           </p>
+          <div className="mt-5 grid sm:grid-cols-3 gap-2 text-left">
+            {[
+              { icon: MapPin, t: "Ganze Region", d: "Leonberg, Stuttgart & Umgebung, auf Wunsch bundesweit" },
+              { icon: Eye, t: "24/7 sichtbar", d: "Fahrend und parkend, ohne Streuverlust" },
+              { icon: Repeat, t: "Wiedererkennung", d: "Immer wieder gesehen = unterbewusst gemerkt" },
+            ].map((f) => (
+              <div key={f.t} className="p-3 rounded-xl bg-secondary/50 border border-border">
+                <f.icon className="w-4 h-4 text-foreground" />
+                <div className="mt-1.5 text-sm font-semibold text-foreground">{f.t}</div>
+                <div className="text-xs text-muted-foreground leading-snug">{f.d}</div>
+              </div>
+            ))}
+          </div>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button
               onClick={scrollToForm}
               className="rounded-full bg-foreground text-background px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
             >
-              Anfrage senden
+              Jetzt Fläche buchen
             </button>
             <a
               href="#packages"
@@ -86,6 +100,50 @@ function WerbungPage() {
             >
               Flächen & Preise ansehen
             </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Warum Fahrzeugwerbung wirkt */}
+      <section className="px-4 pb-16">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center">
+            Warum Werbung am Fahrzeug so gut wirkt
+          </h2>
+          <p className="mt-3 text-center text-muted-foreground max-w-2xl mx-auto">
+            Ein Motiv, das man immer wieder auf einem fahrenden oder parkenden Transporter sieht,
+            bleibt stärker hängen als eine einzelne Anzeige. Dieser Wiederholungseffekt sorgt dafür,
+            dass Ihr Name unterbewusst gelernt und später wiedererkannt wird – genau dann, wenn
+            jemand Ihre Leistung braucht.
+          </p>
+          <div className="mt-8 grid sm:grid-cols-3 gap-4">
+            {[
+              {
+                t: "Fahrzeugwerbung",
+                d: "Feste Kosten pro Monat, 24/7 sichtbar in der ganzen Region, starker Wiederholungseffekt, keine Klickpreise.",
+                highlight: true,
+              },
+              {
+                t: "Flyer",
+                d: "Wird meist einmal gesehen und weggeworfen, jeder neue Kontakt kostet erneut Druck und Verteilung.",
+                highlight: false,
+              },
+              {
+                t: "Online-Ads",
+                d: "Sichtbar nur solange bezahlt wird, Klickpreise steigen, wird oft weggeklickt oder geblockt.",
+                highlight: false,
+              },
+            ].map((c) => (
+              <div
+                key={c.t}
+                className={`p-5 rounded-2xl border ${c.highlight ? "bg-foreground border-foreground" : "bg-card border-border"}`}
+              >
+                <h3 className={`text-sm font-bold ${c.highlight ? "text-background" : "text-foreground"}`}>{c.t}</h3>
+                <p className={`mt-2 text-sm leading-relaxed ${c.highlight ? "text-background/80" : "text-muted-foreground"}`}>
+                  {c.d}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
