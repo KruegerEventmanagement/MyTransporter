@@ -1,12 +1,29 @@
 ## Ziel
-Im Buchungs-Kalender (`src/components/BookingSection.tsx`, Step 0) alle Tage von heute bis einschließlich 07.09.2026 als nicht buchbar sperren und optisch mit einem roten X kennzeichnen.
+Ein Rechnungs-/Angebots-Ersteller im Admin-Bereich: Formular ausfüllen, PDF im gewohnten Design erzeugen, herunterladen und direkt per E-Mail versenden.
 
-## Änderungen
+## Neuer Admin-Tab „Dokumente"
+Fünfter Tab in `src/routes/admin.tsx` (nur im Admin sichtbar, wie die bestehenden Tabs) mit einem Formular:
 
-**`src/components/BookingSection.tsx`**
-1. Konstante `UNAVAILABLE_UNTIL = new Date("2026-09-07")` (inkl. dieses Tages gesperrt, ab 08.09.2026 wieder buchbar).
-2. `disabled`-Funktion des `<Calendar>` erweitern: zusätzlich `true` zurückgeben, wenn `d <= UNAVAILABLE_UNTIL`.
-3. `modifiers={{ unavailable: (d) => d <= UNAVAILABLE_UNTIL && d >= today }}` und `modifiersClassNames={{ unavailable: "relative text-destructive line-through" }}` ergänzen, plus eine kleine CSS-Overlay-Klasse (rotes ✕) via `modifiersClassNames` mit Tailwind (`after:content-['✕'] after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-destructive after:font-bold`) – so erscheint über jedem gesperrten Tag ein rotes X.
-4. Kurze Hinweiszeile über/unter dem Kalender: „Alle Fahrzeuge bis 07.09.2026 ausgebucht – ab 08.09.2026 wieder verfügbar."
+- Dokumenttyp: Rechnung oder Angebot (steuert Titel und Nummernkreis MT-… / AN-…)
+- Empfänger: Firma, z.Hd./Ansprechpartner, Straße, PLZ/Ort, E-Mail, USt-IdNr. (optional)
+- Nummer (automatisch vorgeschlagen, überschreibbar) und Datum
+- Leistung: Fahrzeug, Fahrgestellnummer, Abholung (Datum/Uhrzeit), Rückgabe (Datum/Uhrzeit), Freikilometer, Preis pro Extra-km
+- Positionen: beliebig viele Zeilen mit Bezeichnung + Betrag; jede Zeile netto oder brutto, plus Optionen „Kaution" und „Rabatt/Nachlass" (negativ)
+- Freitext-Fußnote (optional)
+- Live-Summenanzeige: Netto, 19 % USt., Brutto, Gesamtbetrag
 
-Kein Backend-/Logik-Eingriff, reine Frontend-Anzeige, konsistent mit dem bestehenden `AvailabilityNotice`-Overlay.
+Buttons: **PDF herunterladen** und **Per E-Mail senden** (an die Empfänger-E-Mail, Betreff/Text vorbelegt und editierbar).
+
+## Technisch
+
+**`src/lib/custom-document-pdf.server.ts`** (neu)
+Generator nach dem Muster von `src/lib/invoice-pdf.server.ts` (pdf-lib, gleiches Layout: Logo-Header + „Transporter-Vermietung" + Adresse, Meta-Block rechts, Empfängerblock, Abschnitt „Leistung", Positionstabelle Netto/MwSt/Brutto, Summenblock, Fußzeile mit Kontakt, Unternehmen/USt-IdNr., Bankverbindung). Nimmt statt einer `booking_id` ein Eingabeobjekt aus dem Formular. Rabattzeilen und Kaution werden als eigene Positionen ausgewiesen; bei Angebot lautet die Überschrift „ANGEBOT" und die Nummer beginnt mit `AN-`.
+
+**`src/lib/admin-documents.functions.ts`** (neu)
+- `renderAdminDocument` — `createServerFn` mit `requireSupabaseAuth`, prüft `has_role(admin)`, validiert die Eingaben mit Zod, gibt `{ pdfBase64, filename }` zurück (Client löst daraus den Download aus).
+- `sendAdminDocument` — gleiche Prüfung, erzeugt das PDF und versendet es via Resend (`RESEND_API_KEY`, Absender `info@mytransporter.org`) mit PDF-Anhang.
+
+**`src/components/admin/DocumentBuilder.tsx`** (neu)
+Formular-Komponente mit den bestehenden shadcn-Bausteinen, monochromes Design; wird im neuen Tab gerendert.
+
+Keine Datenbank-Änderung nötig (Dokumente werden nicht gespeichert). Bestehende automatische Buchungsrechnung bleibt unverändert.
