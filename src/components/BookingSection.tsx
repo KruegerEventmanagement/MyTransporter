@@ -20,6 +20,13 @@ import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
 import { computePlanReturn, getPlanById, getAvailablePlans, DEPOSIT_EUR } from "@/lib/booking-rules";
 import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot } from "@/lib/addons";
 import { AddonPackageCard } from "./AddonPackageCard";
+import {
+  PENDING_DOC_TYPES,
+  listPendingDocumentTypes,
+  savePendingDocument,
+  uploadPendingDocuments,
+  type PendingDocType,
+} from "@/lib/pending-documents";
 
 const DEPOSIT = DEPOSIT_EUR;
 
@@ -94,6 +101,9 @@ export function BookingSection() {
   const [vehicleIdx, setVehicleIdx] = useState(0);
   const [busySlots, setBusySlots] = useState<BusySlot[]>([]);
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
+  const [pendingDocTypes, setPendingDocTypes] = useState<Set<string>>(new Set());
+  const [pendingUploading, setPendingUploading] = useState(false);
+  const [pendingUploadError, setPendingUploadError] = useState<string | null>(null);
 
   const toggleAddon = (id: string) => {
     setSelectedAddonIds((prev) =>
@@ -284,7 +294,7 @@ export function BookingSection() {
       } catch {
         localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
       }
-      setStep(4);
+      setStep(5);
       document.getElementById("booking")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
@@ -295,7 +305,7 @@ export function BookingSection() {
         setProfileComplete(true);
         setSignupEmailSent(null);
         setShowLogin(false);
-        setStep((currentStep) => (currentStep === 3 ? 4 : currentStep));
+        setStep((currentStep) => (currentStep === 4 ? 5 : currentStep));
         if (session.user.email_confirmed_at || session.user.confirmed_at) {
           localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
         }
@@ -312,7 +322,7 @@ export function BookingSection() {
         setAuthUser({ id: data.session.user.id, email: data.session.user.email ?? undefined });
         setProfileComplete(true);
         setShowLogin(false);
-        setStep((currentStep) => (currentStep === 3 ? 4 : currentStep));
+        setStep((currentStep) => (currentStep === 4 ? 5 : currentStep));
         if (data.session.user.email_confirmed_at || data.session.user.confirmed_at) {
           localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
         }
@@ -322,10 +332,11 @@ export function BookingSection() {
   }, []);
 
   useEffect(() => {
-    if (registrationComplete && step === 3) {
-      setStep(4);
+    if (registrationComplete && step === 4 && !pendingUploading) {
+      setStep(5);
     }
-  }, [registrationComplete, step]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registrationComplete, step, pendingUploading]);
 
   const handleSignUp = async () => {
     setAuthError(null);
@@ -382,17 +393,31 @@ export function BookingSection() {
       }).catch((e) => console.warn("Admin-Registrierungs-Mail fehlgeschlagen:", e)),
     );
     if (data.user && !data.session) {
-      // E-Mail-Bestätigung erforderlich
-      setSignupEmailSent(regForm.email);
-      setLoginForm({ email: regForm.email, password: "" });
-      const now = Date.now();
-      setResendLastSent(now);
-      localStorage.setItem(RESEND_LAST_SENT_KEY, String(now));
+      // Kein Session-Objekt → direkt anmelden (Auto-Bestätigung aktiv)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: regForm.email,
+        password: regPassword,
+      });
+      if (signInError) {
+        setSignupEmailSent(regForm.email);
+        setLoginForm({ email: regForm.email, password: "" });
+        return;
+      }
+      setIsLoggedIn(true);
+      setProfileComplete(true);
     } else if (data.session) {
-      // Auto-confirm aktiv
       setIsLoggedIn(true);
       setProfileComplete(true);
     }
+    // Willkommens-E-Mail (still im Hintergrund)
+    import("@/lib/booking-emails.functions").then(({ sendWelcomeEmail }) =>
+      sendWelcomeEmail({
+        data: {
+          email: regForm.email,
+          firstName: regForm.firstName,
+        },
+      }).catch((e: unknown) => console.warn("Willkommens-Mail fehlgeschlagen:", e)),
+    );
   };
 
   const handleLogin = async () => {
@@ -412,7 +437,7 @@ export function BookingSection() {
       setAuthUser({ id: data.user.id, email: data.user.email ?? undefined });
       setProfileComplete(true);
       setShowLogin(false);
-      setStep(4);
+      setStep(5);
     }
   };
 
@@ -496,9 +521,51 @@ export function BookingSection() {
   // Dokumente beim Login/Step-Wechsel laden
   useEffect(() => { refreshDocs(); }, [authUser?.id]);
 
-  // Beim Betreten von Schritt 4 (Bezahlen/Verifizierung): Hold anlegen
+  // Zwischengespeicherte Scans (ohne Konto) laden
   useEffect(() => {
-    if (step !== 4) return;
+    listPendingDocumentTypes().then(setPendingDocTypes).catch(() => {});
+  }, []);
+
+  const guestDocsComplete = PENDING_DOC_TYPES.every((t) => pendingDocTypes.has(t));
+  const docsReady = authUser?.id ? verified : guestDocsComplete;
+
+  const handlePendingCapture = async (docType: PendingDocType, blob: Blob) => {
+    await savePendingDocument(docType, blob);
+    setPendingDocTypes((prev) => new Set(prev).add(docType));
+  };
+
+  const flushPendingDocuments = async (userId: string) => {
+    setPendingUploadError(null);
+    setPendingUploading(true);
+    try {
+      await uploadPendingDocuments(userId);
+      setPendingDocTypes(await listPendingDocumentTypes());
+      await refreshDocs();
+    } catch (e) {
+      console.error("Dokument-Upload fehlgeschlagen:", e);
+      setPendingUploadError(
+        e instanceof Error ? e.message : "Dokumente konnten nicht hochgeladen werden.",
+      );
+    } finally {
+      setPendingUploading(false);
+    }
+  };
+
+  // Sobald ein Konto existiert: zwischengespeicherte Scans übertragen
+  useEffect(() => {
+    const userId = authUser?.id;
+    if (!userId) return;
+    listPendingDocumentTypes()
+      .then((types) => {
+        if (types.size > 0) return flushPendingDocuments(userId);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser?.id]);
+
+  // Beim Betreten des Bezahlschritts: Hold anlegen
+  useEffect(() => {
+    if (step !== 5) return;
     if (!authUser?.id || !selectedPlanEntry || !date || startHour === null) return;
     let cancelled = false;
     setHoldError(null);
@@ -526,7 +593,7 @@ export function BookingSection() {
 
   // Tick für Countdown
   useEffect(() => {
-    if (step !== 4 || !holdExpiresAt) return;
+    if (step !== 5 || !holdExpiresAt) return;
     const id = setInterval(() => setHoldNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [step, holdExpiresAt]);
@@ -538,7 +605,7 @@ export function BookingSection() {
 
   // Bei Ablauf: Hold freigeben, zurück auf Zeit/Tarif
   useEffect(() => {
-    if (!holdExpired || step !== 4 || paid || showCheckout) return;
+    if (!holdExpired || step !== 5 || paid || showCheckout) return;
     if (date && startHour !== null) {
       dropBookingHold({
         data: { startDate: format(date, "yyyy-MM-dd"), startHour },
@@ -550,16 +617,16 @@ export function BookingSection() {
   }, [holdExpired]);
 
   const stepTitles = registrationComplete
-    ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", verified ? "Bezahlen" : "Verifizierung", "Fahrt"]
-    : ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Registrierung", verified ? "Bezahlen" : "Verifizierung", "Fahrt"];
-  // Wenn Registrierung übersprungen wird, mappen wir step 4/5 auf Stepper-Position 3/4
-  const stepperIndex = registrationComplete && step >= 3 ? step - 1 : step;
+    ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Verifizierung", "Bezahlen", "Fahrt"]
+    : ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Verifizierung", "Registrierung", "Bezahlen", "Fahrt"];
+  // Wenn die Registrierung (Schritt 4) übersprungen wird, rutschen 5/6 im Stepper hoch
+  const stepperIndex = registrationComplete && step >= 5 ? step - 1 : step;
 
   const planKey: string | null = selectedPlanEntry ? `rent_${selectedPlanEntry.id}` : null;
 
   return (
     <section id="booking" className="py-6 px-3 sm:px-4 overflow-x-hidden">
-      {step === 4 && <PaymentTestModeBanner />}
+      {step === 5 && <PaymentTestModeBanner />}
       <div className="max-w-4xl mx-auto w-full">
         <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center text-foreground animate-fade-in-up">
           Buche deinen Transporter
@@ -969,7 +1036,7 @@ export function BookingSection() {
                 <ChevronLeft className="w-5 h-5" /> Zurück
               </button>
               <button
-                onClick={() => setStep(registrationComplete ? 4 : 3)}
+                onClick={() => setStep(registrationComplete && docsReady ? 5 : 3)}
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg"
               >
                 Buchen & bezahlen <ChevronRight className="w-5 h-5" />
@@ -978,8 +1045,82 @@ export function BookingSection() {
           </div>
         )}
 
-        {/* Step 3: Registration / Login */}
+        {/* Step 3: Verifizierung — Ausweis & Führerschein scannen (auch ohne Konto) */}
         {step === 3 && (
+          <div className="mt-12 max-w-lg mx-auto animate-fade-in-up">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-foreground">Verifizierung</h3>
+              <p className="mt-2 text-muted-foreground">
+                Scanne Ausweis und Führerschein – jeweils Vorder- und Rückseite.
+              </p>
+            </div>
+
+            <div className="mt-8 space-y-3">
+              <DocumentScanner
+                documentType="id"
+                mode={authUser?.id ? "upload" : "pending"}
+                onCapture={(scanSide, blob) =>
+                  handlePendingCapture(`id_${scanSide}` as PendingDocType, blob)
+                }
+                frontAlreadyDone={
+                  authUser?.id
+                    ? docTypes.has("id_front") && !docTypes.has("id_back")
+                    : pendingDocTypes.has("id_front") && !pendingDocTypes.has("id_back")
+                }
+                isComplete={
+                  authUser?.id
+                    ? docTypes.has("id_front") && docTypes.has("id_back")
+                    : pendingDocTypes.has("id_front") && pendingDocTypes.has("id_back")
+                }
+                onComplete={refreshDocs}
+              />
+              <DocumentScanner
+                documentType="license"
+                mode={authUser?.id ? "upload" : "pending"}
+                onCapture={(scanSide, blob) =>
+                  handlePendingCapture(`license_${scanSide}` as PendingDocType, blob)
+                }
+                frontAlreadyDone={
+                  authUser?.id
+                    ? docTypes.has("license_front") && !docTypes.has("license_back")
+                    : pendingDocTypes.has("license_front") && !pendingDocTypes.has("license_back")
+                }
+                isComplete={
+                  authUser?.id
+                    ? docTypes.has("license_front") && docTypes.has("license_back")
+                    : pendingDocTypes.has("license_front") && pendingDocTypes.has("license_back")
+                }
+                onComplete={refreshDocs}
+              />
+            </div>
+
+            {!authUser?.id && (
+              <div className="mt-6 rounded-2xl border border-border bg-secondary p-4 text-sm text-muted-foreground">
+                Deine Aufnahmen bleiben auf diesem Gerät gespeichert und werden direkt nach der
+                Registrierung automatisch deinem Konto zugeordnet.
+              </div>
+            )}
+
+            <div className="mt-8 flex justify-between gap-3">
+              <button
+                onClick={() => setStep(2)}
+                className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
+              >
+                <ChevronLeft className="w-5 h-5" /> Zurück
+              </button>
+              <button
+                disabled={!docsReady}
+                onClick={() => setStep(registrationComplete ? 5 : 4)}
+                className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                Weiter <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Registration / Login */}
+        {step === 4 && (
           <div className="mt-12 max-w-lg mx-auto animate-fade-in-up">
             {!registrationComplete ? (
               <>
@@ -1115,72 +1256,20 @@ export function BookingSection() {
                     </div>
 
                     <div className="mt-8 rounded-2xl border border-border bg-secondary p-4 text-sm text-muted-foreground">
-                      Nach der E-Mail-Bestätigung kannst du Ausweis und Führerschein direkt im nächsten Schritt scannen.
-                      So ist dein Konto eindeutig verbunden und die KI-Prüfung läuft zuverlässig.
+                      Deine gescannten Dokumente sind schon hinterlegt. Nach dem Registrieren bist du
+                      sofort eingeloggt und wirst direkt zur Zahlung weitergeleitet.
                     </div>
 
-                    {signupEmailSent ? (
-                      <div className="mt-8 rounded-2xl border border-border bg-secondary p-6 text-center">
-                        <p className="font-medium text-foreground mb-2">📧 Bestätigungs-E-Mail gesendet</p>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Wir haben dir eine E-Mail an <strong>{signupEmailSent}</strong> geschickt.
-                          Bitte klicke auf den Link, um dein Konto zu bestätigen. Danach kannst du dich einloggen.
-                        </p>
-                        {resendLastSent && (
-                          <p className="text-xs text-muted-foreground mb-3">
-                            Zuletzt gesendet:{" "}
-                            {new Date(resendLastSent).toLocaleString("de-DE", {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            })}
-                          </p>
-                        )}
-                        {(() => {
-                          const remaining = resendLastSent
-                            ? Math.max(0, RESEND_COOLDOWN_SECONDS - Math.floor((resendNow - resendLastSent) / 1000))
-                            : 0;
-                          const disabled = resendLoading || remaining > 0;
-                          return (
-                            <>
-                              <button
-                                type="button"
-                                onClick={handleResendConfirmation}
-                                disabled={disabled}
-                                className="w-full rounded-full border border-border bg-background py-3 text-foreground font-medium transition-all hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed mb-3"
-                              >
-                                {resendLoading
-                                  ? "Wird gesendet..."
-                                  : remaining > 0
-                                  ? `Erneut senden in ${remaining}s`
-                                  : "Bestätigungsmail erneut senden"}
-                              </button>
-                              {resendError && (
-                                <p className="text-xs text-destructive mb-3">{resendError}</p>
-                              )}
-                            </>
-                          );
-                        })()}
-                        <button
-                          onClick={() => { setShowLogin(true); setSignupEmailSent(null); }}
-                          className="w-full rounded-full bg-accent py-3 text-accent-foreground font-medium"
-                        >
-                          Jetzt einloggen
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        {authError && (
-                          <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
-                        )}
-                        <button
-                          disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !regPasswordConfirm || authLoading || (regForm.accountType === "business" && !regForm.companyName)}
-                          onClick={handleSignUp}
-                          className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          {authLoading ? "Wird erstellt..." : "Profil erstellen"}
-                        </button>
-                      </>
+                    {authError && (
+                      <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
                     )}
+                    <button
+                      disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !regPasswordConfirm || authLoading || (regForm.accountType === "business" && !regForm.companyName)}
+                      onClick={handleSignUp}
+                      className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {authLoading ? "Konto wird erstellt..." : "Registrieren & weiter zur Zahlung"}
+                    </button>
 
                     <button
                       onClick={() => setShowLogin(true)}
@@ -1253,7 +1342,7 @@ export function BookingSection() {
                   <p className="mt-2 text-muted-foreground">Dein Konto ist bereit. Du kannst jetzt bezahlen.</p>
                 </div>
                 <button
-                  onClick={() => setStep(4)}
+                  onClick={() => setStep(5)}
                   className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
                 >
                   Weiter zur Zahlung <ChevronRight className="w-5 h-5 inline" />
@@ -1261,9 +1350,27 @@ export function BookingSection() {
               </>
             )}
 
+            {pendingUploading && (
+              <div className="mt-6 rounded-2xl bg-secondary p-4 text-sm text-foreground flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Deine Dokumente werden übertragen…
+              </div>
+            )}
+            {pendingUploadError && (
+              <div className="mt-6 rounded-2xl border border-border bg-secondary p-4 text-sm text-center space-y-3">
+                <p className="text-destructive">{pendingUploadError}</p>
+                <button
+                  type="button"
+                  onClick={() => authUser?.id && flushPendingDocuments(authUser.id)}
+                  className="rounded-full bg-accent px-6 py-2.5 text-accent-foreground font-medium"
+                >
+                  Erneut versuchen
+                </button>
+              </div>
+            )}
+
             <div className="mt-6 flex justify-start">
               <button
-                onClick={() => setStep(2)}
+                onClick={() => setStep(3)}
                 className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
               >
                 <ChevronLeft className="w-5 h-5" /> Zurück
@@ -1272,8 +1379,8 @@ export function BookingSection() {
           </div>
         )}
 
-        {/* Step 4: Payment */}
-        {step === 4 && (
+        {/* Step 5: Payment */}
+        {step === 5 && (
           <div className="mt-12 max-w-lg mx-auto animate-fade-in-up text-center">
             <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-6">
               <CreditCard className="w-8 h-8 text-accent" />
@@ -1438,7 +1545,7 @@ export function BookingSection() {
             {!paid && (
               <div className="mt-8 flex justify-start">
                 <button
-                  onClick={() => { setShowCheckout(false); setCheckoutError(null); setCheckoutClientSecret(null); setStep(registrationComplete ? 2 : 3); }}
+                  onClick={() => { setShowCheckout(false); setCheckoutError(null); setCheckoutClientSecret(null); setStep(3); }}
                   className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
                 >
                   <ChevronLeft className="w-5 h-5" /> Zurück
@@ -1448,8 +1555,8 @@ export function BookingSection() {
           </div>
         )}
 
-        {/* Step 5: Gute Fahrt */}
-        {step === 5 && (
+        {/* Step 6: Gute Fahrt */}
+        {step === 6 && (
           <div className="mt-12">
             {drivePhase === "pre" && bookingId && pickupCode && (
               <PreDriveFlow
