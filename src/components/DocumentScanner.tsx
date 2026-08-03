@@ -18,6 +18,14 @@ interface DocumentScannerProps {
   onComplete: () => void;
   isComplete: boolean;
   onReset?: () => void | Promise<void>;
+  /**
+   * "pending" buffers the captures locally (no account required) and hands
+   * them to onCapture instead of uploading them to the backend.
+   */
+  mode?: "upload" | "pending";
+  onCapture?: (side: ScanSide, blob: Blob) => void | Promise<void>;
+  /** Resume on the back side when the front is already buffered/stored. */
+  frontAlreadyDone?: boolean;
 }
 
 const DOC_LABELS = {
@@ -25,10 +33,18 @@ const DOC_LABELS = {
   id: { name: "Personalausweis", icon: "🪪" },
 };
 
-export function DocumentScanner({ documentType, onComplete, isComplete, onReset }: DocumentScannerProps) {
+export function DocumentScanner({
+  documentType,
+  onComplete,
+  isComplete,
+  onReset,
+  mode = "upload",
+  onCapture,
+  frontAlreadyDone = false,
+}: DocumentScannerProps) {
   const [phase, setPhase] = useState<ScanPhase>(isComplete ? "verified" : "idle");
-  const [side, setSide] = useState<ScanSide>("front");
-  const [frontDone, setFrontDone] = useState(false);
+  const [side, setSide] = useState<ScanSide>(frontAlreadyDone ? "back" : "front");
+  const [frontDone, setFrontDone] = useState(frontAlreadyDone);
   const [rejectMsg, setRejectMsg] = useState<string>("");
   const [torchOn, setTorchOn] = useState(false);
   const [torchAvailable, setTorchAvailable] = useState(false);
@@ -130,21 +146,25 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
     if (!blob) return;
     setPhase("capturing");
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Nicht angemeldet");
       const docTypeKey = `${documentType}_${side}`;
-      const path = `${user.id}/${docTypeKey}_${Date.now()}.jpg`;
-      const { error: upErr } = await supabase.storage
-        .from("user-documents")
-        .upload(path, blob, { contentType: "image/jpeg", upsert: false });
-      if (upErr) throw upErr;
-      await supabase.from("user_documents").insert({
-        user_id: user.id,
-        doc_type: docTypeKey,
-        photo_url: path,
-        ai_verified: true,
-        verified_at: new Date().toISOString(),
-      });
+      if (mode === "pending") {
+        await onCapture?.(side, blob);
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Nicht angemeldet");
+        const path = `${user.id}/${docTypeKey}_${Date.now()}.jpg`;
+        const { error: upErr } = await supabase.storage
+          .from("user-documents")
+          .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+        if (upErr) throw upErr;
+        await supabase.from("user_documents").insert({
+          user_id: user.id,
+          doc_type: docTypeKey,
+          photo_url: path,
+          ai_verified: true,
+          verified_at: new Date().toISOString(),
+        });
+      }
 
       pendingBlobRef.current = null;
       if (previewUrl) {
@@ -166,7 +186,7 @@ export function DocumentScanner({ documentType, onComplete, isComplete, onReset 
       setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");
       setPhase("rejected");
     }
-  }, [documentType, side, frontDone, onComplete, stopCamera, previewUrl]);
+  }, [documentType, side, frontDone, onComplete, stopCamera, previewUrl, mode, onCapture]);
 
   const retakeFromPreview = useCallback(() => {
     pendingBlobRef.current = null;
