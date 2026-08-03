@@ -1242,72 +1242,20 @@ export function BookingSection() {
                     </div>
 
                     <div className="mt-8 rounded-2xl border border-border bg-secondary p-4 text-sm text-muted-foreground">
-                      Nach der E-Mail-Bestätigung kannst du Ausweis und Führerschein direkt im nächsten Schritt scannen.
-                      So ist dein Konto eindeutig verbunden und die KI-Prüfung läuft zuverlässig.
+                      Deine gescannten Dokumente sind schon hinterlegt. Nach dem Registrieren bist du
+                      sofort eingeloggt und wirst direkt zur Zahlung weitergeleitet.
                     </div>
 
-                    {signupEmailSent ? (
-                      <div className="mt-8 rounded-2xl border border-border bg-secondary p-6 text-center">
-                        <p className="font-medium text-foreground mb-2">📧 Bestätigungs-E-Mail gesendet</p>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Wir haben dir eine E-Mail an <strong>{signupEmailSent}</strong> geschickt.
-                          Bitte klicke auf den Link, um dein Konto zu bestätigen. Danach kannst du dich einloggen.
-                        </p>
-                        {resendLastSent && (
-                          <p className="text-xs text-muted-foreground mb-3">
-                            Zuletzt gesendet:{" "}
-                            {new Date(resendLastSent).toLocaleString("de-DE", {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            })}
-                          </p>
-                        )}
-                        {(() => {
-                          const remaining = resendLastSent
-                            ? Math.max(0, RESEND_COOLDOWN_SECONDS - Math.floor((resendNow - resendLastSent) / 1000))
-                            : 0;
-                          const disabled = resendLoading || remaining > 0;
-                          return (
-                            <>
-                              <button
-                                type="button"
-                                onClick={handleResendConfirmation}
-                                disabled={disabled}
-                                className="w-full rounded-full border border-border bg-background py-3 text-foreground font-medium transition-all hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed mb-3"
-                              >
-                                {resendLoading
-                                  ? "Wird gesendet..."
-                                  : remaining > 0
-                                  ? `Erneut senden in ${remaining}s`
-                                  : "Bestätigungsmail erneut senden"}
-                              </button>
-                              {resendError && (
-                                <p className="text-xs text-destructive mb-3">{resendError}</p>
-                              )}
-                            </>
-                          );
-                        })()}
-                        <button
-                          onClick={() => { setShowLogin(true); setSignupEmailSent(null); }}
-                          className="w-full rounded-full bg-accent py-3 text-accent-foreground font-medium"
-                        >
-                          Jetzt einloggen
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        {authError && (
-                          <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
-                        )}
-                        <button
-                          disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !regPasswordConfirm || authLoading || (regForm.accountType === "business" && !regForm.companyName)}
-                          onClick={handleSignUp}
-                          className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          {authLoading ? "Wird erstellt..." : "Profil erstellen"}
-                        </button>
-                      </>
+                    {authError && (
+                      <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
                     )}
+                    <button
+                      disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !regPasswordConfirm || authLoading || (regForm.accountType === "business" && !regForm.companyName)}
+                      onClick={handleSignUp}
+                      className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {authLoading ? "Konto wird erstellt..." : "Registrieren & weiter zur Zahlung"}
+                    </button>
 
                     <button
                       onClick={() => setShowLogin(true)}
