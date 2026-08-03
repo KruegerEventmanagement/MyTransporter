@@ -507,9 +507,51 @@ export function BookingSection() {
   // Dokumente beim Login/Step-Wechsel laden
   useEffect(() => { refreshDocs(); }, [authUser?.id]);
 
-  // Beim Betreten von Schritt 4 (Bezahlen/Verifizierung): Hold anlegen
+  // Zwischengespeicherte Scans (ohne Konto) laden
   useEffect(() => {
-    if (step !== 4) return;
+    listPendingDocumentTypes().then(setPendingDocTypes).catch(() => {});
+  }, []);
+
+  const guestDocsComplete = PENDING_DOC_TYPES.every((t) => pendingDocTypes.has(t));
+  const docsReady = authUser?.id ? verified : guestDocsComplete;
+
+  const handlePendingCapture = async (docType: PendingDocType, blob: Blob) => {
+    await savePendingDocument(docType, blob);
+    setPendingDocTypes((prev) => new Set(prev).add(docType));
+  };
+
+  const flushPendingDocuments = async (userId: string) => {
+    setPendingUploadError(null);
+    setPendingUploading(true);
+    try {
+      await uploadPendingDocuments(userId);
+      setPendingDocTypes(await listPendingDocumentTypes());
+      await refreshDocs();
+    } catch (e) {
+      console.error("Dokument-Upload fehlgeschlagen:", e);
+      setPendingUploadError(
+        e instanceof Error ? e.message : "Dokumente konnten nicht hochgeladen werden.",
+      );
+    } finally {
+      setPendingUploading(false);
+    }
+  };
+
+  // Sobald ein Konto existiert: zwischengespeicherte Scans übertragen
+  useEffect(() => {
+    const userId = authUser?.id;
+    if (!userId) return;
+    listPendingDocumentTypes()
+      .then((types) => {
+        if (types.size > 0) return flushPendingDocuments(userId);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser?.id]);
+
+  // Beim Betreten des Bezahlschritts: Hold anlegen
+  useEffect(() => {
+    if (step !== 5) return;
     if (!authUser?.id || !selectedPlanEntry || !date || startHour === null) return;
     let cancelled = false;
     setHoldError(null);
