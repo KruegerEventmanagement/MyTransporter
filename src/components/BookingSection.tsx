@@ -291,7 +291,7 @@ export function BookingSection() {
       } catch {
         localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
       }
-      setStep(4);
+      setStep(5);
       document.getElementById("booking")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
@@ -302,7 +302,7 @@ export function BookingSection() {
         setProfileComplete(true);
         setSignupEmailSent(null);
         setShowLogin(false);
-        setStep((currentStep) => (currentStep === 3 ? 4 : currentStep));
+        setStep((currentStep) => (currentStep === 4 ? 5 : currentStep));
         if (session.user.email_confirmed_at || session.user.confirmed_at) {
           localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
         }
@@ -319,7 +319,7 @@ export function BookingSection() {
         setAuthUser({ id: data.session.user.id, email: data.session.user.email ?? undefined });
         setProfileComplete(true);
         setShowLogin(false);
-        setStep((currentStep) => (currentStep === 3 ? 4 : currentStep));
+        setStep((currentStep) => (currentStep === 4 ? 5 : currentStep));
         if (data.session.user.email_confirmed_at || data.session.user.confirmed_at) {
           localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
         }
@@ -329,10 +329,11 @@ export function BookingSection() {
   }, []);
 
   useEffect(() => {
-    if (registrationComplete && step === 3) {
-      setStep(4);
+    if (registrationComplete && step === 4 && !pendingUploading) {
+      setStep(5);
     }
-  }, [registrationComplete, step]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registrationComplete, step, pendingUploading]);
 
   const handleSignUp = async () => {
     setAuthError(null);
