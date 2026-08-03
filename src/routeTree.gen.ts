@@ -9,10 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WerbungRouteImport } from './routes/werbung'
 import { Route as UeberUnsRouteImport } from './routes/ueber-uns'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ProfilRouteImport } from './routes/profil'
-import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as KontaktRouteImport } from './routes/kontakt'
 import { Route as ImpressumRouteImport } from './routes/impressum'
 import { Route as FaqRouteImport } from './routes/faq'
@@ -30,6 +30,11 @@ import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/publi
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
 import { Route as ApiPublicHooksNotifyAdminRouteImport } from './routes/api/public/hooks/notify-admin'
 
+const WerbungRoute = WerbungRouteImport.update({
+  id: '/werbung',
+  path: '/werbung',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UeberUnsRoute = UeberUnsRouteImport.update({
   id: '/ueber-uns',
   path: '/ueber-uns',
@@ -43,11 +48,6 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ProfilRoute = ProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PartnerRoute = PartnerRouteImport.update({
-  id: '/partner',
-  path: '/partner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KontaktRoute = KontaktRouteImport.update({
@@ -144,10 +144,10 @@ export interface FileRoutesByFullPath {
   '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
-  '/partner': typeof PartnerRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/ueber-uns': typeof UeberUnsRoute
+  '/werbung': typeof WerbungRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -166,10 +166,10 @@ export interface FileRoutesByTo {
   '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
-  '/partner': typeof PartnerRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/ueber-uns': typeof UeberUnsRoute
+  '/werbung': typeof WerbungRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -189,10 +189,10 @@ export interface FileRoutesById {
   '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
-  '/partner': typeof PartnerRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/ueber-uns': typeof UeberUnsRoute
+  '/werbung': typeof WerbungRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -213,10 +213,10 @@ export interface FileRouteTypes {
     | '/faq'
     | '/impressum'
     | '/kontakt'
-    | '/partner'
     | '/profil'
     | '/sitemap.xml'
     | '/ueber-uns'
+    | '/werbung'
     | '/auth/confirm'
     | '/buchung/$bookingId'
     | '/checkout/return'
@@ -235,10 +235,10 @@ export interface FileRouteTypes {
     | '/faq'
     | '/impressum'
     | '/kontakt'
-    | '/partner'
     | '/profil'
     | '/sitemap.xml'
     | '/ueber-uns'
+    | '/werbung'
     | '/auth/confirm'
     | '/buchung/$bookingId'
     | '/checkout/return'
@@ -257,10 +257,10 @@ export interface FileRouteTypes {
     | '/faq'
     | '/impressum'
     | '/kontakt'
-    | '/partner'
     | '/profil'
     | '/sitemap.xml'
     | '/ueber-uns'
+    | '/werbung'
     | '/auth/confirm'
     | '/buchung/$bookingId'
     | '/checkout/return'
@@ -280,10 +280,10 @@ export interface RootRouteChildren {
   FaqRoute: typeof FaqRoute
   ImpressumRoute: typeof ImpressumRoute
   KontaktRoute: typeof KontaktRoute
-  PartnerRoute: typeof PartnerRoute
   ProfilRoute: typeof ProfilRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   UeberUnsRoute: typeof UeberUnsRoute
+  WerbungRoute: typeof WerbungRoute
   AuthConfirmRoute: typeof AuthConfirmRoute
   BuchungBookingIdRoute: typeof BuchungBookingIdRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
@@ -297,6 +297,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/werbung': {
+      id: '/werbung'
+      path: '/werbung'
+      fullPath: '/werbung'
+      preLoaderRoute: typeof WerbungRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ueber-uns': {
       id: '/ueber-uns'
       path: '/ueber-uns'
@@ -316,13 +323,6 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/profil'
       preLoaderRoute: typeof ProfilRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/partner': {
-      id: '/partner'
-      path: '/partner'
-      fullPath: '/partner'
-      preLoaderRoute: typeof PartnerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kontakt': {
@@ -448,10 +448,10 @@ const rootRouteChildren: RootRouteChildren = {
   FaqRoute: FaqRoute,
   ImpressumRoute: ImpressumRoute,
   KontaktRoute: KontaktRoute,
-  PartnerRoute: PartnerRoute,
   ProfilRoute: ProfilRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   UeberUnsRoute: UeberUnsRoute,
+  WerbungRoute: WerbungRoute,
   AuthConfirmRoute: AuthConfirmRoute,
   BuchungBookingIdRoute: BuchungBookingIdRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,

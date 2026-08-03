@@ -8,7 +8,7 @@ import { PartnerBenefits } from "@/components/partner/PartnerBenefits";
 import { PartnerInquiryForm } from "@/components/partner/PartnerInquiryForm";
 import type { PartnerPackageId } from "@/lib/partner-packages";
 
-export const Route = createFileRoute("/partner")({
+export const Route = createFileRoute("/werbung")({
   head: () => ({
     meta: [
       { title: "Partner werden · Werbefläche am Transporter mieten | MyTransporter" },
