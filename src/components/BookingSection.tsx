@@ -1531,7 +1531,7 @@ export function BookingSection() {
             {!paid && (
               <div className="mt-8 flex justify-start">
                 <button
-                  onClick={() => { setShowCheckout(false); setCheckoutError(null); setCheckoutClientSecret(null); setStep(registrationComplete ? 2 : 3); }}
+                  onClick={() => { setShowCheckout(false); setCheckoutError(null); setCheckoutClientSecret(null); setStep(3); }}
                   className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
                 >
                   <ChevronLeft className="w-5 h-5" /> Zurück
@@ -1541,8 +1541,8 @@ export function BookingSection() {
           </div>
         )}
 
-        {/* Step 5: Gute Fahrt */}
-        {step === 5 && (
+        {/* Step 6: Gute Fahrt */}
+        {step === 6 && (
           <div className="mt-12">
             {drivePhase === "pre" && bookingId && pickupCode && (
               <PreDriveFlow
