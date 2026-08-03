@@ -1328,7 +1328,7 @@ export function BookingSection() {
                   <p className="mt-2 text-muted-foreground">Dein Konto ist bereit. Du kannst jetzt bezahlen.</p>
                 </div>
                 <button
-                  onClick={() => setStep(4)}
+                  onClick={() => setStep(5)}
                   className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
                 >
                   Weiter zur Zahlung <ChevronRight className="w-5 h-5 inline" />
@@ -1336,9 +1336,27 @@ export function BookingSection() {
               </>
             )}
 
+            {pendingUploading && (
+              <div className="mt-6 rounded-2xl bg-secondary p-4 text-sm text-foreground flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Deine Dokumente werden übertragen…
+              </div>
+            )}
+            {pendingUploadError && (
+              <div className="mt-6 rounded-2xl border border-border bg-secondary p-4 text-sm text-center space-y-3">
+                <p className="text-destructive">{pendingUploadError}</p>
+                <button
+                  type="button"
+                  onClick={() => authUser?.id && flushPendingDocuments(authUser.id)}
+                  className="rounded-full bg-accent px-6 py-2.5 text-accent-foreground font-medium"
+                >
+                  Erneut versuchen
+                </button>
+              </div>
+            )}
+
             <div className="mt-6 flex justify-start">
               <button
-                onClick={() => setStep(2)}
+                onClick={() => setStep(3)}
                 className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-foreground font-medium transition-all hover:bg-secondary/80"
               >
                 <ChevronLeft className="w-5 h-5" /> Zurück
@@ -1347,8 +1365,8 @@ export function BookingSection() {
           </div>
         )}
 
-        {/* Step 4: Payment */}
-        {step === 4 && (
+        {/* Step 5: Payment */}
+        {step === 5 && (
           <div className="mt-12 max-w-lg mx-auto animate-fade-in-up text-center">
             <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-6">
               <CreditCard className="w-8 h-8 text-accent" />
