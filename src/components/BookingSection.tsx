@@ -20,6 +20,13 @@ import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
 import { computePlanReturn, getPlanById, getAvailablePlans, DEPOSIT_EUR } from "@/lib/booking-rules";
 import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot } from "@/lib/addons";
 import { AddonPackageCard } from "./AddonPackageCard";
+import {
+  PENDING_DOC_TYPES,
+  listPendingDocumentTypes,
+  savePendingDocument,
+  uploadPendingDocuments,
+  type PendingDocType,
+} from "@/lib/pending-documents";
 
 const DEPOSIT = DEPOSIT_EUR;
 
