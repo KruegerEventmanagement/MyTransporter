@@ -416,7 +416,7 @@ export function BookingSection() {
           email: regForm.email,
           firstName: regForm.firstName,
         },
-      }).catch((e) => console.warn("Willkommens-Mail fehlgeschlagen:", e)),
+      }).catch((e: unknown) => console.warn("Willkommens-Mail fehlgeschlagen:", e)),
     );
   };
 
