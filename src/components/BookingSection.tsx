@@ -393,17 +393,31 @@ export function BookingSection() {
       }).catch((e) => console.warn("Admin-Registrierungs-Mail fehlgeschlagen:", e)),
     );
     if (data.user && !data.session) {
-      // E-Mail-Bestätigung erforderlich
-      setSignupEmailSent(regForm.email);
-      setLoginForm({ email: regForm.email, password: "" });
-      const now = Date.now();
-      setResendLastSent(now);
-      localStorage.setItem(RESEND_LAST_SENT_KEY, String(now));
+      // Kein Session-Objekt → direkt anmelden (Auto-Bestätigung aktiv)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: regForm.email,
+        password: regPassword,
+      });
+      if (signInError) {
+        setSignupEmailSent(regForm.email);
+        setLoginForm({ email: regForm.email, password: "" });
+        return;
+      }
+      setIsLoggedIn(true);
+      setProfileComplete(true);
     } else if (data.session) {
-      // Auto-confirm aktiv
       setIsLoggedIn(true);
       setProfileComplete(true);
     }
+    // Willkommens-E-Mail (still im Hintergrund)
+    import("@/lib/booking-emails.functions").then(({ sendWelcomeEmail }) =>
+      sendWelcomeEmail({
+        data: {
+          email: regForm.email,
+          firstName: regForm.firstName,
+        },
+      }).catch((e) => console.warn("Willkommens-Mail fehlgeschlagen:", e)),
+    );
   };
 
   const handleLogin = async () => {
@@ -423,7 +437,7 @@ export function BookingSection() {
       setAuthUser({ id: data.user.id, email: data.user.email ?? undefined });
       setProfileComplete(true);
       setShowLogin(false);
-      setStep(4);
+      setStep(5);
     }
   };
 
