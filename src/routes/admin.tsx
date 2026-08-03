@@ -7,6 +7,7 @@ import {
   Car,
   Check,
   ChevronLeft,
+  FileText,
   Image as ImageIcon,
   LogOut,
   MapPin,
@@ -24,6 +25,7 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { AdminLogin } from "@/components/admin/AdminLogin";
 import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
+import { DocumentBuilder } from "@/components/admin/DocumentBuilder";
 import { useServerFn } from "@tanstack/react-start";
 import { chargeBookingExtra, settleDeposit } from "@/lib/payments.functions";
 import { sendTestAdminPush } from "@/lib/push.functions";
@@ -117,7 +119,7 @@ interface AdminNotification {
   created_at: string;
 }
 
-type Tab = "customers" | "bookings" | "vehicles" | "notifications";
+type Tab = "customers" | "bookings" | "vehicles" | "documents" | "notifications";
 
 function AdminDashboard() {
   const [authReady, setAuthReady] = useState(false);
@@ -543,6 +545,9 @@ function AdminDashboard() {
           <TabButton active={tab === "vehicles"} onClick={() => setTab("vehicles")}>
             <Car className="w-4 h-4" /> Fahrzeuge
           </TabButton>
+          <TabButton active={tab === "documents"} onClick={() => setTab("documents")}>
+            <FileText className="w-4 h-4" /> Dokumente
+          </TabButton>
           <TabButton active={tab === "notifications"} onClick={() => setTab("notifications")}>
             <Bell className="w-4 h-4" /> Push
             {unreadCount > 0 && (
@@ -688,6 +693,8 @@ function AdminDashboard() {
         )}
 
         {tab === "vehicles" && <VehiclesAdmin />}
+
+        {tab === "documents" && <DocumentBuilder />}
       </div>
     </main>
       {alertNotification && (
