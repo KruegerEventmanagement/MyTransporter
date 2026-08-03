@@ -4,6 +4,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { BookingSection } from "@/components/BookingSection";
 import { Navbar } from "@/components/Navbar";
 import { AvailabilityNotice } from "@/components/AvailabilityNotice";
+import { AdBanner } from "@/components/AdBanner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -66,6 +67,7 @@ function Index() {
       <AvailabilityNotice />
       <Navbar />
       <HeroSection />
+      <AdBanner />
       <h1 className="sr-only">Transporter mieten in Leonberg & Stuttgart</h1>
       <BookingSection />
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
@@ -77,7 +79,7 @@ function Index() {
           <Link to="/kontakt" className="hover:text-foreground transition-colors">Kontakt</Link>
           <Link to="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
           <Link to="/ueber-uns" className="hover:text-foreground transition-colors">Über uns</Link>
-          <Link to="/partner" className="hover:text-foreground transition-colors">Partner werden</Link>
+          <Link to="/werbung" className="hover:text-foreground transition-colors">Werbung am Transporter</Link>
         </div>
       </footer>
     </main>
