@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronLeft, Sparkles } from "lucide-react";
+import { ChevronLeft, Megaphone, Repeat, Eye, MapPin } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { TransporterPhotoDiagram } from "@/components/partner/TransporterPhotoDiagram";
 import { PartnerPackages } from "@/components/partner/PartnerPackages";
@@ -11,25 +11,27 @@ import type { PartnerPackageId } from "@/lib/partner-packages";
 export const Route = createFileRoute("/werbung")({
   head: () => ({
     meta: [
-      { title: "Partner werden · Werbefläche am Transporter mieten | MyTransporter" },
+      { title: "Werbefläche am Transporter mieten in Leonberg & Stuttgart | MyTransporter" },
       {
         name: "description",
         content:
-          "Werde Werbepartner von MyTransporter in Leonberg & Stuttgart. Miete eine Magnetfolien-Werbefläche an unserem Transporter, flexibel, lackschonend, mobil sichtbar.",
+          "Ihre Werbung durch die gesamte Region: Werbefläche am MyTransporter mieten, ab 19 € netto / Monat. Täglich sichtbar in Leonberg, Stuttgart und ganz Baden-Württemberg.",
       },
-      { property: "og:title", content: "Partner werden | MyTransporter" },
+      { property: "og:title", content: "Ihre Werbung durch die gesamte Region | MyTransporter" },
       {
         property: "og:description",
         content:
-          "Sponsor & Werbepartner werden: über 25 Magnetfolien-Werbeflächen am Transporter, ab 29 € netto / Monat (zzgl. 19% MwSt., B2B).",
+          "Über 25 Magnetfolien-Werbeflächen am Transporter, jetzt -30% Aktionspreis ab 19 € netto / Monat (zzgl. 19% MwSt., B2B).",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "https://www.mytransporter.org/partner" }],
+    links: [{ rel: "canonical", href: "https://mytransporter.org/werbung" }],
   }),
-  component: PartnerPage,
+  component: WerbungPage,
 });
 
-function PartnerPage() {
+function WerbungPage() {
   const [selected, setSelected] = useState<PartnerPackageId>("S1");
 
   const scrollToForm = () => {
