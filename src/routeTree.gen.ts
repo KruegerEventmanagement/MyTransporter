@@ -13,6 +13,7 @@ import { Route as WerbungRouteImport } from './routes/werbung'
 import { Route as UeberUnsRouteImport } from './routes/ueber-uns'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ProfilRouteImport } from './routes/profil'
+import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as KontaktRouteImport } from './routes/kontakt'
 import { Route as ImpressumRouteImport } from './routes/impressum'
 import { Route as FaqRouteImport } from './routes/faq'
@@ -48,6 +49,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ProfilRoute = ProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnerRoute = PartnerRouteImport.update({
+  id: '/partner',
+  path: '/partner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KontaktRoute = KontaktRouteImport.update({
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
+  '/partner': typeof PartnerRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
+  '/partner': typeof PartnerRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
+  '/partner': typeof PartnerRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/impressum'
     | '/kontakt'
+    | '/partner'
     | '/profil'
     | '/sitemap.xml'
     | '/ueber-uns'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/impressum'
     | '/kontakt'
+    | '/partner'
     | '/profil'
     | '/sitemap.xml'
     | '/ueber-uns'
@@ -257,6 +268,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/impressum'
     | '/kontakt'
+    | '/partner'
     | '/profil'
     | '/sitemap.xml'
     | '/ueber-uns'
@@ -280,6 +292,7 @@ export interface RootRouteChildren {
   FaqRoute: typeof FaqRoute
   ImpressumRoute: typeof ImpressumRoute
   KontaktRoute: typeof KontaktRoute
+  PartnerRoute: typeof PartnerRoute
   ProfilRoute: typeof ProfilRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   UeberUnsRoute: typeof UeberUnsRoute
@@ -323,6 +336,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/profil'
       preLoaderRoute: typeof ProfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partner': {
+      id: '/partner'
+      path: '/partner'
+      fullPath: '/partner'
+      preLoaderRoute: typeof PartnerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kontakt': {
@@ -448,6 +468,7 @@ const rootRouteChildren: RootRouteChildren = {
   FaqRoute: FaqRoute,
   ImpressumRoute: ImpressumRoute,
   KontaktRoute: KontaktRoute,
+  PartnerRoute: PartnerRoute,
   ProfilRoute: ProfilRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   UeberUnsRoute: UeberUnsRoute,
