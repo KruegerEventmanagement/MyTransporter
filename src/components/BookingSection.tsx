@@ -579,7 +579,7 @@ export function BookingSection() {
 
   // Tick für Countdown
   useEffect(() => {
-    if (step !== 4 || !holdExpiresAt) return;
+    if (step !== 5 || !holdExpiresAt) return;
     const id = setInterval(() => setHoldNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [step, holdExpiresAt]);
@@ -591,7 +591,7 @@ export function BookingSection() {
 
   // Bei Ablauf: Hold freigeben, zurück auf Zeit/Tarif
   useEffect(() => {
-    if (!holdExpired || step !== 4 || paid || showCheckout) return;
+    if (!holdExpired || step !== 5 || paid || showCheckout) return;
     if (date && startHour !== null) {
       dropBookingHold({
         data: { startDate: format(date, "yyyy-MM-dd"), startHour },
@@ -603,16 +603,16 @@ export function BookingSection() {
   }, [holdExpired]);
 
   const stepTitles = registrationComplete
-    ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", verified ? "Bezahlen" : "Verifizierung", "Fahrt"]
-    : ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Registrierung", verified ? "Bezahlen" : "Verifizierung", "Fahrt"];
-  // Wenn Registrierung übersprungen wird, mappen wir step 4/5 auf Stepper-Position 3/4
-  const stepperIndex = registrationComplete && step >= 3 ? step - 1 : step;
+    ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Verifizierung", "Bezahlen", "Fahrt"]
+    : ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Verifizierung", "Registrierung", "Bezahlen", "Fahrt"];
+  // Wenn die Registrierung (Schritt 4) übersprungen wird, rutschen 5/6 im Stepper hoch
+  const stepperIndex = registrationComplete && step >= 5 ? step - 1 : step;
 
   const planKey: string | null = selectedPlanEntry ? `rent_${selectedPlanEntry.id}` : null;
 
   return (
     <section id="booking" className="py-6 px-3 sm:px-4 overflow-x-hidden">
-      {step === 4 && <PaymentTestModeBanner />}
+      {step === 5 && <PaymentTestModeBanner />}
       <div className="max-w-4xl mx-auto w-full">
         <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center text-foreground animate-fade-in-up">
           Buche deinen Transporter
