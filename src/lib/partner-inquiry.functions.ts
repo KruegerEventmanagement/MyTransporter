@@ -50,7 +50,7 @@ export const submitPartnerInquiry = createServerFn({ method: "POST" })
 
     const html = `
       <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:auto;padding:24px;color:#111;">
-        <h2 style="margin:0 0 16px;">Neue Partner-Anfrage</h2>
+        <h2 style="margin:0 0 16px;">Neue Werbeflächen-Anfrage</h2>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <tr><td style="padding:6px 0;color:#666;width:140px;">Firma</td><td>${escapeHtml(data.company || "-")}</td></tr>
           <tr><td style="padding:6px 0;color:#666;">Name</td><td>${escapeHtml(data.name)}</td></tr>
@@ -65,14 +65,14 @@ export const submitPartnerInquiry = createServerFn({ method: "POST" })
 
     const sent = await sendEmail(
       ADMIN_TO,
-      `Partner-Anfrage: ${packageLabel} (${yearsLabel})`,
+      `Werbeflächen-Anfrage: ${packageLabel} (${yearsLabel})`,
       html,
       data.email,
     );
 
     await supabaseAdmin.from("admin_notifications").insert({
       type: "partner_inquiry",
-      title: `Partner-Anfrage: ${packageLabel}`,
+      title: `Werbeflächen-Anfrage: ${packageLabel}`,
       body: `${data.name}${data.company ? ` (${data.company})` : ""} · ${data.email}${data.phone ? ` · ${data.phone}` : ""} · ${yearsLabel} · ${priceLabel}${data.message ? `\n\n${data.message}` : ""}`,
     });
 

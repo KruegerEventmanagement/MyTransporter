@@ -187,3 +187,12 @@
   animation: scan-line 1.5s ease-in-out infinite;
   position: absolute;
 }
+
+@keyframes shine {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(100%); }
+}
+
+.animate-shine {
+  animation: shine 3.5s ease-in-out infinite;
+}

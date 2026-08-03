@@ -3,6 +3,8 @@ import {
   PACKAGES_BY_VIEW,
   formatEuro,
   formatSqm,
+  PROMO_DISCOUNT_PERCENT,
+  REGULAR_SETUP_FEE,
   type PartnerPackageId,
 } from "@/lib/partner-packages";
 import { VIEWS, type ViewId } from "@/lib/partner-zones";
@@ -18,6 +20,10 @@ export function PartnerPackages({ highlight, onSelect }: Props) {
     <div className="space-y-10">
       <p className="text-xs text-muted-foreground -mt-4">
         Alle Preise verstehen sich in Euro <strong>netto, zzgl. 19% gesetzlicher Umsatzsteuer</strong>. Angebote richten sich ausschließlich an Unternehmen (B2B).
+      </p>
+      <p className="text-xs font-medium text-foreground -mt-6">
+        Aktion: <strong>-{PROMO_DISCOUNT_PERCENT}%</strong> auf alle Flächen und Folienproduktion geschenkt
+        (statt {formatEuro(REGULAR_SETUP_FEE)} netto). Nur wenige Flächen pro Fahrzeug verfügbar.
       </p>
       {viewOrder.map((v) => {
         const pkgs = PACKAGES_BY_VIEW[v];
@@ -54,6 +60,7 @@ export function PartnerPackages({ highlight, onSelect }: Props) {
                     </div>
                     <div className="mt-2 text-[11px] text-muted-foreground">{formatSqm(pkg.sqm)}</div>
                     <div className="mt-2 flex items-baseline gap-1.5">
+                      <span className="text-sm text-muted-foreground line-through">{formatEuro(pkg.listMonthly)}</span>
                       <span className="text-2xl font-bold text-foreground">{formatEuro(pkg.monthly)}</span>
                       <span className="text-[11px] text-muted-foreground">netto / Mon.</span>
                     </div>
@@ -74,7 +81,7 @@ export function PartnerPackages({ highlight, onSelect }: Props) {
                       ))}
                     </div>
                     <div className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <Check className="w-3 h-3" /> Setup {formatEuro(pkg.setupFee)} netto
+                      <Check className="w-3 h-3" /> Folienproduktion 0 € (statt {formatEuro(REGULAR_SETUP_FEE)})
                     </div>
                   </button>
                 );

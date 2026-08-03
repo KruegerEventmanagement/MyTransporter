@@ -55,7 +55,7 @@ function UeberUnsPage() {
           <Link to="/datenschutz" className="hover:text-foreground transition-colors">Datenschutz</Link>
           <Link to="/kontakt" className="hover:text-foreground transition-colors">Kontakt</Link>
           <Link to="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
-          <Link to="/partner" className="hover:text-foreground transition-colors">Partner werden</Link>
+          <Link to="/werbung" className="hover:text-foreground transition-colors">Werbung am Transporter</Link>
         </div>
       </footer>
     </main>

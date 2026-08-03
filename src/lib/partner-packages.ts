@@ -19,14 +19,20 @@ export interface PartnerPackage {
   heightCm: number;
   sizeLabel: string;
   monthly: number;
+  listMonthly: number;
   prices: { years: 1 | 2 | 3; monthly: number; total: number }[];
   setupFee: number;
   zone: Zone;
 }
 
 const ROUND_TO = 5;
-const MIN_MONTHLY = 25;
-const SETUP_FEE = 149;
+const MIN_MONTHLY = 19;
+const SETUP_FEE = 0;
+
+/** Aktion: -30 % auf alle Flächenpreise, Folienproduktion geschenkt. */
+export const PROMO_FACTOR = 0.7;
+export const PROMO_DISCOUNT_PERCENT = 30;
+export const REGULAR_SETUP_FEE = 149;
 
 function round5(n: number): number {
   return Math.max(MIN_MONTHLY, Math.round(n / ROUND_TO) * ROUND_TO);
@@ -50,7 +56,8 @@ function buildPackage(zone: Zone): PartnerPackage {
   const bbox = polygonBBox(zone.points);
   const widthCm = Math.round((bbox.width / view.pxPerMeter) * 100);
   const heightCm = Math.round((bbox.height / view.pxPerMeter) * 100);
-  const monthly = round5(sqm * view.ratePerSqmMonth);
+  const listMonthly = Math.max(29, Math.round((sqm * view.ratePerSqmMonth) / ROUND_TO) * ROUND_TO);
+  const monthly = round5(listMonthly * PROMO_FACTOR);
   return {
     id: zone.code,
     code: zone.code,
@@ -61,6 +68,7 @@ function buildPackage(zone: Zone): PartnerPackage {
     heightCm,
     sizeLabel: `ca. ${widthCm} \u00d7 ${heightCm} cm`,
     monthly,
+    listMonthly,
     prices: buildPrices(monthly),
     setupFee: SETUP_FEE,
     zone,
