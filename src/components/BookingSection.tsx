@@ -101,6 +101,9 @@ export function BookingSection() {
   const [vehicleIdx, setVehicleIdx] = useState(0);
   const [busySlots, setBusySlots] = useState<BusySlot[]>([]);
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
+  const [pendingDocTypes, setPendingDocTypes] = useState<Set<string>>(new Set());
+  const [pendingUploading, setPendingUploading] = useState(false);
+  const [pendingUploadError, setPendingUploadError] = useState<string | null>(null);
 
   const toggleAddon = (id: string) => {
     setSelectedAddonIds((prev) =>
