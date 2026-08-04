@@ -1480,9 +1480,9 @@ export function BookingSection() {
                     className="mt-1"
                   />
                   <span className="text-sm text-foreground">
-                    <span className="font-bold block mb-1">Versicherung / Haftung erklärt und verstanden</span>
+                  <span className="font-bold block mb-1">Versicherung / Haftung erklärt und verstanden</span>
                     <span className="text-muted-foreground">
-                      Der Mieter bestätigt, dass das Mietfahrzeug keine Teilkasko und keine Vollkasko hat. Bei erheblichen selbstverschuldeten Schäden trägt der Mieter den tatsächlichen Fahrzeugschaden bis maximal 1.000,00 Euro pro Schadensfall. Ist der tatsächliche Schaden niedriger, wird nur der niedrigere Schaden berechnet. Notwendige, tatsächlich angefallene Nebenkosten, z. B. Gutachterkosten, Abschleppkosten, Bergungskosten, Standkosten oder behördliche Gebühren, kommen zusätzlich hinzu.
+                      Im Schadenfall trägt der Mieter bis zu 1.000,00 Euro maximale Selbstbeteiligung. Ist der Schaden geringer, trägt er nur diesen Schaden. Notwendige, tatsächlich angefallene Nebenkosten, z. B. Gutachterkosten, Abschleppkosten, Bergungskosten, Standkosten oder behördliche Gebühren, kommen zusätzlich hinzu.
                     </span>
                   </span>
                 </label>
