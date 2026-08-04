@@ -373,11 +373,20 @@ export function BookingSection() {
         },
       },
     });
-    setAuthLoading(false);
     if (error) {
-      setAuthError(error.message);
+      setAuthLoading(false);
+      const msg = /already registered|already been registered|User already/i.test(error.message)
+        ? "Diese E-Mail ist bereits registriert. Bitte melde dich mit deinem Passwort an."
+        : error.message;
+      setAuthError(msg);
+      if (/already/i.test(error.message)) {
+        setShowLogin(true);
+        setLoginForm({ email: regForm.email, password: "" });
+      }
       return;
     }
+    const alreadyRegistered =
+      !data.session && Array.isArray(data.user?.identities) && data.user!.identities!.length === 0;
     // Admin-Benachrichtigung über neue Registrierung (still im Hintergrund)
     import("@/lib/booking-emails.functions").then(({ sendAdminRegistrationNotification }) =>
       sendAdminRegistrationNotification({
@@ -392,23 +401,43 @@ export function BookingSection() {
         },
       }).catch((e) => console.warn("Admin-Registrierungs-Mail fehlgeschlagen:", e)),
     );
-    if (data.user && !data.session) {
-      // Kein Session-Objekt → direkt anmelden (Auto-Bestätigung aktiv)
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: regForm.email,
-        password: regPassword,
-      });
-      if (signInError) {
-        setSignupEmailSent(regForm.email);
-        setLoginForm({ email: regForm.email, password: "" });
-        return;
+    let session = data.session ?? null;
+    if (!session) {
+      // Kein Session-Objekt → direkt anmelden (Auto-Bestätigung aktiv).
+      // Kurzer Retry, falls das Konto serverseitig noch nicht bereit ist.
+      for (let attempt = 0; attempt < 3 && !session; attempt++) {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, 900));
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: regForm.email,
+          password: regPassword,
+        });
+        if (signInData?.session) {
+          session = signInData.session;
+          break;
+        }
+        if (signInError && /Email not confirmed/i.test(signInError.message)) break;
       }
-      setIsLoggedIn(true);
-      setProfileComplete(true);
-    } else if (data.session) {
-      setIsLoggedIn(true);
-      setProfileComplete(true);
     }
+    setAuthLoading(false);
+    if (!session) {
+      if (alreadyRegistered) {
+        setAuthError(
+          "Für diese E-Mail existiert schon ein Konto. Bitte melde dich mit deinem Passwort an.",
+        );
+      } else {
+        setAuthError(
+          "Dein Konto wurde erstellt, die automatische Anmeldung hat aber nicht funktioniert. Bitte melde dich einmal an – danach geht es direkt zur Zahlung weiter.",
+        );
+      }
+      setShowLogin(true);
+      setLoginForm({ email: regForm.email, password: "" });
+      return;
+    }
+    setIsLoggedIn(true);
+    setProfileComplete(true);
+    setAuthUser({ id: session.user.id, email: session.user.email ?? undefined });
+    setSignupEmailSent(null);
+    setShowLogin(false);
     // Willkommens-E-Mail (still im Hintergrund)
     import("@/lib/booking-emails.functions").then(({ sendWelcomeEmail }) =>
       sendWelcomeEmail({
