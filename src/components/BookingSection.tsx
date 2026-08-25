@@ -1554,7 +1554,7 @@ export function BookingSection() {
                       "mt_pending_booking",
                       JSON.stringify({
                         planId: selectedPlanEntry.id,
-                        planLabel: selectedPlanEntry.label,
+                        planLabel: planLabelWithClass(selectedPlanEntry),
                         planPrice: selectedPlanEntry.price,
                         startDate: format(date, "yyyy-MM-dd"),
                         startHour,
