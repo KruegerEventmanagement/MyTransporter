@@ -113,10 +113,23 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
 
       const stripe = createStripeClient(data.environment);
       const planId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;
-      const planEntry = getPlanById(planId);
+      // Fahrzeugklasse serverseitig bestimmen – sie entscheidet über den Preis
+      const vehicleClass = await resolveVehicleClass(
+        data.vehiclePlate,
+        data.vehicleName,
+        data.vehicleClass,
+      );
+      const planEntry = getPlanById(planId, vehicleClass);
       const plan = planEntry
-        ? { rent: planEntry.price * 100, label: `Transporter-Miete · ${planEntry.label}` }
-        : { rent: 0, label: "Transporter-Miete · Nur Kilometer (0,90 €/km)" };
+        ? { rent: planEntry.price * 100, label: `Transporter-Miete · ${planLabelWithClass(planEntry)}` }
+        : {
+            rent: KM_TARIFF_MIN_EUR[vehicleClass] * 100,
+            label: `Transporter-Miete · ${VEHICLE_CLASS_SHORT_LABEL[vehicleClass]} · Kilometer-Tarif (${(
+              KM_TARIFF_CENTS_PER_KM / 100
+            )
+              .toFixed(2)
+              .replace(".", ",")} €/km, Mindestbetrag ${KM_TARIFF_MIN_EUR[vehicleClass]} €)`,
+          };
 
     const line_items: Array<{
       price_data: {
