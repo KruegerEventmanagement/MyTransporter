@@ -73,7 +73,7 @@ function AgbPage() {
             <ul className="list-disc pl-5 space-y-1">
               <li>Verspätete Rückgabe: 25 € pro angefangene Stunde</li>
               <li>Rauchen im Fahrzeug: 100 € Reinigungsgebühr</li>
-              <li>Schäden am Fahrzeug werden in voller Höhe berechnet</li>
+              <li>Bei einfacher Fahrlässigkeit wird der tatsächlich entstandene Fahrzeugschaden berechnet, jedoch höchstens bis zur vereinbarten Selbstbeteiligung von 1.000 € pro Schadensfall. Die in § 9 genannten Ausnahmen bleiben unberührt.</li>
               <li>Nicht vollgetanktes Fahrzeug: Betankungskosten zzgl. 20 € Servicegebühr</li>
             </ul>
           </div>
