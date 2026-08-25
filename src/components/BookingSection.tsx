@@ -1583,6 +1583,7 @@ export function BookingSection() {
                           addonIds: selectedAddonIds,
                           vehiclePlate: displayVehicle.plate || null,
                           vehicleName: displayVehicle.name || null,
+                          vehicleClass,
                           startDate: date ? format(date, "yyyy-MM-dd") : undefined,
                           startHour: startHour ?? undefined,
                        },
