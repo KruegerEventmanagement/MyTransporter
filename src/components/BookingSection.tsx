@@ -229,6 +229,21 @@ export function BookingSection() {
     return nextFreeFrom(busyMap, plate, selectionWindow.start, selectionWindow.end);
   };
 
+  const currentVehicleUnavailable = currentPlate ? !isPlateAvailable(currentPlate) : false;
+
+  // Automatisch auf ein verfügbares Fahrzeug springen, sobald das Zeitfenster feststeht
+  useEffect(() => {
+    if (!selectionWindow || vehicles.length === 0) return;
+    const plate = vehicles[vehicleIdx]?.plate ?? "";
+    if (plate && isVehicleFree(busyMap, plate, selectionWindow.start, selectionWindow.end)) return;
+    const nextIdx = vehicles.findIndex(
+      (v) => v.plate && isVehicleFree(busyMap, v.plate, selectionWindow.start, selectionWindow.end),
+    );
+    if (nextIdx >= 0 && nextIdx !== vehicleIdx) setVehicleIdx(nextIdx);
+  }, [selectionWindow, busyMap, vehicles, vehicleIdx]);
+
+
+
 
   useEffect(() => {
     let alive = true;
