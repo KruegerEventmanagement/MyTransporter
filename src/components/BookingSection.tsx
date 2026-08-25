@@ -713,27 +713,11 @@ export function BookingSection() {
                 disabled={(d) => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
-                  if (d < today) return true;
-                  return fullyBookedDay(d);
-                }}
-                modifiers={{
-                  partly: (d) => {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    if (d < today || fullyBookedDay(d)) return false;
-                    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-                    return freeVehiclePlates(busyMap, allPlates, dayStart, dayStart + 24 * 3600_000).length
-                      < allPlates.length;
-                  },
-                }}
-                modifiersClassNames={{
-                  partly: "underline decoration-dotted decoration-2 underline-offset-4",
+                  return d < today;
                 }}
                 className="rounded-3xl border border-border p-8 shadow-lg pointer-events-auto text-lg [--cell-size:3.5rem]"
               />
-              <p className="mt-4 text-xs text-muted-foreground text-center">
-                Gestrichelt unterstrichene Tage: nur noch einzelne Fahrzeuge verfügbar. Welches Fahrzeug frei ist, siehst du nach der Tarifauswahl.
-              </p>
+
 
               {rangeFrom && !rangeTo && (
                 <p className="mt-4 text-sm text-muted-foreground text-center">
