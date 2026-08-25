@@ -176,7 +176,7 @@ const SEO_BLOCKS = [
   },
   {
     h: "Preise & Kaution, alles transparent",
-    p: "3 Stunden für 49 € (100 Freikilometer), 6 Stunden für 69 € (200 Freikilometer), 24 Stunden für 99 € (300 Freikilometer) oder 129 € für die Langstrecke (500 Freikilometer). Mehrtagestarife: 2 Tage 169 €, 3 Tage 229 €, 4 Tage 299 €, 5 Tage 359 €, 6 Tage 409 €, 7 Tage 459 €. Alternativ reine Kilometer-Abrechnung zu 0,90 € / km. Mehrkilometer kosten 0,39 € (ab 2 Tagen 0,35 €, Wochenmiete 0,29 €). Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer und vollgetankter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
+    p: "Preise für den kurzen L1H1, der lange L4H2 kostet jeweils 10 € mehr: 3 Stunden 49 € (100 km), 6 Stunden 69 € (200 km), 24 Stunden 99 € (300 km), 179 € (500 km) oder 289 € (800 km). Mehrtagestarife: 2 Tage 249 €, 3 Tage 349 €, 4 Tage 429 €, 5 Tage 499 €, 6 Tage 549 €, 7 Tage 599 €. Alternativ reine Kilometer-Abrechnung zu 0,90 € / km (Mindestbetrag 100 € bzw. 110 €). Mehrkilometer kosten 0,39 € (ab 2 Tagen 0,35 €, Wochenmiete 0,29 €). Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer und vollgetankter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
   },
   {
     h: "Ablauf der Vermietung",
