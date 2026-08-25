@@ -21,11 +21,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
 import {
   slotsByPlate,
-  isAnyVehicleFreeOnDay,
-  freeVehiclePlates,
   isVehicleFree,
   nextFreeFrom,
 } from "@/lib/availability-logic";
+
 import { computePlanReturn, getPlanById, getAvailablePlans, DEPOSIT_EUR } from "@/lib/booking-rules";
 import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot } from "@/lib/addons";
 import { AddonPackageCard } from "./AddonPackageCard";
