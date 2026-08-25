@@ -28,6 +28,29 @@ function assertStripeEnvironment(environment: StripeEnv) {
 
 const REQUIRED_DOC_TYPES = ["id_front", "id_back", "license_front", "license_back"] as const;
 
+/**
+ * Ermittelt die Fahrzeugklasse serverseitig verlässlich: primär aus der
+ * Fahrzeug-Tabelle (Kennzeichen), erst danach aus den übergebenen Angaben.
+ * Der Browser kann dadurch keinen günstigeren Preis erzwingen.
+ */
+async function resolveVehicleClass(
+  plate?: string | null,
+  name?: string | null,
+  hint?: unknown,
+): Promise<VehicleClass> {
+  if (plate) {
+    const { data } = await supabaseAdmin
+      .from("vehicles")
+      .select("name, model, plate")
+      .eq("plate", plate)
+      .maybeSingle();
+    if (data) return vehicleClassFromName(data.name, data.model, data.plate);
+  }
+  if (name) return vehicleClassFromName(name);
+  if (isVehicleClass(hint)) return hint;
+  return "l1h1";
+}
+
 export const createBookingCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: {
@@ -39,6 +62,7 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     addonIds?: string[];
     vehiclePlate?: string | null;
     vehicleName?: string | null;
+    vehicleClass?: VehicleClass;
     startDate?: string;
     startHour?: number;
   }) => {
