@@ -491,10 +491,10 @@ export function BookingSection() {
   const canProceedStep0 = rangeFrom !== undefined && rangeTo !== undefined;
   const canProceedStep1 = startHour !== null && selectedPlanId !== null;
 
-  // Tarife passend zur gewählten Nächtezahl + Startstunde
-  const availablePlans = getAvailablePlans(nights, startHour);
+  // Tarife passend zur gewählten Nächtezahl + Startstunde + Fahrzeugklasse
+  const availablePlans = getAvailablePlans(nights, startHour, vehicleClass);
 
-  const selectedPlanEntry = selectedPlanId ? getPlanById(selectedPlanId) : null;
+  const selectedPlanEntry = selectedPlanId ? getPlanById(selectedPlanId, vehicleClass) : null;
 
   // Return info for selected plan
   const getReturnInfo = () => {
