@@ -11,6 +11,8 @@ import { createBookingHold, releaseBookingHold } from "@/lib/booking-holds.funct
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
+import jumperL1H1 from "@/assets/citroen-jumper-l1h1.jpg";
+
 import { DocumentScanner } from "./DocumentScanner";
 import { PreDriveFlow } from "./PreDriveFlow";
 import { ActiveDriveScreen } from "./ActiveDriveScreen";
@@ -19,11 +21,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
 import {
   slotsByPlate,
-  isAnyVehicleFreeOnDay,
-  freeVehiclePlates,
   isVehicleFree,
   nextFreeFrom,
 } from "@/lib/availability-logic";
+
 import { computePlanReturn, getPlanById, getAvailablePlans, DEPOSIT_EUR } from "@/lib/booking-rules";
 import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot } from "@/lib/addons";
 import { AddonPackageCard } from "./AddonPackageCard";
@@ -36,6 +37,12 @@ import {
 } from "@/lib/pending-documents";
 
 const DEPOSIT = DEPOSIT_EUR;
+
+/** Standardbild, wenn im Fahrzeug kein eigenes Foto hinterlegt ist. */
+function fallbackPhotoFor(name?: string | null) {
+  return (name ?? "").toLowerCase().includes("l1h1") ? jumperL1H1 : fiatDucato;
+}
+
 
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8:00 - 20:00 (letzte Buchung 20 Uhr)
 
@@ -133,7 +140,7 @@ export function BookingSection() {
 
   const currentPlate = vehicles[vehicleIdx]?.plate ?? "";
   const busyMap = useMemo(() => slotsByPlate(busySlots), [busySlots]);
-  const allPlates = useMemo(() => vehicles.map((v) => v.plate ?? ""), [vehicles]);
+  
 
   // Convenience: range start/end + Nächtezahl
   // Wichtig: 1 Nacht = 1 Tag. Selber Tag (0 Nächte) = Tagesmiete (<24h).
@@ -144,13 +151,6 @@ export function BookingSection() {
   const rangeDays = nights; // semantisch = Nächte
   const date = rangeFrom; // bestehender Code unten verwendet `date` als Startdatum
 
-  // Tage, an denen KEIN Fahrzeug mehr frei ist
-  const fullyBookedDay = (d: Date) => {
-    if (allPlates.length === 0) return false;
-    return !isAnyVehicleFreeOnDay(busyMap, allPlates, d);
-  };
-
-
   const handleRangeSelect = (next: { from?: Date; to?: Date } | undefined) => {
     if (!next?.from) {
       setRange(undefined);
@@ -158,54 +158,15 @@ export function BookingSection() {
       setSelectedPlanId(null);
       return;
     }
-    // Wenn ein Range gewählt wurde, prüfen ob ein Tag drin komplett belegt ist
     if (next.to) {
       const start = next.from < next.to ? next.from : next.to;
       const end = next.from < next.to ? next.to : next.from;
-      const cursor = new Date(start);
-      while (cursor.getTime() <= end.getTime()) {
-        if (fullyBookedDay(cursor)) {
-          // Ungültig → nur Startdatum übernehmen
-          setRange({ from: next.from, to: undefined });
-          setStartHour(null);
-          setSelectedPlanId(null);
-          return;
-        }
-        cursor.setDate(cursor.getDate() + 1);
-      }
       setRange({ from: start, to: end });
     } else {
       setRange({ from: next.from, to: undefined });
     }
     setStartHour(null);
     setSelectedPlanId(null);
-  };
-
-  /** Kennzeichen, die im Zeitfenster [startMs, startMs+hours) frei sind */
-  const freePlatesFor = (startMs: number, hours: number) =>
-    freeVehiclePlates(busyMap, allPlates, startMs, startMs + hours * 3600_000);
-
-  const isHourBusy = (d: Date, h: number) => {
-    if (allPlates.length === 0) return false;
-    const start = new Date(d);
-    start.setHours(h, 0, 0, 0);
-    // Belegt nur, wenn KEIN Fahrzeug zu dieser Startzeit frei ist
-    return freePlatesFor(start.getTime(), 1).length === 0;
-  };
-
-  const planDurationHoursForOverlap = (planId: string) => {
-    if (!date || startHour === null) return 0;
-    const start = new Date(date);
-    start.setHours(startHour, 0, 0, 0);
-    const end = computePlanReturn(planId, date, startHour);
-    return (end.getTime() - start.getTime()) / 3600_000;
-  };
-
-  const isPlanBlocked = (planId: string) => {
-    if (!date || startHour === null || allPlates.length === 0) return false;
-    const start = new Date(date);
-    start.setHours(startHour, 0, 0, 0);
-    return freePlatesFor(start.getTime(), planDurationHoursForOverlap(planId)).length === 0;
   };
 
   // Zeitfenster der aktuellen Auswahl (für Fahrzeug-Verfügbarkeit)
@@ -229,16 +190,6 @@ export function BookingSection() {
 
   const currentVehicleUnavailable = currentPlate ? !isPlateAvailable(currentPlate) : false;
 
-  // Automatisch auf ein verfügbares Fahrzeug springen, sobald das Zeitfenster feststeht
-  useEffect(() => {
-    if (!selectionWindow || vehicles.length === 0) return;
-    const plate = vehicles[vehicleIdx]?.plate ?? "";
-    if (plate && isVehicleFree(busyMap, plate, selectionWindow.start, selectionWindow.end)) return;
-    const nextIdx = vehicles.findIndex(
-      (v) => v.plate && isVehicleFree(busyMap, v.plate, selectionWindow.start, selectionWindow.end),
-    );
-    if (nextIdx >= 0 && nextIdx !== vehicleIdx) setVehicleIdx(nextIdx);
-  }, [selectionWindow, busyMap, vehicles, vehicleIdx]);
 
 
 
@@ -263,7 +214,7 @@ export function BookingSection() {
     ? {
         name: currentVehicle.name || `${currentVehicle.brand ?? ""} ${currentVehicle.model ?? ""}`.trim() || "Fahrzeug",
         plate: currentVehicle.plate || "-",
-        photo: currentVehicle.photo_urls?.[0] ?? fiatDucato,
+        photo: currentVehicle.photo_urls?.[0] ?? fallbackPhotoFor(currentVehicle.name),
         fuel: currentVehicle.fuel_type ?? VEHICLE.fuel,
         payload: currentVehicle.payload_kg ? `${currentVehicle.payload_kg.toLocaleString("de-DE")} kg` : VEHICLE.payload,
         seats: currentVehicle.seats,
@@ -713,27 +664,11 @@ export function BookingSection() {
                 disabled={(d) => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
-                  if (d < today) return true;
-                  return fullyBookedDay(d);
-                }}
-                modifiers={{
-                  partly: (d) => {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    if (d < today || fullyBookedDay(d)) return false;
-                    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-                    return freeVehiclePlates(busyMap, allPlates, dayStart, dayStart + 24 * 3600_000).length
-                      < allPlates.length;
-                  },
-                }}
-                modifiersClassNames={{
-                  partly: "underline decoration-dotted decoration-2 underline-offset-4",
+                  return d < today;
                 }}
                 className="rounded-3xl border border-border p-8 shadow-lg pointer-events-auto text-lg [--cell-size:3.5rem]"
               />
-              <p className="mt-4 text-xs text-muted-foreground text-center">
-                Gestrichelt unterstrichene Tage: nur noch einzelne Fahrzeuge verfügbar. Welches Fahrzeug frei ist, siehst du nach der Tarifauswahl.
-              </p>
+
 
               {rangeFrom && !rangeTo && (
                 <p className="mt-4 text-sm text-muted-foreground text-center">
@@ -796,12 +731,11 @@ export function BookingSection() {
                       {canStartNow && (
                         <button
                           onClick={() => setStartHour(currentHour)}
-                          disabled={isHourBusy(d, currentHour)}
                           className={`mb-3 w-full py-3 px-4 rounded-xl text-sm font-bold transition-all ${
                             startHour === currentHour
                               ? "bg-accent text-accent-foreground shadow-md"
                               : "bg-foreground text-background hover:opacity-90"
-                          } disabled:opacity-30 disabled:cursor-not-allowed disabled:line-through`}
+                          }`}
                         >
                           Jetzt sofort starten ({String(currentHour).padStart(2, "0")}:
                           {String(now.getMinutes()).padStart(2, "0")} Uhr)
@@ -809,28 +743,22 @@ export function BookingSection() {
                       )}
                       {visibleHours.length > 0 ? (
                         <div className="grid grid-cols-5 gap-2">
-                          {visibleHours.map((h) => {
-                            const busy = isHourBusy(d, h);
-                            return (
-                              <button
-                                key={h}
-                                onClick={() => { setStartHour(h); setSelectedPlanId(null); }}
-                                disabled={busy}
-                                title={busy ? "Bereits gebucht" : undefined}
-                                className={`py-2 px-3 rounded-xl text-sm font-medium transition-all ${
-                                  startHour === h
-                                    ? "bg-accent text-accent-foreground shadow-md"
-                                    : busy
-                                    ? "bg-secondary/40 text-muted-foreground line-through cursor-not-allowed"
-                                    : "bg-secondary text-foreground hover:bg-accent/20"
-                                }`}
-                              >
-                                {h}:00
-                              </button>
-                            );
-                          })}
+                          {visibleHours.map((h) => (
+                            <button
+                              key={h}
+                              onClick={() => { setStartHour(h); setSelectedPlanId(null); }}
+                              className={`py-2 px-3 rounded-xl text-sm font-medium transition-all ${
+                                startHour === h
+                                  ? "bg-accent text-accent-foreground shadow-md"
+                                  : "bg-secondary text-foreground hover:bg-accent/20"
+                              }`}
+                            >
+                              {h}:00
+                            </button>
+                          ))}
                         </div>
                       ) : (
+
                         !canStartNow && (
                           <p className="text-xs text-muted-foreground text-center py-4">
                             Leider ist für heute nichts mehr verfügbar, bitte einen anderen Tag wählen.
@@ -848,21 +776,17 @@ export function BookingSection() {
                 <p className="text-center text-muted-foreground text-lg mt-10 mb-6">Wähle deinen Tarif</p>
                 <div className="space-y-4">
                   {availablePlans.map((plan) => {
-                const blocked = isPlanBlocked(plan.id);
                 return (
                 <button
                   key={plan.id}
-                  onClick={() => !blocked && setSelectedPlanId(plan.id)}
-                  disabled={blocked}
-                  title={blocked ? "Zeitraum überschneidet sich mit einer bestehenden Buchung" : undefined}
+                  onClick={() => setSelectedPlanId(plan.id)}
                   className={`w-full p-6 rounded-2xl border-2 text-left transition-all ${
                     selectedPlanId === plan.id
                       ? "border-accent bg-accent/5 shadow-md"
-                      : blocked
-                      ? "border-border opacity-40 cursor-not-allowed"
                       : "border-border hover:border-accent/50"
                   }`}
                 >
+
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -876,9 +800,6 @@ export function BookingSection() {
                       <p className="text-sm text-muted-foreground">{plan.returnRule}</p>
                       {plan.freeKm > 0 && (
                         <p className="text-xs text-foreground/80 mt-1">{plan.freeKm.toLocaleString("de-DE")} km inklusive · danach {(plan.extraKmCents / 100).toFixed(2).replace(".", ",")} €/km</p>
-                      )}
-                      {blocked && (
-                        <p className="text-xs text-destructive mt-1">In diesem Zeitraum bereits gebucht</p>
                       )}
                     </div>
                     <p className="text-2xl font-bold text-foreground whitespace-nowrap">{plan.price} €</p>
@@ -997,22 +918,25 @@ export function BookingSection() {
                   </div>
                   {currentVehicleUnavailable && (
                     <div className="mb-4 rounded-xl border border-border bg-secondary p-3 text-sm">
-                      <p className="font-semibold text-foreground">In diesem Zeitraum nicht verfügbar</p>
+                      <p className="font-semibold text-foreground">
+                        {selectionWindow
+                          ? `Dieser Transporter ist am ${format(new Date(selectionWindow.start), "dd.MM.yyyy", { locale: de })} von ${format(new Date(selectionWindow.start), "HH:mm")} bis ${format(new Date(selectionWindow.end), "HH:mm")} Uhr nicht verfügbar.`
+                          : "In diesem Zeitraum nicht verfügbar"}
+                      </p>
                       {(() => {
                         const freeAt = plateFreeAgainAt(currentPlate);
                         return freeAt ? (
                           <p className="text-muted-foreground">
-                            Wieder frei ab {format(new Date(freeAt), "dd.MM.yyyy, HH:mm", { locale: de })} Uhr
+                            Wieder verfügbar ab {format(new Date(freeAt), "dd.MM.yyyy, HH:mm", { locale: de })} Uhr
                           </p>
                         ) : null;
                       })()}
-                      {vehicles.length > 1 && (
-                        <p className="text-muted-foreground mt-1">
-                          Bitte ein anderes Fahrzeug wählen oder Zeitraum anpassen.
-                        </p>
-                      )}
+                      <p className="text-muted-foreground mt-1">
+                        Bitte ein anderes Fahrzeug wählen oder eine andere Uhrzeit bzw. ein anderes Datum auswählen.
+                      </p>
                     </div>
                   )}
+
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground">Kraftstoff</p>
@@ -1060,11 +984,10 @@ export function BookingSection() {
                         <button
                           key={v.plate ?? i}
                           type="button"
-                          disabled={!free}
                           onClick={() => setVehicleIdx(i)}
-                          className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition-all ${
+                          className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition-all hover:bg-secondary ${
                             i === vehicleIdx ? "border-foreground" : "border-border"
-                          } ${free ? "hover:bg-secondary" : "opacity-50 cursor-not-allowed line-through"}`}
+                          } ${free ? "" : "opacity-60"}`}
                         >
                           <span className="font-medium text-foreground">{v.name}</span>
                           <span className="text-muted-foreground">
@@ -1074,6 +997,7 @@ export function BookingSection() {
                       );
                     })}
                   </div>
+
                 </>
               )}
             </div>
