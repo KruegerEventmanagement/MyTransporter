@@ -39,6 +39,12 @@ import {
 
 const DEPOSIT = DEPOSIT_EUR;
 
+/** Standardbild, wenn im Fahrzeug kein eigenes Foto hinterlegt ist. */
+function fallbackPhotoFor(name?: string | null) {
+  return (name ?? "").toLowerCase().includes("l1h1") ? jumperL1H1 : fiatDucato;
+}
+
+
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8:00 - 20:00 (letzte Buchung 20 Uhr)
 
 const VEHICLE = {
