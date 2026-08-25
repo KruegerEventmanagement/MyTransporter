@@ -1060,11 +1060,10 @@ export function BookingSection() {
                         <button
                           key={v.plate ?? i}
                           type="button"
-                          disabled={!free}
                           onClick={() => setVehicleIdx(i)}
-                          className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition-all ${
+                          className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition-all hover:bg-secondary ${
                             i === vehicleIdx ? "border-foreground" : "border-border"
-                          } ${free ? "hover:bg-secondary" : "opacity-50 cursor-not-allowed line-through"}`}
+                          } ${free ? "" : "opacity-60"}`}
                         >
                           <span className="font-medium text-foreground">{v.name}</span>
                           <span className="text-muted-foreground">
@@ -1074,6 +1073,7 @@ export function BookingSection() {
                       );
                     })}
                   </div>
+
                 </>
               )}
             </div>
