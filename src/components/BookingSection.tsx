@@ -873,9 +873,6 @@ export function BookingSection() {
                       {plan.freeKm > 0 && (
                         <p className="text-xs text-foreground/80 mt-1">{plan.freeKm.toLocaleString("de-DE")} km inklusive · danach {(plan.extraKmCents / 100).toFixed(2).replace(".", ",")} €/km</p>
                       )}
-                      {blocked && (
-                        <p className="text-xs text-destructive mt-1">In diesem Zeitraum bereits gebucht</p>
-                      )}
                     </div>
                     <p className="text-2xl font-bold text-foreground whitespace-nowrap">{plan.price} €</p>
                   </div>
