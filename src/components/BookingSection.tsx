@@ -1131,7 +1131,8 @@ export function BookingSection() {
               </button>
               <button
                 onClick={() => setStep(registrationComplete && docsReady ? 5 : 3)}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg"
+                disabled={currentVehicleUnavailable}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 Buchen & bezahlen <ChevronRight className="w-5 h-5" />
               </button>
