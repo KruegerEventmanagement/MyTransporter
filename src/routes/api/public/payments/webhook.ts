@@ -1,7 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyWebhook, type StripeEnv } from "@/lib/stripe.server";
-import { getPlanById } from "@/lib/booking-rules";
+import {
+  getPlanById,
+  planLabelWithClass,
+  vehicleClassFromName,
+  isVehicleClass,
+  KM_TARIFF_CENTS_PER_KM,
+  KM_TARIFF_MIN_EUR,
+  type VehicleClass,
+} from "@/lib/booking-rules";
 import { buildAddonSnapshot } from "@/lib/addons";
 import { sendBookingConfirmation, sendAdminBookingNotification } from "@/lib/booking-emails.functions";
 
