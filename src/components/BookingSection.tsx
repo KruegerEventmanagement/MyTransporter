@@ -144,13 +144,6 @@ export function BookingSection() {
   const rangeDays = nights; // semantisch = Nächte
   const date = rangeFrom; // bestehender Code unten verwendet `date` als Startdatum
 
-  // Tage, an denen KEIN Fahrzeug mehr frei ist
-  const fullyBookedDay = (d: Date) => {
-    if (allPlates.length === 0) return false;
-    return !isAnyVehicleFreeOnDay(busyMap, allPlates, d);
-  };
-
-
   const handleRangeSelect = (next: { from?: Date; to?: Date } | undefined) => {
     if (!next?.from) {
       setRange(undefined);
@@ -158,54 +151,15 @@ export function BookingSection() {
       setSelectedPlanId(null);
       return;
     }
-    // Wenn ein Range gewählt wurde, prüfen ob ein Tag drin komplett belegt ist
     if (next.to) {
       const start = next.from < next.to ? next.from : next.to;
       const end = next.from < next.to ? next.to : next.from;
-      const cursor = new Date(start);
-      while (cursor.getTime() <= end.getTime()) {
-        if (fullyBookedDay(cursor)) {
-          // Ungültig → nur Startdatum übernehmen
-          setRange({ from: next.from, to: undefined });
-          setStartHour(null);
-          setSelectedPlanId(null);
-          return;
-        }
-        cursor.setDate(cursor.getDate() + 1);
-      }
       setRange({ from: start, to: end });
     } else {
       setRange({ from: next.from, to: undefined });
     }
     setStartHour(null);
     setSelectedPlanId(null);
-  };
-
-  /** Kennzeichen, die im Zeitfenster [startMs, startMs+hours) frei sind */
-  const freePlatesFor = (startMs: number, hours: number) =>
-    freeVehiclePlates(busyMap, allPlates, startMs, startMs + hours * 3600_000);
-
-  const isHourBusy = (d: Date, h: number) => {
-    if (allPlates.length === 0) return false;
-    const start = new Date(d);
-    start.setHours(h, 0, 0, 0);
-    // Belegt nur, wenn KEIN Fahrzeug zu dieser Startzeit frei ist
-    return freePlatesFor(start.getTime(), 1).length === 0;
-  };
-
-  const planDurationHoursForOverlap = (planId: string) => {
-    if (!date || startHour === null) return 0;
-    const start = new Date(date);
-    start.setHours(startHour, 0, 0, 0);
-    const end = computePlanReturn(planId, date, startHour);
-    return (end.getTime() - start.getTime()) / 3600_000;
-  };
-
-  const isPlanBlocked = (planId: string) => {
-    if (!date || startHour === null || allPlates.length === 0) return false;
-    const start = new Date(date);
-    start.setHours(startHour, 0, 0, 0);
-    return freePlatesFor(start.getTime(), planDurationHoursForOverlap(planId)).length === 0;
   };
 
   // Zeitfenster der aktuellen Auswahl (für Fahrzeug-Verfügbarkeit)
@@ -229,16 +183,6 @@ export function BookingSection() {
 
   const currentVehicleUnavailable = currentPlate ? !isPlateAvailable(currentPlate) : false;
 
-  // Automatisch auf ein verfügbares Fahrzeug springen, sobald das Zeitfenster feststeht
-  useEffect(() => {
-    if (!selectionWindow || vehicles.length === 0) return;
-    const plate = vehicles[vehicleIdx]?.plate ?? "";
-    if (plate && isVehicleFree(busyMap, plate, selectionWindow.start, selectionWindow.end)) return;
-    const nextIdx = vehicles.findIndex(
-      (v) => v.plate && isVehicleFree(busyMap, v.plate, selectionWindow.start, selectionWindow.end),
-    );
-    if (nextIdx >= 0 && nextIdx !== vehicleIdx) setVehicleIdx(nextIdx);
-  }, [selectionWindow, busyMap, vehicles, vehicleIdx]);
 
 
 
