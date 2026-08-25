@@ -4,7 +4,16 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createStripeClient, getStripeErrorMessage, type StripeEnv } from "@/lib/stripe.server";
 
-import { getPlanById } from "@/lib/booking-rules";
+import {
+  getPlanById,
+  planLabelWithClass,
+  vehicleClassFromName,
+  isVehicleClass,
+  KM_TARIFF_CENTS_PER_KM,
+  KM_TARIFF_MIN_EUR,
+  VEHICLE_CLASS_SHORT_LABEL,
+  type VehicleClass,
+} from "@/lib/booking-rules";
 import { getAddonById } from "@/lib/addons";
 
 const DEPOSIT_CENTS = 200_00;
