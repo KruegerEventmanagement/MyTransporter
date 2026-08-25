@@ -77,19 +77,25 @@ async function reconcileBooking(session: StripeCheckoutSession) {
     return;
   }
 
-  const planEntry = getPlanById(planId);
-  const planLabel = planEntry?.label ?? md.plan ?? "Transporter-Miete";
-  const planPrice = planEntry?.price ?? 0;
-  const freeKm = planEntry?.freeKm ?? 0;
-  const kmPriceCents = planEntry?.extraKmCents ?? 90;
-
   // Fahrzeug-Fallback aus DB, falls Metadata nichts enthält
   let resolvedName = vehicleName;
   let resolvedPlate = vehiclePlate;
+  let resolvedModel: string | null = null;
+  if (resolvedPlate) {
+    const { data: byPlate } = await supabaseAdmin
+      .from("vehicles")
+      .select("name, model, plate")
+      .eq("plate", resolvedPlate)
+      .maybeSingle();
+    if (byPlate) {
+      resolvedName = (byPlate.name as string) || resolvedName;
+      resolvedModel = (byPlate.model as string | null) ?? null;
+    }
+  }
   if (!resolvedName || !resolvedPlate) {
     const { data: activeVehicle } = await supabaseAdmin
       .from("vehicles")
-      .select("name, plate")
+      .select("name, model, plate")
       .eq("is_active", true)
       .order("created_at", { ascending: true })
       .limit(1)
@@ -97,8 +103,23 @@ async function reconcileBooking(session: StripeCheckoutSession) {
     if (activeVehicle) {
       resolvedName = resolvedName ?? (activeVehicle.name as string);
       resolvedPlate = resolvedPlate ?? (activeVehicle.plate as string);
+      resolvedModel = resolvedModel ?? ((activeVehicle.model as string | null) ?? null);
     }
   }
+
+  // Fahrzeugklasse steuert den Preis – aus DB-Fahrzeug, sonst aus Metadata
+  const metaClass = md.vehicleClass as string | undefined;
+  const vehicleClass: VehicleClass = resolvedName
+    ? vehicleClassFromName(resolvedName, resolvedModel, resolvedPlate)
+    : isVehicleClass(metaClass)
+      ? metaClass
+      : "l1h1";
+
+  const planEntry = getPlanById(planId, vehicleClass);
+  const planLabel = planEntry ? planLabelWithClass(planEntry) : (md.plan ?? "Transporter-Miete");
+  const planPrice = planEntry?.price ?? KM_TARIFF_MIN_EUR[vehicleClass];
+  const freeKm = planEntry?.freeKm ?? 0;
+  const kmPriceCents = planEntry?.extraKmCents ?? KM_TARIFF_CENTS_PER_KM;
 
   const addons = buildAddonSnapshot(addonIds);
   const addonsTotalCents = addons.reduce((s, a) => s + a.price_cents, 0);
