@@ -188,6 +188,7 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
             userId: context.userId,
             plan: data.plan,
             planId,
+            vehicleClass,
             ...(data.startDate && { startDate: data.startDate }),
             ...(typeof data.startHour === "number" && { startHour: String(data.startHour) }),
             ...(data.vehicleName && { vehicleName: String(data.vehicleName).slice(0, 200) }),
