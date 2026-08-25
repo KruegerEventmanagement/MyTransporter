@@ -232,7 +232,23 @@ export function BookingSection() {
         power: currentVehicle.power_kw,
       }
     : { name: "", plate: "", photo: fiatDucato, fuel: VEHICLE.fuel, payload: VEHICLE.payload, seats: null as number | null, power: null as number | null };
+
+  // Fahrzeugklasse des aktuell gewählten Transporters – steuert den Preis
+  const vehicleClass: VehicleClass = vehicleClassFromName(
+    currentVehicle?.name,
+    currentVehicle?.model,
+    currentVehicle?.plate,
+  );
+  const classOfVehicle = (v: DbVehicle): VehicleClass =>
+    vehicleClassFromName(v.name, v.model, v.plate);
+  const availableClasses = Array.from(new Set(vehicles.map(classOfVehicle)));
+  const selectVehicleClass = (cls: VehicleClass) => {
+    const idx = vehicles.findIndex((v) => classOfVehicle(v) === cls);
+    if (idx >= 0) setVehicleIdx(idx);
+  };
+
   const registrationComplete = isLoggedIn || profileComplete;
+
 
   // Tick clock every second while a confirmation is pending so the cooldown updates live
   useEffect(() => {
