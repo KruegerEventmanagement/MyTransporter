@@ -52,7 +52,7 @@ export function InstallBanner() {
     const ua = window.navigator.userAgent;
     const p = detectPlatform(ua);
     setPlatform(p);
-    setVisible(true);
+    const showTimer = window.setTimeout(() => setVisible(true), 1200);
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -67,6 +67,7 @@ export function InstallBanner() {
     window.addEventListener("appinstalled", installed);
 
     return () => {
+      window.clearTimeout(showTimer);
       window.removeEventListener("beforeinstallprompt", handler);
       window.removeEventListener("appinstalled", installed);
     };
@@ -91,45 +92,39 @@ export function InstallBanner() {
 
   if (!visible) return null;
 
-  const subtitle =
-    platform === "ios-safari"
-      ? "Tippe auf Anleitung — in wenigen Schritten installiert"
-      : platform === "ios-other"
-      ? "Auf iPhone bitte in Safari öffnen"
-      : "Schneller Zugriff direkt vom Homescreen";
-
-  const buttonLabel = prompt ? "Installieren" : "Anleitung";
+  const hint =
+    platform === "ios-other" ? "In Safari öffnen" : "Auf dem Homescreen speichern";
 
   return (
     <>
-    <div className="sticky top-0 z-50 bg-foreground text-background px-4 py-2.5 flex items-center gap-3 shadow-md">
-      <div className="w-8 h-8 rounded-lg bg-background/10 flex items-center justify-center shrink-0">
-        <Download className="w-4 h-4" />
+      <div className="fixed left-3 top-14 z-40 animate-install-pop-in">
+        <div className="flex items-center gap-2 rounded-2xl bg-foreground py-2 pl-2 pr-1.5 text-background animate-install-pulse">
+          <button
+            onClick={handleInstall}
+            className="flex items-center gap-2 text-left active:scale-[0.98] transition-transform"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-background/15">
+              <Download className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[13px] font-bold leading-tight">App installieren</span>
+              <span className="block text-[10px] leading-tight opacity-75">{hint}</span>
+            </span>
+          </button>
+          <button
+            onClick={handleDismiss}
+            aria-label="Hinweis schließen"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-background/15"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold leading-tight">Als App installieren</p>
-        <p className="text-[11px] opacity-80 leading-tight mt-0.5 truncate">
-          {subtitle}
-        </p>
-      </div>
-      <button
-        onClick={handleInstall}
-        className="rounded-full bg-background text-foreground px-3 py-1.5 text-xs font-bold shrink-0"
-      >
-        {buttonLabel}
-      </button>
-      <button
-        onClick={handleDismiss}
-        aria-label="Schließen"
-        className="w-7 h-7 rounded-full hover:bg-background/10 flex items-center justify-center shrink-0"
-      >
-        <X className="w-4 h-4" />
-      </button>
-    </div>
-    <InstallGuide platform={platform} open={guideOpen} onOpenChange={setGuideOpen} />
+      <InstallGuide platform={platform} open={guideOpen} onOpenChange={setGuideOpen} />
     </>
   );
 }
+
 
 function InstallGuide({
   platform,
