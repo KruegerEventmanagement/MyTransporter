@@ -72,8 +72,8 @@ export function TariffSection() {
               Mehrtagestarife für Umzug, Renovierung &amp; Projekte
             </h3>
             <p className="mt-2 text-sm text-muted-foreground max-w-2xl mx-auto">
-              Wenn ein Tag nicht reicht: Buche den großen L4H2-Transporter einfach mehrere Tage
-              und profitiere von günstigeren Tagespreisen.
+              Wenn ein Tag nicht reicht: Buche einen Transporter einfach mehrere Tage
+              und profitiere von günstigeren Tagespreisen. Preise L1H1 / L4H2.
             </p>
           </div>
 
@@ -82,7 +82,7 @@ export function TariffSection() {
               <thead className="bg-secondary text-foreground">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold">Tarif</th>
-                  <th className="text-right px-4 py-3 font-semibold">Preis</th>
+                  <th className="text-right px-4 py-3 font-semibold">L1H1 / L4H2</th>
                   <th className="text-right px-4 py-3 font-semibold hidden sm:table-cell">Inklusive km</th>
                   <th className="text-right px-4 py-3 font-semibold">pro Tag</th>
                   <th className="px-2 py-3"></th>
@@ -105,7 +105,10 @@ export function TariffSection() {
                           <p className="text-xs text-muted-foreground mt-1 hidden md:block">{plan.idealFor}</p>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right font-bold text-foreground whitespace-nowrap">{plan.price} €</td>
+                      <td className="px-4 py-3 text-right font-bold text-foreground whitespace-nowrap">
+                        {plan.price} € / {plan.price + L4H2_SURCHARGE_EUR} €
+                      </td>
+
                       <td className="px-4 py-3 text-right text-muted-foreground whitespace-nowrap hidden sm:table-cell">
                         {plan.freeKm.toLocaleString("de-DE")} km
                       </td>
