@@ -11,6 +11,8 @@ import { createBookingHold, releaseBookingHold } from "@/lib/booking-holds.funct
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
 import fiatDucato from "@/assets/fiat-ducato.jpg";
+import jumperL1H1 from "@/assets/citroen-jumper-l1h1.jpg";
+
 import { DocumentScanner } from "./DocumentScanner";
 import { PreDriveFlow } from "./PreDriveFlow";
 import { ActiveDriveScreen } from "./ActiveDriveScreen";
