@@ -58,13 +58,14 @@ function fallbackPhotoFor(name?: string | null) {
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8:00 - 20:00 (letzte Buchung 20 Uhr)
 
 const VEHICLE = {
-  name: "Fiat Ducato L4H2",
-  plate: "B-MT 1234",
-  km: 42850,
+  name: "Citroën Jumper",
+  plate: "",
+  km: 0,
   fuel: "Diesel",
   payload: "1.200 kg",
-  length: "6,36 m",
+  length: "5,40 – 6,36 m",
 };
+
 
 type DbVehicle = {
   id: string;
