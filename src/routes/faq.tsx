@@ -35,11 +35,11 @@ const FAQS = [
   },
   {
     q: "Ist im Preis eine Versicherung enthalten?",
-    a: "Ja, der Transporter ist haftpflicht- und vollkaskoversichert (mit Selbstbeteiligung). Du fährst rundum abgesichert los.",
+    a: "Die Fahrzeuge sind versichert. Im Schadenfall trägt der Mieter bis zu 1.000,00 € maximale Selbstbeteiligung. Ist der Schaden geringer, trägt er nur diesen geringeren Schaden. Die Ausnahmen aus § 9 der AGB (z. B. grobe Fahrlässigkeit, Alkohol, Falschbetankung) bleiben unberührt.",
   },
   {
     q: "Muss ich vollgetankt zurückgeben?",
-    a: "Der Transporter muss mit dem gleichen Tankstand zurückgegeben werden, mit dem du ihn übernommen hast. Den Tankbeleg lädst du einfach in der App hoch.",
+    a: "Alle Fahrzeuge werden vollgetankt übergeben und müssen vollgetankt zurückgegeben werden. Der aktuelle Tankbeleg ist bei der Rückgabe in der App hochzuladen.",
   },
 ];
 
