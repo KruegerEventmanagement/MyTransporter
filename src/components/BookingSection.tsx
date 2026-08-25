@@ -25,7 +25,18 @@ import {
   nextFreeFrom,
 } from "@/lib/availability-logic";
 
-import { computePlanReturn, getPlanById, getAvailablePlans, DEPOSIT_EUR } from "@/lib/booking-rules";
+import {
+  computePlanReturn,
+  getPlanById,
+  getAvailablePlans,
+  planLabelWithClass,
+  vehicleClassFromName,
+  VEHICLE_CLASS_LABEL,
+  VEHICLE_CLASS_SHORT_LABEL,
+  L4H2_SURCHARGE_EUR,
+  DEPOSIT_EUR,
+  type VehicleClass,
+} from "@/lib/booking-rules";
 import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot } from "@/lib/addons";
 import { AddonPackageCard } from "./AddonPackageCard";
 import {
@@ -221,7 +232,23 @@ export function BookingSection() {
         power: currentVehicle.power_kw,
       }
     : { name: "", plate: "", photo: fiatDucato, fuel: VEHICLE.fuel, payload: VEHICLE.payload, seats: null as number | null, power: null as number | null };
+
+  // Fahrzeugklasse des aktuell gewählten Transporters – steuert den Preis
+  const vehicleClass: VehicleClass = vehicleClassFromName(
+    currentVehicle?.name,
+    currentVehicle?.model,
+    currentVehicle?.plate,
+  );
+  const classOfVehicle = (v: DbVehicle): VehicleClass =>
+    vehicleClassFromName(v.name, v.model, v.plate);
+  const availableClasses = Array.from(new Set(vehicles.map(classOfVehicle)));
+  const selectVehicleClass = (cls: VehicleClass) => {
+    const idx = vehicles.findIndex((v) => classOfVehicle(v) === cls);
+    if (idx >= 0) setVehicleIdx(idx);
+  };
+
   const registrationComplete = isLoggedIn || profileComplete;
+
 
   // Tick clock every second while a confirmation is pending so the cooldown updates live
   useEffect(() => {
@@ -464,10 +491,10 @@ export function BookingSection() {
   const canProceedStep0 = rangeFrom !== undefined && rangeTo !== undefined;
   const canProceedStep1 = startHour !== null && selectedPlanId !== null;
 
-  // Tarife passend zur gewählten Nächtezahl + Startstunde
-  const availablePlans = getAvailablePlans(nights, startHour);
+  // Tarife passend zur gewählten Nächtezahl + Startstunde + Fahrzeugklasse
+  const availablePlans = getAvailablePlans(nights, startHour, vehicleClass);
 
-  const selectedPlanEntry = selectedPlanId ? getPlanById(selectedPlanId) : null;
+  const selectedPlanEntry = selectedPlanId ? getPlanById(selectedPlanId, vehicleClass) : null;
 
   // Return info for selected plan
   const getReturnInfo = () => {
@@ -773,6 +800,41 @@ export function BookingSection() {
 
             {startHour !== null && (
               <>
+                {/* Fahrzeugklasse: bestimmt eindeutig den Preis */}
+                {availableClasses.length > 1 && (
+                  <div className="mt-10">
+                    <p className="text-center text-muted-foreground text-lg mb-3">
+                      Wähle deine Fahrzeugklasse
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {(["l1h1", "l4h2"] as VehicleClass[])
+                        .filter((cls) => availableClasses.includes(cls))
+                        .map((cls) => (
+                          <button
+                            key={cls}
+                            type="button"
+                            onClick={() => selectVehicleClass(cls)}
+                            className={`rounded-2xl border-2 p-4 text-left transition-all ${
+                              vehicleClass === cls
+                                ? "border-accent bg-accent/5 shadow-md"
+                                : "border-border hover:border-accent/50"
+                            }`}
+                          >
+                            <p className="font-bold text-foreground">{VEHICLE_CLASS_LABEL[cls]}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {cls === "l1h1"
+                                ? "Kurzer Kastenwagen, günstigster Preis"
+                                : `Langer Kastenwagen, mehr Ladevolumen · +${L4H2_SURCHARGE_EUR} €`}
+                            </p>
+                          </button>
+                        ))}
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground text-center">
+                      Die angezeigten Tarifpreise gelten für {VEHICLE_CLASS_LABEL[vehicleClass]}.
+                    </p>
+                  </div>
+                )}
+
                 <p className="text-center text-muted-foreground text-lg mt-10 mb-6">Wähle deinen Tarif</p>
                 <div className="space-y-4">
                   {availablePlans.map((plan) => {
@@ -802,8 +864,17 @@ export function BookingSection() {
                         <p className="text-xs text-foreground/80 mt-1">{plan.freeKm.toLocaleString("de-DE")} km inklusive · danach {(plan.extraKmCents / 100).toFixed(2).replace(".", ",")} €/km</p>
                       )}
                     </div>
-                    <p className="text-2xl font-bold text-foreground whitespace-nowrap">{plan.price} €</p>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-foreground whitespace-nowrap">{plan.price} €</p>
+                      <p className="text-[11px] text-muted-foreground whitespace-nowrap">
+                        {VEHICLE_CLASS_SHORT_LABEL[plan.vehicleClass]}
+                        {plan.vehicleClass === "l1h1"
+                          ? ` · L4H2 ${plan.basePrice + L4H2_SURCHARGE_EUR} €`
+                          : ` · L1H1 ${plan.basePrice} €`}
+                      </p>
+                    </div>
                   </div>
+
                   {plan.days > 1 && (
                     <p className="text-xs text-muted-foreground mt-2">
                       ≈ {(plan.price / plan.days).toFixed(2).replace(".", ",")} € pro Tag
@@ -1483,7 +1554,7 @@ export function BookingSection() {
                       "mt_pending_booking",
                       JSON.stringify({
                         planId: selectedPlanEntry.id,
-                        planLabel: selectedPlanEntry.label,
+                        planLabel: planLabelWithClass(selectedPlanEntry),
                         planPrice: selectedPlanEntry.price,
                         startDate: format(date, "yyyy-MM-dd"),
                         startHour,
@@ -1512,6 +1583,7 @@ export function BookingSection() {
                           addonIds: selectedAddonIds,
                           vehiclePlate: displayVehicle.plate || null,
                           vehicleName: displayVehicle.name || null,
+                          vehicleClass,
                           startDate: date ? format(date, "yyyy-MM-dd") : undefined,
                           startHour: startHour ?? undefined,
                        },

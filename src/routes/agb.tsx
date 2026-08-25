@@ -48,22 +48,24 @@ function AgbPage() {
 
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">§ 4 Preise und Tarife</h2>
-            <p className="mb-2">Alle Preise verstehen sich in Euro und enthalten die gesetzliche Umsatzsteuer von 19 %. Die Mietpreise gelten je gebuchtem Mietzeitraum und Transporter inklusive der angegebenen Freikilometer.</p>
+            <p className="mb-2">Alle Preise verstehen sich in Euro und enthalten die gesetzliche Umsatzsteuer von 19 %. Die Mietpreise gelten je gebuchtem Mietzeitraum und Transporter inklusive der angegebenen Freikilometer. Angegeben ist jeweils der Preis für den kurzen Transporter L1H1; für den langen Transporter L4H2 erhöht sich der jeweilige Festpreis um pauschal 10 €.</p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>3-Stunden-Tarif „Express": 49 € inklusive 100 Freikilometern (Rückgabe nach 3 Stunden).</li>
-              <li>6-Stunden-Tarif „Umzug Mini": 69 € inklusive 200 Freikilometern (Rückgabe nach 6 Stunden).</li>
-              <li>24-Stunden-Tarif „Umzugstag": 99 € inklusive 300 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
-              <li>24-Stunden-Tarif „Langstrecke": 129 € inklusive 500 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
-              <li>2-Tage-Tarif „Kurzprojekt": 169 € inklusive 600 Freikilometern.</li>
-              <li>3-Tage-Tarif „Umzug Plus": 229 € inklusive 900 Freikilometern.</li>
-              <li>4-Tage-Tarif „Renovierungs-Tarif": 299 € inklusive 1.100 Freikilometern.</li>
-              <li>5-Tage-Tarif „Projektwoche Mini": 359 € inklusive 1.300 Freikilometern.</li>
-              <li>6-Tage-Tarif „Projektwoche": 409 € inklusive 1.400 Freikilometern.</li>
-              <li>7-Tage-Tarif „Wochenmiete": 459 € inklusive 1.500 Freikilometern.</li>
+              <li>3-Stunden-Tarif „Express": 49 € (L4H2 59 €) inklusive 100 Freikilometern (Rückgabe nach 3 Stunden).</li>
+              <li>6-Stunden-Tarif „Umzug Mini": 69 € (L4H2 79 €) inklusive 200 Freikilometern (Rückgabe nach 6 Stunden).</li>
+              <li>24-Stunden-Tarif „Umzugstag": 99 € (L4H2 109 €) inklusive 300 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
+              <li>24-Stunden-Tarif „Langstrecke": 179 € (L4H2 189 €) inklusive 500 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
+              <li>24-Stunden-Tarif „Fernstrecke": 289 € (L4H2 299 €) inklusive 800 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
+              <li>2-Tage-Tarif „Kurzprojekt": 249 € (L4H2 259 €) inklusive 600 Freikilometern.</li>
+              <li>3-Tage-Tarif „Umzug Plus": 349 € (L4H2 359 €) inklusive 900 Freikilometern.</li>
+              <li>4-Tage-Tarif „Renovierungs-Tarif": 429 € (L4H2 439 €) inklusive 1.100 Freikilometern.</li>
+              <li>5-Tage-Tarif „Projektwoche Mini": 499 € (L4H2 509 €) inklusive 1.300 Freikilometern.</li>
+              <li>6-Tage-Tarif „Projektwoche": 549 € (L4H2 559 €) inklusive 1.400 Freikilometern.</li>
+              <li>7-Tage-Tarif „Wochenmiete": 599 € (L4H2 609 €) inklusive 1.500 Freikilometern.</li>
               <li>Jeder über das jeweilige Freikilometer-Kontingent hinaus gefahrene Kilometer wird mit 0,39 € berechnet; bei Mehrtagestarifen ab 2 Tagen mit 0,35 €, bei der 7-Tage-Wochenmiete mit 0,29 €.</li>
-              <li>Reiner Kilometer-Tarif: 0,90 € pro gefahrenem Kilometer (Mindestbetrag 100 €).</li>
+              <li>Reiner Kilometer-Tarif: 0,90 € pro gefahrenem Kilometer (Mindestbetrag L1H1 100 €, L4H2 110 €).</li>
               <li>Optionale Zusatzpakete: „Sicher-Transport Paket" 19 €, „Profi-Umzug Paket" 49 €.</li>
             </ul>
+
           </div>
 
           <div>
@@ -71,7 +73,7 @@ function AgbPage() {
             <ul className="list-disc pl-5 space-y-1">
               <li>Verspätete Rückgabe: 25 € pro angefangene Stunde</li>
               <li>Rauchen im Fahrzeug: 100 € Reinigungsgebühr</li>
-              <li>Schäden am Fahrzeug werden in voller Höhe berechnet</li>
+              <li>Bei einfacher Fahrlässigkeit wird der tatsächlich entstandene Fahrzeugschaden berechnet, jedoch höchstens bis zur vereinbarten Selbstbeteiligung von 1.000 € pro Schadensfall. Die in § 9 genannten Ausnahmen bleiben unberührt.</li>
               <li>Nicht vollgetanktes Fahrzeug: Betankungskosten zzgl. 20 € Servicegebühr</li>
             </ul>
           </div>
@@ -79,6 +81,7 @@ function AgbPage() {
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">§ 6 Fahrzeugübernahme und -rückgabe</h2>
             <p>Die Schlüsselübergabe erfolgt in der Römerstraße 36, 71229 Leonberg. Vor Fahrtantritt ist das Fahrzeug von allen Seiten zu fotografieren und der Kilometerstand zu dokumentieren. Bei Rückgabe sind erneut Fotos, der aktuelle Kilometerstand sowie der Tankbeleg einzureichen.</p>
+            <p className="mt-2">Alle Fahrzeuge werden vollgetankt übergeben und müssen vollgetankt zurückgegeben werden. Der aktuelle Tankbeleg ist bei der Rückgabe in der App hochzuladen.</p>
           </div>
 
           <div>

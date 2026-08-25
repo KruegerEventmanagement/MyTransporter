@@ -7,7 +7,7 @@ const FAQS = [
   },
   {
     q: "Was kostet die Transporter-Miete?",
-    a: "Bei MyTransporter mietest du einen Fiat Ducato L4H2 ab 49 € für 3 Stunden (inkl. 100 Freikilometern), 69 € für 6 Stunden (inkl. 200 Freikilometern), 99 € für 24 Stunden (inkl. 300 Freikilometern) oder 129 € für 24 Stunden Langstrecke (inkl. 500 Freikilometern). Mehrtagestarife starten bei 169 € für 2 Tage, die Wochenmiete kostet 459 €. Jeder Kilometer über das Freikontingent hinaus kostet 0,39 € (ab 2 Tagen 0,35 €, bei der Wochenmiete 0,29 €). Alternativ gibt es eine reine Kilometer-Abrechnung zu 0,90 € pro Kilometer. Die Preise sind transparent, ohne versteckte Kosten und ideal für günstige Umzüge in Leonberg, Stuttgart und Umgebung.",
+    a: "Wir haben zwei Fahrzeugklassen: den kurzen L1H1 und den langen L4H2 (jeweils pauschal 10 € mehr). L1H1: 3 Stunden 49 € (100 km inkl.), 6 Stunden 69 € (200 km), 24 Stunden 99 € (300 km), 179 € (500 km) oder 289 € (800 km). Mehrtagestarife L1H1: 2 Tage 249 €, 3 Tage 349 €, 4 Tage 429 €, 5 Tage 499 €, 6 Tage 549 €, 7 Tage 599 €. Für den L4H2 gilt jeweils der gleiche Tarif +10 €. Jeder Kilometer über das Freikontingent kostet 0,39 € (ab 2 Tagen 0,35 €, Wochenmiete 0,29 €). Alternativ gibt es die reine Kilometer-Abrechnung zu 0,90 € pro Kilometer (Mindestbetrag L1H1 100 €, L4H2 110 €).",
   },
   {
     q: "Gibt es eine Kaution?",
@@ -19,7 +19,7 @@ const FAQS = [
   },
   {
     q: "Ist der Transporter für Umzüge geeignet?",
-    a: "Ja, der Fiat Ducato L4H2 mit 6,36 m Länge und 1.200 kg Nutzlast ist perfekt für Umzüge geeignet. Du transportierst Sofas, Schränke, Betten oder komplette Haushalte einer 2- bis 3-Zimmer-Wohnung in einer Tour. Ein klassischer Umzugswagen zum kleinen Preis.",
+    a: "Ja. Der lange L4H2 mit 6,36 m Länge und rund 1.200 kg Nutzlast ist perfekt für komplette Umzüge einer 2- bis 3-Zimmer-Wohnung. Für kleinere Transporte, Kleinanzeigen-Abholungen oder Baumarkt-Touren reicht meist der kurze L1H1 – er ist 10 € günstiger und leichter zu parken.",
   },
   {
     q: "Kann ich den Transporter kurzfristig mieten?",
@@ -35,11 +35,11 @@ const FAQS = [
   },
   {
     q: "Ist im Preis eine Versicherung enthalten?",
-    a: "Ja, der Transporter ist haftpflicht- und vollkaskoversichert (mit Selbstbeteiligung). Du fährst rundum abgesichert los.",
+    a: "Die Fahrzeuge sind versichert. Im Schadenfall trägt der Mieter bis zu 1.000,00 € maximale Selbstbeteiligung. Ist der Schaden geringer, trägt er nur diesen geringeren Schaden. Die Ausnahmen aus § 9 der AGB (z. B. grobe Fahrlässigkeit, Alkohol, Falschbetankung) bleiben unberührt.",
   },
   {
     q: "Muss ich vollgetankt zurückgeben?",
-    a: "Der Transporter muss mit dem gleichen Tankstand zurückgegeben werden, mit dem du ihn übernommen hast. Den Tankbeleg lädst du einfach in der App hoch.",
+    a: "Alle Fahrzeuge werden vollgetankt übergeben und müssen vollgetankt zurückgegeben werden. Der aktuelle Tankbeleg ist bei der Rückgabe in der App hochzuladen.",
   },
 ];
 
@@ -156,7 +156,7 @@ function FaqPage() {
 const SEO_BLOCKS = [
   {
     h: "Transporter mieten in Leonberg",
-    p: "MyTransporter ist deine lokale Transporter-Vermietung in Leonberg. Direkt in der Römerstraße 36 holst du deinen Fiat Ducato L4H2 ab, ideal für Umzüge, Möbeltransporte oder spontane Fahrten in der Region. Buchung online in unter 2 Minuten, transparente Preise ab 49 € inklusive 100 Freikilometern.",
+    p: "MyTransporter ist deine lokale Transporter-Vermietung in Leonberg. Direkt in der Römerstraße 36 holst du deinen Transporter ab – kurzer L1H1 oder langer L4H2, ideal für Umzüge, Möbeltransporte oder spontane Fahrten in der Region. Buchung online in unter 2 Minuten, transparente Preise ab 49 € inklusive 100 Freikilometern.",
   },
   {
     h: "Transporter mieten in Stuttgart & Umgebung",
@@ -164,7 +164,7 @@ const SEO_BLOCKS = [
   },
   {
     h: "Umzugswagen mieten, günstig & flexibel",
-    p: "Mit 6,36 m Länge, 1.200 kg Nutzlast und Hochdach ist unser Transporter ein vollwertiger Umzugswagen. Du transportierst den Inhalt einer 2- bis 3-Zimmer-Wohnung in einer Tour. Perfekt für deinen Umzug in Leonberg, Stuttgart oder bundesweit.",
+    p: "Mit 6,36 m Länge, rund 1.200 kg Nutzlast und Hochdach ist unser L4H2 ein vollwertiger Umzugswagen. Du transportierst den Inhalt einer 2- bis 3-Zimmer-Wohnung in einer Tour. Für kleinere Touren gibt es den kurzen L1H1 – 10 € günstiger. Perfekt für deinen Umzug in Leonberg, Stuttgart oder bundesweit.",
   },
   {
     h: "Möbeltransport, Baumarkt & Kleinanzeigen",
@@ -176,7 +176,7 @@ const SEO_BLOCKS = [
   },
   {
     h: "Preise & Kaution, alles transparent",
-    p: "3 Stunden für 49 € (100 Freikilometer), 6 Stunden für 69 € (200 Freikilometer), 24 Stunden für 99 € (300 Freikilometer) oder 129 € für die Langstrecke (500 Freikilometer). Mehrtagestarife: 2 Tage 169 €, 3 Tage 229 €, 4 Tage 299 €, 5 Tage 359 €, 6 Tage 409 €, 7 Tage 459 €. Alternativ reine Kilometer-Abrechnung zu 0,90 € / km. Mehrkilometer kosten 0,39 € (ab 2 Tagen 0,35 €, Wochenmiete 0,29 €). Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer und vollgetankter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
+    p: "Preise für den kurzen L1H1, der lange L4H2 kostet jeweils 10 € mehr: 3 Stunden 49 € (100 km), 6 Stunden 69 € (200 km), 24 Stunden 99 € (300 km), 179 € (500 km) oder 289 € (800 km). Mehrtagestarife: 2 Tage 249 €, 3 Tage 349 €, 4 Tage 429 €, 5 Tage 499 €, 6 Tage 549 €, 7 Tage 599 €. Alternativ reine Kilometer-Abrechnung zu 0,90 € / km (Mindestbetrag 100 € bzw. 110 €). Mehrkilometer kosten 0,39 € (ab 2 Tagen 0,35 €, Wochenmiete 0,29 €). Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer und vollgetankter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
   },
   {
     h: "Ablauf der Vermietung",
