@@ -19,7 +19,7 @@ const FAQS = [
   },
   {
     q: "Ist der Transporter für Umzüge geeignet?",
-    a: "Ja, der Fiat Ducato L4H2 mit 6,36 m Länge und 1.200 kg Nutzlast ist perfekt für Umzüge geeignet. Du transportierst Sofas, Schränke, Betten oder komplette Haushalte einer 2- bis 3-Zimmer-Wohnung in einer Tour. Ein klassischer Umzugswagen zum kleinen Preis.",
+    a: "Ja. Der lange L4H2 mit 6,36 m Länge und rund 1.200 kg Nutzlast ist perfekt für komplette Umzüge einer 2- bis 3-Zimmer-Wohnung. Für kleinere Transporte, Kleinanzeigen-Abholungen oder Baumarkt-Touren reicht meist der kurze L1H1 – er ist 10 € günstiger und leichter zu parken.",
   },
   {
     q: "Kann ich den Transporter kurzfristig mieten?",
