@@ -701,28 +701,25 @@ export function BookingSection() {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
                   if (d < today) return true;
-                  const unavailableUntil = new Date(2026, 8, 7);
-                  unavailableUntil.setHours(23, 59, 59, 999);
-                  if (d <= unavailableUntil) return true;
-                  return busyDateSet.has(dayKey(d));
+                  return fullyBookedDay(d);
                 }}
                 modifiers={{
-                  unavailable: (d) => {
+                  partly: (d) => {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    const unavailableUntil = new Date(2026, 8, 7);
-                    unavailableUntil.setHours(23, 59, 59, 999);
-                    return d >= today && d <= unavailableUntil;
+                    if (d < today || fullyBookedDay(d)) return false;
+                    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+                    return freeVehiclePlates(busyMap, allPlates, dayStart, dayStart + 24 * 3600_000).length
+                      < allPlates.length;
                   },
                 }}
                 modifiersClassNames={{
-                  unavailable:
-                    "relative !text-red-600 after:content-['✕'] after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-red-600 after:font-bold after:text-xl after:pointer-events-none",
+                  partly: "underline decoration-dotted decoration-2 underline-offset-4",
                 }}
                 className="rounded-3xl border border-border p-8 shadow-lg pointer-events-auto text-lg [--cell-size:3.5rem]"
               />
-              <p className="mt-4 text-sm text-red-600 text-center font-medium">
-                Alle Fahrzeuge bis 07.09.2026 ausgebucht – ab 08.09.2026 wieder verfügbar.
+              <p className="mt-4 text-xs text-muted-foreground text-center">
+                Gestrichelt unterstrichene Tage: nur noch einzelne Fahrzeuge verfügbar. Welches Fahrzeug frei ist, siehst du nach der Tarifauswahl.
               </p>
 
               {rangeFrom && !rangeTo && (
