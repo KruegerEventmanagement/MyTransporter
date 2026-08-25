@@ -25,7 +25,18 @@ import {
   nextFreeFrom,
 } from "@/lib/availability-logic";
 
-import { computePlanReturn, getPlanById, getAvailablePlans, DEPOSIT_EUR } from "@/lib/booking-rules";
+import {
+  computePlanReturn,
+  getPlanById,
+  getAvailablePlans,
+  planLabelWithClass,
+  vehicleClassFromName,
+  VEHICLE_CLASS_LABEL,
+  VEHICLE_CLASS_SHORT_LABEL,
+  L4H2_SURCHARGE_EUR,
+  DEPOSIT_EUR,
+  type VehicleClass,
+} from "@/lib/booking-rules";
 import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot } from "@/lib/addons";
 import { AddonPackageCard } from "./AddonPackageCard";
 import {
