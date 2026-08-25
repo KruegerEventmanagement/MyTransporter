@@ -848,21 +848,17 @@ export function BookingSection() {
                 <p className="text-center text-muted-foreground text-lg mt-10 mb-6">Wähle deinen Tarif</p>
                 <div className="space-y-4">
                   {availablePlans.map((plan) => {
-                const blocked = isPlanBlocked(plan.id);
                 return (
                 <button
                   key={plan.id}
-                  onClick={() => !blocked && setSelectedPlanId(plan.id)}
-                  disabled={blocked}
-                  title={blocked ? "Zeitraum überschneidet sich mit einer bestehenden Buchung" : undefined}
+                  onClick={() => setSelectedPlanId(plan.id)}
                   className={`w-full p-6 rounded-2xl border-2 text-left transition-all ${
                     selectedPlanId === plan.id
                       ? "border-accent bg-accent/5 shadow-md"
-                      : blocked
-                      ? "border-border opacity-40 cursor-not-allowed"
                       : "border-border hover:border-accent/50"
                   }`}
                 >
+
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
