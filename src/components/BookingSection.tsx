@@ -997,22 +997,25 @@ export function BookingSection() {
                   </div>
                   {currentVehicleUnavailable && (
                     <div className="mb-4 rounded-xl border border-border bg-secondary p-3 text-sm">
-                      <p className="font-semibold text-foreground">In diesem Zeitraum nicht verfügbar</p>
+                      <p className="font-semibold text-foreground">
+                        {selectionWindow
+                          ? `Dieser Transporter ist am ${format(new Date(selectionWindow.start), "dd.MM.yyyy", { locale: de })} von ${format(new Date(selectionWindow.start), "HH:mm")} bis ${format(new Date(selectionWindow.end), "HH:mm")} Uhr nicht verfügbar.`
+                          : "In diesem Zeitraum nicht verfügbar"}
+                      </p>
                       {(() => {
                         const freeAt = plateFreeAgainAt(currentPlate);
                         return freeAt ? (
                           <p className="text-muted-foreground">
-                            Wieder frei ab {format(new Date(freeAt), "dd.MM.yyyy, HH:mm", { locale: de })} Uhr
+                            Wieder verfügbar ab {format(new Date(freeAt), "dd.MM.yyyy, HH:mm", { locale: de })} Uhr
                           </p>
                         ) : null;
                       })()}
-                      {vehicles.length > 1 && (
-                        <p className="text-muted-foreground mt-1">
-                          Bitte ein anderes Fahrzeug wählen oder Zeitraum anpassen.
-                        </p>
-                      )}
+                      <p className="text-muted-foreground mt-1">
+                        Bitte ein anderes Fahrzeug wählen oder eine andere Uhrzeit bzw. ein anderes Datum auswählen.
+                      </p>
                     </div>
                   )}
+
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground">Kraftstoff</p>
