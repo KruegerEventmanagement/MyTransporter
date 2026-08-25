@@ -196,3 +196,22 @@
 .animate-shine {
   animation: shine 3.5s ease-in-out infinite;
 }
+
+@keyframes install-pop-in {
+  0% { opacity: 0; transform: translateY(-8px) scale(0.94); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-install-pop-in {
+  animation: install-pop-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes install-pulse {
+  0%, 100% { box-shadow: 0 6px 20px -6px rgb(0 0 0 / 0.45), 0 0 0 0 rgb(0 0 0 / 0.28); }
+  50% { box-shadow: 0 6px 20px -6px rgb(0 0 0 / 0.45), 0 0 0 10px rgb(0 0 0 / 0); }
+}
+
+.animate-install-pulse {
+  animation: install-pulse 2.2s ease-out infinite;
+}
+
