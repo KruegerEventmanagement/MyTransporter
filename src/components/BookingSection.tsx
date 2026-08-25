@@ -800,6 +800,41 @@ export function BookingSection() {
 
             {startHour !== null && (
               <>
+                {/* Fahrzeugklasse: bestimmt eindeutig den Preis */}
+                {availableClasses.length > 1 && (
+                  <div className="mt-10">
+                    <p className="text-center text-muted-foreground text-lg mb-3">
+                      Wähle deine Fahrzeugklasse
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {(["l1h1", "l4h2"] as VehicleClass[])
+                        .filter((cls) => availableClasses.includes(cls))
+                        .map((cls) => (
+                          <button
+                            key={cls}
+                            type="button"
+                            onClick={() => selectVehicleClass(cls)}
+                            className={`rounded-2xl border-2 p-4 text-left transition-all ${
+                              vehicleClass === cls
+                                ? "border-accent bg-accent/5 shadow-md"
+                                : "border-border hover:border-accent/50"
+                            }`}
+                          >
+                            <p className="font-bold text-foreground">{VEHICLE_CLASS_LABEL[cls]}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {cls === "l1h1"
+                                ? "Kurzer Kastenwagen, günstigster Preis"
+                                : `Langer Kastenwagen, mehr Ladevolumen · +${L4H2_SURCHARGE_EUR} €`}
+                            </p>
+                          </button>
+                        ))}
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground text-center">
+                      Die angezeigten Tarifpreise gelten für {VEHICLE_CLASS_LABEL[vehicleClass]}.
+                    </p>
+                  </div>
+                )}
+
                 <p className="text-center text-muted-foreground text-lg mt-10 mb-6">Wähle deinen Tarif</p>
                 <div className="space-y-4">
                   {availablePlans.map((plan) => {
@@ -829,8 +864,17 @@ export function BookingSection() {
                         <p className="text-xs text-foreground/80 mt-1">{plan.freeKm.toLocaleString("de-DE")} km inklusive · danach {(plan.extraKmCents / 100).toFixed(2).replace(".", ",")} €/km</p>
                       )}
                     </div>
-                    <p className="text-2xl font-bold text-foreground whitespace-nowrap">{plan.price} €</p>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-foreground whitespace-nowrap">{plan.price} €</p>
+                      <p className="text-[11px] text-muted-foreground whitespace-nowrap">
+                        {VEHICLE_CLASS_SHORT_LABEL[plan.vehicleClass]}
+                        {plan.vehicleClass === "l1h1"
+                          ? ` · L4H2 ${plan.basePrice + L4H2_SURCHARGE_EUR} €`
+                          : ` · L1H1 ${plan.basePrice} €`}
+                      </p>
+                    </div>
                   </div>
+
                   {plan.days > 1 && (
                     <p className="text-xs text-muted-foreground mt-2">
                       ≈ {(plan.price / plan.days).toFixed(2).replace(".", ",")} € pro Tag
