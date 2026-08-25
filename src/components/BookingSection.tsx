@@ -125,9 +125,8 @@ export function BookingSection() {
   }, []);
 
   const currentPlate = vehicles[vehicleIdx]?.plate ?? "";
-  const slotsForVehicle = busySlots.filter(
-    (s) => !currentPlate || !s.vehiclePlate || s.vehiclePlate === currentPlate,
-  );
+  const busyMap = useMemo(() => slotsByPlate(busySlots), [busySlots]);
+  const allPlates = useMemo(() => vehicles.map((v) => v.plate ?? ""), [vehicles]);
 
   // Convenience: range start/end + Nächtezahl
   // Wichtig: 1 Nacht = 1 Tag. Selber Tag (0 Nächte) = Tagesmiete (<24h).
