@@ -5,8 +5,10 @@ export function CompareSection() {
         <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Fair vergleichen</h2>
         <p className="mt-4 text-muted-foreground leading-relaxed">
           Viele Anbieter wirken im Grundpreis günstig, haben aber oft nur wenige Kilometer
-          inklusive. Bei MyTransporter bekommst du einen <strong className="text-foreground">großen
-          L4H2-Transporter</strong> mit fairen Kilometerpaketen, ideal für echte Umzüge und Transporte.
+          inklusive. Bei MyTransporter wählst du zwischen dem{" "}
+          <strong className="text-foreground">kurzen L1H1</strong> und dem{" "}
+          <strong className="text-foreground">langen L4H2</strong> – beide mit fairen
+          Kilometerpaketen, ideal für echte Umzüge und Transporte.
         </p>
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
           <div className="rounded-xl border border-border p-4">
@@ -15,11 +17,11 @@ export function CompareSection() {
           </div>
           <div className="rounded-xl border border-border p-4">
             <p className="font-semibold text-foreground">Faire Kilometer</p>
-            <p className="text-muted-foreground mt-1">großzügig inklusive</p>
+            <p className="text-muted-foreground mt-1">bis 800 km inklusive</p>
           </div>
           <div className="rounded-xl border border-border p-4">
-            <p className="font-semibold text-foreground">Großer L4H2</p>
-            <p className="text-muted-foreground mt-1">statt kleinem Standard-Transporter</p>
+            <p className="font-semibold text-foreground">Zwei Größen</p>
+            <p className="text-muted-foreground mt-1">L1H1 kurz oder L4H2 lang (+10 €)</p>
           </div>
         </div>
       </div>
