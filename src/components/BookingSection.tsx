@@ -1041,19 +1041,42 @@ export function BookingSection() {
               </div>
 
               {vehicles.length > 1 && (
-                <div className="flex justify-center gap-1.5 mt-4">
-                  {vehicles.map((_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setVehicleIdx(i)}
-                      aria-label={`Fahrzeug ${i + 1}`}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        i === vehicleIdx ? "bg-foreground w-6" : "bg-border"
-                      }`}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="flex justify-center gap-1.5 mt-4">
+                    {vehicles.map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setVehicleIdx(i)}
+                        aria-label={`Fahrzeug ${i + 1}`}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          i === vehicleIdx ? "bg-foreground w-6" : "bg-border"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {vehicles.map((v, i) => {
+                      const free = isPlateAvailable(v.plate ?? "");
+                      return (
+                        <button
+                          key={v.plate ?? i}
+                          type="button"
+                          disabled={!free}
+                          onClick={() => setVehicleIdx(i)}
+                          className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition-all ${
+                            i === vehicleIdx ? "border-foreground" : "border-border"
+                          } ${free ? "hover:bg-secondary" : "opacity-50 cursor-not-allowed line-through"}`}
+                        >
+                          <span className="font-medium text-foreground">{v.name}</span>
+                          <span className="text-muted-foreground">
+                            {free ? "verfügbar" : "nicht verfügbar"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </div>
 
