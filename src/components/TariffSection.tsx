@@ -13,13 +13,15 @@ export function TariffSection() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-10">
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground">
-            Großer L4H2-Transporter zum fairen Preis
+            Transporter mieten zum fairen Festpreis
           </h2>
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-            Mehr Platz, faire Kilometer und transparente Preise, perfekt für Umzug,
-            Möbeltransport, Entrümpelung und Großeinkäufe.
+            Zwei Fahrzeugklassen: der kurze L1H1 und der lange L4H2 mit noch mehr Ladevolumen.
+            Alle Preise unten gelten für den L1H1 – der L4H2 kostet pro Buchung pauschal{" "}
+            {L4H2_SURCHARGE_EUR} € mehr.
           </p>
         </div>
+
 
         {/* Eintagestarife */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
