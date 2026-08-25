@@ -7,7 +7,7 @@ const FAQS = [
   },
   {
     q: "Was kostet die Transporter-Miete?",
-    a: "Bei MyTransporter mietest du einen Fiat Ducato L4H2 ab 49 € für 3 Stunden (inkl. 100 Freikilometern), 69 € für 6 Stunden (inkl. 200 Freikilometern), 99 € für 24 Stunden (inkl. 300 Freikilometern) oder 129 € für 24 Stunden Langstrecke (inkl. 500 Freikilometern). Mehrtagestarife starten bei 169 € für 2 Tage, die Wochenmiete kostet 459 €. Jeder Kilometer über das Freikontingent hinaus kostet 0,39 € (ab 2 Tagen 0,35 €, bei der Wochenmiete 0,29 €). Alternativ gibt es eine reine Kilometer-Abrechnung zu 0,90 € pro Kilometer. Die Preise sind transparent, ohne versteckte Kosten und ideal für günstige Umzüge in Leonberg, Stuttgart und Umgebung.",
+    a: "Wir haben zwei Fahrzeugklassen: den kurzen L1H1 und den langen L4H2 (jeweils pauschal 10 € mehr). L1H1: 3 Stunden 49 € (100 km inkl.), 6 Stunden 69 € (200 km), 24 Stunden 99 € (300 km), 179 € (500 km) oder 289 € (800 km). Mehrtagestarife L1H1: 2 Tage 249 €, 3 Tage 349 €, 4 Tage 429 €, 5 Tage 499 €, 6 Tage 549 €, 7 Tage 599 €. Für den L4H2 gilt jeweils der gleiche Tarif +10 €. Jeder Kilometer über das Freikontingent kostet 0,39 € (ab 2 Tagen 0,35 €, Wochenmiete 0,29 €). Alternativ gibt es die reine Kilometer-Abrechnung zu 0,90 € pro Kilometer (Mindestbetrag L1H1 100 €, L4H2 110 €).",
   },
   {
     q: "Gibt es eine Kaution?",
