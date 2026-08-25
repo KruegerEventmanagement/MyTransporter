@@ -207,7 +207,7 @@ export function BookingSection() {
     ? {
         name: currentVehicle.name || `${currentVehicle.brand ?? ""} ${currentVehicle.model ?? ""}`.trim() || "Fahrzeug",
         plate: currentVehicle.plate || "-",
-        photo: currentVehicle.photo_urls?.[0] ?? fiatDucato,
+        photo: currentVehicle.photo_urls?.[0] ?? fallbackPhotoFor(currentVehicle.name),
         fuel: currentVehicle.fuel_type ?? VEHICLE.fuel,
         payload: currentVehicle.payload_kg ? `${currentVehicle.payload_kg.toLocaleString("de-DE")} kg` : VEHICLE.payload,
         seats: currentVehicle.seats,
