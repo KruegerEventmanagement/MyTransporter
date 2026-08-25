@@ -72,11 +72,17 @@ export function isAnyVehicleFreeOnDay(
   const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0).getTime();
   const dayEnd = dayStart + 24 * 3600_000;
   return plates.some((plate) => {
-    const ranges = rangesFor(map, plate).filter((r) => r.start < dayEnd && r.end > dayStart);
+    const ranges = rangesFor(map, plate)
+      .filter((r) => r.start < dayEnd && r.end > dayStart)
+      .sort((a, b) => a.start - b.start);
     if (ranges.length === 0) return true;
-    // Deckt eine Sperre den ganzen Tag ab?
-    return !ranges.some((r) => r.start <= dayStart && r.end >= dayEnd)
-      ? true
-      : false;
+    // Union der Sperren prüfen: bleibt eine Lücke innerhalb des Tages?
+    let covered = dayStart;
+    for (const r of ranges) {
+      if (r.start > covered) return true; // Lücke gefunden
+      covered = Math.max(covered, r.end);
+      if (covered >= dayEnd) return false;
+    }
+    return covered < dayEnd;
   });
 }
