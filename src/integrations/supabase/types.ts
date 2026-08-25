@@ -422,6 +422,47 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_blocks: {
+        Row: {
+          created_at: string
+          end_at: string
+          id: string
+          reason: string | null
+          start_at: string
+          updated_at: string
+          vehicle_id: string | null
+          vehicle_plate: string
+        }
+        Insert: {
+          created_at?: string
+          end_at: string
+          id?: string
+          reason?: string | null
+          start_at: string
+          updated_at?: string
+          vehicle_id?: string | null
+          vehicle_plate: string
+        }
+        Update: {
+          created_at?: string
+          end_at?: string
+          id?: string
+          reason?: string | null
+          start_at?: string
+          updated_at?: string
+          vehicle_id?: string | null
+          vehicle_plate?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_blocks_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           axles: number | null

@@ -46,5 +46,16 @@ export const getBusySlots = createServerFn({ method: "GET" })
         };
       });
 
-    return [...bookingSlots, ...holdSlots];
+    // Manuelle Fahrzeug-Sperren (Wartung, Offline-Vermietung, Verfügbarkeitsstart)
+    const { data: blocks } = await supabaseAdmin
+      .from("vehicle_blocks")
+      .select("vehicle_plate, start_at, end_at");
+
+    const blockSlots = (blocks ?? []).map((b) => ({
+      vehiclePlate: b.vehicle_plate ?? "",
+      start: new Date(b.start_at).toISOString(),
+      end: new Date(b.end_at).toISOString(),
+    }));
+
+    return [...bookingSlots, ...holdSlots, ...blockSlots];
   });

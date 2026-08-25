@@ -17,6 +17,13 @@ import { ActiveDriveScreen } from "./ActiveDriveScreen";
 import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
 import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
+import {
+  slotsByPlate,
+  isAnyVehicleFreeOnDay,
+  freeVehiclePlates,
+  isVehicleFree,
+  nextFreeFrom,
+} from "@/lib/availability-logic";
 import { computePlanReturn, getPlanById, getAvailablePlans, DEPOSIT_EUR } from "@/lib/booking-rules";
 import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot } from "@/lib/addons";
 import { AddonPackageCard } from "./AddonPackageCard";
@@ -125,9 +132,8 @@ export function BookingSection() {
   }, []);
 
   const currentPlate = vehicles[vehicleIdx]?.plate ?? "";
-  const slotsForVehicle = busySlots.filter(
-    (s) => !currentPlate || !s.vehiclePlate || s.vehiclePlate === currentPlate,
-  );
+  const busyMap = useMemo(() => slotsByPlate(busySlots), [busySlots]);
+  const allPlates = useMemo(() => vehicles.map((v) => v.plate ?? ""), [vehicles]);
 
   // Convenience: range start/end + Nächtezahl
   // Wichtig: 1 Nacht = 1 Tag. Selber Tag (0 Nächte) = Tagesmiete (<24h).
@@ -138,23 +144,12 @@ export function BookingSection() {
   const rangeDays = nights; // semantisch = Nächte
   const date = rangeFrom; // bestehender Code unten verwendet `date` als Startdatum
 
-  // Set belegter Tage (YYYY-MM-DD), basierend auf slotsForVehicle
-  const busyDateSet = useMemo(() => {
-    const set = new Set<string>();
-    for (const s of slotsForVehicle) {
-      const bs = new Date(s.start);
-      const be = new Date(s.end);
-      const d = new Date(bs.getFullYear(), bs.getMonth(), bs.getDate());
-      while (d.getTime() < be.getTime()) {
-        set.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
-        d.setDate(d.getDate() + 1);
-      }
-    }
-    return set;
-  }, [slotsForVehicle]);
+  // Tage, an denen KEIN Fahrzeug mehr frei ist
+  const fullyBookedDay = (d: Date) => {
+    if (allPlates.length === 0) return false;
+    return !isAnyVehicleFreeOnDay(busyMap, allPlates, d);
+  };
 
-  const dayKey = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
   const handleRangeSelect = (next: { from?: Date; to?: Date } | undefined) => {
     if (!next?.from) {
@@ -163,13 +158,13 @@ export function BookingSection() {
       setSelectedPlanId(null);
       return;
     }
-    // Wenn ein Range gewählt wurde, prüfen ob ein Tag drin belegt ist
+    // Wenn ein Range gewählt wurde, prüfen ob ein Tag drin komplett belegt ist
     if (next.to) {
       const start = next.from < next.to ? next.from : next.to;
       const end = next.from < next.to ? next.to : next.from;
       const cursor = new Date(start);
       while (cursor.getTime() <= end.getTime()) {
-        if (busyDateSet.has(dayKey(cursor))) {
+        if (fullyBookedDay(cursor)) {
           // Ungültig → nur Startdatum übernehmen
           setRange({ from: next.from, to: undefined });
           setStartHour(null);
@@ -186,25 +181,16 @@ export function BookingSection() {
     setSelectedPlanId(null);
   };
 
-  // Prüft, ob [start, start+hours) sich mit einer belegten Periode überschneidet
-  const overlapsBusy = (startMs: number, hours: number) => {
-    const endMs = startMs + hours * 3600_000;
-    return slotsForVehicle.some((s) => {
-      const bs = new Date(s.start).getTime();
-      const be = new Date(s.end).getTime();
-      return startMs < be && endMs > bs;
-    });
-  };
+  /** Kennzeichen, die im Zeitfenster [startMs, startMs+hours) frei sind */
+  const freePlatesFor = (startMs: number, hours: number) =>
+    freeVehiclePlates(busyMap, allPlates, startMs, startMs + hours * 3600_000);
 
   const isHourBusy = (d: Date, h: number) => {
+    if (allPlates.length === 0) return false;
     const start = new Date(d);
     start.setHours(h, 0, 0, 0);
-    // Eine Startstunde ist belegt, wenn sie innerhalb einer fremden Buchung liegt
-    return slotsForVehicle.some((s) => {
-      const bs = new Date(s.start).getTime();
-      const be = new Date(s.end).getTime();
-      return start.getTime() >= bs && start.getTime() < be;
-    });
+    // Belegt nur, wenn KEIN Fahrzeug zu dieser Startzeit frei ist
+    return freePlatesFor(start.getTime(), 1).length === 0;
   };
 
   const planDurationHoursForOverlap = (planId: string) => {
@@ -216,11 +202,46 @@ export function BookingSection() {
   };
 
   const isPlanBlocked = (planId: string) => {
-    if (!date || startHour === null) return false;
+    if (!date || startHour === null || allPlates.length === 0) return false;
     const start = new Date(date);
     start.setHours(startHour, 0, 0, 0);
-    return overlapsBusy(start.getTime(), planDurationHoursForOverlap(planId));
+    return freePlatesFor(start.getTime(), planDurationHoursForOverlap(planId)).length === 0;
   };
+
+  // Zeitfenster der aktuellen Auswahl (für Fahrzeug-Verfügbarkeit)
+  const selectionWindow = useMemo(() => {
+    if (!date || startHour === null || !selectedPlanId) return null;
+    const start = new Date(date);
+    start.setHours(startHour, 0, 0, 0);
+    const end = computePlanReturn(selectedPlanId, date, startHour);
+    return { start: start.getTime(), end: end.getTime() };
+  }, [date, startHour, selectedPlanId]);
+
+  const isPlateAvailable = (plate: string) => {
+    if (!selectionWindow) return true;
+    return isVehicleFree(busyMap, plate, selectionWindow.start, selectionWindow.end);
+  };
+
+  const plateFreeAgainAt = (plate: string) => {
+    if (!selectionWindow) return null;
+    return nextFreeFrom(busyMap, plate, selectionWindow.start, selectionWindow.end);
+  };
+
+  const currentVehicleUnavailable = currentPlate ? !isPlateAvailable(currentPlate) : false;
+
+  // Automatisch auf ein verfügbares Fahrzeug springen, sobald das Zeitfenster feststeht
+  useEffect(() => {
+    if (!selectionWindow || vehicles.length === 0) return;
+    const plate = vehicles[vehicleIdx]?.plate ?? "";
+    if (plate && isVehicleFree(busyMap, plate, selectionWindow.start, selectionWindow.end)) return;
+    const nextIdx = vehicles.findIndex(
+      (v) => v.plate && isVehicleFree(busyMap, v.plate, selectionWindow.start, selectionWindow.end),
+    );
+    if (nextIdx >= 0 && nextIdx !== vehicleIdx) setVehicleIdx(nextIdx);
+  }, [selectionWindow, busyMap, vehicles, vehicleIdx]);
+
+
+
 
   useEffect(() => {
     let alive = true;
@@ -693,28 +714,25 @@ export function BookingSection() {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
                   if (d < today) return true;
-                  const unavailableUntil = new Date(2026, 8, 7);
-                  unavailableUntil.setHours(23, 59, 59, 999);
-                  if (d <= unavailableUntil) return true;
-                  return busyDateSet.has(dayKey(d));
+                  return fullyBookedDay(d);
                 }}
                 modifiers={{
-                  unavailable: (d) => {
+                  partly: (d) => {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    const unavailableUntil = new Date(2026, 8, 7);
-                    unavailableUntil.setHours(23, 59, 59, 999);
-                    return d >= today && d <= unavailableUntil;
+                    if (d < today || fullyBookedDay(d)) return false;
+                    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+                    return freeVehiclePlates(busyMap, allPlates, dayStart, dayStart + 24 * 3600_000).length
+                      < allPlates.length;
                   },
                 }}
                 modifiersClassNames={{
-                  unavailable:
-                    "relative !text-red-600 after:content-['✕'] after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-red-600 after:font-bold after:text-xl after:pointer-events-none",
+                  partly: "underline decoration-dotted decoration-2 underline-offset-4",
                 }}
                 className="rounded-3xl border border-border p-8 shadow-lg pointer-events-auto text-lg [--cell-size:3.5rem]"
               />
-              <p className="mt-4 text-sm text-red-600 text-center font-medium">
-                Alle Fahrzeuge bis 07.09.2026 ausgebucht – ab 08.09.2026 wieder verfügbar.
+              <p className="mt-4 text-xs text-muted-foreground text-center">
+                Gestrichelt unterstrichene Tage: nur noch einzelne Fahrzeuge verfügbar. Welches Fahrzeug frei ist, siehst du nach der Tarifauswahl.
               </p>
 
               {rangeFrom && !rangeTo && (
@@ -957,7 +975,11 @@ export function BookingSection() {
                 </>
               )}
 
-              <div className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
+              <div
+                className={`rounded-2xl border border-border overflow-hidden bg-card shadow-sm ${
+                  currentVehicleUnavailable ? "opacity-60 grayscale" : ""
+                }`}
+              >
                 <img
                   src={displayVehicle.photo}
                   alt={displayVehicle.name}
@@ -973,6 +995,24 @@ export function BookingSection() {
                       {displayVehicle.plate}
                     </span>
                   </div>
+                  {currentVehicleUnavailable && (
+                    <div className="mb-4 rounded-xl border border-border bg-secondary p-3 text-sm">
+                      <p className="font-semibold text-foreground">In diesem Zeitraum nicht verfügbar</p>
+                      {(() => {
+                        const freeAt = plateFreeAgainAt(currentPlate);
+                        return freeAt ? (
+                          <p className="text-muted-foreground">
+                            Wieder frei ab {format(new Date(freeAt), "dd.MM.yyyy, HH:mm", { locale: de })} Uhr
+                          </p>
+                        ) : null;
+                      })()}
+                      {vehicles.length > 1 && (
+                        <p className="text-muted-foreground mt-1">
+                          Bitte ein anderes Fahrzeug wählen oder Zeitraum anpassen.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground">Kraftstoff</p>
@@ -999,19 +1039,42 @@ export function BookingSection() {
               </div>
 
               {vehicles.length > 1 && (
-                <div className="flex justify-center gap-1.5 mt-4">
-                  {vehicles.map((_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setVehicleIdx(i)}
-                      aria-label={`Fahrzeug ${i + 1}`}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        i === vehicleIdx ? "bg-foreground w-6" : "bg-border"
-                      }`}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="flex justify-center gap-1.5 mt-4">
+                    {vehicles.map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setVehicleIdx(i)}
+                        aria-label={`Fahrzeug ${i + 1}`}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          i === vehicleIdx ? "bg-foreground w-6" : "bg-border"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {vehicles.map((v, i) => {
+                      const free = isPlateAvailable(v.plate ?? "");
+                      return (
+                        <button
+                          key={v.plate ?? i}
+                          type="button"
+                          disabled={!free}
+                          onClick={() => setVehicleIdx(i)}
+                          className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition-all ${
+                            i === vehicleIdx ? "border-foreground" : "border-border"
+                          } ${free ? "hover:bg-secondary" : "opacity-50 cursor-not-allowed line-through"}`}
+                        >
+                          <span className="font-medium text-foreground">{v.name}</span>
+                          <span className="text-muted-foreground">
+                            {free ? "verfügbar" : "nicht verfügbar"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </div>
 
@@ -1066,7 +1129,8 @@ export function BookingSection() {
               </button>
               <button
                 onClick={() => setStep(registrationComplete && docsReady ? 5 : 3)}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg"
+                disabled={currentVehicleUnavailable}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 Buchen & bezahlen <ChevronRight className="w-5 h-5" />
               </button>
