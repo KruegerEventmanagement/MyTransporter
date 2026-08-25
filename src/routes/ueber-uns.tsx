@@ -13,13 +13,13 @@ export const Route = createFileRoute("/ueber-uns")({
       {
         name: "description",
         content:
-          "Großer L4H2-Transporter mit fairen Kilometern, sauber aufbereitet und technisch gepflegt. Tarife, Vorteile und gute Hinweise rund um die Miete.",
+          "Zwei Transporter-Klassen (L1H1 kurz, L4H2 lang) mit fairen Kilometern, sauber aufbereitet und technisch gepflegt. Tarife, Vorteile und gute Hinweise rund um die Miete.",
       },
       { property: "og:title", content: "Über MyTransporter" },
       {
         property: "og:description",
         content:
-          "Großer L4H2-Transporter zum fairen Preis, faire Kilometer, ehrlich kommuniziert. Mehr Platz für Umzug, Renovierung und Projekte.",
+          "Transporter L1H1 und L4H2 zum fairen Festpreis, faire Kilometer, ehrlich kommuniziert. Mehr Platz für Umzug, Renovierung und Projekte.",
       },
     ],
     links: [{ rel: "canonical", href: "https://www.mytransporter.org/ueber-uns" }],
@@ -37,7 +37,7 @@ function UeberUnsPage() {
             Über MyTransporter
           </h1>
           <p className="mt-4 text-muted-foreground">
-            Großer L4H2-Transporter zum fairen Preis. Mehr Platz, faire Kilometer, ehrlich kommuniziert.
+            Transporter L1H1 und L4H2 zum fairen Festpreis. Mehr Platz, faire Kilometer, ehrlich kommuniziert.
           </p>
         </div>
       </section>
