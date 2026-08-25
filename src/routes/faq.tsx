@@ -164,7 +164,7 @@ const SEO_BLOCKS = [
   },
   {
     h: "Umzugswagen mieten, günstig & flexibel",
-    p: "Mit 6,36 m Länge, 1.200 kg Nutzlast und Hochdach ist unser Transporter ein vollwertiger Umzugswagen. Du transportierst den Inhalt einer 2- bis 3-Zimmer-Wohnung in einer Tour. Perfekt für deinen Umzug in Leonberg, Stuttgart oder bundesweit.",
+    p: "Mit 6,36 m Länge, rund 1.200 kg Nutzlast und Hochdach ist unser L4H2 ein vollwertiger Umzugswagen. Du transportierst den Inhalt einer 2- bis 3-Zimmer-Wohnung in einer Tour. Für kleinere Touren gibt es den kurzen L1H1 – 10 € günstiger. Perfekt für deinen Umzug in Leonberg, Stuttgart oder bundesweit.",
   },
   {
     h: "Möbeltransport, Baumarkt & Kleinanzeigen",
