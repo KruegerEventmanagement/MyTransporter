@@ -977,7 +977,11 @@ export function BookingSection() {
                 </>
               )}
 
-              <div className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
+              <div
+                className={`rounded-2xl border border-border overflow-hidden bg-card shadow-sm ${
+                  currentVehicleUnavailable ? "opacity-60 grayscale" : ""
+                }`}
+              >
                 <img
                   src={displayVehicle.photo}
                   alt={displayVehicle.name}
@@ -993,6 +997,24 @@ export function BookingSection() {
                       {displayVehicle.plate}
                     </span>
                   </div>
+                  {currentVehicleUnavailable && (
+                    <div className="mb-4 rounded-xl border border-border bg-secondary p-3 text-sm">
+                      <p className="font-semibold text-foreground">In diesem Zeitraum nicht verfügbar</p>
+                      {(() => {
+                        const freeAt = plateFreeAgainAt(currentPlate);
+                        return freeAt ? (
+                          <p className="text-muted-foreground">
+                            Wieder frei ab {format(new Date(freeAt), "dd.MM.yyyy, HH:mm", { locale: de })} Uhr
+                          </p>
+                        ) : null;
+                      })()}
+                      {vehicles.length > 1 && (
+                        <p className="text-muted-foreground mt-1">
+                          Bitte ein anderes Fahrzeug wählen oder Zeitraum anpassen.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground">Kraftstoff</p>
