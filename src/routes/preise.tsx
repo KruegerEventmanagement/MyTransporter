@@ -102,8 +102,8 @@ function PreisePage() {
                 <p className="text-sm text-muted-foreground">{p.label}</p>
                 <p className="text-2xl font-bold text-foreground mt-1">{p.price} €</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  L4H2 {p.price + L4H2_SURCHARGE_EUR} € · Langstreckentarif mit{" "}
-                  {p.freeKm.toLocaleString("de-DE")} Kilometern
+                  L4H2 {p.price + L4H2_SURCHARGE_EUR} € · Tarif mit{" "}
+                  {p.freeKm.toLocaleString("de-DE")} Kilometern inklusive
                 </p>
               </div>
             ))}
