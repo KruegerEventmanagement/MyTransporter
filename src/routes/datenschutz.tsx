@@ -72,7 +72,7 @@ function DatenschutzPage() {
             <p className="mt-2">Diese Hinweise beschreiben die tatsächliche technische Umsetzung und stellen keine Rechtsberatung dar.</p>
           </div>
 
-          <p className="text-xs text-muted-foreground mt-8">Stand: Mai 2026</p>
+          <p className="text-xs text-muted-foreground mt-8">Stand: August 2026</p>
         </div>
       </div>
     </main>
