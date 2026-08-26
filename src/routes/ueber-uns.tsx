@@ -50,6 +50,7 @@ function UeberUnsPage() {
         <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
         <div className="mt-3 flex flex-wrap justify-center gap-4">
           <Link to="/" className="hover:text-foreground transition-colors">Startseite</Link>
+          <Link to="/preise" className="hover:text-foreground transition-colors">Tarife & Preise</Link>
           <Link to="/impressum" className="hover:text-foreground transition-colors">Impressum</Link>
           <Link to="/agb" className="hover:text-foreground transition-colors">AGB</Link>
           <Link to="/datenschutz" className="hover:text-foreground transition-colors">Datenschutz</Link>

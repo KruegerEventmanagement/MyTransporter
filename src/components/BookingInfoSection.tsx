@@ -1,8 +1,9 @@
 const POINTS = [
-  "Kaution nach Absprache",
+  "Kaution 200 € – wird nach ordnungsgemäßer Rückgabe zurückerstattet",
   "Führerschein und Ausweis erforderlich",
   "Übergabe mit Fotos und Protokoll",
-  "Vollgetankt zurückgeben",
+  "Zubehör (Spanngurte, Decken, Rollbrett) optional als Zusatzpaket buchbar",
+  "Voll-voll-Regel: vollgetankt übernehmen, vollgetankt zurückgeben",
   "Besenrein zurückgeben",
   "Rauchen im Fahrzeug verboten",
   "Auslandsfahrten nur nach vorheriger Absprache",
