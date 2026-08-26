@@ -11,6 +11,7 @@ import {
 import appCss from "../styles.css?url";
 import { InstallBanner } from "@/components/InstallBanner";
 import { HelpBubble } from "@/components/HelpBubble";
+import { CookieConsent } from "@/components/CookieConsent";
 
 function NotFoundComponent() {
   return (
