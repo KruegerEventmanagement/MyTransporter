@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { openConsentSettings } from "@/components/CookieConsent";
 
 export const Route = createFileRoute("/datenschutz")({
   head: () => ({
@@ -51,11 +52,27 @@ function DatenschutzPage() {
           </div>
 
           <div>
-            <h2 className="font-bold text-lg text-foreground mb-2">6. Cookies</h2>
-            <p>Unsere Website verwendet nur technisch notwendige Cookies zur Sitzungsverwaltung. Es werden keine Tracking- oder Marketing-Cookies eingesetzt.</p>
+            <h2 className="font-bold text-lg text-foreground mb-2">6. Cookies und Einwilligung</h2>
+            <p>Technisch notwendige Cookies und Speichereinträge verwenden wir für Login, Buchung und Zahlungsabwicklung. Sie sind zur Bereitstellung der Website erforderlich (Art. 6 Abs. 1 lit. b DSGVO) und werden ohne Einwilligung gesetzt.</p>
+            <p className="mt-2">Marketing-Cookies werden ausschließlich nach ausdrücklicher Einwilligung gesetzt (Art. 6 Abs. 1 lit. a DSGVO). Ohne Einwilligung wird kein Marketing- oder Trackingdienst geladen.</p>
           </div>
 
-          <p className="text-xs text-muted-foreground mt-8">Stand: Mai 2026</p>
+          <div>
+            <h2 className="font-bold text-lg text-foreground mb-2">7. Google Ads Conversion-Tracking</h2>
+            <p>Mit Ihrer Einwilligung setzen wir Google Ads Conversion-Tracking (Google Ireland Limited) ein. Zweck ist die Messung, ob eine über eine Google-Anzeige begonnene Sitzung zu einer abgeschlossenen, bezahlten Buchung geführt hat. Übermittelt werden dabei ein pseudonymer Klick-Identifier, der Buchungswert (Mietpreis inkl. gebuchter Zusatzpakete, ohne die rückzahlbare Kaution), die Währung und eine eindeutige Transaktionskennung. Es werden keine Namen, E-Mail-Adressen oder Dokumentendaten an Google übermittelt.</p>
+            <p className="mt-2">Wir nutzen den Google Consent Mode v2: Die Signale <em>ad_storage</em>, <em>analytics_storage</em>, <em>ad_user_data</em> und <em>ad_personalization</em> sind standardmäßig auf „denied“ gesetzt und werden erst nach Ihrer Einwilligung auf „granted“ gesetzt. Eine Datenübermittlung in die USA kann nicht ausgeschlossen werden.</p>
+            <p className="mt-2">Sie können Ihre Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen oder ändern:</p>
+            <button
+              type="button"
+              onClick={openConsentSettings}
+              className="mt-3 inline-flex items-center rounded-full border border-input bg-background px-5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+            >
+              Cookie-Einstellungen ändern
+            </button>
+            <p className="mt-2">Diese Hinweise beschreiben die tatsächliche technische Umsetzung und stellen keine Rechtsberatung dar.</p>
+          </div>
+
+          <p className="text-xs text-muted-foreground mt-8">Stand: August 2026</p>
         </div>
       </div>
     </main>

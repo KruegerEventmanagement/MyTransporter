@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { getBookingBySessionId } from "@/lib/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
+import { trackPurchase } from "@/lib/analytics";
 
 export const Route = createFileRoute("/checkout/return")({
   validateSearch: (search: Record<string, unknown>): { session_id?: string } => ({
@@ -35,6 +36,16 @@ function CheckoutReturn() {
         if (cancelled) return;
         try {
           const result = await getBookingBySessionId({ data: { sessionId, environment } });
+          if (result.paid && result.conversionValueEur && result.transactionId) {
+            // Nur serverseitig verifizierte Werte; feuert genau einmal pro transaction_id
+            // und nur bei Marketing-Einwilligung + gesetztem Conversion-Label.
+            trackPurchase({
+              paid: true,
+              conversionValueEur: result.conversionValueEur,
+              currency: result.currency,
+              transactionId: result.transactionId,
+            });
+          }
           if (result.bookingId) {
             try { localStorage.removeItem("mt_pending_booking"); } catch {}
             if (!cancelled) {

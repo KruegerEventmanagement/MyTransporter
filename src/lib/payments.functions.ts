@@ -237,22 +237,58 @@ export const getBookingBySessionId = createServerFn({ method: "POST" })
     assertStripeEnvironment(data.environment);
     return data;
   })
-  .handler(async ({ data }): Promise<{ bookingId: string | null; paymentStatus: string | null }> => {
+  .handler(async ({ data }): Promise<{
+    bookingId: string | null;
+    paymentStatus: string | null;
+    /** Serverseitig bestätigte Zahlung – Basis für Conversion-Tracking */
+    paid: boolean;
+    /** Echter Umsatz (Miete + Add-ons) OHNE rückzahlbare Kaution, in EUR */
+    conversionValueEur: number | null;
+    currency: string;
+    /** Bevorzugt Stripe PaymentIntent, sonst Checkout-Session-ID */
+    transactionId: string | null;
+  }> => {
     const stripe = createStripeClient(data.environment);
     const session = await stripe.checkout.sessions.retrieve(data.sessionId, {
       expand: ["payment_intent"],
     });
     const pi = session.payment_intent as Stripe.PaymentIntent | null;
     const paymentIntentId = pi?.id ?? null;
-    if (!paymentIntentId) {
-      return { bookingId: null, paymentStatus: session.payment_status ?? null };
-    }
+    const paymentStatus = session.payment_status ?? null;
+    const empty = {
+      bookingId: null,
+      paymentStatus,
+      paid: false,
+      conversionValueEur: null,
+      currency: "EUR",
+      transactionId: null,
+    };
+    if (!paymentIntentId) return empty;
+
     const { data: booking } = await supabaseAdmin
       .from("bookings")
-      .select("id")
+      .select("id, status, plan_price, addons_total_cents")
       .eq("stripe_payment_intent_id", paymentIntentId)
       .maybeSingle();
-    return { bookingId: booking?.id ?? null, paymentStatus: session.payment_status ?? null };
+    if (!booking) return { ...empty, transactionId: paymentIntentId };
+
+    // Zahlung gilt nur als bestätigt, wenn Stripe "paid" meldet UND der Webhook
+    // die Buchung mit bezahltem Status persistiert hat.
+    const paid = paymentStatus === "paid" && booking.status !== "pending";
+    const rentEur = Number(booking.plan_price ?? 0);
+    const addonsEur = Number(booking.addons_total_cents ?? 0) / 100;
+    const valueEur = Math.round((rentEur + addonsEur) * 100) / 100;
+
+    return {
+      bookingId: booking.id as string,
+      paymentStatus,
+      paid,
+      // Kaution (200 €) ist reine rückzahlbare Sicherheitsleistung und
+      // deshalb NICHT Teil des Conversion-Werts.
+      conversionValueEur: paid && valueEur > 0 ? valueEur : null,
+      currency: "EUR",
+      transactionId: paymentIntentId ?? data.sessionId,
+    };
   });
 
 async function assertAdmin(supabase: {
