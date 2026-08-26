@@ -13,6 +13,7 @@ import { Route as WerbungRouteImport } from './routes/werbung'
 import { Route as UeberUnsRouteImport } from './routes/ueber-uns'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ProfilRouteImport } from './routes/profil'
+import { Route as PreiseRouteImport } from './routes/preise'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as KontaktRouteImport } from './routes/kontakt'
 import { Route as ImpressumRouteImport } from './routes/impressum'
@@ -49,6 +50,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ProfilRoute = ProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PreiseRoute = PreiseRouteImport.update({
+  id: '/preise',
+  path: '/preise',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PartnerRoute = PartnerRouteImport.update({
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
   '/partner': typeof PartnerRoute
+  '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -174,6 +181,7 @@ export interface FileRoutesByTo {
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
   '/partner': typeof PartnerRoute
+  '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
   '/partner': typeof PartnerRoute
+  '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/impressum'
     | '/kontakt'
     | '/partner'
+    | '/preise'
     | '/profil'
     | '/sitemap.xml'
     | '/ueber-uns'
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
     | '/impressum'
     | '/kontakt'
     | '/partner'
+    | '/preise'
     | '/profil'
     | '/sitemap.xml'
     | '/ueber-uns'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/impressum'
     | '/kontakt'
     | '/partner'
+    | '/preise'
     | '/profil'
     | '/sitemap.xml'
     | '/ueber-uns'
@@ -293,6 +305,7 @@ export interface RootRouteChildren {
   ImpressumRoute: typeof ImpressumRoute
   KontaktRoute: typeof KontaktRoute
   PartnerRoute: typeof PartnerRoute
+  PreiseRoute: typeof PreiseRoute
   ProfilRoute: typeof ProfilRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   UeberUnsRoute: typeof UeberUnsRoute
@@ -336,6 +349,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/profil'
       preLoaderRoute: typeof ProfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/preise': {
+      id: '/preise'
+      path: '/preise'
+      fullPath: '/preise'
+      preLoaderRoute: typeof PreiseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/partner': {
@@ -469,6 +489,7 @@ const rootRouteChildren: RootRouteChildren = {
   ImpressumRoute: ImpressumRoute,
   KontaktRoute: KontaktRoute,
   PartnerRoute: PartnerRoute,
+  PreiseRoute: PreiseRoute,
   ProfilRoute: ProfilRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   UeberUnsRoute: UeberUnsRoute,

@@ -9,20 +9,22 @@ import { AdBanner } from "@/components/AdBanner";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Transporter mieten in Leonberg & Stuttgart | MyTransporter" },
+      { title: "Transporter mieten ab 49 € – Leonberg & Stuttgart | MyTransporter" },
       {
         name: "description",
         content:
-          "Günstige und flexible Transporter-Vermietung in Leonberg, Stuttgart und Umgebung. Ideal für Umzug, Möbeltransport, Kleinanzeigen-Abholung, Baumarkt und kurzfristige Fahrten.",
+          "Transporter mieten ab 49 € in Leonberg, Stuttgart, Böblingen und Sindelfingen: 3 h 49 €, 6 h 69 €, 24 h 99 €. Online buchen für Umzug, Möbeltransport, Baumarkt und Kleinanzeigen-Abholung.",
       },
       { name: "robots", content: "index,follow" },
       { name: "geo.region", content: "DE-BW" },
       { name: "geo.placename", content: "Leonberg, Stuttgart" },
-      { property: "og:title", content: "Transporter mieten in Leonberg & Stuttgart | MyTransporter" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { property: "og:title", content: "Transporter mieten ab 49 € – Leonberg & Stuttgart" },
       {
         property: "og:description",
         content:
-          "Günstige Transporter-Vermietung in Leonberg, Stuttgart, Böblingen, Sindelfingen und Ludwigsburg. Online buchen ab 90 Cent pro Kilometer, ideal für Umzug, Möbeltransport und kurzfristige Fahrten.",
+          "Festpreise ab 49 €: 3 Stunden 49 €, 6 Stunden 69 €, 24 Stunden 99 €, Langstrecke 189 € (500 km). Kaution 200 €, voll-voll-Tankregel, online buchbar in Leonberg und Stuttgart.",
       },
       { property: "og:locale", content: "de_DE" },
     ],
@@ -48,6 +50,13 @@ export const Route = createFileRoute("/")({
             addressCountry: "DE",
           },
           areaServed: ["Leonberg", "Stuttgart", "Böblingen", "Sindelfingen", "Ludwigsburg"],
+          makesOffer: [
+            { "@type": "Offer", name: "3 Stunden Express (L1H1)", price: 49, priceCurrency: "EUR" },
+            { "@type": "Offer", name: "6 Stunden Umzug Mini (L1H1)", price: 69, priceCurrency: "EUR" },
+            { "@type": "Offer", name: "24 Stunden Umzugstag (L1H1)", price: 99, priceCurrency: "EUR" },
+            { "@type": "Offer", name: "24 Stunden Langstrecke 500 km (L1H1)", price: 189, priceCurrency: "EUR" },
+            { "@type": "Offer", name: "24 Stunden Fernstrecke 800 km (L1H1)", price: 299, priceCurrency: "EUR" },
+          ],
           openingHoursSpecification: {
             "@type": "OpeningHoursSpecification",
             dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
@@ -68,11 +77,12 @@ function Index() {
       <Navbar />
       <HeroSection />
       <AdBanner />
-      <h1 className="sr-only">Transporter mieten in Leonberg & Stuttgart</h1>
+      <h1 className="sr-only">Transporter mieten in Leonberg &amp; Stuttgart ab 49 € – Umzug, Möbeltransport &amp; Baumarkt</h1>
       <BookingSection />
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
         <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
         <div className="mt-3 flex flex-wrap justify-center gap-4">
+          <Link to="/preise" className="hover:text-foreground transition-colors">Tarife & Preise</Link>
           <Link to="/impressum" className="hover:text-foreground transition-colors">Impressum</Link>
           <Link to="/agb" className="hover:text-foreground transition-colors">AGB</Link>
           <Link to="/datenschutz" className="hover:text-foreground transition-colors">Datenschutz</Link>
