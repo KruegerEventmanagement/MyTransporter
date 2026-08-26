@@ -17,7 +17,7 @@ export function CompareSection() {
           </div>
           <div className="rounded-xl border border-border p-4">
             <p className="font-semibold text-foreground">Faire Kilometer</p>
-            <p className="text-muted-foreground mt-1">bis 800 km inklusive</p>
+            <p className="text-muted-foreground mt-1">bis 800 km im Fernstreckentarif</p>
           </div>
           <div className="rounded-xl border border-border p-4">
             <p className="font-semibold text-foreground">Zwei Größen</p>

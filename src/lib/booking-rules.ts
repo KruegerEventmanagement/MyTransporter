@@ -100,13 +100,13 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
   },
   {
     id: "24h_500", label: "24 Stunden Langstrecke", shortLabel: "24 h · 500 km",
-    days: 1, durationHours: 24, basePrice: 179, freeKm: 500, extraKmCents: 39,
+    days: 1, durationHours: 24, basePrice: 189, freeKm: 500, extraKmCents: 39,
     returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit",
     idealFor: "Weitere Strecken, größere Abholungen, Transporte außerhalb der Region",
   },
   {
     id: "24h_800", label: "24 Stunden Fernstrecke", shortLabel: "24 h · 800 km",
-    days: 1, durationHours: 24, basePrice: 289, freeKm: 800, extraKmCents: 39,
+    days: 1, durationHours: 24, basePrice: 299, freeKm: 800, extraKmCents: 39,
     returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit",
     idealFor: "Lange Einzelfahrten, Fernumzug, Abholung in einer anderen Region",
     highlight: "best_km", highlightLabel: "Bester Kilometer-Deal",

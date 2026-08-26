@@ -53,8 +53,8 @@ function AgbPage() {
               <li>3-Stunden-Tarif „Express": 49 € (L4H2 59 €) inklusive 100 Freikilometern (Rückgabe nach 3 Stunden).</li>
               <li>6-Stunden-Tarif „Umzug Mini": 69 € (L4H2 79 €) inklusive 200 Freikilometern (Rückgabe nach 6 Stunden).</li>
               <li>24-Stunden-Tarif „Umzugstag": 99 € (L4H2 109 €) inklusive 300 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
-              <li>24-Stunden-Tarif „Langstrecke": 179 € (L4H2 189 €) inklusive 500 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
-              <li>24-Stunden-Tarif „Fernstrecke": 289 € (L4H2 299 €) inklusive 800 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
+              <li>24-Stunden-Tarif „Langstrecke": 189 € (L4H2 199 €) inklusive 500 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
+              <li>24-Stunden-Tarif „Fernstrecke": 299 € (L4H2 309 €) inklusive 800 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
               <li>2-Tage-Tarif „Kurzprojekt": 249 € (L4H2 259 €) inklusive 600 Freikilometern.</li>
               <li>3-Tage-Tarif „Umzug Plus": 349 € (L4H2 359 €) inklusive 900 Freikilometern.</li>
               <li>4-Tage-Tarif „Renovierungs-Tarif": 429 € (L4H2 439 €) inklusive 1.100 Freikilometern.</li>

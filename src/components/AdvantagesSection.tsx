@@ -1,6 +1,6 @@
 const ITEMS = [
   { title: "Zwei Größen: L1H1 & L4H2", body: "Kurzer L1H1 für Möbel und Baumarkt, langer L4H2 mit Hochdach für den kompletten Umzug (+10 €)." },
-  { title: "Faire Kilometer inklusive", body: "300 km im Umzugstag · 500 km oder 800 km in den Langstrecken-Tarifen · 1.500 km in der Wochenmiete." },
+  { title: "Faire Kilometer inklusive", body: "300 km im 24-Stunden-Umzugstag (99 €). Mehr Strecke gibt es als eigenen Tarif: 500 km für 189 €, 800 km für 299 €, 1.500 km in der Wochenmiete." },
   { title: "Technisch gepflegt", body: "Neue Bremsen, neue Reifen, neue Federn vorne, Schweller geschweißt, läuft zuverlässig." },
   { title: "Sauber aufbereitet", body: "Fahrraum gründlich gereinigt, Sitze nass gereinigt, du steigst in einen aufgeräumten Transporter ein." },
   { title: "Lokal in Leonberg", body: "Ideal für Leonberg, Stuttgart, Böblingen, Sindelfingen und Ludwigsburg." },
