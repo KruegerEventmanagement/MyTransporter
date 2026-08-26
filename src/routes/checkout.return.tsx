@@ -35,6 +35,16 @@ function CheckoutReturn() {
         if (cancelled) return;
         try {
           const result = await getBookingBySessionId({ data: { sessionId, environment } });
+          if (result.paid && result.conversionValueEur && result.transactionId) {
+            // Nur serverseitig verifizierte Werte; feuert genau einmal pro transaction_id
+            // und nur bei Marketing-Einwilligung + gesetztem Conversion-Label.
+            trackPurchase({
+              paid: true,
+              conversionValueEur: result.conversionValueEur,
+              currency: result.currency,
+              transactionId: result.transactionId,
+            });
+          }
           if (result.bookingId) {
             try { localStorage.removeItem("mt_pending_booking"); } catch {}
             if (!cancelled) {
