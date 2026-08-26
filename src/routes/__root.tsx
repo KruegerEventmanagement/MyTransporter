@@ -134,6 +134,7 @@ function RootComponent() {
       <InstallBanner />
       <Outlet />
       <HelpBubble />
+      <CookieConsent />
     </QueryClientProvider>
   );
 }
