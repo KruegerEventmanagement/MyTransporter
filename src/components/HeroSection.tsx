@@ -15,7 +15,7 @@ function goToBooking() {
 
 export function HeroSection() {
   return (
-    <section className="hidden pt-10 pb-6 px-4">
+    <section className="pt-10 pb-6 px-4">
       <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
         <button
           type="button"
