@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { openConsentSettings } from "@/components/CookieConsent";
 
 export const Route = createFileRoute("/datenschutz")({
   head: () => ({
