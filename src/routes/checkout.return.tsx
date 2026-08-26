@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { getBookingBySessionId } from "@/lib/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
+import { trackPurchase } from "@/lib/analytics";
 
 export const Route = createFileRoute("/checkout/return")({
   validateSearch: (search: Record<string, unknown>): { session_id?: string } => ({
