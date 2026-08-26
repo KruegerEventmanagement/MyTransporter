@@ -145,11 +145,18 @@ export function Navbar() {
             Werbefläche
           </Link>
           <Link
+            to="/preise"
+            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Preise
+          </Link>
+          <Link
             to="/ueber-uns"
             className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             Über uns
           </Link>
+
           {!isLoggedIn ? (
             <>
               <button
