@@ -134,9 +134,56 @@ export function trackEvent(event: InternalEvent): void {
   if (typeof window === "undefined") return;
   if (!hasMarketingConsent()) return;
   ensureGoogleTag();
+  ensureMetaPixel();
   const { name, ...params } = event;
   window.gtag?.("event", name, params);
+  if (name === "checkout_start") {
+    const { valueEur } = event as { valueEur: number };
+    // Verbindlicher Checkout-Start, aber NOCH KEINE Zahlung → InitiateCheckout.
+    metaTrack("InitiateCheckout", { currency: "EUR", value: valueEur });
+  }
 }
+
+/* -------------------------------------------- CompleteRegistration (Meta) */
+
+const REGISTRATIONS_KEY = "mt_meta_registrations_sent";
+
+function sentIds(key: string): string[] {
+  try {
+    const raw = window.localStorage.getItem(key);
+    const list = raw ? (JSON.parse(raw) as unknown) : [];
+    return Array.isArray(list) ? list.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberId(key: string, id: string): void {
+  try {
+    const arr = sentIds(key);
+    arr.push(id);
+    window.localStorage.setItem(key, JSON.stringify(arr.slice(-50)));
+  } catch {
+    /* ignorieren */
+  }
+}
+
+/**
+ * Feuert genau einmal pro User-ID, nachdem die Registrierung serverseitig
+ * abgeschlossen ist (Auth-User existiert). Es werden keine personenbezogenen
+ * Daten übergeben – nur eine anonyme Event-ID zur Deduplizierung.
+ */
+export function trackCompleteRegistration(userId: string): void {
+  if (typeof window === "undefined" || !userId) return;
+  if (!hasMarketingConsent()) return;
+  if (sentIds(REGISTRATIONS_KEY).includes(userId)) return;
+  rememberId(REGISTRATIONS_KEY, userId);
+
+  ensureGoogleTag();
+  window.gtag?.("event", "sign_up", { method: "email" });
+  metaTrack("CompleteRegistration", { status: true }, `reg_${userId}`);
+}
+
 
 /* ---------------------------------------------------------- Purchase/Ads */
 
