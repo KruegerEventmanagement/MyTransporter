@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { User, X, ChevronRight, Eye, EyeOff, Route as RouteIcon, Shield } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { trackCompleteRegistration } from "@/lib/analytics";
 
 const AUTH_CONFIRM_URL = `${typeof window !== "undefined" ? window.location.origin : "https://www.mytransporter.org"}/auth/confirm`;
 
