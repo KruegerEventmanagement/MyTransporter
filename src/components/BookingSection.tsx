@@ -18,7 +18,7 @@ import { PreDriveFlow } from "./PreDriveFlow";
 import { ActiveDriveScreen } from "./ActiveDriveScreen";
 import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
-import { trackCompleteRegistration } from "@/lib/analytics";
+import { trackCompleteRegistration, trackEvent } from "@/lib/analytics";
 import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
 import {
   slotsByPlate,
