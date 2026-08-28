@@ -60,6 +60,7 @@ export function setConsent(choice: ConsentChoice): void {
   }
   if (choice === "marketing") {
     ensureGoogleTag();
+    ensureMetaPixel();
     applyConsent(true);
   } else {
     applyConsent(false);
