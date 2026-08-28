@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { User, X, ChevronRight, Eye, EyeOff, Route as RouteIcon, Shield } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { trackCompleteRegistration } from "@/lib/analytics";
 
 const AUTH_CONFIRM_URL = `${typeof window !== "undefined" ? window.location.origin : "https://www.mytransporter.org"}/auth/confirm`;
 
@@ -108,6 +109,11 @@ export function Navbar() {
       setError(error.message);
       return;
     }
+    // Konto serverseitig angelegt → CompleteRegistration (einmalig pro User-ID).
+    const isExisting =
+      !data.session && Array.isArray(data.user?.identities) && data.user!.identities!.length === 0;
+    if (data.user?.id && !isExisting) trackCompleteRegistration(data.user.id);
+
     // Admin-Benachrichtigung über neue Registrierung (still im Hintergrund)
     import("@/lib/booking-emails.functions").then(({ sendAdminRegistrationNotification }) =>
       sendAdminRegistrationNotification({

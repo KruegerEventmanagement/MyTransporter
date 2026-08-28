@@ -18,6 +18,7 @@ import { PreDriveFlow } from "./PreDriveFlow";
 import { ActiveDriveScreen } from "./ActiveDriveScreen";
 import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
+import { trackCompleteRegistration, trackEvent } from "@/lib/analytics";
 import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
 import {
   slotsByPlate,
@@ -387,6 +388,8 @@ export function BookingSection() {
     }
     const alreadyRegistered =
       !data.session && Array.isArray(data.user?.identities) && data.user!.identities!.length === 0;
+    // Konto serverseitig angelegt → CompleteRegistration (einmalig pro User-ID).
+    if (data.user?.id && !alreadyRegistered) trackCompleteRegistration(data.user.id);
     // Admin-Benachrichtigung über neue Registrierung (still im Hintergrund)
     import("@/lib/booking-emails.functions").then(({ sendAdminRegistrationNotification }) =>
       sendAdminRegistrationNotification({
@@ -1589,8 +1592,15 @@ export function BookingSection() {
                           startHour: startHour ?? undefined,
                        },
                      });
-                     if ("error" in result) throw new Error(result.error);
-                     setCheckoutClientSecret(result.clientSecret);
+                      if ("error" in result) throw new Error(result.error);
+                      setCheckoutClientSecret(result.clientSecret);
+                      // Checkout wurde erfolgreich gestartet, Zahlung noch NICHT final
+                      // → InitiateCheckout (kein Purchase). Wert ohne Kaution.
+                      trackEvent({
+                        name: "checkout_start",
+                        valueEur: selectedPlanEntry ? selectedPlanEntry.price + addonsTotal : 0,
+                        planId: selectedPlanId ?? "",
+                      });
                    } catch (e) {
                      console.error(e);
                      setCheckoutError(e instanceof Error ? e.message : "Zahlung konnte nicht gestartet werden.");

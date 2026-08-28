@@ -8,6 +8,8 @@
  *   Fehlt sie, wird kein Conversion-Event gesendet (kein Fehler, kein Crash).
  */
 
+import { ensureMetaPixel, metaTrack } from "./meta-pixel";
+
 export const GOOGLE_ADS_ID = "AW-18092739278";
 
 const PURCHASE_LABEL = (import.meta.env.VITE_GOOGLE_ADS_PURCHASE_LABEL as string | undefined)?.trim() || "";
@@ -58,6 +60,7 @@ export function setConsent(choice: ConsentChoice): void {
   }
   if (choice === "marketing") {
     ensureGoogleTag();
+    ensureMetaPixel();
     applyConsent(true);
   } else {
     applyConsent(false);
@@ -134,9 +137,56 @@ export function trackEvent(event: InternalEvent): void {
   if (typeof window === "undefined") return;
   if (!hasMarketingConsent()) return;
   ensureGoogleTag();
+  ensureMetaPixel();
   const { name, ...params } = event;
   window.gtag?.("event", name, params);
+  if (name === "checkout_start") {
+    const { valueEur } = event as { valueEur: number };
+    // Verbindlicher Checkout-Start, aber NOCH KEINE Zahlung → InitiateCheckout.
+    metaTrack("InitiateCheckout", { currency: "EUR", value: valueEur });
+  }
 }
+
+/* -------------------------------------------- CompleteRegistration (Meta) */
+
+const REGISTRATIONS_KEY = "mt_meta_registrations_sent";
+
+function sentIds(key: string): string[] {
+  try {
+    const raw = window.localStorage.getItem(key);
+    const list = raw ? (JSON.parse(raw) as unknown) : [];
+    return Array.isArray(list) ? list.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberId(key: string, id: string): void {
+  try {
+    const arr = sentIds(key);
+    arr.push(id);
+    window.localStorage.setItem(key, JSON.stringify(arr.slice(-50)));
+  } catch {
+    /* ignorieren */
+  }
+}
+
+/**
+ * Feuert genau einmal pro User-ID, nachdem die Registrierung serverseitig
+ * abgeschlossen ist (Auth-User existiert). Es werden keine personenbezogenen
+ * Daten übergeben – nur eine anonyme Event-ID zur Deduplizierung.
+ */
+export function trackCompleteRegistration(userId: string): void {
+  if (typeof window === "undefined" || !userId) return;
+  if (!hasMarketingConsent()) return;
+  if (sentIds(REGISTRATIONS_KEY).includes(userId)) return;
+  rememberId(REGISTRATIONS_KEY, userId);
+
+  ensureGoogleTag();
+  window.gtag?.("event", "sign_up", { method: "email" });
+  metaTrack("CompleteRegistration", { status: true }, `reg_${userId}`);
+}
+
 
 /* ---------------------------------------------------------- Purchase/Ads */
 
@@ -192,14 +242,22 @@ export function trackPurchase(purchase: VerifiedPurchase): void {
     pendingPurchase = purchase;
     return;
   }
-  if (!PURCHASE_LABEL) {
-    // Label unbekannt: bewusst kein Event, kein Fehler.
-    return;
-  }
   if (sentThisSession.has(purchase.transactionId) || alreadySent(purchase.transactionId)) return;
 
   sentThisSession.add(purchase.transactionId);
   markSent(purchase.transactionId);
+
+  // Meta Purchase – nur Wert, Währung und stabile Zahlungs-ID (keine PII).
+  metaTrack(
+    "Purchase",
+    { currency: "EUR", value: purchase.conversionValueEur },
+    purchase.transactionId,
+  );
+
+  if (!PURCHASE_LABEL) {
+    // Google-Ads-Label nicht gesetzt: bewusst kein Google-Event, kein Fehler.
+    return;
+  }
 
   ensureGoogleTag();
   window.gtag?.("event", "conversion", {

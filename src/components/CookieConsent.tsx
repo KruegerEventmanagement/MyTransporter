@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { getConsent, setConsent, ensureGoogleTag, hasMarketingConsent } from "@/lib/analytics";
+import { ensureMetaPixel } from "@/lib/meta-pixel";
+import { captureAttribution } from "@/lib/attribution";
 
 export const OPEN_CONSENT_EVENT = "mt:open-consent";
 
@@ -13,11 +15,15 @@ export function CookieConsent() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    // First-Touch-Attribution (UTM/gclid/fbclid) immer erfassen – rein lokal,
+    // ohne Übertragung an Werbeplattformen.
+    captureAttribution();
     const choice = getConsent();
     if (choice === null) setOpen(true);
-    // Bei bereits erteilter Einwilligung Tag laden und Consent anwenden.
+    // Bei bereits erteilter Einwilligung Tags laden und Consent anwenden.
     if (choice === "marketing" && hasMarketingConsent()) {
       ensureGoogleTag();
+      ensureMetaPixel();
       setConsent("marketing");
     }
     const reopen = () => setOpen(true);
@@ -41,9 +47,9 @@ export function CookieConsent() {
       <h2 className="text-base font-bold text-foreground">Cookies & Einwilligung</h2>
       <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
         Technisch notwendige Cookies benötigen wir für Login, Buchung und Zahlung – sie sind immer
-        aktiv. Zusätzlich möchten wir Google Ads Conversion-Tracking einsetzen, um zu messen, welche
-        Anzeigen zu Buchungen führen. Das geschieht nur mit deiner Einwilligung und ist jederzeit
-        widerrufbar.
+        aktiv. Zusätzlich möchten wir Conversion-Tracking von Google Ads und Meta einsetzen, um zu
+        messen, welche Anzeigen zu Buchungen führen. Das geschieht nur mit deiner Einwilligung und
+        ist jederzeit widerrufbar.
       </p>
       <div className="mt-4 flex flex-col sm:flex-row gap-2">
         <button
