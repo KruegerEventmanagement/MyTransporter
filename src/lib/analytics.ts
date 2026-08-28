@@ -241,14 +241,22 @@ export function trackPurchase(purchase: VerifiedPurchase): void {
     pendingPurchase = purchase;
     return;
   }
-  if (!PURCHASE_LABEL) {
-    // Label unbekannt: bewusst kein Event, kein Fehler.
-    return;
-  }
   if (sentThisSession.has(purchase.transactionId) || alreadySent(purchase.transactionId)) return;
 
   sentThisSession.add(purchase.transactionId);
   markSent(purchase.transactionId);
+
+  // Meta Purchase – nur Wert, Währung und stabile Zahlungs-ID (keine PII).
+  metaTrack(
+    "Purchase",
+    { currency: "EUR", value: purchase.conversionValueEur },
+    purchase.transactionId,
+  );
+
+  if (!PURCHASE_LABEL) {
+    // Google-Ads-Label nicht gesetzt: bewusst kein Google-Event, kein Fehler.
+    return;
+  }
 
   ensureGoogleTag();
   window.gtag?.("event", "conversion", {
