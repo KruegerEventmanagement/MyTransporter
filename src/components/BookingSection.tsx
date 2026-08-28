@@ -1592,8 +1592,15 @@ export function BookingSection() {
                           startHour: startHour ?? undefined,
                        },
                      });
-                     if ("error" in result) throw new Error(result.error);
-                     setCheckoutClientSecret(result.clientSecret);
+                      if ("error" in result) throw new Error(result.error);
+                      setCheckoutClientSecret(result.clientSecret);
+                      // Checkout wurde erfolgreich gestartet, Zahlung noch NICHT final
+                      // → InitiateCheckout (kein Purchase). Wert ohne Kaution.
+                      trackEvent({
+                        name: "checkout_start",
+                        valueEur: selectedPlanEntry ? selectedPlanEntry.price + addonsTotal : 0,
+                        planId: selectedPlanId ?? "",
+                      });
                    } catch (e) {
                      console.error(e);
                      setCheckoutError(e instanceof Error ? e.message : "Zahlung konnte nicht gestartet werden.");
