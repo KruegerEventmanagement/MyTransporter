@@ -8,6 +8,8 @@
  *   Fehlt sie, wird kein Conversion-Event gesendet (kein Fehler, kein Crash).
  */
 
+import { ensureMetaPixel, metaTrack } from "./meta-pixel";
+
 export const GOOGLE_ADS_ID = "AW-18092739278";
 
 const PURCHASE_LABEL = (import.meta.env.VITE_GOOGLE_ADS_PURCHASE_LABEL as string | undefined)?.trim() || "";
