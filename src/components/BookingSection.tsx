@@ -388,6 +388,8 @@ export function BookingSection() {
     }
     const alreadyRegistered =
       !data.session && Array.isArray(data.user?.identities) && data.user!.identities!.length === 0;
+    // Konto serverseitig angelegt → CompleteRegistration (einmalig pro User-ID).
+    if (data.user?.id && !alreadyRegistered) trackCompleteRegistration(data.user.id);
     // Admin-Benachrichtigung über neue Registrierung (still im Hintergrund)
     import("@/lib/booking-emails.functions").then(({ sendAdminRegistrationNotification }) =>
       sendAdminRegistrationNotification({
