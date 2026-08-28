@@ -108,6 +108,11 @@ export function Navbar() {
       setError(error.message);
       return;
     }
+    // Konto serverseitig angelegt → CompleteRegistration (einmalig pro User-ID).
+    const isExisting =
+      !data.session && Array.isArray(data.user?.identities) && data.user!.identities!.length === 0;
+    if (data.user?.id && !isExisting) trackCompleteRegistration(data.user.id);
+
     // Admin-Benachrichtigung über neue Registrierung (still im Hintergrund)
     import("@/lib/booking-emails.functions").then(({ sendAdminRegistrationNotification }) =>
       sendAdminRegistrationNotification({
