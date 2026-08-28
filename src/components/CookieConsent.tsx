@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { getConsent, setConsent, ensureGoogleTag, hasMarketingConsent } from "@/lib/analytics";
+import { ensureMetaPixel } from "@/lib/meta-pixel";
+import { captureAttribution } from "@/lib/attribution";
 
 export const OPEN_CONSENT_EVENT = "mt:open-consent";
 
