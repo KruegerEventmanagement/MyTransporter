@@ -4,6 +4,11 @@
  * WICHTIG: Dies ist die einzige Preisquelle. Sie wird sowohl im Client (Anzeige)
  * als auch serverseitig (Stripe-Checkout, Webhook, Buchungsanlage) verwendet.
  * Der Zahlbetrag wird ausschließlich serverseitig aus diesem Katalog berechnet.
+ *
+ * Preis-Invariante: Grundtarif + Mehrkilometer ist nie günstiger als ein
+ * beworbenes Kilometerpaket. Beispiel L1H1: 24h/300 km (99 €) + 200 km × 0,45 €
+ * = 189 € = 24h/500-km-Paket; 24h/800 km kostet als Paket 299 € statt 324 €
+ * nach Einzelabrechnung.
  */
 
 export const EARLIEST_START_HOUR = 8;
@@ -31,8 +36,12 @@ export const VEHICLE_CLASS_SHORT_LABEL: Record<VehicleClass, string> = {
   l4h2: "L4H2",
 };
 
-/** Aufpreis der langen Klasse gegenüber L1H1 – exakt 10 € pro Buchung. */
-export const L4H2_SURCHARGE_EUR = 10;
+/**
+ * Aufpreis der langen Klasse gegenüber L1H1: 10 € je Miettag.
+ * Eintagestarife (3h/6h/24h): +10 € · 2 Tage: +20 € · … · 7 Tage: +70 €.
+ * Die verbindlichen L4H2-Preise stehen explizit im Tarif-Katalog (basePriceL4h2).
+ */
+export const L4H2_SURCHARGE_PER_DAY_EUR = 10;
 
 /** Mindestbetrag beim reinen Kilometer-Tarif. */
 export const KM_TARIFF_MIN_EUR: Record<VehicleClass, number> = {
@@ -51,9 +60,6 @@ export function vehicleClassFromName(...parts: Array<string | null | undefined>)
   return "l1h1";
 }
 
-export function classSurchargeEur(vehicleClass: VehicleClass): number {
-  return vehicleClass === "l4h2" ? L4H2_SURCHARGE_EUR : 0;
-}
 
 export type PlanEntry = {
   id: PlanId;
@@ -63,6 +69,7 @@ export type PlanEntry = {
   durationHours: number;   // Mietdauer in Stunden (3, 6, 24, n*24)
   price: number;           // € für die konkrete Fahrzeugklasse
   basePrice: number;       // € für L1H1 (Basis)
+  priceL4h2: number;       // € für L4H2 (verbindlicher Katalogpreis)
   vehicleClass: VehicleClass;
   classLabel: string;
   freeKm: number;
@@ -73,78 +80,79 @@ export type PlanEntry = {
   highlightLabel?: string;
 };
 
-type PlanTemplate = Omit<PlanEntry, "price" | "basePrice" | "vehicleClass" | "classLabel"> & {
+type PlanTemplate = Omit<PlanEntry, "price" | "basePrice" | "priceL4h2" | "vehicleClass" | "classLabel"> & {
   basePrice: number;
+  basePriceL4h2: number;
 };
 
-/** Alle aktiven Tarife – Preise sind Basispreise für L1H1. */
+/** Alle aktiven Tarife – verbindliche Preise für L1H1 und L4H2. */
 const PLAN_TEMPLATES: PlanTemplate[] = [
   {
     id: "3h", label: "3 Stunden Express", shortLabel: "3 h Express",
-    days: 1, durationHours: 3, basePrice: 49, freeKm: 100, extraKmCents: 39,
+    days: 1, durationHours: 3, basePrice: 49, basePriceL4h2: 59, freeKm: 100, extraKmCents: 45,
     returnRule: "Rückgabe nach 3 Stunden",
     idealFor: "Kurze Transporte, Möbelhaus, Kleinanzeigen-Abholung",
   },
   {
     id: "6h", label: "6 Stunden Umzug Mini", shortLabel: "6 h Mini",
-    days: 1, durationHours: 6, basePrice: 69, freeKm: 200, extraKmCents: 39,
+    days: 1, durationHours: 6, basePrice: 69, basePriceL4h2: 79, freeKm: 200, extraKmCents: 45,
     returnRule: "Rückgabe nach 6 Stunden",
     idealFor: "Kleine Umzüge, mehrere Fahrten, Entrümpelung",
   },
   {
     id: "24h_300", label: "24 Stunden Umzugstag", shortLabel: "24 h · 300 km",
-    days: 1, durationHours: 24, basePrice: 99, freeKm: 300, extraKmCents: 39,
+    days: 1, durationHours: 24, basePrice: 99, basePriceL4h2: 109, freeKm: 300, extraKmCents: 45,
     returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit",
     idealFor: "Kompletter Umzugstag, stressfreies Be- und Entladen",
     highlight: "popular", highlightLabel: "Beliebtester Tarif",
   },
   {
     id: "24h_500", label: "24 Stunden Langstrecke", shortLabel: "24 h · 500 km",
-    days: 1, durationHours: 24, basePrice: 189, freeKm: 500, extraKmCents: 39,
+    days: 1, durationHours: 24, basePrice: 189, basePriceL4h2: 199, freeKm: 500, extraKmCents: 45,
     returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit",
     idealFor: "Weitere Strecken, größere Abholungen, Transporte außerhalb der Region",
   },
   {
     id: "24h_800", label: "24 Stunden Fernstrecke", shortLabel: "24 h · 800 km",
-    days: 1, durationHours: 24, basePrice: 299, freeKm: 800, extraKmCents: 39,
+    days: 1, durationHours: 24, basePrice: 299, basePriceL4h2: 309, freeKm: 800, extraKmCents: 45,
     returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit",
     idealFor: "Lange Einzelfahrten, Fernumzug, Abholung in einer anderen Region",
     highlight: "best_km", highlightLabel: "Bester Kilometer-Deal",
   },
   {
     id: "multi_2d", label: "2 Tage Kurzprojekt", shortLabel: "2 Tage",
-    days: 2, durationHours: 48, basePrice: 249, freeKm: 600, extraKmCents: 35,
+    days: 2, durationHours: 48, basePrice: 189, basePriceL4h2: 209, freeKm: 600, extraKmCents: 35,
     returnRule: "Rückgabe nach 2 Tagen zur gleichen Uhrzeit",
     idealFor: "Wochenende, kleiner Umzug, Möbeltransport",
   },
   {
     id: "multi_3d", label: "3 Tage Umzug Plus", shortLabel: "3 Tage",
-    days: 3, durationHours: 72, basePrice: 349, freeKm: 900, extraKmCents: 35,
+    days: 3, durationHours: 72, basePrice: 269, basePriceL4h2: 299, freeKm: 900, extraKmCents: 35,
     returnRule: "Rückgabe nach 3 Tagen zur gleichen Uhrzeit",
     idealFor: "Entspannter Umzug, Abbau, Transport und Aufbau ohne Zeitdruck",
     highlight: "popular", highlightLabel: "Beliebt für Umzüge",
   },
   {
     id: "multi_4d", label: "4 Tage Renovierungs-Tarif", shortLabel: "4 Tage",
-    days: 4, durationHours: 96, basePrice: 429, freeKm: 1100, extraKmCents: 35,
+    days: 4, durationHours: 96, basePrice: 339, basePriceL4h2: 379, freeKm: 1200, extraKmCents: 35,
     returnRule: "Rückgabe nach 4 Tagen zur gleichen Uhrzeit",
     idealFor: "Renovierung, Baumarkt, Möbelhaus, Entsorgung",
   },
   {
     id: "multi_5d", label: "5 Tage Projektwoche Mini", shortLabel: "5 Tage",
-    days: 5, durationHours: 120, basePrice: 499, freeKm: 1300, extraKmCents: 35,
+    days: 5, durationHours: 120, basePrice: 399, basePriceL4h2: 449, freeKm: 1500, extraKmCents: 35,
     returnRule: "Rückgabe nach 5 Tagen zur gleichen Uhrzeit",
     idealFor: "Längere Projekte, mehrere Transporte, Firmen oder Umbauten",
   },
   {
     id: "multi_6d", label: "6 Tage Projektwoche", shortLabel: "6 Tage",
-    days: 6, durationHours: 144, basePrice: 549, freeKm: 1400, extraKmCents: 35,
+    days: 6, durationHours: 144, basePrice: 449, basePriceL4h2: 509, freeKm: 1800, extraKmCents: 35,
     returnRule: "Rückgabe nach 6 Tagen zur gleichen Uhrzeit",
     idealFor: "Intensive Umzugswoche, Renovierung, gewerbliche Nutzung",
   },
   {
     id: "multi_7d", label: "7 Tage Wochenmiete", shortLabel: "7 Tage Wochenmiete",
-    days: 7, durationHours: 168, basePrice: 599, freeKm: 1500, extraKmCents: 29,
+    days: 7, durationHours: 168, basePrice: 499, basePriceL4h2: 569, freeKm: 2100, extraKmCents: 29,
     returnRule: "Rückgabe nach 7 Tagen zur gleichen Uhrzeit",
     idealFor: "Komplette Projektwoche, Baustelle, Umzug, Firmen",
     highlight: "best_daily", highlightLabel: "Bester Tagespreis",
@@ -159,12 +167,14 @@ const LEGACY_PLAN_ALIASES: Record<string, string> = {
 };
 
 function withClass(tpl: PlanTemplate, vehicleClass: VehicleClass): PlanEntry {
+  const { basePriceL4h2, ...rest } = tpl;
   return {
-    ...tpl,
+    ...rest,
     vehicleClass,
     classLabel: VEHICLE_CLASS_LABEL[vehicleClass],
     basePrice: tpl.basePrice,
-    price: tpl.basePrice + classSurchargeEur(vehicleClass),
+    priceL4h2: basePriceL4h2,
+    price: vehicleClass === "l4h2" ? basePriceL4h2 : tpl.basePrice,
   };
 }
 
@@ -188,17 +198,17 @@ export function getPlanById(planId: string, vehicleClass: VehicleClass = "l1h1")
     if (!base) return null;
     const days = n * 7;
     const basePrice = base.basePrice * n;
+    const priceL4h2 = base.basePriceL4h2 * n;
     return {
-      ...base,
+      ...withClass(base, vehicleClass),
       id: resolvedId,
       label: `${n} × 7 Tage Wochenmiete (${days} Tage)`,
       shortLabel: `${n}× Wochenmiete`,
       days,
       durationHours: days * 24,
       basePrice,
-      price: basePrice + classSurchargeEur(vehicleClass),
-      vehicleClass,
-      classLabel: VEHICLE_CLASS_LABEL[vehicleClass],
+      priceL4h2,
+      price: vehicleClass === "l4h2" ? priceL4h2 : basePrice,
       freeKm: base.freeKm * n,
       returnRule: `Rückgabe nach ${days} Tagen zur gleichen Uhrzeit`,
       idealFor: n > 1 ? `Längere Miete: ${n} volle Wochen` : base.idealFor,
