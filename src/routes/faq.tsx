@@ -7,7 +7,7 @@ const FAQS = [
   },
   {
     q: "Was kostet die Transporter-Miete?",
-    a: "Wir haben zwei Fahrzeugklassen: den kurzen L1H1 und den langen L4H2 (jeweils pauschal 10 € mehr). L1H1: 3 Stunden 49 € (100 km inkl.), 6 Stunden 69 € (200 km), 24 Stunden 99 € (300 km), 189 € (500-km-Langstreckentarif) oder 299 € (800-km-Fernstreckentarif). Mehrtagestarife L1H1: 2 Tage 249 €, 3 Tage 349 €, 4 Tage 429 €, 5 Tage 499 €, 6 Tage 549 €, 7 Tage 599 €. Für den L4H2 gilt jeweils der gleiche Tarif +10 €. Jeder Kilometer über das Freikontingent kostet 0,39 € (ab 2 Tagen 0,35 €, Wochenmiete 0,29 €). Alternativ gibt es die reine Kilometer-Abrechnung zu 0,90 € pro Kilometer (Mindestbetrag L1H1 100 €, L4H2 110 €).",
+    a: "Wir haben zwei Fahrzeugklassen: den kurzen L1H1 und den langen L4H2 (+10 € pro Miettag). L1H1: 3 Stunden 49 € (100 km inkl.), 6 Stunden 69 € (200 km), 24 Stunden 99 € (300 km), 189 € (500-km-Langstreckentarif) oder 299 € (800-km-Fernstreckentarif). Mehrtagestarife L1H1: 2 Tage 189 € (600 km), 3 Tage 269 € (900 km), 4 Tage 339 € (1.200 km), 5 Tage 399 € (1.500 km), 6 Tage 449 € (1.800 km), 7 Tage 499 € (2.100 km). L4H2 z. B.: 24 Stunden 109 €, 2 Tage 209 €, 7 Tage 569 €. Mehrkilometer kosten 0,45 € bei Tagesmieten, 0,35 € bei 2 bis 6 Tagen und 0,29 € bei der 7-Tage-Wochenmiete. Alternativ gibt es die reine Kilometer-Abrechnung zu 0,90 € pro Kilometer (Mindestbetrag L1H1 100 €, L4H2 110 €).",
   },
   {
     q: "Gibt es eine Kaution?",
@@ -19,7 +19,7 @@ const FAQS = [
   },
   {
     q: "Ist der Transporter für Umzüge geeignet?",
-    a: "Ja. Der lange L4H2 mit 6,36 m Länge und rund 1.200 kg Nutzlast ist perfekt für komplette Umzüge einer 2- bis 3-Zimmer-Wohnung. Für kleinere Transporte, Kleinanzeigen-Abholungen oder Baumarkt-Touren reicht meist der kurze L1H1 – er ist 10 € günstiger und leichter zu parken.",
+    a: "Ja. Der lange L4H2 mit 6,36 m Länge und rund 1.200 kg Nutzlast ist perfekt für komplette Umzüge einer 2- bis 3-Zimmer-Wohnung. Für kleinere Transporte, Kleinanzeigen-Abholungen oder Baumarkt-Touren reicht meist der kurze L1H1 – er ist 10 € pro Miettag günstiger und leichter zu parken.",
   },
   {
     q: "Kann ich den Transporter kurzfristig mieten?",
@@ -164,7 +164,7 @@ const SEO_BLOCKS = [
   },
   {
     h: "Umzugswagen mieten, günstig & flexibel",
-    p: "Mit 6,36 m Länge, rund 1.200 kg Nutzlast und Hochdach ist unser L4H2 ein vollwertiger Umzugswagen. Du transportierst den Inhalt einer 2- bis 3-Zimmer-Wohnung in einer Tour. Für kleinere Touren gibt es den kurzen L1H1 – 10 € günstiger. Perfekt für deinen Umzug in Leonberg, Stuttgart oder bundesweit.",
+    p: "Mit 6,36 m Länge, rund 1.200 kg Nutzlast und Hochdach ist unser L4H2 ein vollwertiger Umzugswagen. Du transportierst den Inhalt einer 2- bis 3-Zimmer-Wohnung in einer Tour. Für kleinere Touren gibt es den kurzen L1H1 – 10 € pro Miettag günstiger. Perfekt für deinen Umzug in Leonberg, Stuttgart oder bundesweit.",
   },
   {
     h: "Möbeltransport, Baumarkt & Kleinanzeigen",
@@ -176,7 +176,7 @@ const SEO_BLOCKS = [
   },
   {
     h: "Preise & Kaution, alles transparent",
-    p: "Preise für den kurzen L1H1, der lange L4H2 kostet jeweils 10 € mehr: 3 Stunden 49 € (100 km), 6 Stunden 69 € (200 km), 24 Stunden 99 € (300 km), 189 € (500-km-Langstreckentarif) oder 299 € (800-km-Fernstreckentarif). Mehrtagestarife: 2 Tage 249 €, 3 Tage 349 €, 4 Tage 429 €, 5 Tage 499 €, 6 Tage 549 €, 7 Tage 599 €. Alternativ reine Kilometer-Abrechnung zu 0,90 € / km (Mindestbetrag 100 € bzw. 110 €). Mehrkilometer kosten 0,39 € (ab 2 Tagen 0,35 €, Wochenmiete 0,29 €). Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer und vollgetankter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
+    p: "Preise für den kurzen L1H1, der lange L4H2 kostet 10 € pro Miettag mehr: 3 Stunden 49 € (100 km), 6 Stunden 69 € (200 km), 24 Stunden 99 € (300 km), 189 € (500-km-Langstreckentarif) oder 299 € (800-km-Fernstreckentarif). Mehrtagestarife: 2 Tage 189 € (600 km), 3 Tage 269 € (900 km), 4 Tage 339 € (1.200 km), 5 Tage 399 € (1.500 km), 6 Tage 449 € (1.800 km), 7 Tage 499 € (2.100 km). Alternativ reine Kilometer-Abrechnung zu 0,90 € / km (Mindestbetrag 100 € bzw. 110 €). Mehrkilometer kosten 0,45 € bei Tagesmieten, 0,35 € bei 2 bis 6 Tagen und 0,29 € bei der Wochenmiete. Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer und vollgetankter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
   },
   {
     h: "Ablauf der Vermietung",

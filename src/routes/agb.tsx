@@ -48,20 +48,20 @@ function AgbPage() {
 
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">§ 4 Preise und Tarife</h2>
-            <p className="mb-2">Alle Preise verstehen sich in Euro und enthalten die gesetzliche Umsatzsteuer von 19 %. Die Mietpreise gelten je gebuchtem Mietzeitraum und Transporter inklusive der angegebenen Freikilometer. Angegeben ist jeweils der Preis für den kurzen Transporter L1H1; für den langen Transporter L4H2 erhöht sich der jeweilige Festpreis um pauschal 10 €.</p>
+            <p className="mb-2">Alle Preise verstehen sich in Euro und enthalten die gesetzliche Umsatzsteuer von 19 %. Die Mietpreise gelten je gebuchtem Mietzeitraum und Transporter inklusive der angegebenen Freikilometer. Angegeben ist jeweils der Preis für den kurzen Transporter L1H1; für den langen Transporter L4H2 erhöht sich der jeweilige Festpreis um 10 € je Miettag (Eintagestarife +10 €, Mehrtagestarife +10 € pro Tag).</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>3-Stunden-Tarif „Express": 49 € (L4H2 59 €) inklusive 100 Freikilometern (Rückgabe nach 3 Stunden).</li>
               <li>6-Stunden-Tarif „Umzug Mini": 69 € (L4H2 79 €) inklusive 200 Freikilometern (Rückgabe nach 6 Stunden).</li>
               <li>24-Stunden-Tarif „Umzugstag": 99 € (L4H2 109 €) inklusive 300 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
               <li>24-Stunden-Tarif „Langstrecke": 189 € (L4H2 199 €) inklusive 500 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
               <li>24-Stunden-Tarif „Fernstrecke": 299 € (L4H2 309 €) inklusive 800 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
-              <li>2-Tage-Tarif „Kurzprojekt": 249 € (L4H2 259 €) inklusive 600 Freikilometern.</li>
-              <li>3-Tage-Tarif „Umzug Plus": 349 € (L4H2 359 €) inklusive 900 Freikilometern.</li>
-              <li>4-Tage-Tarif „Renovierungs-Tarif": 429 € (L4H2 439 €) inklusive 1.100 Freikilometern.</li>
-              <li>5-Tage-Tarif „Projektwoche Mini": 499 € (L4H2 509 €) inklusive 1.300 Freikilometern.</li>
-              <li>6-Tage-Tarif „Projektwoche": 549 € (L4H2 559 €) inklusive 1.400 Freikilometern.</li>
-              <li>7-Tage-Tarif „Wochenmiete": 599 € (L4H2 609 €) inklusive 1.500 Freikilometern.</li>
-              <li>Jeder über das jeweilige Freikilometer-Kontingent hinaus gefahrene Kilometer wird mit 0,39 € berechnet; bei Mehrtagestarifen ab 2 Tagen mit 0,35 €, bei der 7-Tage-Wochenmiete mit 0,29 €.</li>
+              <li>2-Tage-Tarif „Kurzprojekt": 189 € (L4H2 209 €) inklusive 600 Freikilometern.</li>
+              <li>3-Tage-Tarif „Umzug Plus": 269 € (L4H2 299 €) inklusive 900 Freikilometern.</li>
+              <li>4-Tage-Tarif „Renovierungs-Tarif": 339 € (L4H2 379 €) inklusive 1.200 Freikilometern.</li>
+              <li>5-Tage-Tarif „Projektwoche Mini": 399 € (L4H2 449 €) inklusive 1.500 Freikilometern.</li>
+              <li>6-Tage-Tarif „Projektwoche": 449 € (L4H2 509 €) inklusive 1.800 Freikilometern.</li>
+              <li>7-Tage-Tarif „Wochenmiete": 499 € (L4H2 569 €) inklusive 2.100 Freikilometern.</li>
+              <li>Jeder über das jeweilige Freikilometer-Kontingent hinaus gefahrene Kilometer wird bei Eintagestarifen (3 Stunden, 6 Stunden, 24 Stunden) mit 0,45 € berechnet; bei Mehrtagestarifen von 2 bis 6 Tagen mit 0,35 €, bei der 7-Tage-Wochenmiete mit 0,29 €.</li>
               <li>Reiner Kilometer-Tarif: 0,90 € pro gefahrenem Kilometer (Mindestbetrag L1H1 100 €, L4H2 110 €).</li>
               <li>Optionale Zusatzpakete: „Sicher-Transport Paket" 19 €, „Profi-Umzug Paket" 49 €.</li>
             </ul>

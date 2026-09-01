@@ -34,7 +34,7 @@ import {
   vehicleClassFromName,
   VEHICLE_CLASS_LABEL,
   VEHICLE_CLASS_SHORT_LABEL,
-  L4H2_SURCHARGE_EUR,
+  L4H2_SURCHARGE_PER_DAY_EUR,
   DEPOSIT_EUR,
   type VehicleClass,
 } from "@/lib/booking-rules";
@@ -828,7 +828,7 @@ export function BookingSection() {
                             <p className="text-xs text-muted-foreground mt-1">
                               {cls === "l1h1"
                                 ? "Kurzer Kastenwagen, günstigster Preis"
-                                : `Langer Kastenwagen, mehr Ladevolumen · +${L4H2_SURCHARGE_EUR} €`}
+                                : `Langer Kastenwagen, mehr Ladevolumen · +${L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag`}
                             </p>
                           </button>
                         ))}
@@ -873,7 +873,7 @@ export function BookingSection() {
                       <p className="text-[11px] text-muted-foreground whitespace-nowrap">
                         {VEHICLE_CLASS_SHORT_LABEL[plan.vehicleClass]}
                         {plan.vehicleClass === "l1h1"
-                          ? ` · L4H2 ${plan.basePrice + L4H2_SURCHARGE_EUR} €`
+                          ? ` · L4H2 ${plan.priceL4h2} €`
                           : ` · L1H1 ${plan.basePrice} €`}
                       </p>
                     </div>
