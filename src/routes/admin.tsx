@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Bell,
   BellRing,
+  CalendarDays,
   Car,
   Check,
   ChevronLeft,
@@ -25,6 +26,7 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { AdminLogin } from "@/components/admin/AdminLogin";
 import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
+import { CalendarAdmin } from "@/components/admin/CalendarAdmin";
 import { DocumentBuilder } from "@/components/admin/DocumentBuilder";
 import { useServerFn } from "@tanstack/react-start";
 import { chargeBookingExtra, settleDeposit } from "@/lib/payments.functions";
@@ -119,7 +121,7 @@ interface AdminNotification {
   created_at: string;
 }
 
-type Tab = "customers" | "bookings" | "vehicles" | "documents" | "notifications";
+type Tab = "customers" | "bookings" | "calendar" | "vehicles" | "documents" | "notifications";
 
 function AdminDashboard() {
   const [authReady, setAuthReady] = useState(false);
@@ -542,6 +544,9 @@ function AdminDashboard() {
           <TabButton active={tab === "bookings"} onClick={() => setTab("bookings")}>
             <Car className="w-4 h-4" /> Buchungen
           </TabButton>
+          <TabButton active={tab === "calendar"} onClick={() => setTab("calendar")}>
+            <CalendarDays className="w-4 h-4" /> Kalender
+          </TabButton>
           <TabButton active={tab === "vehicles"} onClick={() => setTab("vehicles")}>
             <Car className="w-4 h-4" /> Fahrzeuge
           </TabButton>
@@ -691,6 +696,8 @@ function AdminDashboard() {
             )}
           </>
         )}
+
+        {tab === "calendar" && <CalendarAdmin />}
 
         {tab === "vehicles" && <VehiclesAdmin />}
 

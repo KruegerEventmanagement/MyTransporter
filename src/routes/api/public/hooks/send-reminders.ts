@@ -150,6 +150,110 @@ async function processBatch(kind: ReminderKind) {
   return { processed };
 }
 
+interface ManualRow {
+  id: string;
+  vehicle_plate: string;
+  vehicle_name: string | null;
+  start_at: string;
+  end_at: string;
+  customer_name: string;
+  customer_phone: string | null;
+  customer_email: string | null;
+  note: string | null;
+  notify_customer: boolean;
+  reminder_24h_sent_at: string | null;
+  reminder_30min_sent_at: string | null;
+}
+
+function fmtBerlin(iso: string): string {
+  return new Date(iso).toLocaleString("de-DE", {
+    timeZone: "Europe/Berlin",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+/** Erinnerungen für manuell im Adminkalender eingetragene Termine. */
+async function processManualBatch(kind: ReminderKind) {
+  const now = Date.now();
+  const windowStart = kind === "24h" ? now + 23 * 3600_000 : now + 25 * 60_000;
+  const windowEnd = kind === "24h" ? now + 25 * 3600_000 : now + 35 * 60_000;
+  const column = kind === "24h" ? "reminder_24h_sent_at" : "reminder_30min_sent_at";
+
+  const { data, error } = await supabaseAdmin
+    .from("manual_reservations")
+    .select(
+      "id, vehicle_plate, vehicle_name, start_at, end_at, customer_name, customer_phone, customer_email, note, notify_customer, reminder_24h_sent_at, reminder_30min_sent_at",
+    )
+    .eq("reminder_enabled", true)
+    .is(column, null);
+  if (error) {
+    console.error("Manual reservation query failed", error);
+    return { processed: 0, error: error.message };
+  }
+
+  const candidates = ((data ?? []) as ManualRow[]).filter((m) => {
+    const t = new Date(m.start_at).getTime();
+    return t >= windowStart && t <= windowEnd;
+  });
+
+  let processed = 0;
+  for (const m of candidates) {
+    const when = fmtBerlin(m.start_at);
+    const vehicle = [m.vehicle_name, m.vehicle_plate].filter(Boolean).join(" · ");
+    const title =
+      kind === "24h"
+        ? `Erinnerung: Termin morgen – ${m.customer_name}`
+        : `Termin startet in 30 Minuten – ${m.customer_name}`;
+    const bodyParts = [
+      vehicle,
+      `Start ${when}`,
+      `Ende ${fmtBerlin(m.end_at)}`,
+      m.customer_phone ? `Tel. ${m.customer_phone}` : null,
+      m.note,
+    ].filter(Boolean);
+
+    let customerMailed: boolean | null = null;
+    if (m.notify_customer && m.customer_email) {
+      customerMailed = await sendEmail(
+        m.customer_email,
+        kind === "24h"
+          ? "MyTransporter · Erinnerung an deinen Termin morgen"
+          : "MyTransporter · Dein Termin startet in Kürze",
+        `
+        <div style="font-family:system-ui,sans-serif;max-width:560px;margin:auto;padding:24px;color:#111;">
+          <h2 style="margin:0 0 12px;">Erinnerung an deinen Termin</h2>
+          <p>Hallo ${m.customer_name},</p>
+          <p>dein Termin bei MyTransporter startet am <strong>${when}</strong>.</p>
+          <p><strong>${vehicle || "Transporter"}</strong></p>
+          <p style="color:#888;font-size:12px;margin-top:32px;">MyTransporter · Römerstraße 36, 71229 Leonberg</p>
+        </div>`,
+      );
+    }
+
+    await supabaseAdmin.from("admin_notifications").insert({
+      type: kind === "24h" ? "manual_reminder_24h" : "manual_reminder_30min",
+      title,
+      body:
+        bodyParts.join(" · ") +
+        (customerMailed === null ? "" : customerMailed ? " (Kunden-E-Mail gesendet)" : " (Kunden-E-Mail fehlgeschlagen)"),
+    });
+
+    await supabaseAdmin
+      .from("manual_reservations")
+      .update(
+        kind === "24h"
+          ? { reminder_24h_sent_at: new Date().toISOString() }
+          : { reminder_30min_sent_at: new Date().toISOString() },
+      )
+      .eq("id", m.id);
+
+
+    processed++;
+  }
+  return { processed };
+}
+
 export const Route = createFileRoute("/api/public/hooks/send-reminders")({
   server: {
     handlers: {
@@ -157,10 +261,19 @@ export const Route = createFileRoute("/api/public/hooks/send-reminders")({
         try {
           const r24 = await processBatch("24h");
           const r30 = await processBatch("30min");
+          const m24 = await processManualBatch("24h");
+          const m30 = await processManualBatch("30min");
           return new Response(
-            JSON.stringify({ ok: true, reminders_24h: r24, reminders_30min: r30 }),
+            JSON.stringify({
+              ok: true,
+              reminders_24h: r24,
+              reminders_30min: r30,
+              manual_24h: m24,
+              manual_30min: m30,
+            }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );
+
         } catch (e) {
           console.error("send-reminders failed", e);
           return new Response(JSON.stringify({ ok: false, error: String(e) }), {

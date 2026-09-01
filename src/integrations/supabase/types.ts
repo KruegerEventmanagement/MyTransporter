@@ -261,6 +261,74 @@ export type Database = {
           },
         ]
       }
+      manual_reservations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          end_at: string
+          id: string
+          note: string | null
+          notify_customer: boolean
+          reminder_24h_sent_at: string | null
+          reminder_30min_sent_at: string | null
+          reminder_enabled: boolean
+          start_at: string
+          updated_at: string
+          vehicle_id: string | null
+          vehicle_name: string | null
+          vehicle_plate: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          end_at: string
+          id?: string
+          note?: string | null
+          notify_customer?: boolean
+          reminder_24h_sent_at?: string | null
+          reminder_30min_sent_at?: string | null
+          reminder_enabled?: boolean
+          start_at: string
+          updated_at?: string
+          vehicle_id?: string | null
+          vehicle_name?: string | null
+          vehicle_plate: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          end_at?: string
+          id?: string
+          note?: string | null
+          notify_customer?: boolean
+          reminder_24h_sent_at?: string | null
+          reminder_30min_sent_at?: string | null
+          reminder_enabled?: boolean
+          start_at?: string
+          updated_at?: string
+          vehicle_id?: string | null
+          vehicle_name?: string | null
+          vehicle_plate?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_reservations_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_type: string
