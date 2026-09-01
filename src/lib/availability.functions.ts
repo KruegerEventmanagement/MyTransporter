@@ -57,5 +57,17 @@ export const getBusySlots = createServerFn({ method: "GET" })
       end: new Date(b.end_at).toISOString(),
     }));
 
-    return [...bookingSlots, ...holdSlots, ...blockSlots];
+    // Manuell im Adminkalender eingetragene Termine (Offline-Vermietung, Reservierung)
+    const { data: manual } = await supabaseAdmin
+      .from("manual_reservations")
+      .select("vehicle_plate, start_at, end_at");
+
+    const manualSlots = (manual ?? []).map((m) => ({
+      vehiclePlate: m.vehicle_plate ?? "",
+      start: new Date(m.start_at).toISOString(),
+      end: new Date(m.end_at).toISOString(),
+    }));
+
+    return [...bookingSlots, ...holdSlots, ...blockSlots, ...manualSlots];
   });
+
