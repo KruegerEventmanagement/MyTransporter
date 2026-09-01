@@ -675,6 +675,15 @@ export function CalendarAdmin() {
               <p className="text-xs rounded-xl border border-foreground px-3 py-2">{conflictWarning}</p>
             )}
 
+            {formError && (
+              <p
+                role="alert"
+                className="text-xs rounded-xl border border-destructive bg-destructive/10 text-destructive px-3 py-2"
+              >
+                {formError}
+              </p>
+            )}
+
             <div className="flex gap-2 pt-1">
               <button
                 onClick={handleSave}
