@@ -20,7 +20,7 @@ export const Route = createFileRoute("/preise")({
       { title: `Transporter mieten Preise ab ${MIN_PRICE} € | Leonberg & Stuttgart` },
       {
         name: "description",
-        content: `Alle Tarife der Transporter-Vermietung MyTransporter: 3 Stunden 49 €, 6 Stunden 69 €, 24 Stunden 99 €, Langstrecke 189 € (500 km) und 299 € (800 km). Kaution ${DEPOSIT_EUR} €, Rückgabe mit dem gleichen Tankstand, online buchbar in Leonberg und Stuttgart.`,
+        content: `Alle Tarife der Transporter-Vermietung MyTransporter: 3 Stunden 49 €, 6 Stunden 69 €, 24 Stunden 99 €, Langstrecke 189 € (500 km) und 299 € (800 km). Kaution ${DEPOSIT_EUR} €, Rückgabe vollgetankt (Voll/Voll), online buchbar in Leonberg und Stuttgart.`,
       },
       { name: "robots", content: "index,follow" },
       { property: "og:type", content: "website" },
@@ -132,7 +132,7 @@ function PreisePage() {
           <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left text-sm">
             {[
               `Kaution ${DEPOSIT_EUR} € – wird nach ordnungsgemäßer Rückgabe zurückerstattet`,
-              "Tankregel: mit dem gleichen Tankstand zurückgeben, mit dem das Fahrzeug übernommen wurde (Tankbeleg erforderlich)",
+              "Tankregel Voll/Voll: Das Fahrzeug wird vollgetankt übergeben und muss vollgetankt zurückgegeben werden (Tankbeleg erforderlich)",
               "Selbstbeteiligung im Schadensfall maximal 1.000 €",
               `Reiner Kilometer-Tarif: ${(KM_TARIFF_CENTS_PER_KM / 100).toFixed(2).replace(".", ",")} € / km (Mindestbetrag ${KM_TARIFF_MIN_EUR.l1h1} € / L4H2 ${KM_TARIFF_MIN_EUR.l4h2} €)`,
               "Mindestalter 25 Jahre, Führerschein Klasse B, digitale Verifizierung",
