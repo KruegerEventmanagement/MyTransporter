@@ -239,7 +239,10 @@ export function CalendarAdmin() {
     return `${vehicle.plate} ist in diesem Zeitraum bereits belegt (${fmtDateTime(clash.start)} – ${fmtDateTime(clash.end)}).`;
   }, [form, vehicles, entries]);
 
-  const openCreate = () => setForm(emptyForm(selectedDay));
+  const openCreate = () => {
+    setFormError(null);
+    setForm(emptyForm(selectedDay));
+  };
 
   const openEdit = (m: ManualReservation) => {
     const s = toLocalInput(new Date(m.start_at));
