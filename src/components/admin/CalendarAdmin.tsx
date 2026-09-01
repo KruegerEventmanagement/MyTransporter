@@ -122,6 +122,7 @@ export function CalendarAdmin() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const fetchManual = useServerFn(listManualReservations);
   const saveManual = useServerFn(upsertManualReservation);
