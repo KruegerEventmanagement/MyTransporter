@@ -12,6 +12,7 @@ import appCss from "../styles.css?url";
 import { InstallBanner } from "@/components/InstallBanner";
 import { HelpBubble } from "@/components/HelpBubble";
 import { CookieConsent } from "@/components/CookieConsent";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
