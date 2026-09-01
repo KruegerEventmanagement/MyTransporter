@@ -122,6 +122,7 @@ export function CalendarAdmin() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const fetchManual = useServerFn(listManualReservations);
   const saveManual = useServerFn(upsertManualReservation);
@@ -238,7 +239,10 @@ export function CalendarAdmin() {
     return `${vehicle.plate} ist in diesem Zeitraum bereits belegt (${fmtDateTime(clash.start)} – ${fmtDateTime(clash.end)}).`;
   }, [form, vehicles, entries]);
 
-  const openCreate = () => setForm(emptyForm(selectedDay));
+  const openCreate = () => {
+    setFormError(null);
+    setForm(emptyForm(selectedDay));
+  };
 
   const openEdit = (m: ManualReservation) => {
     const s = toLocalInput(new Date(m.start_at));
@@ -260,29 +264,35 @@ export function CalendarAdmin() {
     });
   };
 
+  const fail = (msg: string) => {
+    setFormError(msg);
+    toast.error(msg);
+  };
+
   const handleSave = async () => {
     if (!form) return;
+    setFormError(null);
     const vehicle = vehicles.find((v) => v.id === form.vehicleKey);
     if (!vehicle) {
-      toast.error("Bitte ein Fahrzeug auswählen");
+      fail("Bitte ein Fahrzeug auswählen");
       return;
     }
     if (!form.customerName.trim()) {
-      toast.error("Bitte einen Namen eintragen");
+      fail("Bitte einen Namen eintragen");
       return;
     }
     const start = fromLocalInput(form.startDate, form.startTime);
     const end = fromLocalInput(form.endDate, form.endTime);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-      toast.error("Bitte Datum und Uhrzeit vollständig angeben");
+      fail("Bitte Datum und Uhrzeit vollständig angeben");
       return;
     }
     if (end <= start) {
-      toast.error("Das Ende muss nach dem Start liegen");
+      fail("Das Ende muss nach dem Start liegen");
       return;
     }
     if (form.notifyCustomer && !form.customerEmail.trim()) {
-      toast.error("Für die Kunden-Erinnerung wird eine E-Mail-Adresse benötigt");
+      fail("Für die Kunden-Erinnerung wird eine E-Mail-Adresse benötigt");
       return;
     }
 
@@ -311,7 +321,12 @@ export function CalendarAdmin() {
       setSelectedDay(start);
       await load();
     } catch (e) {
-      toast.error("Speichern fehlgeschlagen", { description: String(e) });
+      const raw = e instanceof Error ? e.message : String(e);
+      const msg = /unauthorized|forbidden/i.test(raw)
+        ? "Speichern nicht erlaubt – bitte neu als Admin anmelden."
+        : `Speichern fehlgeschlagen: ${raw}`;
+      setFormError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -661,6 +676,15 @@ export function CalendarAdmin() {
 
             {conflictWarning && (
               <p className="text-xs rounded-xl border border-foreground px-3 py-2">{conflictWarning}</p>
+            )}
+
+            {formError && (
+              <p
+                role="alert"
+                className="text-xs rounded-xl border border-destructive bg-destructive/10 text-destructive px-3 py-2"
+              >
+                {formError}
+              </p>
             )}
 
             <div className="flex gap-2 pt-1">
