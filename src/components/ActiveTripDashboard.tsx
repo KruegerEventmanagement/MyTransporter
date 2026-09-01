@@ -667,7 +667,7 @@ export function ActiveTripDashboard({
               <div className="p-3 rounded-xl bg-secondary mb-4 flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
                 <p className="text-xs text-muted-foreground">
-                  Nicht rauchen · Tank volltanken · Rückgabe pünktlich
+                  Nicht rauchen · Tankstand wie bei Übernahme · Rückgabe pünktlich
                 </p>
               </div>
             </>

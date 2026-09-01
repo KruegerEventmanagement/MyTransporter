@@ -3,7 +3,7 @@ const POINTS = [
   "Führerschein und Ausweis erforderlich",
   "Übergabe mit Fotos und Protokoll",
   "Zubehör (Spanngurte, Decken, Rollbrett) optional als Zusatzpaket buchbar",
-  "Voll-voll-Regel: vollgetankt übernehmen, vollgetankt zurückgeben",
+  "Tankregel: mit dem gleichen Tankstand zurückgeben, mit dem übernommen wurde",
   "Besenrein zurückgeben",
   "Rauchen im Fahrzeug verboten",
   "Auslandsfahrten nur nach vorheriger Absprache",

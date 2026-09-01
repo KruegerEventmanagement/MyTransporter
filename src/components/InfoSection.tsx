@@ -1,8 +1,8 @@
 const INFO_ITEMS = [
   {
     icon: "⛽",
-    title: "Vollgetankt zurückgeben",
-    description: "Alle Fahrzeuge werden vollgetankt übergeben und müssen vollgetankt zurückgegeben werden. Der aktuelle Tankbeleg ist bei der Rückgabe in der App hochzuladen.",
+    title: "Gleicher Tankstand zurück",
+    description: "Das Fahrzeug wird mit dem gleichen Tankstand zurückgegeben, mit dem es übernommen wurde. Der aktuelle Tankbeleg ist bei der Rückgabe in der App hochzuladen.",
   },
   {
     icon: "📸",

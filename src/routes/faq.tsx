@@ -38,8 +38,8 @@ const FAQS = [
     a: "Die Fahrzeuge sind versichert. Im Schadenfall trägt der Mieter bis zu 1.000,00 € maximale Selbstbeteiligung. Ist der Schaden geringer, trägt er nur diesen geringeren Schaden. Die Ausnahmen aus § 9 der AGB (z. B. grobe Fahrlässigkeit, Alkohol, Falschbetankung) bleiben unberührt.",
   },
   {
-    q: "Muss ich vollgetankt zurückgeben?",
-    a: "Alle Fahrzeuge werden vollgetankt übergeben und müssen vollgetankt zurückgegeben werden. Der aktuelle Tankbeleg ist bei der Rückgabe in der App hochzuladen.",
+    q: "Mit welchem Tankstand muss ich zurückgeben?",
+    a: "Das Fahrzeug wird mit dem gleichen Tankstand zurückgegeben, mit dem du es übernommen hast. Der aktuelle Tankbeleg ist bei der Rückgabe in der App hochzuladen.",
   },
 ];
 
@@ -160,7 +160,7 @@ const SEO_BLOCKS = [
   },
   {
     h: "Transporter mieten in Stuttgart & Umgebung",
-    p: "Auch für Kunden aus Stuttgart, Böblingen, Sindelfingen und Ludwigsburg sind wir die schnelle Alternative zu großen Mietwagen-Konzernen. Statt langer Schlangen am Schalter bekommst du den Transporter ohne Umweg, persönlich übergeben, vollgetankt und einsatzbereit.",
+    p: "Auch für Kunden aus Stuttgart, Böblingen, Sindelfingen und Ludwigsburg sind wir die schnelle Alternative zu großen Mietwagen-Konzernen. Statt langer Schlangen am Schalter bekommst du den Transporter ohne Umweg, persönlich übergeben und einsatzbereit.",
   },
   {
     h: "Umzugswagen mieten, günstig & flexibel",
@@ -176,7 +176,7 @@ const SEO_BLOCKS = [
   },
   {
     h: "Preise & Kaution, alles transparent",
-    p: "Preise für den kurzen L1H1, der lange L4H2 kostet 10 € pro Miettag mehr: 3 Stunden 49 € (100 km), 6 Stunden 69 € (200 km), 24 Stunden 99 € (300 km), 189 € (500-km-Langstreckentarif) oder 299 € (800-km-Fernstreckentarif). Mehrtagestarife: 2 Tage 189 € (600 km), 3 Tage 269 € (900 km), 4 Tage 339 € (1.200 km), 5 Tage 399 € (1.500 km), 6 Tage 449 € (1.800 km), 7 Tage 499 € (2.100 km). Alternativ reine Kilometer-Abrechnung zu 0,90 € / km (Mindestbetrag 100 € bzw. 110 €). Mehrkilometer kosten 0,45 € bei Tagesmieten, 0,35 € bei 2 bis 6 Tagen und 0,29 € bei der Wochenmiete. Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer und vollgetankter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
+    p: "Preise für den kurzen L1H1, der lange L4H2 kostet 10 € pro Miettag mehr: 3 Stunden 49 € (100 km), 6 Stunden 69 € (200 km), 24 Stunden 99 € (300 km), 189 € (500-km-Langstreckentarif) oder 299 € (800-km-Fernstreckentarif). Mehrtagestarife: 2 Tage 189 € (600 km), 3 Tage 269 € (900 km), 4 Tage 339 € (1.200 km), 5 Tage 399 € (1.500 km), 6 Tage 449 € (1.800 km), 7 Tage 499 € (2.100 km). Alternativ reine Kilometer-Abrechnung zu 0,90 € / km (Mindestbetrag 100 € bzw. 110 €). Mehrkilometer kosten 0,45 € bei Tagesmieten, 0,35 € bei 2 bis 6 Tagen und 0,29 € bei der Wochenmiete. Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer Rückgabe mit unverändertem Tankstand automatisch freigegeben. Keine versteckten Gebühren.",
   },
   {
     h: "Ablauf der Vermietung",

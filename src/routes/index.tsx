@@ -24,7 +24,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Festpreise ab 49 €: 3 Stunden 49 €, 6 Stunden 69 €, 24 Stunden 99 €, Langstrecke 189 € (500 km). Kaution 200 €, voll-voll-Tankregel, online buchbar in Leonberg und Stuttgart.",
+          "Festpreise ab 49 €: 3 Stunden 49 €, 6 Stunden 69 €, 24 Stunden 99 €, Langstrecke 189 € (500 km). Kaution 200 €, Rückgabe mit dem gleichen Tankstand, online buchbar in Leonberg und Stuttgart.",
       },
       { property: "og:locale", content: "de_DE" },
     ],

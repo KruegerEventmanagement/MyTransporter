@@ -39,7 +39,7 @@ function AgbPage() {
             <p className="mt-2">Die Kaution dient ausdrücklich zur Absicherung folgender Fälle und kann hierfür ganz oder anteilig einbehalten werden:</p>
             <ul className="list-disc pl-5 space-y-1 mt-2">
               <li>Verschmutzte Rückgabe des Fahrzeugs (innen oder außen), die eine Reinigung erforderlich macht.</li>
-              <li>Rückgabe ohne vollen Tank oder ohne gültigen Tankbeleg.</li>
+              <li>Rückgabe mit geringerem Tankstand als bei Übernahme oder ohne gültigen Tankbeleg.</li>
               <li>Fehlende oder entwendete Ausstattung, insbesondere FM-Transmitter bzw. Bluetooth-Audiogerät, Spanngurte, Warndreieck, Warnweste, Verbandskasten, Ladekabel oder vergleichbares Zubehör.</li>
               <li>Sonstige geringfügige Beschädigungen oder Vertragsverstöße, die im Rahmen der Kautionssumme abgegolten werden können.</li>
             </ul>
@@ -74,14 +74,14 @@ function AgbPage() {
               <li>Verspätete Rückgabe: 25 € pro angefangene Stunde</li>
               <li>Rauchen im Fahrzeug: 100 € Reinigungsgebühr</li>
               <li>Bei einfacher Fahrlässigkeit wird der tatsächlich entstandene Fahrzeugschaden berechnet, jedoch höchstens bis zur vereinbarten Selbstbeteiligung von 1.000 € pro Schadensfall. Die in § 9 genannten Ausnahmen bleiben unberührt.</li>
-              <li>Nicht vollgetanktes Fahrzeug: Betankungskosten zzgl. 20 € Servicegebühr</li>
+              <li>Geringerer Tankstand als bei Übernahme: Betankungskosten zzgl. 20 € Servicegebühr</li>
             </ul>
           </div>
 
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">§ 6 Fahrzeugübernahme und -rückgabe</h2>
             <p>Die Schlüsselübergabe erfolgt in der Römerstraße 36, 71229 Leonberg. Vor Fahrtantritt ist das Fahrzeug von allen Seiten zu fotografieren und der Kilometerstand zu dokumentieren. Bei Rückgabe sind erneut Fotos, der aktuelle Kilometerstand sowie der Tankbeleg einzureichen.</p>
-            <p className="mt-2">Alle Fahrzeuge werden vollgetankt übergeben und müssen vollgetankt zurückgegeben werden. Der aktuelle Tankbeleg ist bei der Rückgabe in der App hochzuladen.</p>
+            <p className="mt-2">Das Fahrzeug ist mit dem gleichen Tankstand zurückzugeben, mit dem es übernommen wurde. Der aktuelle Tankbeleg ist bei der Rückgabe in der App hochzuladen.</p>
           </div>
 
           <div>
@@ -89,7 +89,7 @@ function AgbPage() {
             <ul className="list-disc pl-5 space-y-1">
               <li>Sorgfältige Behandlung des Fahrzeugs</li>
               <li>Absolutes Rauchverbot im Fahrzeug</li>
-              <li>Rückgabe mit vollem Tank (Tankbeleg erforderlich)</li>
+              <li>Rückgabe mit dem gleichen Tankstand wie bei Übernahme (Tankbeleg erforderlich)</li>
               <li>Rückgabe innerhalb der vereinbarten Mietdauer</li>
               <li>Unverzügliche Meldung von Schäden oder Unfällen</li>
             </ul>
