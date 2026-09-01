@@ -5,6 +5,7 @@ import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
 import { useServerFn } from "@tanstack/react-start";
 import { recognizeOdometer } from "@/lib/odometer-ai.functions";
 import { notifyAdmin } from "@/lib/admin-notify";
+import { getPlanById, KM_TARIFF_CENTS_PER_KM } from "@/lib/booking-rules";
 
 const TEST_MODE_ADMIN_EMAIL = "krueger.christian96@gmx.de";
 
@@ -56,6 +57,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
     free: number;
     extra: number;
     chargeCents: number;
+    pricePerKmCents: number;
   } | null>(null);
   const [currentTarget, setCurrentTarget] = useState<
     | { kind: "side"; id: string }
@@ -239,8 +241,14 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
   const handleSubmitKm = async () => {
     const end = parseInt(endKm);
     const start = typeof startKm === "number" ? startKm : 0;
-    const free = typeof freeKm === "number" ? freeKm : planId === "6h" ? 300 : planId === "24h" ? 500 : 0;
-    const pricePerKmCents = typeof kmPriceCents === "number" ? kmPriceCents : 90;
+    const plan = planId && planId !== "km" ? getPlanById(planId) : null;
+    const free = typeof freeKm === "number" ? freeKm : (plan?.freeKm ?? 0);
+    const pricePerKmCents =
+      typeof kmPriceCents === "number"
+        ? kmPriceCents
+        : planId === "km"
+          ? KM_TARIFF_CENTS_PER_KM
+          : (plan?.extraKmCents ?? KM_TARIFF_CENTS_PER_KM);
     const driven = Math.max(0, end - start);
     // Im reinen Kilometer-Tarif werden alle Kilometer berechnet (kein Freikontingent).
     const billable = planId === "km" ? driven : Math.max(0, driven - free);
@@ -257,6 +265,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
       .eq("id", bookingId);
 
     setKmSummary({
+      pricePerKmCents,
       driven,
       free: planId === "km" ? 0 : free,
       extra: planId === "km" ? driven : Math.max(0, driven - free),
@@ -532,7 +541,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
               )}
               <div className="flex justify-between"><span>{planId === "km" ? "Berechnete Kilometer" : "Mehrkilometer"}</span><span className="text-foreground">{kmSummary.extra} km</span></div>
               <div className="flex justify-between font-medium pt-2 border-t border-border">
-                <span className="text-foreground">{kmSummary.extra > 0 ? "Aufpreis (0,90 €/km)" : "Aufpreis"}</span>
+                <span className="text-foreground">{kmSummary.extra > 0 ? `Aufpreis (${(kmSummary.pricePerKmCents / 100).toFixed(2).replace(".", ",")} €/km)` : "Aufpreis"}</span>
                 <span className="text-foreground">{(kmSummary.chargeCents / 100).toFixed(2)} €</span>
               </div>
             </div>
