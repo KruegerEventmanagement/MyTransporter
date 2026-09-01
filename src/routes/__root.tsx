@@ -136,6 +136,7 @@ function RootComponent() {
       <Outlet />
       <HelpBubble />
       <CookieConsent />
+      <Toaster position="top-center" />
     </QueryClientProvider>
   );
 }
