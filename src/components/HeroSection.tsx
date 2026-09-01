@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import logoImage from "@/assets/logo.png";
-import { PLAN_CATALOG, L4H2_SURCHARGE_EUR, DEPOSIT_EUR } from "@/lib/booking-rules";
+import { PLAN_CATALOG, L4H2_SURCHARGE_PER_DAY_EUR, DEPOSIT_EUR } from "@/lib/booking-rules";
 
 const ENTRY_IDS = ["3h", "6h", "24h_300"] as const;
 
@@ -63,8 +63,8 @@ export function HeroSection() {
             ))}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Preise für den kurzen L1H1 · langer L4H2 mit Hochdach jeweils + {L4H2_SURCHARGE_EUR} €
-            · Kaution {DEPOSIT_EUR} € (wird zurückerstattet)
+            Preise für den kurzen L1H1 · langer L4H2 mit Hochdach + {L4H2_SURCHARGE_PER_DAY_EUR} €
+            pro Miettag · Kaution {DEPOSIT_EUR} € (wird zurückerstattet)
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">

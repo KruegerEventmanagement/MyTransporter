@@ -1,4 +1,4 @@
-import { PLAN_CATALOG, L4H2_SURCHARGE_EUR } from "@/lib/booking-rules";
+import { PLAN_CATALOG, L4H2_SURCHARGE_PER_DAY_EUR } from "@/lib/booking-rules";
 
 const SINGLE = PLAN_CATALOG.filter((p) => p.days === 1);
 const MULTI = PLAN_CATALOG.filter((p) => p.days > 1);
@@ -17,8 +17,8 @@ export function TariffSection() {
           </h2>
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
             Zwei Fahrzeugklassen: der kurze L1H1 und der lange L4H2 mit noch mehr Ladevolumen.
-            Alle Preise unten gelten für den L1H1 – der L4H2 kostet pro Buchung pauschal{" "}
-            {L4H2_SURCHARGE_EUR} € mehr.
+            Alle Preise unten gelten für den L1H1 – der L4H2 kostet{" "}
+            {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr; sein Preis steht jeweils direkt dabei.
           </p>
         </div>
 
@@ -42,7 +42,7 @@ export function TariffSection() {
                 <h3 className="text-lg font-bold text-foreground">{plan.shortLabel}</h3>
                 <p className="text-3xl font-bold text-foreground mt-2">{plan.price} €</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  L1H1 · L4H2 {plan.price + L4H2_SURCHARGE_EUR} €
+                  L1H1 · L4H2 {plan.priceL4h2} €
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">inkl. {plan.freeKm} km</p>
                 {plan.idealFor && (
@@ -106,7 +106,7 @@ export function TariffSection() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right font-bold text-foreground whitespace-nowrap">
-                        {plan.price} € / {plan.price + L4H2_SURCHARGE_EUR} €
+                        {plan.price} € / {plan.priceL4h2} €
                       </td>
 
                       <td className="px-4 py-3 text-right text-muted-foreground whitespace-nowrap hidden sm:table-cell">
@@ -129,7 +129,7 @@ export function TariffSection() {
             </table>
           </div>
           <p className="mt-3 text-xs text-muted-foreground text-center">
-            Mehrkilometer in den Mehrtagestarifen: 0,35 €/km · Wochenmiete: 0,29 €/km · Kaution 200 € (wird zurückerstattet)
+            Mehrkilometer: Tagesmieten 0,45 €/km · 2–6 Tage 0,35 €/km · Wochenmiete 0,29 €/km · Kaution 200 € (wird zurückerstattet)
           </p>
         </div>
       </div>

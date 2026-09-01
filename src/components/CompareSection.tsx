@@ -21,7 +21,7 @@ export function CompareSection() {
           </div>
           <div className="rounded-xl border border-border p-4">
             <p className="font-semibold text-foreground">Zwei Größen</p>
-            <p className="text-muted-foreground mt-1">L1H1 kurz oder L4H2 lang (+10 €)</p>
+            <p className="text-muted-foreground mt-1">L1H1 kurz oder L4H2 lang (+10 €/Tag)</p>
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { TariffSection } from "@/components/TariffSection";
 import { AddonPackagesSection } from "@/components/AddonPackagesSection";
 import {
   PLAN_CATALOG,
-  L4H2_SURCHARGE_EUR,
+  L4H2_SURCHARGE_PER_DAY_EUR,
   DEPOSIT_EUR,
   KM_TARIFF_CENTS_PER_KM,
   KM_TARIFF_MIN_EUR,
@@ -79,8 +79,12 @@ function PreisePage() {
           <p className="mt-4 text-muted-foreground">
             Alle Festpreise für die Transporter-Miete in Leonberg, Stuttgart, Böblingen und
             Sindelfingen – ob Umzug, Möbeltransport, Baumarkt-Fahrt oder Kleinanzeigen-Abholung.
-            Angegeben ist der Preis für den kurzen L1H1; der lange L4H2 mit Hochdach kostet
-            pauschal {L4H2_SURCHARGE_EUR} € mehr.
+            Angegeben ist der Preis für den kurzen L1H1; der lange L4H2 mit Hochdach kostet{" "}
+            {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr.
+          </p>
+          <p className="mt-4 inline-block rounded-xl border-2 border-foreground bg-secondary/40 px-4 py-3 text-sm font-medium text-foreground">
+            Viele Freikilometer und maximal 1.000 € Selbstbeteiligung bereits inklusive –
+            ohne kostenpflichtiges Schutzpaket.
           </p>
 
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -89,7 +93,7 @@ function PreisePage() {
                 <p className="text-sm text-muted-foreground">{p.shortLabel}</p>
                 <p className="text-3xl font-bold text-foreground mt-1">{p.price} €</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  L4H2 {p.price + L4H2_SURCHARGE_EUR} €
+                  L4H2 {p.priceL4h2} €
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">inkl. {p.freeKm} km</p>
               </div>
@@ -102,7 +106,7 @@ function PreisePage() {
                 <p className="text-sm text-muted-foreground">{p.label}</p>
                 <p className="text-2xl font-bold text-foreground mt-1">{p.price} €</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  L4H2 {p.price + L4H2_SURCHARGE_EUR} € · Tarif mit{" "}
+                  L4H2 {p.priceL4h2} € · Tarif mit{" "}
                   {p.freeKm.toLocaleString("de-DE")} Kilometern inklusive
                 </p>
               </div>
