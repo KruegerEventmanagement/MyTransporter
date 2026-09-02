@@ -15,13 +15,13 @@ export const Route = createFileRoute("/werbung")({
       {
         name: "description",
         content:
-          "Ihre Werbung durch die gesamte Region: Werbefläche am MyTransporter mieten, ab 19 € netto / Monat. Täglich sichtbar in Leonberg, Stuttgart und ganz Baden-Württemberg.",
+          "Ihre Werbung durch die gesamte Region: Werbefläche am MyTransporter mieten, ab 29 € netto / Monat. Täglich sichtbar in Leonberg, Stuttgart und ganz Baden-Württemberg.",
       },
       { property: "og:title", content: "Ihre Werbung durch die gesamte Region | MyTransporter" },
       {
         property: "og:description",
         content:
-          "Über 25 Magnetfolien-Werbeflächen am Transporter, jetzt -30% Aktionspreis ab 19 € netto / Monat (zzgl. 19% MwSt., B2B).",
+          "Über 25 Magnetfolien-Werbeflächen am Transporter ab 29 € netto / Monat (zzgl. 19% MwSt., B2B).",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -63,7 +63,7 @@ function WerbungPage() {
         <div className="max-w-3xl mx-auto text-center">
           <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-secondary text-foreground border border-border">
             <Megaphone className="w-3 h-3" />
-            Aktion: -30% auf alle Werbeflächen
+            Werbefläche am Transporter mieten
           </span>
           <h1 className="mt-4 text-3xl md:text-5xl font-bold text-foreground animate-fade-in-up">
             Ihre Werbung durch die gesamte Region
@@ -72,7 +72,7 @@ function WerbungPage() {
             MyTransporter ist täglich unterwegs: Leonberg, Stuttgart, Böblingen, Sindelfingen,
             Ludwigsburg – auf Wunsch Baden-Württemberg- und deutschlandweit. Ihre Werbung fährt mit
             und wird bei Veranstaltungen, am Baumarkt, beim IKEA, vor Cafés und in Wohngebieten
-            gesehen. Jetzt schon ab 19 € netto im Monat.
+            gesehen. Schon ab 29 € netto im Monat.
           </p>
           <div className="mt-5 grid sm:grid-cols-3 gap-2 text-left">
             {[
