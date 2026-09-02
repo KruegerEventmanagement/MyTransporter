@@ -15,7 +15,7 @@ export function AdBanner() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-background opacity-75" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-background" />
             </span>
-            Neu · Aktion
+            Neu
           </span>
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 text-sm font-bold leading-tight text-foreground">
@@ -23,7 +23,7 @@ export function AdBanner() {
               Ihre Werbung durch die gesamte Region mit MyTransporter
             </p>
             <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-              Täglich gesehen in Leonberg, Stuttgart &amp; ganz Baden-Württemberg – jetzt ab 19 € netto / Monat
+              Täglich gesehen in Leonberg, Stuttgart &amp; ganz Baden-Württemberg – ab 29 € netto / Monat
             </p>
           </div>
           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-foreground px-3.5 py-1.5 text-xs font-semibold text-background transition-transform group-hover:translate-x-0.5">
