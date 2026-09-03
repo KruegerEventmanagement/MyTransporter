@@ -21,7 +21,7 @@ function DatenschutzPage() {
         <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">1. Verantwortlicher</h2>
-            <p>MyTransporter UG (haftungsbeschränkt)<br />Römerstraße 36, 71229 Leonberg<br />E-Mail: info@mytransporter.de<br />Telefon: 0152 3623 0118</p>
+            <p>MyTransporter UG (haftungsbeschränkt)<br />Römerstraße 36, 71229 Leonberg<br />E-Mail: info@mytransporter.org<br />Telefon: 0152 3623 0118</p>
           </div>
 
           <div>
@@ -48,7 +48,7 @@ function DatenschutzPage() {
 
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">5. Ihre Rechte</h2>
-            <p>Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch. Kontaktieren Sie uns unter info@mytransporter.de.</p>
+            <p>Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch. Kontaktieren Sie uns unter info@mytransporter.org.</p>
           </div>
 
           <div>

@@ -120,8 +120,8 @@ function FaqPage() {
           </h2>
           <p className="text-sm text-muted-foreground">
             Schreib uns an{" "}
-            <a href="mailto:info@mytransporter.de" className="text-foreground underline">
-              info@mytransporter.de
+            <a href="mailto:info@mytransporter.org" className="text-foreground underline">
+              info@mytransporter.org
             </a>{" "}
             oder ruf uns an unter{" "}
             <a href="tel:+4915236230118" className="text-foreground underline">

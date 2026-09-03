@@ -39,7 +39,7 @@ export const Route = createFileRoute("/")({
           image: "https://www.mytransporter.org/icons/icon-192.png",
           url: "https://www.mytransporter.org/",
           telephone: "+4915236230118",
-          email: "info@mytransporter.de",
+          email: "info@mytransporter.org",
           priceRange: "€€",
           address: {
             "@type": "PostalAddress",
