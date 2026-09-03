@@ -1702,7 +1702,7 @@ export function BookingSection() {
                 </p>
                 <div className="p-4 rounded-2xl bg-secondary text-sm text-muted-foreground">
                   <p>Deine Kaution wird nach Prüfung des Fahrzeugs zurückerstattet.</p>
-                  <p className="mt-1">Bei Fragen: info@mytransporter.de</p>
+                  <p className="mt-1">Bei Fragen: info@mytransporter.org</p>
                 </div>
               </div>
             )}

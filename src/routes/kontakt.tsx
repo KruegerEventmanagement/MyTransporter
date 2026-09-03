@@ -37,8 +37,8 @@ function KontaktPage() {
             </div>
             <div>
               <p className="font-medium text-foreground">E-Mail</p>
-              <a href="mailto:info@mytransporter.de" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                info@mytransporter.de
+              <a href="mailto:info@mytransporter.org" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                info@mytransporter.org
               </a>
             </div>
           </div>

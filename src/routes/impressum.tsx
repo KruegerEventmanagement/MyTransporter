@@ -33,7 +33,7 @@ function ImpressumPage() {
           <div>
             <h2 className="font-bold text-lg mb-2">Kontakt</h2>
             <p>Telefon: 0152 3623 0118</p>
-            <p>E-Mail: info@mytransporter.de</p>
+            <p>E-Mail: info@mytransporter.org</p>
           </div>
 
           <div>
