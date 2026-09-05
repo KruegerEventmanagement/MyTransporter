@@ -1232,48 +1232,13 @@ export function BookingSection() {
             <div className="text-center">
               <h3 className="text-2xl font-bold text-foreground">Verifizierung</h3>
               <p className="mt-2 text-muted-foreground">
-                Scanne Ausweis und Führerschein – jeweils Vorder- und Rückseite.
+                Vier Fotos: Ausweis vorne und hinten, Führerschein vorne und hinten. Jedes Feld
+                kannst du jederzeit antippen und neu aufnehmen.
               </p>
             </div>
 
-            <div className="mt-8 space-y-3">
-              <DocumentScanner
-                documentType="id"
-                mode={authUser?.id ? "upload" : "pending"}
-                onCapture={(scanSide, blob) =>
-                  handlePendingCapture(`id_${scanSide}` as PendingDocType, blob)
-                }
-                frontAlreadyDone={
-                  authUser?.id
-                    ? docTypes.has("id_front") && !docTypes.has("id_back")
-                    : pendingDocTypes.has("id_front") && !pendingDocTypes.has("id_back")
-                }
-                isComplete={
-                  authUser?.id
-                    ? docTypes.has("id_front") && docTypes.has("id_back")
-                    : pendingDocTypes.has("id_front") && pendingDocTypes.has("id_back")
-                }
-                onComplete={refreshDocs}
-              />
-              <DocumentScanner
-                documentType="license"
-                mode={authUser?.id ? "upload" : "pending"}
-                onCapture={(scanSide, blob) =>
-                  handlePendingCapture(`license_${scanSide}` as PendingDocType, blob)
-                }
-                frontAlreadyDone={
-                  authUser?.id
-                    ? docTypes.has("license_front") && !docTypes.has("license_back")
-                    : pendingDocTypes.has("license_front") && !pendingDocTypes.has("license_back")
-                }
-                isComplete={
-                  authUser?.id
-                    ? docTypes.has("license_front") && docTypes.has("license_back")
-                    : pendingDocTypes.has("license_front") && pendingDocTypes.has("license_back")
-                }
-                onComplete={refreshDocs}
-              />
-            </div>
+            <div className="mt-8">{renderDocFields()}</div>
+
 
             {!authUser?.id && (
               <div className="mt-6 rounded-2xl border border-border bg-secondary p-4 text-sm text-muted-foreground">
