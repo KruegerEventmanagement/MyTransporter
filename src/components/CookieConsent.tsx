@@ -57,14 +57,14 @@ export function CookieConsent() {
           onClick={() => choose("necessary")}
           className="flex-1 rounded-full border border-input bg-background px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
         >
-          Nur notwendige
+          Cookies nicht zulassen
         </button>
         <button
           type="button"
           onClick={() => choose("marketing")}
           className="flex-1 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground transition-transform hover:scale-[1.02]"
         >
-          Marketing erlauben
+          Cookies zulassen
         </button>
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
