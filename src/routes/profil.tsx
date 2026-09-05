@@ -238,19 +238,21 @@ function ProfilePage() {
             Verifizierung
           </h2>
           <div className="space-y-3">
-            <DocumentScanner
-              documentType="id"
-              isComplete={docTypes.has("id_front") && docTypes.has("id_back")}
-              onComplete={loadDocs}
-              onReset={() => resetDocType("id")}
-            />
-            <DocumentScanner
-              documentType="license"
-              isComplete={docTypes.has("license_front") && docTypes.has("license_back")}
-              onComplete={loadDocs}
-              onReset={() => resetDocType("license")}
-            />
+            {(Object.keys(SCAN_DOC_LABELS) as ScanDocType[]).map((docType) => {
+              const row = [...docs].reverse().find((d) => d.doc_type === docType);
+              return (
+                <DocumentScanner
+                  key={docType}
+                  docType={docType}
+                  isComplete={docTypes.has(docType)}
+                  previewUrl={row ? (docUrls[row.id] ?? null) : null}
+                  onComplete={loadDocs}
+                  onReset={() => resetDocSide(docType)}
+                />
+              );
+            })}
           </div>
+
         </section>
 
         {/* Meine Dokumente */}
