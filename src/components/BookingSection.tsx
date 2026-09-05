@@ -564,9 +564,11 @@ export function BookingSection() {
   const docsReady = authUser?.id ? verified : guestDocsComplete;
 
   const handlePendingCapture = async (docType: PendingDocType, blob: Blob) => {
-    await savePendingDocument(docType, blob);
+    const level = await savePendingDocument(docType, blob);
+    if (level === "memory") setPendingVolatile(true);
     setPendingDocTypes((prev) => new Set(prev).add(docType));
   };
+
 
   const flushPendingDocuments = async (userId: string) => {
     setPendingUploadError(null);
