@@ -3,59 +3,56 @@ import { Camera, X, RotateCcw, CheckCircle, AlertTriangle, Zap, ZapOff, Loader2 
 import { supabase } from "@/integrations/supabase/client";
 import { useTapFocus } from "@/hooks/useTapFocus";
 
-type ScanSide = "front" | "back";
-type ScanPhase =
-  | "idle"
-  | "camera"
-  | "capturing"
-  | "preview"
-  | "verified"
-  | "error"
-  | "rejected";
+type ScanPhase = "idle" | "camera" | "capturing" | "preview" | "error" | "rejected";
 
-interface DocumentScannerProps {
-  documentType: "license" | "id";
-  onComplete: () => void;
-  isComplete: boolean;
-  onReset?: () => void | Promise<void>;
-  /**
-   * "pending" buffers the captures locally (no account required) and hands
-   * them to onCapture instead of uploading them to the backend.
-   */
-  mode?: "upload" | "pending";
-  onCapture?: (side: ScanSide, blob: Blob) => void | Promise<void>;
-  /** Resume on the back side when the front is already buffered/stored. */
-  frontAlreadyDone?: boolean;
-}
+export type ScanDocType = "id_front" | "id_back" | "license_front" | "license_back";
 
-const DOC_LABELS = {
-  license: { name: "Führerschein", icon: "🪪" },
-  id: { name: "Personalausweis", icon: "🪪" },
+export const SCAN_DOC_LABELS: Record<ScanDocType, { title: string; hint: string }> = {
+  id_front: { title: "Personalausweis · Vorderseite", hint: "Seite mit Foto" },
+  id_back: { title: "Personalausweis · Rückseite", hint: "Seite mit Adresse" },
+  license_front: { title: "Führerschein · Vorderseite", hint: "Seite mit Foto" },
+  license_back: { title: "Führerschein · Rückseite", hint: "Seite mit Klassen" },
 };
 
+interface DocumentScannerProps {
+  /** Exactly one side per field. */
+  docType: ScanDocType;
+  /** True when a photo for this side is already stored/buffered. */
+  isComplete: boolean;
+  onComplete: () => void | Promise<void>;
+  /** Removes the currently stored photo for this side (called before a replacement). */
+  onReset?: () => void | Promise<void>;
+  /** Small thumbnail of the stored photo, if available. */
+  previewUrl?: string | null;
+  /**
+   * "pending" buffers the capture locally (no account required) and hands it
+   * to onCapture instead of uploading it to the backend.
+   */
+  mode?: "upload" | "pending";
+  onCapture?: (docType: ScanDocType, blob: Blob) => void | Promise<void>;
+}
+
 export function DocumentScanner({
-  documentType,
-  onComplete,
+  docType,
   isComplete,
+  onComplete,
   onReset,
+  previewUrl: storedPreviewUrl = null,
   mode = "upload",
   onCapture,
-  frontAlreadyDone = false,
 }: DocumentScannerProps) {
-  const [phase, setPhase] = useState<ScanPhase>(isComplete ? "verified" : "idle");
-  const [side, setSide] = useState<ScanSide>(frontAlreadyDone ? "back" : "front");
-  const [frontDone, setFrontDone] = useState(frontAlreadyDone);
+  const [phase, setPhase] = useState<ScanPhase>("idle");
   const [rejectMsg, setRejectMsg] = useState<string>("");
   const [torchOn, setTorchOn] = useState(false);
   const [torchAvailable, setTorchAvailable] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [shotUrl, setShotUrl] = useState<string | null>(null);
   const pendingBlobRef = useRef<Blob | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { focusPoint, handleTap } = useTapFocus(videoRef, streamRef);
 
-  const label = DOC_LABELS[documentType];
+  const label = SCAN_DOC_LABELS[docType];
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -83,7 +80,6 @@ export function DocumentScanner({
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
-      // Autofokus + Torch-Erkennung (best effort)
       const track = stream.getVideoTracks()[0];
       try {
         const caps = (track.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { focusMode?: string[]; torch?: boolean };
@@ -131,80 +127,75 @@ export function DocumentScanner({
       const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9));
       if (!blob) throw new Error("Bild konnte nicht erstellt werden");
       pendingBlobRef.current = blob;
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(URL.createObjectURL(blob));
+      if (shotUrl) URL.revokeObjectURL(shotUrl);
+      setShotUrl(URL.createObjectURL(blob));
       setPhase("preview");
     } catch (err) {
       console.error("Document capture error:", err);
       setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");
       setPhase("rejected");
     }
-  }, [previewUrl]);
+  }, [shotUrl]);
 
   const confirmUpload = useCallback(async () => {
     const blob = pendingBlobRef.current;
     if (!blob) return;
     setPhase("capturing");
     try {
-      const docTypeKey = `${documentType}_${side}`;
       if (mode === "pending") {
-        await onCapture?.(side, blob);
+        await onCapture?.(docType, blob);
       } else {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Nicht angemeldet");
-        const path = `${user.id}/${docTypeKey}_${Date.now()}.jpg`;
+        // Replacing an existing side: retire the old photo first.
+        if (isComplete && onReset) await onReset();
+        const path = `${user.id}/${docType}_${Date.now()}.jpg`;
         const { error: upErr } = await supabase.storage
           .from("user-documents")
           .upload(path, blob, { contentType: "image/jpeg", upsert: false });
         if (upErr) throw upErr;
-        await supabase.from("user_documents").insert({
+        const { error: insErr } = await supabase.from("user_documents").insert({
           user_id: user.id,
-          doc_type: docTypeKey,
+          doc_type: docType,
           photo_url: path,
           ai_verified: true,
           verified_at: new Date().toISOString(),
         });
+        if (insErr) throw insErr;
       }
 
       pendingBlobRef.current = null;
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-        setPreviewUrl(null);
+      if (shotUrl) {
+        URL.revokeObjectURL(shotUrl);
+        setShotUrl(null);
       }
       stopCamera();
-
-      if (!frontDone) {
-        setFrontDone(true);
-        setSide("back");
-        setPhase("idle");
-      } else {
-        setPhase("verified");
-        onComplete();
-      }
+      setPhase("idle");
+      await onComplete();
     } catch (err) {
       console.error("Document upload error:", err);
       setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");
       setPhase("rejected");
     }
-  }, [documentType, side, frontDone, onComplete, stopCamera, previewUrl, mode, onCapture]);
+  }, [docType, isComplete, onReset, onComplete, stopCamera, shotUrl, mode, onCapture]);
 
   const retakeFromPreview = useCallback(() => {
     pendingBlobRef.current = null;
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
+    if (shotUrl) {
+      URL.revokeObjectURL(shotUrl);
+      setShotUrl(null);
     }
     setPhase("camera");
-  }, [previewUrl]);
+  }, [shotUrl]);
 
   const handleClose = () => {
     stopCamera();
     pendingBlobRef.current = null;
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
+    if (shotUrl) {
+      URL.revokeObjectURL(shotUrl);
+      setShotUrl(null);
     }
-    setPhase(isComplete ? "verified" : "idle");
+    setPhase("idle");
     setRejectMsg("");
   };
 
@@ -219,94 +210,63 @@ export function DocumentScanner({
     }
   };
 
-  // Reattach an existing MediaStream to the <video> whenever we (re)enter
-  // the camera phase. Without this, retry after a rejection remounts the
-  // <video> element but never re-binds srcObject, leaving a black preview.
+  // Reattach an existing MediaStream to the <video> whenever we (re)enter the
+  // camera phase — otherwise a retry shows a black preview.
   useEffect(() => {
     if (phase !== "camera") return;
     const video = videoRef.current;
     const stream = streamRef.current;
     if (!video || !stream) return;
-    if (video.srcObject !== stream) {
-      video.srcObject = stream;
-    }
+    if (video.srcObject !== stream) video.srcObject = stream;
     video.play().catch(() => {
       /* ignore autoplay errors */
     });
   }, [phase]);
 
-  // Keep the internal progress in sync with what the flow actually holds.
-  // Without this, a stale initialisation can leave the card showing "Scannen"
-  // although both sides are already buffered (or vice versa).
-  useEffect(() => {
-    if (isComplete) {
-      setFrontDone(true);
-      setPhase((p) => (p === "idle" ? "verified" : p));
-    } else if (frontAlreadyDone) {
-      setFrontDone(true);
-      setSide((s) => (s === "front" ? "back" : s));
-    }
-  }, [isComplete, frontAlreadyDone]);
-
-
-  // Idle state, button
-  if (phase === "idle" || phase === "verified") {
+  // Single field: tap to capture, tap again to replace
+  if (phase === "idle") {
     return (
-      <div className="space-y-2">
+      <div className="rounded-2xl border border-border bg-card overflow-hidden">
         <button
-          onClick={() => {
-            if (phase !== "verified") startCamera();
-          }}
-          disabled={phase === "verified"}
-          className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all ${
-            phase === "verified"
-              ? "border-border bg-secondary"
-              : "border-border bg-card hover:border-accent/50 hover:shadow-sm"
-          }`}
+          type="button"
+          onClick={() => startCamera()}
+          className="w-full p-3 flex items-center gap-3 text-left hover:bg-secondary/60 transition-colors"
         >
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-            phase === "verified" ? "bg-muted" : "bg-accent/10"
-          }`}>
-            {phase === "verified" ? (
-              <CheckCircle className="w-5 h-5 text-foreground" />
+          <div className="w-16 h-11 shrink-0 rounded-lg bg-secondary border border-border overflow-hidden flex items-center justify-center">
+            {isComplete && storedPreviewUrl ? (
+              <img src={storedPreviewUrl} alt={label.title} className="w-full h-full object-cover" />
             ) : (
-              <Camera className="w-5 h-5 text-accent" />
+              <Camera className="w-4 h-4 text-muted-foreground" />
             )}
           </div>
-          <div className="flex-1 text-left">
-            <p className="font-medium text-foreground">{label.name} scannen</p>
-            <p className="text-sm text-muted-foreground">
-              {phase === "verified"
-                ? "✓ Vorder- & Rückseite gespeichert"
-                : frontDone
-                  ? "Rückseite noch ausstehend"
-                  : "Vorder- und Rückseite fotografieren"}
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-foreground text-sm truncate">{label.title}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {isComplete ? "Gespeichert – tippen zum Ändern" : `Foto aufnehmen (${label.hint})`}
             </p>
           </div>
-          {phase !== "verified" && (
-            <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-accent text-accent-foreground">
-              {frontDone ? "Weiter" : "Scannen"}
+          {isComplete ? (
+            <CheckCircle className="w-6 h-6 text-green-600 shrink-0" aria-label="Foto vorhanden" />
+          ) : (
+            <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-accent text-accent-foreground shrink-0">
+              Foto
             </span>
           )}
         </button>
-        {phase === "verified" && onReset && (
+        {isComplete && (
           <button
-            onClick={async () => {
-              await onReset();
-              setFrontDone(false);
-              setSide("front");
-              setPhase("idle");
-            }}
-            className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 py-1"
+            type="button"
+            onClick={() => startCamera()}
+            className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 py-2 border-t border-border"
           >
-            Erneut aufnehmen
+            Neu aufnehmen
           </button>
         )}
       </div>
     );
   }
 
-  // Fullscreen camera / scanning / verifying overlay
+  // Fullscreen camera / capture / preview overlay
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       {/* Header */}
@@ -315,8 +275,8 @@ export function DocumentScanner({
           <X className="w-5 h-5 text-white" />
         </button>
         <div className="text-center">
-          <p className="text-white font-medium text-sm">{label.name}</p>
-          <p className="text-white/70 text-xs">{side === "front" ? "Vorderseite" : "Rückseite"}</p>
+          <p className="text-white font-medium text-sm">{label.title}</p>
+          <p className="text-white/70 text-xs">{label.hint}</p>
         </div>
         {torchAvailable ? (
           <button onClick={toggleTorch} className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
@@ -340,7 +300,6 @@ export function DocumentScanner({
           />
           <canvas ref={canvasRef} className="hidden" />
 
-          {/* Tap-to-focus indicator */}
           {focusPoint && (
             <div
               className="absolute pointer-events-none w-16 h-16 -ml-8 -mt-8 border-2 border-white rounded-md transition-opacity duration-200"
@@ -354,12 +313,8 @@ export function DocumentScanner({
 
           {/* Card overlay guide */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            {/* Darkened corners */}
             <div className="relative w-[85%] max-w-[360px] aspect-[1.586/1]">
-              {/* Card border */}
               <div className="absolute inset-0 rounded-2xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]" />
-              
-              {/* Corner marks */}
               <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-2xl" />
               <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-2xl" />
               <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-2xl" />
@@ -372,7 +327,7 @@ export function DocumentScanner({
             <p className="text-white text-center text-lg font-medium mb-2">
               {phase === "capturing"
                 ? "Bild wird aufgenommen..."
-                : `Bitte ${side === "front" ? "Vorderseite" : "Rückseite"} des ${label.name}s in den Rahmen halten`}
+                : `Bitte ${label.title} in den Rahmen halten`}
             </p>
             <p className="text-white/60 text-center text-sm mb-6">
               Positionieren, dann Auslöser drücken
@@ -392,25 +347,23 @@ export function DocumentScanner({
         </>
       )}
 
-      {/* Uploading state */}
+      {/* Saving state */}
       {phase === "capturing" && (
         <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center px-8">
           <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mb-6">
             <Loader2 className="w-10 h-10 text-accent animate-spin" />
           </div>
           <h3 className="text-white text-xl font-bold mb-2">Foto wird gespeichert</h3>
-          <p className="text-white/60 text-center text-sm">
-            {side === "front" ? "Vorderseite" : "Rückseite"} wird hochgeladen.
-          </p>
+          <p className="text-white/60 text-center text-sm">{label.title}</p>
         </div>
       )}
 
       {/* Preview state — user must confirm or retake */}
-      {phase === "preview" && previewUrl && (
+      {phase === "preview" && shotUrl && (
         <div className="absolute inset-0 bg-black flex flex-col">
           <div className="flex-1 flex items-center justify-center p-4">
             <img
-              src={previewUrl}
+              src={shotUrl}
               alt="Aufgenommenes Dokument"
               className="max-w-full max-h-full object-contain rounded-2xl"
             />
@@ -477,7 +430,7 @@ export function DocumentScanner({
               Abbrechen
             </button>
             <button
-              onClick={startCamera}
+              onClick={() => void startCamera()}
               className="px-6 py-3 rounded-full bg-accent text-accent-foreground font-medium flex items-center gap-2"
             >
               <RotateCcw className="w-4 h-4" /> Erneut versuchen
