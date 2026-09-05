@@ -131,6 +131,8 @@ export function BookingSection() {
   const [pendingDocTypes, setPendingDocTypes] = useState<Set<string>>(new Set());
   const [pendingUploading, setPendingUploading] = useState(false);
   const [pendingUploadError, setPendingUploadError] = useState<string | null>(null);
+  const [pendingVolatile, setPendingVolatile] = useState(false);
+
 
   const toggleAddon = (id: string) => {
     setSelectedAddonIds((prev) =>
