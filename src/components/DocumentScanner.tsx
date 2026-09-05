@@ -284,8 +284,9 @@ export function DocumentScanner({
     );
   }
 
-  // Fullscreen camera / capture / preview overlay
-  return (
+  // Fullscreen camera / capture / preview overlay (portalled to <body> so no
+  // transformed ancestor can trap the fixed layer inside the page).
+  const overlay = (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/70 to-transparent">
