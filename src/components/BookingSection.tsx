@@ -545,13 +545,26 @@ export function BookingSection() {
   const [holdError, setHoldError] = useState<string | null>(null);
   const [holdNow, setHoldNow] = useState<number>(Date.now());
 
+  /** doc_type -> photo_url of the account's stored scans (for previews/replacement). */
+  const [docPaths, setDocPaths] = useState<Record<string, string>>({});
+  const [docPreviews, setDocPreviews] = useState<Record<string, string>>({});
+
   const refreshDocs = async () => {
     if (!authUser?.id) return;
     const { data } = await supabase
       .from("user_documents")
-      .select("doc_type")
-      .eq("user_id", authUser.id);
-    if (data) setDocTypes(new Set(data.map((d: { doc_type: string }) => d.doc_type)));
+      .select("doc_type, photo_url")
+      .eq("user_id", authUser.id)
+      .is("deleted_by_user_at", null)
+      .order("created_at", { ascending: false });
+    if (data) {
+      setDocTypes(new Set(data.map((d: { doc_type: string }) => d.doc_type)));
+      const paths: Record<string, string> = {};
+      for (const row of data as { doc_type: string; photo_url: string | null }[]) {
+        if (row.photo_url && !paths[row.doc_type]) paths[row.doc_type] = row.photo_url;
+      }
+      setDocPaths(paths);
+    }
   };
 
   // Dokumente beim Login/Step-Wechsel laden
@@ -565,11 +578,81 @@ export function BookingSection() {
   const guestDocsComplete = PENDING_DOC_TYPES.every((t) => pendingDocTypes.has(t));
   const docsReady = authUser?.id ? verified : guestDocsComplete;
 
+  // Kleine Vorschaubilder der vier Felder aufbauen (Konto: signierte URL, Gast: lokal)
+  useEffect(() => {
+    let cancelled = false;
+    const created: string[] = [];
+    (async () => {
+      const next: Record<string, string> = {};
+      for (const docType of PENDING_DOC_TYPES) {
+        if (authUser?.id) {
+          const path = docPaths[docType];
+          if (!path) continue;
+          const { data } = await supabase.storage
+            .from("user-documents")
+            .createSignedUrl(path, 60 * 30);
+          if (data?.signedUrl) next[docType] = data.signedUrl;
+        } else if (pendingDocTypes.has(docType)) {
+          const url = await getPendingDocumentUrl(docType);
+          if (url) {
+            next[docType] = url;
+            created.push(url);
+          }
+        }
+      }
+      if (cancelled) {
+        created.forEach((u) => URL.revokeObjectURL(u));
+        return;
+      }
+      setDocPreviews(next);
+    })();
+    return () => {
+      cancelled = true;
+      created.forEach((u) => URL.revokeObjectURL(u));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser?.id, docPaths, pendingDocTypes]);
+
   const handlePendingCapture = async (docType: PendingDocType, blob: Blob) => {
     const level = await savePendingDocument(docType, blob);
     if (level === "memory") setPendingVolatile(true);
     setPendingDocTypes((prev) => new Set(prev).add(docType));
   };
+
+  /** Entfernt genau eine Seite, damit sie neu aufgenommen werden kann. */
+  const resetDocSide = async (docType: PendingDocType) => {
+    if (authUser?.id) {
+      await supabase
+        .from("user_documents")
+        .update({ deleted_by_user_at: new Date().toISOString() })
+        .eq("user_id", authUser.id)
+        .eq("doc_type", docType)
+        .is("deleted_by_user_at", null);
+      await refreshDocs();
+    } else {
+      await deletePendingDocument(docType);
+      setPendingDocTypes(await listPendingDocumentTypes());
+    }
+  };
+
+  /** Die vier Einzelfelder (Ausweis vorne/hinten, Führerschein vorne/hinten). */
+  const renderDocFields = () => (
+    <div className="space-y-3">
+      {PENDING_DOC_TYPES.map((docType) => (
+        <DocumentScanner
+          key={docType}
+          docType={docType}
+          mode={authUser?.id ? "upload" : "pending"}
+          onCapture={handlePendingCapture}
+          isComplete={authUser?.id ? docTypes.has(docType) : pendingDocTypes.has(docType)}
+          previewUrl={docPreviews[docType] ?? null}
+          onReset={() => resetDocSide(docType)}
+          onComplete={refreshDocs}
+        />
+      ))}
+    </div>
+  );
+
 
 
   const flushPendingDocuments = async (userId: string) => {
