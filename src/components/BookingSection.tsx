@@ -131,6 +131,8 @@ export function BookingSection() {
   const [pendingDocTypes, setPendingDocTypes] = useState<Set<string>>(new Set());
   const [pendingUploading, setPendingUploading] = useState(false);
   const [pendingUploadError, setPendingUploadError] = useState<string | null>(null);
+  const [pendingVolatile, setPendingVolatile] = useState(false);
+
 
   const toggleAddon = (id: string) => {
     setSelectedAddonIds((prev) =>
@@ -562,9 +564,11 @@ export function BookingSection() {
   const docsReady = authUser?.id ? verified : guestDocsComplete;
 
   const handlePendingCapture = async (docType: PendingDocType, blob: Blob) => {
-    await savePendingDocument(docType, blob);
+    const level = await savePendingDocument(docType, blob);
+    if (level === "memory") setPendingVolatile(true);
     setPendingDocTypes((prev) => new Set(prev).add(docType));
   };
+
 
   const flushPendingDocuments = async (userId: string) => {
     setPendingUploadError(null);
@@ -1188,10 +1192,12 @@ export function BookingSection() {
 
             {!authUser?.id && (
               <div className="mt-6 rounded-2xl border border-border bg-secondary p-4 text-sm text-muted-foreground">
-                Deine Aufnahmen bleiben auf diesem Gerät gespeichert und werden direkt nach der
-                Registrierung automatisch deinem Konto zugeordnet.
+                {pendingVolatile
+                  ? "Deine Aufnahmen liegen nur in diesem Browser-Fenster – bitte schließe die Buchung jetzt hier ab, dann werden sie nach der Registrierung automatisch deinem Konto zugeordnet."
+                  : "Deine Aufnahmen bleiben auf diesem Gerät gespeichert und werden direkt nach der Registrierung automatisch deinem Konto zugeordnet."}
               </div>
             )}
+
 
             <div className="mt-8 flex justify-between gap-3">
               <button
