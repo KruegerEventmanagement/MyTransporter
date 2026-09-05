@@ -7,7 +7,7 @@ import { de } from "date-fns/locale";
 import { useServerFn } from "@tanstack/react-start";
 import { cancelBookingWithRefund } from "@/lib/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
-import { DocumentScanner } from "@/components/DocumentScanner";
+import { DocumentScanner, SCAN_DOC_LABELS, type ScanDocType } from "@/components/DocumentScanner";
 
 export const Route = createFileRoute("/profil")({
   head: () => ({ meta: [{ title: "MyTransporter · Profil" }] }),
