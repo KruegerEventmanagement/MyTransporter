@@ -91,7 +91,8 @@ function ProfilePage() {
     }
   };
 
-  const resetDocType = async (documentType: "id" | "license") => {
+  /** Entfernt genau eine Seite, damit sie einzeln neu aufgenommen werden kann. */
+  const resetDocSide = async (docType: ScanDocType) => {
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
     if (!user) return;
@@ -99,10 +100,11 @@ function ProfilePage() {
       .from("user_documents")
       .update({ deleted_by_user_at: new Date().toISOString() })
       .eq("user_id", user.id)
-      .in("doc_type", [`${documentType}_front`, `${documentType}_back`])
+      .eq("doc_type", docType)
       .is("deleted_by_user_at", null);
     await loadDocs();
   };
+
 
   const deleteDoc = async (id: string) => {
     await supabase
