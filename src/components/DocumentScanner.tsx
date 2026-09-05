@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Camera, X, RotateCcw, CheckCircle, AlertTriangle, Zap, ZapOff, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTapFocus } from "@/hooks/useTapFocus";
@@ -119,11 +120,27 @@ export function DocumentScanner({
       if (!video || !canvas || video.videoWidth === 0) {
         throw new Error("Kamera nicht bereit");
       }
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      const rect = video.getBoundingClientRect();
+
+      // Crop exactly to the on-screen guide frame (85% width, max 360px, ID aspect).
+      const guideW = Math.min(rect.width * 0.85, 360);
+      const guideH = guideW / 1.586;
+      // object-cover: displayed = source * s
+      const s = Math.max(rect.width / vw, rect.height / vh) || 1;
+      let cropW = Math.min(vw, guideW / s);
+      let cropH = Math.min(vh, guideH / s);
+      if (!isFinite(cropW) || cropW <= 0) cropW = vw;
+      if (!isFinite(cropH) || cropH <= 0) cropH = vh;
+      const cropX = (vw - cropW) / 2;
+      const cropY = (vh - cropH) / 2;
+
+      canvas.width = Math.round(cropW);
+      canvas.height = Math.round(cropH);
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Canvas-Kontext fehlt");
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
       const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9));
       if (!blob) throw new Error("Bild konnte nicht erstellt werden");
       pendingBlobRef.current = blob;
@@ -136,6 +153,7 @@ export function DocumentScanner({
       setPhase("rejected");
     }
   }, [shotUrl]);
+
 
   const confirmUpload = useCallback(async () => {
     const blob = pendingBlobRef.current;
@@ -266,8 +284,9 @@ export function DocumentScanner({
     );
   }
 
-  // Fullscreen camera / capture / preview overlay
-  return (
+  // Fullscreen camera / capture / preview overlay (portalled to <body> so no
+  // transformed ancestor can trap the fixed layer inside the page).
+  const overlay = (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/70 to-transparent">
@@ -440,4 +459,7 @@ export function DocumentScanner({
       )}
     </div>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(overlay, document.body);
 }
