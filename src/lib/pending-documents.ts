@@ -156,6 +156,12 @@ async function readPendingDocument(docType: PendingDocType): Promise<Blob | null
   return null;
 }
 
+/** Object URL of a buffered scan, for the thumbnail preview. Caller revokes it. */
+export async function getPendingDocumentUrl(docType: PendingDocType): Promise<string | null> {
+  const blob = await readPendingDocument(docType);
+  return blob ? URL.createObjectURL(blob) : null;
+}
+
 export async function deletePendingDocument(docType: PendingDocType): Promise<void> {
   memory.delete(docType);
   try {

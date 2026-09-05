@@ -7,7 +7,7 @@ import { de } from "date-fns/locale";
 import { useServerFn } from "@tanstack/react-start";
 import { cancelBookingWithRefund } from "@/lib/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
-import { DocumentScanner } from "@/components/DocumentScanner";
+import { DocumentScanner, SCAN_DOC_LABELS, type ScanDocType } from "@/components/DocumentScanner";
 
 export const Route = createFileRoute("/profil")({
   head: () => ({ meta: [{ title: "MyTransporter · Profil" }] }),
@@ -91,7 +91,8 @@ function ProfilePage() {
     }
   };
 
-  const resetDocType = async (documentType: "id" | "license") => {
+  /** Entfernt genau eine Seite, damit sie einzeln neu aufgenommen werden kann. */
+  const resetDocSide = async (docType: ScanDocType) => {
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
     if (!user) return;
@@ -99,10 +100,11 @@ function ProfilePage() {
       .from("user_documents")
       .update({ deleted_by_user_at: new Date().toISOString() })
       .eq("user_id", user.id)
-      .in("doc_type", [`${documentType}_front`, `${documentType}_back`])
+      .eq("doc_type", docType)
       .is("deleted_by_user_at", null);
     await loadDocs();
   };
+
 
   const deleteDoc = async (id: string) => {
     await supabase
@@ -236,19 +238,21 @@ function ProfilePage() {
             Verifizierung
           </h2>
           <div className="space-y-3">
-            <DocumentScanner
-              documentType="id"
-              isComplete={docTypes.has("id_front") && docTypes.has("id_back")}
-              onComplete={loadDocs}
-              onReset={() => resetDocType("id")}
-            />
-            <DocumentScanner
-              documentType="license"
-              isComplete={docTypes.has("license_front") && docTypes.has("license_back")}
-              onComplete={loadDocs}
-              onReset={() => resetDocType("license")}
-            />
+            {(Object.keys(SCAN_DOC_LABELS) as ScanDocType[]).map((docType) => {
+              const row = [...docs].reverse().find((d) => d.doc_type === docType);
+              return (
+                <DocumentScanner
+                  key={docType}
+                  docType={docType}
+                  isComplete={docTypes.has(docType)}
+                  previewUrl={row ? (docUrls[row.id] ?? null) : null}
+                  onComplete={loadDocs}
+                  onReset={() => resetDocSide(docType)}
+                />
+              );
+            })}
           </div>
+
         </section>
 
         {/* Meine Dokumente */}
