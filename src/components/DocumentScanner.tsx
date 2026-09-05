@@ -459,4 +459,7 @@ export function DocumentScanner({
       )}
     </div>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(overlay, document.body);
 }
