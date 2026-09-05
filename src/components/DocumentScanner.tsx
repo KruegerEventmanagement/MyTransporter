@@ -15,6 +15,30 @@ export const SCAN_DOC_LABELS: Record<ScanDocType, { title: string; hint: string 
   license_back: { title: "Führerschein · Rückseite", hint: "Seite mit Klassen" },
 };
 
+const dataUrlToBlob = (dataUrl: string): Blob => {
+  const [header, encoded] = dataUrl.split(",");
+  if (!header || !encoded) throw new Error("Bild konnte nicht erstellt werden");
+  const mime = header.match(/^data:(.*?);base64$/)?.[1] ?? "image/jpeg";
+  const binary = window.atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return new Blob([bytes], { type: mime });
+};
+
+const canvasToJpegBlob = async (canvas: HTMLCanvasElement): Promise<Blob> => {
+  // Some iOS/WebKit versions never invoke canvas.toBlob's callback for a
+  // camera frame. Never leave the user on an endless saving screen.
+  if (typeof canvas.toBlob === "function") {
+    const blob = await Promise.race<Blob | null>([
+      new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9)),
+      new Promise((resolve) => window.setTimeout(() => resolve(null), 1200)),
+    ]);
+    if (blob) return blob;
+  }
+
+  return dataUrlToBlob(canvas.toDataURL("image/jpeg", 0.9));
+};
+
 interface DocumentScannerProps {
   /** Exactly one side per field. */
   docType: ScanDocType;
@@ -141,8 +165,7 @@ export function DocumentScanner({
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Canvas-Kontext fehlt");
       ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
-      const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9));
-      if (!blob) throw new Error("Bild konnte nicht erstellt werden");
+      const blob = await canvasToJpegBlob(canvas);
       pendingBlobRef.current = blob;
       if (shotUrl) URL.revokeObjectURL(shotUrl);
       setShotUrl(URL.createObjectURL(blob));
