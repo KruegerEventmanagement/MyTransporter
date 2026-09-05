@@ -1561,18 +1561,8 @@ export function BookingSection() {
 
             {/* Verifizierungs-Block — vor der Bezahlung */}
             {!verified && !paid && (
-              <div className="mt-6 space-y-3 text-left">
-                <DocumentScanner
-                  documentType="id"
-                  isComplete={docTypes.has("id_front") && docTypes.has("id_back")}
-                  onComplete={refreshDocs}
-                />
-                <DocumentScanner
-                  documentType="license"
-                  isComplete={docTypes.has("license_front") && docTypes.has("license_back")}
-                  onComplete={refreshDocs}
-                />
-              </div>
+              <div className="mt-6 text-left">{renderDocFields()}</div>
+
             )}
 
             {verified && total !== null && (
