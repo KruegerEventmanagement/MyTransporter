@@ -39,6 +39,12 @@ const canvasToJpegBlob = async (canvas: HTMLCanvasElement): Promise<Blob> => {
   return dataUrlToBlob(canvas.toDataURL("image/jpeg", 0.9));
 };
 
+const withTimeout = async <T,>(promise: Promise<T>, milliseconds: number, message: string): Promise<T> =>
+  Promise.race([
+    promise,
+    new Promise<T>((_, reject) => window.setTimeout(() => reject(new Error(message)), milliseconds)),
+  ]);
+
 interface DocumentScannerProps {
   /** Exactly one side per field. */
   docType: ScanDocType;
@@ -141,7 +147,7 @@ export function DocumentScanner({
     try {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      if (!video || !canvas || video.videoWidth === 0) {
+      if (!video || !canvas || video.videoWidth === 0 || video.videoHeight === 0) {
         throw new Error("Kamera nicht bereit");
       }
       const vw = video.videoWidth;
@@ -184,7 +190,13 @@ export function DocumentScanner({
     setPhase("capturing");
     try {
       if (mode === "pending") {
-        await onCapture?.(docType, blob);
+        if (onCapture) {
+          await withTimeout(
+            Promise.resolve(onCapture(docType, blob)),
+            5_000,
+            "Das Foto konnte nicht dauerhaft gespeichert werden. Bitte erneut versuchen.",
+          );
+        }
       } else {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Nicht angemeldet");
@@ -212,7 +224,11 @@ export function DocumentScanner({
       }
       stopCamera();
       setPhase("idle");
-      await onComplete();
+      // Refreshing thumbnails must never keep the scanner overlay open. The
+      // photo itself is already stored at this point.
+      void Promise.resolve(onComplete()).catch((error) => {
+        console.warn("Document refresh error:", error);
+      });
     } catch (err) {
       console.error("Document upload error:", err);
       setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");

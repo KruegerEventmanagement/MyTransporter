@@ -15,6 +15,7 @@ const DB_VERSION = 1;
 const LS_PREFIX = "mt_pending_doc_";
 /** ~1.4 MB base64 per document keeps us well below the 5 MB localStorage quota. */
 const LS_MAX_CHARS = 1_400_000;
+const IDB_TIMEOUT_MS = 1_500;
 
 /**
  * Level 1 (authoritative): in-memory. Never fails, survives step changes.
@@ -32,13 +33,25 @@ function openDb(): Promise<IDBDatabase> {
       return;
     }
     const req = indexedDB.open(DB_NAME, DB_VERSION);
+    let settled = false;
+    const timeout = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error("IndexedDB Zeitüberschreitung"));
+    }, IDB_TIMEOUT_MS);
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      callback();
+    };
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error ?? new Error("IndexedDB Fehler"));
-    req.onblocked = () => reject(new Error("IndexedDB blockiert"));
+    req.onsuccess = () => finish(() => resolve(req.result));
+    req.onerror = () => finish(() => reject(req.error ?? new Error("IndexedDB Fehler")));
+    req.onblocked = () => finish(() => reject(new Error("IndexedDB blockiert")));
   });
 }
 
