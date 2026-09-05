@@ -45,6 +45,8 @@ import {
   listPendingDocumentTypes,
   savePendingDocument,
   uploadPendingDocuments,
+  getPendingDocumentUrl,
+  deletePendingDocument,
   type PendingDocType,
 } from "@/lib/pending-documents";
 
