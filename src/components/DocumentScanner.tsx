@@ -15,6 +15,36 @@ export const SCAN_DOC_LABELS: Record<ScanDocType, { title: string; hint: string 
   license_back: { title: "Führerschein · Rückseite", hint: "Seite mit Klassen" },
 };
 
+const dataUrlToBlob = (dataUrl: string): Blob => {
+  const [header, encoded] = dataUrl.split(",");
+  if (!header || !encoded) throw new Error("Bild konnte nicht erstellt werden");
+  const mime = header.match(/^data:(.*?);base64$/)?.[1] ?? "image/jpeg";
+  const binary = window.atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return new Blob([bytes], { type: mime });
+};
+
+const canvasToJpegBlob = async (canvas: HTMLCanvasElement): Promise<Blob> => {
+  // Some iOS/WebKit versions never invoke canvas.toBlob's callback for a
+  // camera frame. Never leave the user on an endless saving screen.
+  if (typeof canvas.toBlob === "function") {
+    const blob = await Promise.race<Blob | null>([
+      new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9)),
+      new Promise((resolve) => window.setTimeout(() => resolve(null), 1200)),
+    ]);
+    if (blob) return blob;
+  }
+
+  return dataUrlToBlob(canvas.toDataURL("image/jpeg", 0.9));
+};
+
+const withTimeout = async <T,>(promise: Promise<T>, milliseconds: number, message: string): Promise<T> =>
+  Promise.race([
+    promise,
+    new Promise<T>((_, reject) => window.setTimeout(() => reject(new Error(message)), milliseconds)),
+  ]);
+
 interface DocumentScannerProps {
   /** Exactly one side per field. */
   docType: ScanDocType;
@@ -117,7 +147,7 @@ export function DocumentScanner({
     try {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      if (!video || !canvas || video.videoWidth === 0) {
+      if (!video || !canvas || video.videoWidth === 0 || video.videoHeight === 0) {
         throw new Error("Kamera nicht bereit");
       }
       const vw = video.videoWidth;
@@ -141,8 +171,7 @@ export function DocumentScanner({
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Canvas-Kontext fehlt");
       ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
-      const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9));
-      if (!blob) throw new Error("Bild konnte nicht erstellt werden");
+      const blob = await canvasToJpegBlob(canvas);
       pendingBlobRef.current = blob;
       if (shotUrl) URL.revokeObjectURL(shotUrl);
       setShotUrl(URL.createObjectURL(blob));
@@ -161,7 +190,13 @@ export function DocumentScanner({
     setPhase("capturing");
     try {
       if (mode === "pending") {
-        await onCapture?.(docType, blob);
+        if (onCapture) {
+          await withTimeout(
+            Promise.resolve(onCapture(docType, blob)),
+            5_000,
+            "Das Foto konnte nicht dauerhaft gespeichert werden. Bitte erneut versuchen.",
+          );
+        }
       } else {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Nicht angemeldet");
@@ -189,7 +224,11 @@ export function DocumentScanner({
       }
       stopCamera();
       setPhase("idle");
-      await onComplete();
+      // Refreshing thumbnails must never keep the scanner overlay open. The
+      // photo itself is already stored at this point.
+      void Promise.resolve(onComplete()).catch((error) => {
+        console.warn("Document refresh error:", error);
+      });
     } catch (err) {
       console.error("Document upload error:", err);
       setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");
@@ -287,7 +326,7 @@ export function DocumentScanner({
   // Fullscreen camera / capture / preview overlay (portalled to <body> so no
   // transformed ancestor can trap the fixed layer inside the page).
   const overlay = (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+    <div className="fixed inset-x-0 top-0 z-50 h-[100dvh] max-h-[100dvh] overflow-hidden bg-black flex flex-col">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/70 to-transparent">
         <button onClick={handleClose} className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
@@ -312,7 +351,7 @@ export function DocumentScanner({
           <video
             ref={videoRef}
             onPointerDown={handleTap}
-            className="flex-1 object-cover"
+            className="h-full w-full min-h-0 object-cover"
             playsInline
             muted
             autoPlay
@@ -342,7 +381,7 @@ export function DocumentScanner({
           </div>
 
           {/* Instructions */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 pb-10">
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
             <p className="text-white text-center text-lg font-medium mb-2">
               {phase === "capturing"
                 ? "Bild wird aufgenommen..."
@@ -387,7 +426,7 @@ export function DocumentScanner({
               className="max-w-full max-h-full object-contain rounded-2xl"
             />
           </div>
-          <div className="p-6 pb-10 bg-gradient-to-t from-black/90 to-transparent">
+          <div className="p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/90 to-transparent">
             <p className="text-white text-center text-base font-medium mb-4">
               Sieht das Bild gut aus?
             </p>
