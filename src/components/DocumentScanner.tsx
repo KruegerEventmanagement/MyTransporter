@@ -235,6 +235,20 @@ export function DocumentScanner({
     });
   }, [phase]);
 
+  // Keep the internal progress in sync with what the flow actually holds.
+  // Without this, a stale initialisation can leave the card showing "Scannen"
+  // although both sides are already buffered (or vice versa).
+  useEffect(() => {
+    if (isComplete) {
+      setFrontDone(true);
+      setPhase((p) => (p === "idle" ? "verified" : p));
+    } else if (frontAlreadyDone) {
+      setFrontDone(true);
+      setSide((s) => (s === "front" ? "back" : s));
+    }
+  }, [isComplete, frontAlreadyDone]);
+
+
   // Idle state, button
   if (phase === "idle" || phase === "verified") {
     return (
