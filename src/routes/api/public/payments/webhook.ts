@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { verifyWebhook, type StripeEnv } from "@/lib/stripe.server";
+import { verifyWebhook, createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import {
   getPlanById,
   planLabelWithClass,
@@ -37,7 +37,7 @@ function extractPaymentMethodId(pi: StripeCheckoutSession["payment_intent"]): st
   return extractId(pi.payment_method ?? null);
 }
 
-async function reconcileBooking(session: StripeCheckoutSession) {
+async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) {
   const paymentIntentId = extractId(session.payment_intent ?? null);
   const customerId = extractId(session.customer ?? null);
   const paymentMethodId = extractPaymentMethodId(session.payment_intent ?? null);
@@ -56,6 +56,7 @@ async function reconcileBooking(session: StripeCheckoutSession) {
   if (existing?.id) {
     return;
   }
+
 
   const md = session.metadata ?? {};
   const userId = (md.userId as string | undefined) ?? session.client_reference_id ?? null;
@@ -114,6 +115,46 @@ async function reconcileBooking(session: StripeCheckoutSession) {
     : isVehicleClass(metaClass)
       ? metaClass
       : "l1h1";
+
+  // Doppelbelegung ausschließen: verspätete/parallele Zahlung darf keine zweite
+  // bestätigte Buchung für denselben Fahrzeug-Zeitraum anlegen.
+  if (resolvedPlate) {
+    const { findVehicleConflicts } = await import("@/lib/availability.server");
+    const conflicts = await findVehicleConflicts({
+      vehiclePlate: resolvedPlate,
+      planId,
+      startDate,
+      startHour,
+      ignoreHoldUserId: userId,
+    });
+    if (conflicts.length > 0) {
+      console.error("[webhook] Doppelbelegung verhindert", session.id, conflicts);
+      let refundId: string | null = null;
+      let refundError: string | null = null;
+      try {
+        const stripe = createStripeClient(env);
+        const refund = await stripe.refunds.create({
+          payment_intent: paymentIntentId,
+          metadata: { kind: "double_booking_conflict", sessionId: session.id },
+        });
+        refundId = refund.id;
+      } catch (e) {
+        refundError = e instanceof Error ? e.message : String(e);
+      }
+      await supabaseAdmin.from("admin_notifications").insert({
+        type: "booking_conflict",
+        title: "Zahlung ohne Buchung – Fahrzeug war belegt",
+        body:
+          `Session ${session.id} · PaymentIntent ${paymentIntentId} · ${resolvedPlate} · ` +
+          `${startDate} ${String(startHour).padStart(2, "0")}:00 · Tarif ${planId} · ` +
+          `Konflikt: ${conflicts.map((c) => `${c.source} ${c.start_at}–${c.end_at}`).join(", ")} · ` +
+          (refundId ? `automatisch erstattet (${refundId})` : `ERSTATTUNG FEHLGESCHLAGEN: ${refundError ?? "unbekannt"} – bitte manuell erstatten`),
+        user_id: userId,
+      });
+      return;
+    }
+  }
+
 
   const planEntry = getPlanById(planId, vehicleClass);
   const planLabel = planEntry ? planLabelWithClass(planEntry) : (md.plan ?? "Transporter-Miete");
@@ -214,7 +255,7 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
           if (event.type === "checkout.session.completed") {
             const session = event.data.object as StripeCheckoutSession;
             if (session.payment_status === "paid") {
-              await reconcileBooking(session);
+              await reconcileBooking(session, env);
             } else {
               console.log("[webhook] Session nicht bezahlt, ignoriere", session.id, session.payment_status);
             }

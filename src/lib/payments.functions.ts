@@ -96,20 +96,35 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
         return { error: "Bitte zuerst Ausweis und Führerschein hochladen, bevor du bezahlen kannst." };
       }
 
-      // 2) Aktive Reservierung für genau diesen Slot muss bestehen
+      // 2) Aktive Reservierung für genau diesen Slot (User + Fahrzeug + Tarif + Zeit)
+      const checkoutPlanId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;
       if (data.startDate && typeof data.startHour === "number") {
-        const { data: holds } = await context.supabase
+        let holdQuery = supabaseAdmin
           .from("booking_holds")
-          .select("id, expires_at")
+          .select("id, expires_at, plan_id, vehicle_plate")
           .eq("user_id", context.userId)
           .eq("start_date", data.startDate)
           .eq("start_hour", data.startHour)
-          .gt("expires_at", new Date().toISOString())
-          .limit(1);
+          .eq("plan_id", checkoutPlanId)
+          .gt("expires_at", new Date().toISOString());
+        if (data.vehiclePlate) holdQuery = holdQuery.eq("vehicle_plate", data.vehiclePlate);
+        const { data: holds } = await holdQuery.limit(1);
         if (!holds || holds.length === 0) {
           return { error: "Deine 15-Minuten-Reservierung ist abgelaufen. Bitte wähle dein Zeitfenster neu." };
         }
+
+        // 3) Reale Verfügbarkeit erneut prüfen (eigener Hold zählt nicht als Konflikt)
+        const { findVehicleConflicts, conflictMessage } = await import("@/lib/availability.server");
+        const conflicts = await findVehicleConflicts({
+          vehiclePlate: data.vehiclePlate ?? "",
+          planId: checkoutPlanId,
+          startDate: data.startDate,
+          startHour: data.startHour,
+          ignoreHoldUserId: context.userId,
+        });
+        if (conflicts.length > 0) return { error: conflictMessage(conflicts) };
       }
+
 
       const stripe = createStripeClient(data.environment);
       const planId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;

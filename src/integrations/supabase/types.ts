@@ -665,6 +665,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      create_booking_hold_atomic: {
+        Args: {
+          _minutes?: number
+          _plan_id: string
+          _start_date: string
+          _start_hour: number
+          _user_id: string
+          _vehicle_id: string
+          _vehicle_plate: string
+        }
+        Returns: {
+          expires_at: string
+          hold_id: string
+        }[]
+      }
       delete_expired_booking_holds: { Args: never; Returns: undefined }
       has_role: {
         Args: {
@@ -672,6 +687,56 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      is_vehicle_available: {
+        Args: {
+          _end: string
+          _ignore_booking_id?: string
+          _ignore_hold_user?: string
+          _plate: string
+          _start: string
+        }
+        Returns: boolean
+      }
+      local_start_at: {
+        Args: { _start_date: string; _start_hour: number }
+        Returns: string
+      }
+      normalize_plate: { Args: { _plate: string }; Returns: string }
+      plan_end_at: {
+        Args: { _plan_id: string; _start: string }
+        Returns: string
+      }
+      vehicle_conflicts: {
+        Args: {
+          _end: string
+          _ignore_booking_id?: string
+          _ignore_hold_user?: string
+          _plate: string
+          _start: string
+        }
+        Returns: {
+          end_at: string
+          ref_id: string
+          source: string
+          start_at: string
+        }[]
+      }
+      vehicle_conflicts_for_plan: {
+        Args: {
+          _ignore_booking_id?: string
+          _ignore_hold_user?: string
+          _plan_id: string
+          _plate: string
+          _start_date: string
+          _start_hour: number
+        }
+        Returns: {
+          end_at: string
+          ref_id: string
+          source: string
+          start_at: string
+        }[]
       }
     }
     Enums: {

@@ -24,6 +24,8 @@ import {
   slotsByPlate,
   isVehicleFree,
   nextFreeFrom,
+  isDayBookable,
+  anyPlateFreeForWindows,
 } from "@/lib/availability-logic";
 
 import {
@@ -34,6 +36,8 @@ import {
   vehicleClassFromName,
   VEHICLE_CLASS_LABEL,
   VEHICLE_CLASS_SHORT_LABEL,
+  EARLIEST_START_HOUR,
+  LATEST_RETURN_HOUR,
   L4H2_SURCHARGE_PER_DAY_EUR,
   DEPOSIT_EUR,
   type VehicleClass,
@@ -143,6 +147,12 @@ export function BookingSection() {
   };
   const addonsTotal = sumAddonsEur(selectedAddonIds);
 
+  const refreshBusySlots = () => {
+    getBusySlots()
+      .then(setBusySlots)
+      .catch((e) => console.warn("Belegte Slots konnten nicht geladen werden:", e));
+  };
+
   useEffect(() => {
     let alive = true;
     getBusySlots()
@@ -154,6 +164,12 @@ export function BookingSection() {
       alive = false;
     };
   }, []);
+
+  // Nach jedem Schritt neu laden, damit frische Holds/Buchungen sofort greifen
+  useEffect(() => {
+    if (step <= 2) refreshBusySlots();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   const currentPlate = vehicles[vehicleIdx]?.plate ?? "";
   const busyMap = useMemo(() => slotsByPlate(busySlots), [busySlots]);
@@ -251,6 +267,69 @@ export function BookingSection() {
   const selectVehicleClass = (cls: VehicleClass) => {
     const idx = vehicles.findIndex((v) => classOfVehicle(v) === cls);
     if (idx >= 0) setVehicleIdx(idx);
+  };
+
+  // ---- Verfügbarkeit im gesamten Auswahlprozess ----
+  const activePlates = useMemo(
+    () => vehicles.map((v) => v.plate ?? "").filter(Boolean),
+    [vehicles],
+  );
+  const platesOfClass = (cls: VehicleClass) =>
+    vehicles.filter((v) => classOfVehicle(v) === cls).map((v) => v.plate ?? "").filter(Boolean);
+
+  /** Kalendertag: nur sperren, wenn für KEIN Fahrzeug irgendein Fenster frei ist. */
+  const isDayUnavailable = (d: Date) => {
+    if (activePlates.length === 0) return false;
+    return !isDayBookable(busyMap, activePlates, d, {
+      earliestHour: EARLIEST_START_HOUR,
+      latestReturnHour: LATEST_RETURN_HOUR,
+      minDurationHours: 3,
+    });
+  };
+
+  const windowFor = (planId: string, hour: number) => {
+    if (!date) return null;
+    const start = new Date(date);
+    start.setHours(hour, 0, 0, 0);
+    return { start: start.getTime(), end: computePlanReturn(planId, date, hour).getTime() };
+  };
+
+  /** Startstunde: sperren, wenn zu dieser Zeit kein Fahrzeug für irgendeinen passenden Tarif frei ist. */
+  const isHourUnavailable = (hour: number) => {
+    if (!date || activePlates.length === 0) return false;
+    const classes = availableClasses.length > 0 ? availableClasses : (["l1h1"] as VehicleClass[]);
+    return !classes.some((cls) => {
+      const plates = platesOfClass(cls);
+      if (plates.length === 0) return false;
+      const wins = getAvailablePlans(nights, hour, cls)
+        .map((p) => windowFor(p.id, hour))
+        .filter((w): w is { start: number; end: number } => w !== null);
+      return wins.length > 0 && anyPlateFreeForWindows(busyMap, plates, wins);
+    });
+  };
+
+  // Nicht verfügbares Fahrzeug: automatisch auf ein freies (möglichst gleiche Klasse) springen
+  useEffect(() => {
+    if (!selectionWindow || vehicles.length === 0) return;
+    const cur = vehicles[vehicleIdx];
+    if (cur && isPlateAvailable(cur.plate ?? "")) return;
+    const cls = cur ? classOfVehicle(cur) : null;
+    const sameClass = vehicles.findIndex(
+      (v) => (!cls || classOfVehicle(v) === cls) && isPlateAvailable(v.plate ?? ""),
+    );
+    const next = sameClass >= 0 ? sameClass : vehicles.findIndex((v) => isPlateAvailable(v.plate ?? ""));
+    if (next >= 0 && next !== vehicleIdx) setVehicleIdx(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectionWindow, busyMap, vehicles, vehicleIdx]);
+
+  /** Tarif: sperren, wenn kein Fahrzeug der gewählten Klasse den kompletten Zeitraum frei hat. */
+  const isPlanUnavailable = (planId: string) => {
+    if (!date || startHour === null || activePlates.length === 0) return false;
+    const w = windowFor(planId, startHour);
+    if (!w) return false;
+    const plates = platesOfClass(vehicleClass);
+    if (plates.length === 0) return false;
+    return !anyPlateFreeForWindows(busyMap, plates, [w]);
   };
 
   const registrationComplete = isLoggedIn || profileComplete;
@@ -703,10 +782,12 @@ export function BookingSection() {
       .then((res) => {
         if (cancelled) return;
         setHoldExpiresAt(new Date(res.expiresAt).getTime());
+        refreshBusySlots();
       })
       .catch((e: unknown) => {
         if (cancelled) return;
         setHoldError(e instanceof Error ? e.message : "Reservierung fehlgeschlagen");
+        refreshBusySlots();
       });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -784,7 +865,8 @@ export function BookingSection() {
                 disabled={(d) => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
-                  return d < today;
+                  if (d < today) return true;
+                  return isDayUnavailable(d);
                 }}
                 className="rounded-3xl border border-border p-8 shadow-lg pointer-events-auto text-lg [--cell-size:3.5rem]"
               />
@@ -863,19 +945,24 @@ export function BookingSection() {
                       )}
                       {visibleHours.length > 0 ? (
                         <div className="grid grid-cols-5 gap-2">
-                          {visibleHours.map((h) => (
+                          {visibleHours.map((h) => {
+                            const hourBlocked = isHourUnavailable(h);
+                            return (
                             <button
                               key={h}
+                              disabled={hourBlocked}
+                              title={hourBlocked ? "Zu dieser Zeit ist kein Transporter verfügbar" : undefined}
                               onClick={() => { setStartHour(h); setSelectedPlanId(null); }}
                               className={`py-2 px-3 rounded-xl text-sm font-medium transition-all ${
                                 startHour === h
                                   ? "bg-accent text-accent-foreground shadow-md"
                                   : "bg-secondary text-foreground hover:bg-accent/20"
-                              }`}
+                              } disabled:opacity-40 disabled:cursor-not-allowed disabled:line-through disabled:hover:bg-secondary`}
                             >
                               {h}:00
                             </button>
-                          ))}
+                            );
+                          })}
                         </div>
                       ) : (
 
@@ -931,16 +1018,23 @@ export function BookingSection() {
                 <p className="text-center text-muted-foreground text-lg mt-10 mb-6">Wähle deinen Tarif</p>
                 <div className="space-y-4">
                   {availablePlans.map((plan) => {
+                const planBlocked = isPlanUnavailable(plan.id);
                 return (
                 <button
                   key={plan.id}
+                  disabled={planBlocked}
                   onClick={() => setSelectedPlanId(plan.id)}
                   className={`w-full p-6 rounded-2xl border-2 text-left transition-all ${
                     selectedPlanId === plan.id
                       ? "border-accent bg-accent/5 shadow-md"
                       : "border-border hover:border-accent/50"
-                  }`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
+                  {planBlocked && (
+                    <p className="mb-2 text-xs font-semibold text-destructive">
+                      Für diesen Zeitraum ist kein Transporter dieser Klasse verfügbar
+                    </p>
+                  )}
 
                   <div className="flex items-center justify-between">
                     <div>
@@ -1148,10 +1242,11 @@ export function BookingSection() {
                         <button
                           key={v.plate ?? i}
                           type="button"
+                          disabled={!free}
                           onClick={() => setVehicleIdx(i)}
                           className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition-all hover:bg-secondary ${
                             i === vehicleIdx ? "border-foreground" : "border-border"
-                          } ${free ? "" : "opacity-60"}`}
+                          } ${free ? "" : "opacity-50 grayscale cursor-not-allowed"}`}
                         >
                           <span className="font-medium text-foreground">{v.name}</span>
                           <span className="text-muted-foreground">
