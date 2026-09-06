@@ -722,6 +722,22 @@ export type Database = {
           start_at: string
         }[]
       }
+      vehicle_conflicts_for_plan: {
+        Args: {
+          _ignore_booking_id?: string
+          _ignore_hold_user?: string
+          _plan_id: string
+          _plate: string
+          _start_date: string
+          _start_hour: number
+        }
+        Returns: {
+          end_at: string
+          ref_id: string
+          source: string
+          start_at: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
