@@ -14,7 +14,7 @@ export const ADDONS: Addon[] = [
     id: "umzugspaket",
     name: "Umzugspaket",
     priceEur: 29,
-    badge: "Praktisches Zusatzpaket",
+    badge: "Praktisches Umzugspaket",
     description:
       "Ideal, wenn du Möbel, Kartons, einen Kühlschrank, eine Waschmaschine oder empfindliche Gegenstände sicher transportieren möchtest.",
     items: [
