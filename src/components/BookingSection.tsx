@@ -1176,7 +1176,7 @@ export function BookingSection() {
                   Damit dein Umzug einfacher, sicherer und stressfreier wird – optional zubuchbar.
                 </p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+              <div className="grid grid-cols-1 gap-6 mt-8 max-w-md mx-auto">
                 {ADDONS.map((addon) => (
                   <AddonPackageCard
                     key={addon.id}
