@@ -156,7 +156,7 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
       line_items.push({
         price_data: {
           currency: "eur",
-          product_data: { name: `Zusatzpaket · ${a.name}` },
+          product_data: { name: a.name },
           unit_amount: a.priceEur * 100,
         },
         quantity: 1,
