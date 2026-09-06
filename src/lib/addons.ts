@@ -1,4 +1,4 @@
-export type AddonId = "sicher_transport" | "profi_umzug";
+export type AddonId = "umzugspaket";
 
 export type Addon = {
   id: AddonId;
@@ -11,35 +11,18 @@ export type Addon = {
 
 export const ADDONS: Addon[] = [
   {
-    id: "sicher_transport",
-    name: "Sicher-Transport Paket",
-    priceEur: 19,
-    badge: "Beliebtestes Zusatzpaket",
+    id: "umzugspaket",
+    name: "Umzugspaket",
+    priceEur: 29,
+    badge: "Praktisches Zusatzpaket",
     description:
       "Ideal, wenn du Möbel, Kartons, einen Kühlschrank, eine Waschmaschine oder empfindliche Gegenstände sicher transportieren möchtest.",
     items: [
-      "1 Eurobox für Kleinteile",
-      "4 Spanngurte / Zurrgurte zur Ladungssicherung",
-      "2–4 kleine Gurte für kleinere Gegenstände",
-      "4 Umzugsdecken zum Schutz von Möbeln",
+      "2 dicke Spanngurte",
+      "4 dünne Zurrgurte",
+      "1 neue Rolle Klebeband / Panzertape",
       "1 Paar Arbeitshandschuhe",
-    ],
-  },
-  {
-    id: "profi_umzug",
-    name: "Profi-Umzug Paket",
-    priceEur: 49,
-    badge: "Bester Komfort",
-    description:
-      "Das Rundum-sorglos-Paket für größere Umzüge, Entrümpelungen oder Transporte mit mehreren schweren Gegenständen.",
-    items: [
-      "1 Möbelroller / Rollbrett",
-      "8–10 Umzugsdecken",
-      "6 Spanngurte / Zurrgurte",
-      "Klebeband",
-      "Cutter",
-      "1–2 Paar Arbeitshandschuhe",
-      "Müllbeutel für Verpackungsmüll oder Kleinteile",
+      "5 Umzugsdecken für Möbeltransport",
     ],
   },
 ];
