@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computePlanReturn } from "@/lib/booking-rules";
+import { BLOCKING_BOOKING_STATUSES } from "@/lib/booking-status";
 
 export type BusySlot = {
   vehiclePlate: string;
@@ -14,7 +15,7 @@ export const getBusySlots = createServerFn({ method: "GET" })
     const { data, error } = await supabaseAdmin
       .from("bookings")
       .select("vehicle_plate, plan_id, start_date, start_hour, status")
-      .in("status", ["paid", "active", "in_progress", "picked_up", "confirmed", "started", "running"]);
+      .in("status", [...BLOCKING_BOOKING_STATUSES]);
     if (error) throw new Error(error.message);
     const bookingSlots = (data ?? [])
       .filter((b) => b.start_date && b.start_hour !== null)
