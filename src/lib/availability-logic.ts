@@ -1,4 +1,5 @@
 import type { BusySlot } from "@/lib/availability.functions";
+import { berlinDayHourToMs } from "@/lib/berlin-time";
 
 export type SlotRange = { start: number; end: number };
 
@@ -69,8 +70,8 @@ export function isAnyVehicleFreeOnDay(
   plates: string[],
   day: Date,
 ): boolean {
-  const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0).getTime();
-  const dayEnd = dayStart + 24 * 3600_000;
+  const dayStart = berlinDayHourToMs(day, 0);
+  const dayEnd = berlinDayHourToMs(day, 24);
   return plates.some((plate) => {
     const ranges = rangesFor(map, plate)
       .filter((r) => r.start < dayEnd && r.end > dayStart)
@@ -100,7 +101,7 @@ export function isDayBookable(
 ): boolean {
   const now = opts.nowMs ?? Date.now();
   for (let h = opts.earliestHour; h + opts.minDurationHours <= opts.latestReturnHour; h++) {
-    const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, 0, 0, 0).getTime();
+    const start = berlinDayHourToMs(day, h);
     if (start < now) continue;
     const end = start + opts.minDurationHours * 3600_000;
     if (plates.some((p) => isVehicleFree(map, p, start, end))) return true;
