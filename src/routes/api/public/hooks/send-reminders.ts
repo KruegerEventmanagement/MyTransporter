@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { renderEmail } from "@/lib/email-template";
 
 type ReminderKind = "24h" | "30min";
 
@@ -135,7 +136,7 @@ async function processBatch(kind: ReminderKind) {
       .eq("id", b.user_id)
       .maybeSingle();
     const email = profile?.email;
-    const { subject, html, title } = buildEmail(kind, b);
+    const { subject, html, title } = buildEmail(kind, b, profile?.first_name);
 
     let sent = false;
     if (email) sent = await sendEmail(email, subject, html);
@@ -230,14 +231,18 @@ async function processManualBatch(kind: ReminderKind) {
         kind === "24h"
           ? "MyTransporter · Erinnerung an deinen Termin morgen"
           : "MyTransporter · Dein Termin startet in Kürze",
-        `
-        <div style="font-family:system-ui,sans-serif;max-width:560px;margin:auto;padding:24px;color:#111;">
-          <h2 style="margin:0 0 12px;">Erinnerung an deinen Termin</h2>
-          <p>Hallo ${m.customer_name},</p>
-          <p>dein Termin bei MyTransporter startet am <strong>${when}</strong>.</p>
-          <p><strong>${vehicle || "Transporter"}</strong></p>
-          <p style="color:#888;font-size:12px;margin-top:32px;">MyTransporter · Römerstraße 36, 71229 Leonberg</p>
-        </div>`,
+        renderEmail({
+          firstName: m.customer_name,
+          heading: kind === "24h" ? "Erinnerung an deinen Termin morgen" : "Dein Termin startet in Kürze",
+          intro: ["hier noch einmal die Daten zu deinem Termin bei MyTransporter:"],
+          rowsTitle: "Deine Mietdaten",
+          rows: [
+            { label: "Fahrzeug", value: vehicle || "Transporter" },
+            { label: "Beginn", value: `${when} Uhr` },
+            { label: "Ende", value: `${fmtBerlin(m.end_at)} Uhr` },
+          ],
+          button: { label: "MyTransporter öffnen", url: "https://www.mytransporter.org" },
+        }),
       );
     }
 
