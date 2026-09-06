@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { verifyWebhook, type StripeEnv } from "@/lib/stripe.server";
+import { verifyWebhook, createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import {
   getPlanById,
   planLabelWithClass,
@@ -255,7 +255,7 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
           if (event.type === "checkout.session.completed") {
             const session = event.data.object as StripeCheckoutSession;
             if (session.payment_status === "paid") {
-              await reconcileBooking(session);
+              await reconcileBooking(session, env);
             } else {
               console.log("[webhook] Session nicht bezahlt, ignoriere", session.id, session.payment_status);
             }
