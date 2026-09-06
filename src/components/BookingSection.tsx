@@ -1170,7 +1170,7 @@ export function BookingSection() {
             <div className="mt-12">
               <div className="text-center mb-6">
                 <h3 className="text-xl sm:text-2xl font-bold text-foreground">
-                  Praktische Zusatzpakete
+                  Praktisches Umzugspaket
                 </h3>
                 <p className="mt-2 text-sm text-muted-foreground max-w-xl mx-auto">
                   Damit dein Umzug einfacher, sicherer und stressfreier wird – optional zubuchbar.
