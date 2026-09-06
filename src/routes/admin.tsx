@@ -1286,7 +1286,7 @@ function SettlementPanel({
       {/* Zusatzpakete */}
       {Array.isArray(booking.addons) && booking.addons.length > 0 && (
         <div className="rounded-xl bg-secondary p-3">
-          <p className="text-xs text-muted-foreground mb-1">Gebuchte Zusatzpakete</p>
+          <p className="text-xs text-muted-foreground mb-1">Gebuchtes Umzugspaket</p>
           <ul className="text-sm space-y-1">
             {booking.addons.map((a) => (
               <li key={a.id} className="flex items-center justify-between">

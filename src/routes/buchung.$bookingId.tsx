@@ -228,7 +228,7 @@ function BookingDetailPage() {
             {Array.isArray(booking.addons) && booking.addons.map((a) => (
               <PaymentLine
                 key={a.id}
-                label={`Zusatzpaket · ${a.label}`}
+                label={a.label}
                 value={`${(a.price_cents / 100).toFixed(2)} €`}
               />
             ))}

@@ -14,7 +14,7 @@ export const ADDONS: Addon[] = [
     id: "umzugspaket",
     name: "Umzugspaket",
     priceEur: 29,
-    badge: "Praktisches Zusatzpaket",
+    badge: "Praktisches Umzugspaket",
     description:
       "Ideal, wenn du Möbel, Kartons, einen Kühlschrank, eine Waschmaschine oder empfindliche Gegenstände sicher transportieren möchtest.",
     items: [
@@ -28,7 +28,7 @@ export const ADDONS: Addon[] = [
 ];
 
 export const ADDON_NOTE =
-  "Alle Pakete sind optional und nur nach Verfügbarkeit buchbar. Zubehör muss vollständig und unbeschädigt zurückgegeben werden. Bei Verlust oder Beschädigung können Ersatzkosten entstehen.";
+  "Das Umzugspaket ist optional und nur nach Verfügbarkeit buchbar. Das Zubehör muss vollständig und unbeschädigt zurückgegeben werden. Bei Verlust oder Beschädigung können Ersatzkosten entstehen.";
 
 export const ADDON_TRUST =
   "Viele große Anbieter bieten Umzugszubehör nur als Extra oder über separate Mietoptionen an. Bei MyTransporter bekommst du auf Wunsch direkt ein passendes Zubehörpaket dazu – einfach, praktisch und fair.";
