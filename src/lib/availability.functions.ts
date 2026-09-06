@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { getPlanById, LATEST_RETURN_HOUR } from "@/lib/booking-rules";
 import { BLOCKING_BOOKING_STATUSES } from "@/lib/booking-status";
-import { berlinDateHourToMs } from "@/lib/berlin-time";
+import { bookingWindowMs } from "@/lib/booking-window";
 
 /**
  * Sperrintervall einer Buchung/Reservierung in echter Zeit.
@@ -10,16 +9,8 @@ import { berlinDateHourToMs } from "@/lib/berlin-time";
  * umrechnen (identisch zu `local_start_at` + `plan_end_at` in der Datenbank).
  */
 function blockInterval(planId: string, dateStr: string, hour: number): { start: string; end: string } {
-  const startMs = berlinDateHourToMs(dateStr, hour);
-  let endMs: number;
-  if (planId === "km") {
-    endMs = berlinDateHourToMs(dateStr, LATEST_RETURN_HOUR);
-  } else {
-    const plan = getPlanById(planId as never);
-    const hours = plan?.durationHours ?? (planId === "6h" ? 6 : planId === "3h" ? 3 : 24);
-    endMs = startMs + hours * 3600_000;
-  }
-  return { start: new Date(startMs).toISOString(), end: new Date(endMs).toISOString() };
+  const w = bookingWindowMs(planId, dateStr, hour);
+  return { start: new Date(w.start).toISOString(), end: new Date(w.end).toISOString() };
 }
 
 export type BusySlot = {

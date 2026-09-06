@@ -20,6 +20,7 @@ import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
 import { trackCompleteRegistration, trackEvent } from "@/lib/analytics";
 import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
+import { bookingWindowMsForDay } from "@/lib/booking-window";
 import {
   slotsByPlate,
   isVehicleFree,
@@ -205,10 +206,7 @@ export function BookingSection() {
   // Zeitfenster der aktuellen Auswahl (für Fahrzeug-Verfügbarkeit)
   const selectionWindow = useMemo(() => {
     if (!date || startHour === null || !selectedPlanId) return null;
-    const start = new Date(date);
-    start.setHours(startHour, 0, 0, 0);
-    const end = computePlanReturn(selectedPlanId, date, startHour);
-    return { start: start.getTime(), end: end.getTime() };
+    return bookingWindowMsForDay(selectedPlanId, date, startHour);
   }, [date, startHour, selectedPlanId]);
 
   const isPlateAvailable = (plate: string) => {
@@ -289,9 +287,7 @@ export function BookingSection() {
 
   const windowFor = (planId: string, hour: number) => {
     if (!date) return null;
-    const start = new Date(date);
-    start.setHours(hour, 0, 0, 0);
-    return { start: start.getTime(), end: computePlanReturn(planId, date, hour).getTime() };
+    return bookingWindowMsForDay(planId, date, hour);
   };
 
   /** Startstunde: sperren, wenn zu dieser Zeit kein Fahrzeug für irgendeinen passenden Tarif frei ist. */
