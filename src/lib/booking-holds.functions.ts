@@ -13,6 +13,11 @@ export const createBookingHold = createServerFn({ method: "POST" })
     startHour: number;
   }) => {
     if (!data.planId) throw new Error("planId fehlt");
+    // Miet-Holds ohne Kennzeichen würden Advisory Lock und Konfliktprüfung
+    // umgehen – deshalb serverseitig verpflichtend.
+    if (!data.vehiclePlate || !data.vehiclePlate.trim()) {
+      throw new Error("Kein Fahrzeug gewählt – Reservierung nicht möglich.");
+    }
     if (!data.startDate || !/^\d{4}-\d{2}-\d{2}$/.test(data.startDate)) {
       throw new Error("startDate ungültig");
     }
