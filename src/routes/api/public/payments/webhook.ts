@@ -37,7 +37,7 @@ function extractPaymentMethodId(pi: StripeCheckoutSession["payment_intent"]): st
   return extractId(pi.payment_method ?? null);
 }
 
-async function reconcileBooking(session: StripeCheckoutSession) {
+async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) {
   const paymentIntentId = extractId(session.payment_intent ?? null);
   const customerId = extractId(session.customer ?? null);
   const paymentMethodId = extractPaymentMethodId(session.payment_intent ?? null);
@@ -56,6 +56,7 @@ async function reconcileBooking(session: StripeCheckoutSession) {
   if (existing?.id) {
     return;
   }
+
 
   const md = session.metadata ?? {};
   const userId = (md.userId as string | undefined) ?? session.client_reference_id ?? null;
