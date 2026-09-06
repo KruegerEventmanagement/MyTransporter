@@ -116,6 +116,46 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
       ? metaClass
       : "l1h1";
 
+  // Doppelbelegung ausschließen: verspätete/parallele Zahlung darf keine zweite
+  // bestätigte Buchung für denselben Fahrzeug-Zeitraum anlegen.
+  if (resolvedPlate) {
+    const { findVehicleConflicts } = await import("@/lib/availability.server");
+    const conflicts = await findVehicleConflicts({
+      vehiclePlate: resolvedPlate,
+      planId,
+      startDate,
+      startHour,
+      ignoreHoldUserId: userId,
+    });
+    if (conflicts.length > 0) {
+      console.error("[webhook] Doppelbelegung verhindert", session.id, conflicts);
+      let refundId: string | null = null;
+      let refundError: string | null = null;
+      try {
+        const stripe = createStripeClient(env);
+        const refund = await stripe.refunds.create({
+          payment_intent: paymentIntentId,
+          metadata: { kind: "double_booking_conflict", sessionId: session.id },
+        });
+        refundId = refund.id;
+      } catch (e) {
+        refundError = e instanceof Error ? e.message : String(e);
+      }
+      await supabaseAdmin.from("admin_notifications").insert({
+        type: "booking_conflict",
+        title: "Zahlung ohne Buchung – Fahrzeug war belegt",
+        body:
+          `Session ${session.id} · PaymentIntent ${paymentIntentId} · ${resolvedPlate} · ` +
+          `${startDate} ${String(startHour).padStart(2, "0")}:00 · Tarif ${planId} · ` +
+          `Konflikt: ${conflicts.map((c) => `${c.source} ${c.start_at}–${c.end_at}`).join(", ")} · ` +
+          (refundId ? `automatisch erstattet (${refundId})` : `ERSTATTUNG FEHLGESCHLAGEN: ${refundError ?? "unbekannt"} – bitte manuell erstatten`),
+        user_id: userId,
+      });
+      return;
+    }
+  }
+
+
   const planEntry = getPlanById(planId, vehicleClass);
   const planLabel = planEntry ? planLabelWithClass(planEntry) : (md.plan ?? "Transporter-Miete");
   const planPrice = planEntry?.price ?? KM_TARIFF_MIN_EUR[vehicleClass];
