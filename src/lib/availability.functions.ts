@@ -1,7 +1,26 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { computePlanReturn } from "@/lib/booking-rules";
+import { getPlanById, LATEST_RETURN_HOUR } from "@/lib/booking-rules";
 import { BLOCKING_BOOKING_STATUSES } from "@/lib/booking-status";
+import { berlinDateHourToMs } from "@/lib/berlin-time";
+
+/**
+ * Sperrintervall einer Buchung/Reservierung in echter Zeit.
+ * `start_date` + `start_hour` sind LOKALE Berliner Zeit – deshalb explizit
+ * umrechnen (identisch zu `local_start_at` + `plan_end_at` in der Datenbank).
+ */
+function blockInterval(planId: string, dateStr: string, hour: number): { start: string; end: string } {
+  const startMs = berlinDateHourToMs(dateStr, hour);
+  let endMs: number;
+  if (planId === "km") {
+    endMs = berlinDateHourToMs(dateStr, LATEST_RETURN_HOUR);
+  } else {
+    const plan = getPlanById(planId as never);
+    const hours = plan?.durationHours ?? (planId === "6h" ? 6 : planId === "3h" ? 3 : 24);
+    endMs = startMs + hours * 3600_000;
+  }
+  return { start: new Date(startMs).toISOString(), end: new Date(endMs).toISOString() };
+}
 
 export type BusySlot = {
   vehiclePlate: string;
@@ -19,15 +38,10 @@ export const getBusySlots = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     const bookingSlots = (data ?? [])
       .filter((b) => b.start_date && b.start_hour !== null)
-      .map((b) => {
-        const start = new Date(`${b.start_date}T${String(b.start_hour).padStart(2, "0")}:00:00`);
-        const end = computePlanReturn(b.plan_id, start, b.start_hour as number);
-        return {
-          vehiclePlate: b.vehicle_plate ?? "",
-          start: start.toISOString(),
-          end: end.toISOString(),
-        };
-      });
+      .map((b) => ({
+        vehiclePlate: b.vehicle_plate ?? "",
+        ...blockInterval(b.plan_id, b.start_date as string, b.start_hour as number),
+      }));
 
     // Aktive, nicht abgelaufene Reservierungen blockieren das Zeitfenster ebenfalls
     const { data: holds } = await supabaseAdmin
@@ -37,15 +51,10 @@ export const getBusySlots = createServerFn({ method: "GET" })
 
     const holdSlots = (holds ?? [])
       .filter((h) => h.start_date && h.start_hour !== null)
-      .map((h) => {
-        const start = new Date(`${h.start_date}T${String(h.start_hour).padStart(2, "0")}:00:00`);
-        const end = computePlanReturn(h.plan_id, start, h.start_hour as number);
-        return {
-          vehiclePlate: h.vehicle_plate ?? "",
-          start: start.toISOString(),
-          end: end.toISOString(),
-        };
-      });
+      .map((h) => ({
+        vehiclePlate: h.vehicle_plate ?? "",
+        ...blockInterval(h.plan_id, h.start_date as string, h.start_hour as number),
+      }));
 
     // Manuelle Fahrzeug-Sperren (Wartung, Offline-Vermietung, Verfügbarkeitsstart)
     const { data: blocks } = await supabaseAdmin
