@@ -29,7 +29,7 @@ export function AddonPackagesSection() {
         </div>
 
         <p className="mt-8 text-center text-sm text-muted-foreground">
-          Zusatzpakete kannst du direkt im Buchungsvorgang auswählen.
+          Das Umzugspaket kannst du direkt im Buchungsvorgang auswählen.
         </p>
       </div>
     </section>
