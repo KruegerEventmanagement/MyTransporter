@@ -311,19 +311,16 @@ export const sendWelcomeEmail = createServerFn({ method: "POST" })
     return { email: data.email, firstName: data.firstName ?? "" };
   })
   .handler(async ({ data }) => {
-    const html = `
-      <div style="font-family:Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;color:#111;">
-        <h2 style="margin:0 0 12px;">Willkommen bei MyTransporter${data.firstName ? `, ${data.firstName}` : ""}!</h2>
-        <p style="font-size:14px;line-height:1.6;">
-          Dein Konto wurde erfolgreich erstellt. Du kannst deine Buchung jetzt direkt abschließen.
-        </p>
-        <p style="font-size:14px;line-height:1.6;">
-          Deine Dokumente (Ausweis & Führerschein) sind in deinem Profil hinterlegt.
-        </p>
-        <p style="font-size:12px;color:#666;margin-top:24px;">
-          MyTransporter · Transporter-Vermietung · Römerstraße 36, 71229 Leonberg
-        </p>
-      </div>`;
+    const html = renderEmail({
+      firstName: data.firstName,
+      heading: "Willkommen bei MyTransporter",
+      intro: [
+        "dein Konto wurde erfolgreich erstellt. Du kannst deine Buchung jetzt direkt abschließen.",
+        "Deine Dokumente (Ausweis und Führerschein) sind in deinem Profil hinterlegt.",
+      ],
+      button: { label: "Zu meinem Profil", url: "https://www.mytransporter.org/profil" },
+    });
+
     const ok = await sendEmail(data.email, "Willkommen bei MyTransporter", html);
     return { ok };
   });
