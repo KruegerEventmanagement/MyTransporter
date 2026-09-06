@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { User, X, ChevronRight, Eye, EyeOff, Route as RouteIcon, Shield } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { trackCompleteRegistration } from "@/lib/analytics";
+import { consumeLoginRequest, takeLoginRedirect } from "@/lib/login-redirect";
 
 const AUTH_CONFIRM_URL = `${typeof window !== "undefined" ? window.location.origin : "https://www.mytransporter.org"}/auth/confirm`;
 
 export function Navbar() {
+  const navigate = useNavigate();
   const [showModal, setShowModal] = useState<"login" | "register" | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
@@ -59,6 +61,11 @@ export function Navbar() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Aus einem Buchungslink ohne Sitzung: Login automatisch öffnen
+  useEffect(() => {
+    if (consumeLoginRequest()) setShowModal("login");
+  }, []);
+
   const closeModal = () => {
     setShowModal(null);
     setError(null);
@@ -79,6 +86,8 @@ export function Navbar() {
       return;
     }
     closeModal();
+    const target = takeLoginRedirect();
+    if (target) navigate({ to: target });
   };
 
   const handleRegister = async () => {
