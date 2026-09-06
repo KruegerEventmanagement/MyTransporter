@@ -24,6 +24,8 @@ import {
   slotsByPlate,
   isVehicleFree,
   nextFreeFrom,
+  isDayBookable,
+  anyPlateFreeForWindows,
 } from "@/lib/availability-logic";
 
 import {
@@ -34,6 +36,8 @@ import {
   vehicleClassFromName,
   VEHICLE_CLASS_LABEL,
   VEHICLE_CLASS_SHORT_LABEL,
+  EARLIEST_START_HOUR,
+  LATEST_RETURN_HOUR,
   L4H2_SURCHARGE_PER_DAY_EUR,
   DEPOSIT_EUR,
   type VehicleClass,
@@ -143,6 +147,12 @@ export function BookingSection() {
   };
   const addonsTotal = sumAddonsEur(selectedAddonIds);
 
+  const refreshBusySlots = () => {
+    getBusySlots()
+      .then(setBusySlots)
+      .catch((e) => console.warn("Belegte Slots konnten nicht geladen werden:", e));
+  };
+
   useEffect(() => {
     let alive = true;
     getBusySlots()
@@ -154,6 +164,12 @@ export function BookingSection() {
       alive = false;
     };
   }, []);
+
+  // Nach jedem Schritt neu laden, damit frische Holds/Buchungen sofort greifen
+  useEffect(() => {
+    if (step <= 2) refreshBusySlots();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   const currentPlate = vehicles[vehicleIdx]?.plate ?? "";
   const busyMap = useMemo(() => slotsByPlate(busySlots), [busySlots]);
@@ -703,10 +719,12 @@ export function BookingSection() {
       .then((res) => {
         if (cancelled) return;
         setHoldExpiresAt(new Date(res.expiresAt).getTime());
+        refreshBusySlots();
       })
       .catch((e: unknown) => {
         if (cancelled) return;
         setHoldError(e instanceof Error ? e.message : "Reservierung fehlgeschlagen");
+        refreshBusySlots();
       });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
