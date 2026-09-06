@@ -18,7 +18,7 @@ import {
   deleteManualReservation,
   type ManualReservation,
 } from "@/lib/manual-reservations.functions";
-import { computePlanReturn } from "@/lib/booking-rules";
+import { bookingWindowMs } from "@/lib/booking-window";
 
 interface VehicleOption {
   id: string;
@@ -155,8 +155,10 @@ export function CalendarAdmin() {
       const slots: BookingSlot[] = (bookingRows ?? [])
         .filter((b) => b.start_date && b.start_hour !== null)
         .map((b) => {
-          const start = new Date(`${b.start_date}T${String(b.start_hour).padStart(2, "0")}:00:00`);
-          const end = computePlanReturn(b.plan_id, start, b.start_hour as number);
+          // Gleiche zentrale Regel wie öffentliche Auswahl und Datenbank
+          const w = bookingWindowMs(b.plan_id, b.start_date as string, b.start_hour as number);
+          const start = new Date(w.start);
+          const end = new Date(w.end);
           return {
             id: b.id,
             vehiclePlate: b.vehicle_plate ?? "",
