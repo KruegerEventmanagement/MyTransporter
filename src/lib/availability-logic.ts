@@ -86,3 +86,33 @@ export function isAnyVehicleFreeOnDay(
     return covered < dayEnd;
   });
 }
+
+/**
+ * Ist für mindestens ein Fahrzeug irgendein buchbares Zeitfenster an diesem
+ * Kalendertag möglich? Geprüft wird das kürzeste Angebot (3 Stunden) über alle
+ * zulässigen Startstunden.
+ */
+export function isDayBookable(
+  map: Map<string, SlotRange[]>,
+  plates: string[],
+  day: Date,
+  opts: { earliestHour: number; latestReturnHour: number; minDurationHours: number; nowMs?: number },
+): boolean {
+  const now = opts.nowMs ?? Date.now();
+  for (let h = opts.earliestHour; h + opts.minDurationHours <= opts.latestReturnHour; h++) {
+    const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, 0, 0, 0).getTime();
+    if (start < now) continue;
+    const end = start + opts.minDurationHours * 3600_000;
+    if (plates.some((p) => isVehicleFree(map, p, start, end))) return true;
+  }
+  return false;
+}
+
+/** Ist mindestens ein Fahrzeug für mindestens ein Zeitfenster frei? */
+export function anyPlateFreeForWindows(
+  map: Map<string, SlotRange[]>,
+  plates: string[],
+  windows: SlotRange[],
+): boolean {
+  return windows.some((w) => plates.some((p) => isVehicleFree(map, p, w.start, w.end)));
+}
