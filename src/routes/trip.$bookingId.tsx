@@ -6,7 +6,8 @@ import { ReturnFlow } from "@/components/ReturnFlow";
 import { ActiveTripDashboard } from "@/components/ActiveTripDashboard";
 import { ScheduledTripView } from "@/components/ScheduledTripView";
 import { Loader2, Check } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { requireLogin } from "@/lib/login-redirect";
 
 export const Route = createFileRoute("/trip/$bookingId")({
   component: TripPage,
@@ -32,6 +33,8 @@ interface Booking {
 
 function TripPage() {
   const { bookingId } = Route.useParams();
+  const navigate = useNavigate();
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [phase, setPhase] = useState<Phase>("pre");
   const [loading, setLoading] = useState(true);
@@ -67,12 +70,30 @@ function TripPage() {
         return;
       }
 
-      const { data } = await supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        // Alte Links aus E-Mails: nach dem Login direkt zur Buchungsübersicht
+        requireLogin(navigate, `/buchung/${bookingId}`);
+        return;
+      }
+
+      const { data, error } = await supabase
         .from("bookings")
         .select("*")
         .eq("id", bookingId)
         .maybeSingle();
+      if (error) {
+        setLoadError(error.message);
+        setLoading(false);
+        return;
+      }
       if (data) {
+        const st = (data as { status?: string | null }).status;
+        // Miete beendet oder storniert → nur noch Übersicht, keine Fahrtaktionen
+        if (st === "completed" || st === "cancelled") {
+          navigate({ to: "/buchung/$bookingId", params: { bookingId } });
+          return;
+        }
         setBooking(data as Booking);
         if (data.start_km) setStartKm(data.start_km);
         // Phase aus Buchungsstatus ableiten, damit ein Reload während aktiver
@@ -85,7 +106,7 @@ function TripPage() {
       setLoading(false);
     };
     load();
-  }, [bookingId]);
+  }, [bookingId, navigate]);
 
   if (loading) {
     return (
@@ -95,12 +116,30 @@ function TripPage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <main className="min-h-screen bg-background flex items-center justify-center px-4 text-center">
+        <div className="max-w-sm">
+          <h1 className="text-2xl font-bold mb-2">Buchung konnte nicht geladen werden</h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            Da ist gerade technisch etwas schiefgelaufen. Bitte versuche es in einem Moment noch einmal.
+          </p>
+          <Link to="/profil" className="underline">Zu meinen Buchungen</Link>
+        </div>
+      </main>
+    );
+  }
+
   if (!booking) {
     return (
       <main className="min-h-screen bg-background flex items-center justify-center px-4 text-center">
-        <div>
-          <h1 className="text-2xl font-bold mb-2">Buchung nicht gefunden</h1>
-          <Link to="/" className="underline">Zurück zur Startseite</Link>
+        <div className="max-w-sm">
+          <h1 className="text-2xl font-bold mb-2">Diese Buchung finden wir nicht</h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            Möglicherweise gehört sie zu einem anderen Konto oder der Link ist nicht mehr gültig.
+            In deinem Profil findest du alle deine Buchungen – auch vergangene.
+          </p>
+          <Link to="/profil" className="underline">Zu meinen Buchungen</Link>
         </div>
       </main>
     );

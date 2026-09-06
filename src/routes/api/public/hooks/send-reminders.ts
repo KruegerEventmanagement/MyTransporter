@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { renderEmail } from "@/lib/email-template";
 
 type ReminderKind = "24h" | "30min";
 
@@ -61,39 +62,49 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
   }
 }
 
-function buildEmail(kind: ReminderKind, b: BookingRow): { subject: string; html: string; title: string } {
+function buildEmail(
+  kind: ReminderKind,
+  b: BookingRow,
+  firstName?: string | null,
+): { subject: string; html: string; title: string } {
   const dateStr = new Date(`${b.start_date}T${String(b.start_hour).padStart(2, "0")}:00:00`)
     .toLocaleString("de-DE", { dateStyle: "full", timeStyle: "short" });
   const tripUrl = `https://www.mytransporter.org/trip/${b.id}`;
+  const rows = [
+    { label: "Fahrzeug", value: `${b.vehicle_name} · ${b.vehicle_plate}` },
+    { label: "Tarif", value: b.plan_label },
+    { label: "Abholung", value: `${dateStr} Uhr` },
+  ];
   if (kind === "24h") {
     return {
       title: `Erinnerung: Deine Fahrt morgen um ${b.start_hour}:00`,
       subject: `MyTransporter · Deine Abholung morgen um ${b.start_hour}:00 Uhr`,
-      html: `
-        <div style="font-family:system-ui,sans-serif;max-width:560px;margin:auto;padding:24px;color:#111;">
-          <h2 style="margin:0 0 12px;">Erinnerung: Deine Fahrt morgen</h2>
-          <p>Hallo,</p>
-          <p>nur eine kurze Erinnerung: Deine Buchung startet am <strong>${dateStr}</strong>.</p>
-          <p><strong>${b.vehicle_name}</strong> · ${b.vehicle_plate}<br/>${b.plan_label}</p>
-          <p>Du erhältst deinen Schlüssel-Code automatisch 30 Minuten vor der Abholung in der App.</p>
-          <p style="margin-top:24px;"><a href="${tripUrl}" style="background:#000;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;">Buchung öffnen</a></p>
-          <p style="color:#888;font-size:12px;margin-top:32px;">MyTransporter</p>
-        </div>`,
+      html: renderEmail({
+        firstName,
+        heading: "Erinnerung: Deine Fahrt startet morgen",
+        intro: ["nur eine kurze Erinnerung an deine Abholung. Hier noch einmal alle Mietdaten:"],
+        rowsTitle: "Deine Mietdaten",
+        rows,
+        button: { label: "Buchung öffnen", url: tripUrl },
+        outro: ["Deinen Schlüssel-Code schalten wir automatisch 30 Minuten vor der Abholung in der App frei."],
+      }),
     };
   }
   return {
     title: `Dein Schlüssel-Code ist jetzt freigeschaltet`,
     subject: `MyTransporter · Schlüssel-Code freigeschaltet`,
-    html: `
-      <div style="font-family:system-ui,sans-serif;max-width:560px;margin:auto;padding:24px;color:#111;">
-        <h2 style="margin:0 0 12px;">Es geht gleich los 🚐</h2>
-        <p>Deine Fahrt startet um <strong>${b.start_hour}:00 Uhr</strong>.</p>
-        <p>Der Schlüssel-Code ist jetzt in der App freigeschaltet.</p>
-        <p style="margin-top:24px;"><a href="${tripUrl}" style="background:#000;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;">Zur Buchung</a></p>
-        <p style="color:#888;font-size:12px;margin-top:32px;">MyTransporter</p>
-      </div>`,
+    html: renderEmail({
+      firstName,
+      heading: "Es geht gleich los",
+      intro: [`deine Fahrt startet um ${b.start_hour}:00 Uhr. Dein Schlüssel-Code ist jetzt in der App freigeschaltet.`],
+      rowsTitle: "Deine Mietdaten",
+      rows,
+      button: { label: "Zur Buchung", url: tripUrl },
+      outro: ["Bitte prüfe das Fahrzeug vor der Fahrt und lade die Fotos direkt in der App hoch."],
+    }),
   };
 }
+
 
 async function processBatch(kind: ReminderKind) {
   const now = Date.now();
@@ -125,7 +136,7 @@ async function processBatch(kind: ReminderKind) {
       .eq("id", b.user_id)
       .maybeSingle();
     const email = profile?.email;
-    const { subject, html, title } = buildEmail(kind, b);
+    const { subject, html, title } = buildEmail(kind, b, profile?.first_name);
 
     let sent = false;
     if (email) sent = await sendEmail(email, subject, html);
@@ -220,14 +231,18 @@ async function processManualBatch(kind: ReminderKind) {
         kind === "24h"
           ? "MyTransporter · Erinnerung an deinen Termin morgen"
           : "MyTransporter · Dein Termin startet in Kürze",
-        `
-        <div style="font-family:system-ui,sans-serif;max-width:560px;margin:auto;padding:24px;color:#111;">
-          <h2 style="margin:0 0 12px;">Erinnerung an deinen Termin</h2>
-          <p>Hallo ${m.customer_name},</p>
-          <p>dein Termin bei MyTransporter startet am <strong>${when}</strong>.</p>
-          <p><strong>${vehicle || "Transporter"}</strong></p>
-          <p style="color:#888;font-size:12px;margin-top:32px;">MyTransporter · Römerstraße 36, 71229 Leonberg</p>
-        </div>`,
+        renderEmail({
+          firstName: m.customer_name,
+          heading: kind === "24h" ? "Erinnerung an deinen Termin morgen" : "Dein Termin startet in Kürze",
+          intro: ["hier noch einmal die Daten zu deinem Termin bei MyTransporter:"],
+          rowsTitle: "Deine Mietdaten",
+          rows: [
+            { label: "Fahrzeug", value: vehicle || "Transporter" },
+            { label: "Beginn", value: `${when} Uhr` },
+            { label: "Ende", value: `${fmtBerlin(m.end_at)} Uhr` },
+          ],
+          button: { label: "MyTransporter öffnen", url: "https://www.mytransporter.org" },
+        }),
       );
     }
 

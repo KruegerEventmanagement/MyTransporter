@@ -31,11 +31,15 @@ export const sendAdminDocument = createServerFn({ method: "POST" })
     const apiKey = process.env["RESEND_API_KEY"];
     if (!apiKey) throw new Error("E-Mail-Versand ist nicht konfiguriert");
 
-    const escape = (s: string) =>
-      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const html = `<div style="font-family:Arial,sans-serif;font-size:14px;color:#111;line-height:1.6;">${
-      escape(data.message).replace(/\n/g, "<br/>")
-    }<p style="color:#666;font-size:12px;margin-top:24px;">MyTransporter · Römerstraße 36 · 71229 Leonberg · info@mytransporter.org</p></div>`;
+    const { renderEmail, esc } = await import("@/lib/email-template");
+    const html = renderEmail({
+      heading: data.subject,
+      extraHtml: `<p style="margin:0 0 14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;">${esc(
+        data.message,
+      ).replace(/\n/g, "<br/>")}</p>`,
+      outro: ["Das zugehörige Dokument findest du im Anhang dieser E-Mail."],
+    });
+
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",

@@ -7,6 +7,7 @@ import { de } from "date-fns/locale";
 import { useServerFn } from "@tanstack/react-start";
 import { cancelBookingWithRefund } from "@/lib/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
+import { computePlanReturn, type PlanId } from "@/lib/booking-rules";
 import { DocumentScanner, SCAN_DOC_LABELS, type ScanDocType } from "@/components/DocumentScanner";
 
 export const Route = createFileRoute("/profil")({
@@ -18,6 +19,7 @@ interface Booking {
   id: string;
   vehicle_name: string;
   vehicle_plate: string;
+  plan_id: string;
   plan_label: string;
   plan_price: number;
   deposit: number;
@@ -170,7 +172,16 @@ function ProfilePage() {
         const db = new Date(`${b.start_date}T${String(b.start_hour).padStart(2, "0")}:00:00`).getTime();
         return da - db;
       });
+    const now = Date.now();
+    const past = bookings
+      .filter((b) => {
+        if (b.status === "completed" || b.status === "cancelled") return true;
+        if (b.status === "active" || b.status === "returning") return false;
+        return bookingEnd(b).getTime() < now;
+      })
+      .sort((a, b) => bookingEnd(b).getTime() - bookingEnd(a).getTime());
     return {
+      past,
       totalTrips: bookings.length,
       completed: completedOrPaid.length,
       totalSpent,
@@ -350,6 +361,20 @@ function ProfilePage() {
           </section>
         )}
 
+        {/* Vergangene Buchungen */}
+        {stats.past.length > 0 && (
+          <section id="vergangene-buchungen">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1">
+              Vergangene Buchungen
+            </h2>
+            <ul className="space-y-2">
+              {stats.past.map((b) => (
+                <BookingRow key={b.id} booking={b} onCancelled={loadBookings} />
+              ))}
+            </ul>
+          </section>
+        )}
+
         {/* Buchungs-Historie */}
         <section>
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1">
@@ -402,6 +427,15 @@ function computeCancellationFee(b: Booking): { hours: number; fee: number; start
   return { hours, fee, startsAt };
 }
 
+/** Geplantes Mietende einer Buchung. */
+function bookingEnd(b: { plan_id: string; start_date: string; start_hour: number }): Date {
+  try {
+    return computePlanReturn(b.plan_id as PlanId, new Date(`${b.start_date}T00:00:00`), b.start_hour);
+  } catch {
+    return new Date(`${b.start_date}T00:00:00`);
+  }
+}
+
 function BookingRow({ booking: b, onCancelled }: { booking: Booking; onCancelled: () => void | Promise<void> }) {
   const [confirming, setConfirming] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -451,8 +485,11 @@ function BookingRow({ booking: b, onCancelled }: { booking: Booking; onCancelled
         <InfoLine icon={<Hash className="w-3 h-3" />} label="Buchung">
           <span className="font-mono text-[11px]">{b.id.slice(0, 8).toUpperCase()}</span>
         </InfoLine>
-        <InfoLine icon={<Calendar className="w-3 h-3" />} label="Datum">
+        <InfoLine icon={<Calendar className="w-3 h-3" />} label="Abholung">
           {dateLabel} · {String(b.start_hour).padStart(2, "0")}:00
+        </InfoLine>
+        <InfoLine icon={<Calendar className="w-3 h-3" />} label="Mietende">
+          {format(bookingEnd(b), "dd. MMM yyyy · HH:mm", { locale: de })}
         </InfoLine>
         <InfoLine icon={<Wallet className="w-3 h-3" />} label="Preis">
           {Number(b.plan_price).toFixed(2)} € <span className="text-muted-foreground">({b.plan_label})</span>
