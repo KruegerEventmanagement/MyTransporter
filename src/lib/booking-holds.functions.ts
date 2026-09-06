@@ -22,55 +22,20 @@ export const createBookingHold = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { userId } = context;
+    const { createHoldAtomic } = await import("@/lib/availability.server");
 
-    // Abgelaufene Holds für diesen Slot wegräumen, damit sie keine Verfügbarkeit blocken
-    await supabaseAdmin
-      .from("booking_holds")
-      .delete()
-      .lt("expires_at", new Date().toISOString());
-
-    // Konkurrierender Hold von anderem User?
-    if (data.vehiclePlate) {
-      const { data: conflicts } = await supabaseAdmin
-        .from("booking_holds")
-        .select("user_id, expires_at")
-        .eq("vehicle_plate", data.vehiclePlate)
-        .eq("start_date", data.startDate)
-        .eq("start_hour", data.startHour)
-        .gt("expires_at", new Date().toISOString());
-      const foreign = (conflicts ?? []).find((c) => c.user_id !== userId);
-      if (foreign) {
-        throw new Error("Dieses Zeitfenster wird gerade von einer anderen Person reserviert. Bitte wähle einen anderen Termin.");
-      }
-    }
-
-    const expiresAt = new Date(Date.now() + HOLD_MINUTES * 60 * 1000).toISOString();
-
-    // Eigene vorhandene Holds für denselben Slot durch frische ersetzen
-    await supabase
-      .from("booking_holds")
-      .delete()
-      .eq("user_id", userId)
-      .eq("start_date", data.startDate)
-      .eq("start_hour", data.startHour);
-
-    const { data: row, error } = await supabase
-      .from("booking_holds")
-      .insert({
-        user_id: userId,
-        vehicle_id: data.vehicleId ?? null,
-        vehicle_plate: data.vehiclePlate ?? null,
-        plan_id: data.planId,
-        start_date: data.startDate,
-        start_hour: data.startHour,
-        expires_at: expiresAt,
-      })
-      .select("id, expires_at")
-      .single();
-    if (error || !row) throw new Error(error?.message ?? "Reservierung konnte nicht angelegt werden");
-    return { holdId: row.id, expiresAt: row.expires_at };
+    // Atomar: Advisory Lock pro Fahrzeug + vollständige Intervallprüfung gegen
+    // bezahlte Buchungen, manuelle Reservierungen, Sperren und fremde Holds.
+    return await createHoldAtomic({
+      userId,
+      vehicleId: data.vehicleId ?? null,
+      vehiclePlate: data.vehiclePlate ?? null,
+      planId: data.planId,
+      startDate: data.startDate,
+      startHour: data.startHour,
+      minutes: HOLD_MINUTES,
+    });
   });
 
 export const releaseBookingHold = createServerFn({ method: "POST" })
