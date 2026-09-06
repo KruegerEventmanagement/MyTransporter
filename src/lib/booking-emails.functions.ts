@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computePlanReturn } from "@/lib/booking-rules";
 import { pushToAdmins } from "@/lib/push.functions";
+import { renderEmail, noteBlock, listBlock, rawListBlock, esc } from "@/lib/email-template";
+
 
 const DEFAULT_FROM = "MyTransporter <info@mytransporter.org>";
 const DEFAULT_ADMIN_EMAIL = "info@mytransporter.org";
