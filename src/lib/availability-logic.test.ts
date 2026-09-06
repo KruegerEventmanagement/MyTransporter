@@ -6,6 +6,7 @@ import {
   isDayBookable,
   anyPlateFreeForWindows,
 } from "@/lib/availability-logic";
+import { BLOCKING_BOOKING_STATUSES } from "@/lib/booking-status";
 
 /** Georgiev-Buchung: LEO MY 102, 18.09.2026, 6h-Tarif ab 14:00 → 14:00–20:00. */
 const georgiev: BusySlot = {
@@ -79,5 +80,15 @@ describe("Tages- und Fenster-Aggregation", () => {
       },
     ]);
     expect(anyPlateFreeForWindows(withHold, plates, [{ start: at(16), end: at(17) }])).toBe(false);
+  });
+});
+
+describe("Blockierende Buchungsstatus", () => {
+  it("returning blockiert (Fahrzeug noch nicht zurück)", () => {
+    expect(BLOCKING_BOOKING_STATUSES).toContain("returning");
+  });
+  it("cancelled und completed blockieren nicht", () => {
+    expect(BLOCKING_BOOKING_STATUSES).not.toContain("cancelled" as never);
+    expect(BLOCKING_BOOKING_STATUSES).not.toContain("completed" as never);
   });
 });
