@@ -641,6 +641,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      blocking_booking_statuses: { Args: never; Returns: string[] }
       bookings_locked_fields_unchanged: {
         Args: {
           _addons: Json

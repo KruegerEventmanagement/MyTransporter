@@ -37,6 +37,56 @@ function extractPaymentMethodId(pi: StripeCheckoutSession["payment_intent"]): st
   return extractId(pi.payment_method ?? null);
 }
 
+
+/** Erkennt die Ablehnung des atomaren BEFORE-INSERT-Triggers auf bookings. */
+function isVehicleConflictError(err: { message?: string; code?: string } | null): boolean {
+  const msg = err?.message ?? "";
+  return msg.includes("VEHICLE_UNAVAILABLE");
+}
+
+/**
+ * Zahlung ist erfolgt, aber das Fahrzeug ist belegt: idempotent erstatten und
+ * Admin informieren – ohne zweite Buchung zu speichern.
+ */
+async function refundConflictingPayment(params: {
+  env: StripeEnv;
+  sessionId: string;
+  paymentIntentId: string;
+  userId: string;
+  details: string;
+}) {
+  let refundId: string | null = null;
+  let refundError: string | null = null;
+  try {
+    const stripe = createStripeClient(params.env);
+    // Idempotenz: bereits vorhandene Erstattung wiederverwenden
+    const existing = await stripe.refunds.list({ payment_intent: params.paymentIntentId, limit: 1 });
+    refundId = existing.data[0]?.id ?? null;
+    if (!refundId) {
+      const refund = await stripe.refunds.create(
+        {
+          payment_intent: params.paymentIntentId,
+          metadata: { kind: "double_booking_conflict", sessionId: params.sessionId },
+        },
+        { idempotencyKey: `dbl-${params.paymentIntentId}` },
+      );
+      refundId = refund.id;
+    }
+  } catch (e) {
+    refundError = e instanceof Error ? e.message : String(e);
+  }
+  await supabaseAdmin.from("admin_notifications").insert({
+    type: "booking_conflict",
+    title: "Zahlung ohne Buchung – Fahrzeug war belegt",
+    body:
+      `Session ${params.sessionId} · PaymentIntent ${params.paymentIntentId} · ${params.details} · ` +
+      (refundId
+        ? `automatisch erstattet (${refundId})`
+        : `ERSTATTUNG FEHLGESCHLAGEN: ${refundError ?? "unbekannt"} – bitte manuell erstatten`),
+    user_id: params.userId,
+  });
+}
+
 async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) {
   const paymentIntentId = extractId(session.payment_intent ?? null);
   const customerId = extractId(session.customer ?? null);
@@ -128,28 +178,15 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
       ignoreHoldUserId: userId,
     });
     if (conflicts.length > 0) {
-      console.error("[webhook] Doppelbelegung verhindert", session.id, conflicts);
-      let refundId: string | null = null;
-      let refundError: string | null = null;
-      try {
-        const stripe = createStripeClient(env);
-        const refund = await stripe.refunds.create({
-          payment_intent: paymentIntentId,
-          metadata: { kind: "double_booking_conflict", sessionId: session.id },
-        });
-        refundId = refund.id;
-      } catch (e) {
-        refundError = e instanceof Error ? e.message : String(e);
-      }
-      await supabaseAdmin.from("admin_notifications").insert({
-        type: "booking_conflict",
-        title: "Zahlung ohne Buchung – Fahrzeug war belegt",
-        body:
-          `Session ${session.id} · PaymentIntent ${paymentIntentId} · ${resolvedPlate} · ` +
-          `${startDate} ${String(startHour).padStart(2, "0")}:00 · Tarif ${planId} · ` +
-          `Konflikt: ${conflicts.map((c) => `${c.source} ${c.start_at}–${c.end_at}`).join(", ")} · ` +
-          (refundId ? `automatisch erstattet (${refundId})` : `ERSTATTUNG FEHLGESCHLAGEN: ${refundError ?? "unbekannt"} – bitte manuell erstatten`),
-        user_id: userId,
+      console.error("[webhook] Doppelbelegung verhindert (Vorprüfung)", session.id, conflicts);
+      await refundConflictingPayment({
+        env,
+        sessionId: session.id,
+        paymentIntentId,
+        userId,
+        details:
+          `${resolvedPlate} · ${startDate} ${String(startHour).padStart(2, "0")}:00 · Tarif ${planId} · ` +
+          `Konflikt: ${conflicts.map((c) => `${c.source} ${c.start_at}–${c.end_at}`).join(", ")}`,
       });
       return;
     }
@@ -191,6 +228,22 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
     .single();
 
   if (insertError || !booking) {
+    // Letzte Schranke der DB (Trigger bookings_enforce_vehicle_availability_trigger):
+    // Fahrzeug wurde zwischen Vorprüfung und Insert belegt → erstatten, nicht speichern.
+    if (isVehicleConflictError(insertError)) {
+      console.error("[webhook] Doppelbelegung durch DB-Trigger verhindert", session.id, insertError?.message);
+      await refundConflictingPayment({
+        env,
+        sessionId: session.id,
+        paymentIntentId,
+        userId,
+        details:
+          `${resolvedPlate ?? "ohne Kennzeichen"} · ${startDate} ${String(startHour).padStart(2, "0")}:00 · ` +
+          `Tarif ${planId} · ${insertError?.message ?? "VEHICLE_UNAVAILABLE"}`,
+      });
+      return;
+    }
+    // Andere DB-Fehler NICHT als Doppelbuchung behandeln (keine Erstattung).
     console.error("[webhook] Booking-Insert fehlgeschlagen", insertError);
     await supabaseAdmin.from("admin_notifications").insert({
       type: "email_failed",
