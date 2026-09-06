@@ -2,7 +2,7 @@ const POINTS = [
   "Kaution 200 € – wird nach ordnungsgemäßer Rückgabe zurückerstattet",
   "Führerschein und Ausweis erforderlich",
   "Übergabe mit Fotos und Protokoll",
-  "Zubehör (Spanngurte, Decken, Rollbrett) optional als Zusatzpaket buchbar",
+  "Umzugspaket mit Spanngurten, Zurrgurten, Decken, Klebeband und Handschuhen optional für 29 €",
   "Tankregel Voll/Voll: vollgetankt übernehmen, vollgetankt zurückgeben",
   "Besenrein zurückgeben",
   "Rauchen im Fahrzeug verboten",
