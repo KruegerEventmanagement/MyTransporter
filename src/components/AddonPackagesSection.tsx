@@ -7,14 +7,14 @@ export function AddonPackagesSection() {
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-10">
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground">
-            Praktische Zusatzpakete für deinen Transport
+            Das praktische Umzugspaket für deinen Transport
           </h2>
           <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
             Damit dein Umzug einfacher, sicherer und stressfreier wird, kannst du auf Wunsch passendes Zubehör direkt dazubuchen.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 max-w-md mx-auto">
           {ADDONS.map((addon) => (
             <AddonPackageCard key={addon.id} addon={addon} marketing />
           ))}
@@ -29,7 +29,7 @@ export function AddonPackagesSection() {
         </div>
 
         <p className="mt-8 text-center text-sm text-muted-foreground">
-          Zusatzpakete kannst du direkt im Buchungsvorgang auswählen.
+          Das Umzugspaket kannst du direkt im Buchungsvorgang auswählen.
         </p>
       </div>
     </section>
