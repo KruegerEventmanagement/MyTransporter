@@ -119,52 +119,44 @@ export const sendBookingConfirmation = createServerFn({ method: "POST" })
     const tripUrl = `https://www.mytransporter.org/trip/${booking.id}`;
     const profilUrl = `https://www.mytransporter.org/profil`;
 
-    const html = `
-      <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:auto;padding:24px;color:#111;">
-        <h2 style="margin:0 0 16px;">Buchung bestätigt ✅</h2>
-        <p>${greeting}</p>
-        <p>vielen Dank für deine Buchung bei MyTransporter. Hier deine Übersicht:</p>
+    const addons = Array.isArray(booking.addons)
+      ? (booking.addons as Array<{ id: string; label: string; price_cents: number }>)
+      : [];
+    const addonsHtmlBlock =
+      addons.length === 0
+        ? ""
+        : rawListBlock(
+            "Gebuchtes Zubehör",
+            addons.map((a) => `${esc(a.label)} · <strong>${(a.price_cents / 100).toFixed(2)} €</strong>`),
+          ) +
+          noteBlock(
+            `Summe Zubehör: <strong>${(((booking.addons_total_cents ?? 0) as number) / 100).toFixed(2)} €</strong>. Bitte vollständig &amp; unbeschädigt zurückgeben.`,
+          );
 
-        <div style="background:#f7f7f7;border-radius:12px;padding:16px 20px;margin:20px 0;">
-          <p style="margin:0 0 4px;"><strong>${booking.vehicle_name}</strong> · ${booking.vehicle_plate}</p>
-          <p style="margin:0 0 4px;">${booking.plan_label}</p>
-          <p style="margin:0 0 4px;"><strong>Abholung:</strong> ${startStr} Uhr</p>
-          <p style="margin:0;"><strong>Rückgabe spätestens:</strong> ${returnStr} Uhr</p>
-        </div>
+    const html = renderEmail({
+      firstName: profile?.first_name,
+      heading: "Deine Buchung ist bestätigt",
+      intro: ["vielen Dank für deine Buchung bei MyTransporter. Hier findest du alle Mietdaten auf einen Blick."],
+      rowsTitle: "Deine Mietdaten",
+      rows: [
+        { label: "Fahrzeug", value: `${booking.vehicle_name} · ${booking.vehicle_plate}` },
+        { label: "Tarif", value: booking.plan_label },
+        { label: "Abholung", value: `${startStr} Uhr` },
+        { label: "Rückgabe spätestens", value: `${returnStr} Uhr` },
+      ],
+      button: { label: "Zur Buchung", url: tripUrl },
+      extraHtml:
+        addonsHtmlBlock +
+        listBlock("So geht es weiter", [
+          "Dein Schlüssel-Code wird automatisch 30 Minuten vor der Abholung in der App freigeschaltet.",
+          "Du bekommst eine Erinnerung 24 Stunden vorher und nochmal 30 Minuten vor Start.",
+          "Über den Button oben kommst du jederzeit zu deiner Buchung.",
+        ]) +
+        noteBlock(
+          `<strong>Stornierung:</strong> Du kannst deine Fahrt jederzeit im <a href="${profilUrl}" style="color:#000;">Profil</a> stornieren. Bis 13 Stunden vor Abfahrt ist das kostenlos.${cancellationTable()}<br />Die Kaution wird in jedem Fall vollständig zurückerstattet.`,
+        ),
+    });
 
-        ${(() => {
-          const addons = Array.isArray(booking.addons) ? (booking.addons as Array<{ id: string; label: string; price_cents: number }>) : [];
-          if (addons.length === 0) return "";
-          const totalEur = ((booking.addons_total_cents ?? 0) / 100).toFixed(2);
-          const items = addons
-            .map((a) => `<li>${a.label} · <strong>${(a.price_cents / 100).toFixed(2)} €</strong></li>`)
-            .join("");
-          return `
-            <h3 style="margin:24px 0 8px;font-size:16px;">Gebuchtes Zubehör</h3>
-            <ul style="padding-left:20px;line-height:1.6;margin:0 0 8px;">${items}</ul>
-            <p style="margin:0;font-size:13px;color:#555;">Summe Zubehör: <strong>${totalEur} €</strong>. Bitte vollständig &amp; unbeschädigt zurückgeben.</p>
-          `;
-        })()}
-
-        <h3 style="margin:24px 0 8px;font-size:16px;">So geht es weiter</h3>
-        <ol style="padding-left:20px;line-height:1.6;">
-          <li>Dein <strong>Schlüssel-Code</strong> wird automatisch <strong>30 Minuten vor Abholung</strong> in der App freigeschaltet.</li>
-          <li>Du bekommst rechtzeitig eine Erinnerung per E-Mail, einmal <strong>24 Stunden</strong> vorher und nochmal <strong>30 Minuten</strong> vor Start.</li>
-          <li>Über den Button unten kommst du jederzeit zu deiner Buchung.</li>
-        </ol>
-
-        <p style="margin:24px 0;">
-          <a href="${tripUrl}" style="background:#000;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:600;display:inline-block;">Zur Buchung</a>
-        </p>
-
-        <h3 style="margin:32px 0 8px;font-size:16px;">Stornierung</h3>
-        <p style="margin:0 0 8px;">Du kannst deine Fahrt jederzeit kostenlos im <a href="${profilUrl}" style="color:#000;">Profil</a> stornieren, bis 13 Stunden vor Abfahrt fallen keine Gebühren an.</p>
-        ${cancellationTable()}
-        <p style="font-size:12px;color:#666;margin:8px 0 0;">Die Kaution wird in jedem Fall vollständig zurückerstattet.</p>
-
-        <hr style="border:none;border-top:1px solid #eee;margin:32px 0 16px;" />
-        <p style="color:#888;font-size:12px;margin:0;">MyTransporter · info@mytransporter.org</p>
-      </div>`;
 
     let invoiceAttachment: Attachment | undefined;
     try {
