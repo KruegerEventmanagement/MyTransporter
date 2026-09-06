@@ -308,6 +308,20 @@ export function BookingSection() {
     });
   };
 
+  // Nicht verfügbares Fahrzeug: automatisch auf ein freies (möglichst gleiche Klasse) springen
+  useEffect(() => {
+    if (!selectionWindow || vehicles.length === 0) return;
+    const cur = vehicles[vehicleIdx];
+    if (cur && isPlateAvailable(cur.plate ?? "")) return;
+    const cls = cur ? classOfVehicle(cur) : null;
+    const sameClass = vehicles.findIndex(
+      (v) => (!cls || classOfVehicle(v) === cls) && isPlateAvailable(v.plate ?? ""),
+    );
+    const next = sameClass >= 0 ? sameClass : vehicles.findIndex((v) => isPlateAvailable(v.plate ?? ""));
+    if (next >= 0 && next !== vehicleIdx) setVehicleIdx(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectionWindow, busyMap, vehicles, vehicleIdx]);
+
   /** Tarif: sperren, wenn kein Fahrzeug der gewählten Klasse den kompletten Zeitraum frei hat. */
   const isPlanUnavailable = (planId: string) => {
     if (!date || startHour === null || activePlates.length === 0) return false;

@@ -14,7 +14,7 @@ export const getBusySlots = createServerFn({ method: "GET" })
     const { data, error } = await supabaseAdmin
       .from("bookings")
       .select("vehicle_plate, plan_id, start_date, start_hour, status")
-      .in("status", ["paid", "active", "in_progress", "picked_up"]);
+      .in("status", ["paid", "active", "in_progress", "picked_up", "confirmed", "started", "running"]);
     if (error) throw new Error(error.message);
     const bookingSlots = (data ?? [])
       .filter((b) => b.start_date && b.start_hour !== null)
