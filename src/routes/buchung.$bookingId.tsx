@@ -5,6 +5,8 @@ import { ChevronLeft, Calendar, Car, Hash, Key, Wallet, Route as RouteIcon, Imag
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { resolveTripPhotoUrls } from "@/lib/trip-photos";
+import { computePlanReturn } from "@/lib/booking-rules";
+import { requireLogin } from "@/lib/login-redirect";
 
 export const Route = createFileRoute("/buchung/$bookingId")({
   head: () => ({ meta: [{ title: "MyTransporter · Buchungsdetails" }] }),
@@ -31,6 +33,7 @@ interface Booking {
   return_code: string | null;
   status: string;
   created_at: string;
+  updated_at: string;
   remarks: string | null;
   extra_km: number | null;
   extra_km_charge_cents: number | null;
@@ -83,6 +86,7 @@ function BookingDetailPage() {
   const [photos, setPhotos] = useState<Array<TripPhoto & { resolvedUrl: string }>>([]);
   const [documents, setDocuments] = useState<UserDoc[]>([]);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -90,15 +94,21 @@ function BookingDetailPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
       if (!user) {
-        navigate({ to: "/" });
+        // Ohne Sitzung: Ziel sicher merken und Login öffnen
+        requireLogin(navigate, `/buchung/${bookingId}`);
         return;
       }
-      const { data: b } = await supabase
+      const { data: b, error } = await supabase
         .from("bookings")
         .select("*")
         .eq("id", bookingId)
         .maybeSingle();
       if (!mounted) return;
+      if (error) {
+        setLoadError(error.message);
+        setLoading(false);
+        return;
+      }
       if (!b) {
         setLoading(false);
         return;
@@ -147,18 +157,41 @@ function BookingDetailPage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <main className="min-h-screen bg-background flex items-center justify-center px-4 text-center">
+        <div className="max-w-sm">
+          <h1 className="text-2xl font-bold mb-2">Buchung konnte nicht geladen werden</h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            Da ist gerade technisch etwas schiefgelaufen. Bitte versuche es in einem Moment noch einmal.
+          </p>
+          <button type="button" onClick={() => window.location.reload()} className="underline mr-4">
+            Neu laden
+          </button>
+          <Link to="/profil" className="underline">Zu meinen Buchungen</Link>
+        </div>
+      </main>
+    );
+  }
+
   if (!booking) {
     return (
       <main className="min-h-screen bg-background flex items-center justify-center px-4 text-center">
-        <div>
-          <h1 className="text-2xl font-bold mb-2">Buchung nicht gefunden</h1>
-          <Link to="/profil" className="underline">Zurück zu meinen Buchungen</Link>
+        <div className="max-w-sm">
+          <h1 className="text-2xl font-bold mb-2">Diese Buchung finden wir nicht</h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            Möglicherweise gehört sie zu einem anderen Konto oder der Link ist nicht mehr gültig.
+            In deinem Profil findest du alle deine Buchungen – auch vergangene.
+          </p>
+          <Link to="/profil" className="underline">Zu meinen Buchungen</Link>
         </div>
       </main>
     );
   }
 
   const startsAt = new Date(`${booking.start_date}T${String(booking.start_hour).padStart(2, "0")}:00:00`);
+  const plannedEnd = computePlanReturn(booking.plan_id as never, new Date(`${booking.start_date}T00:00:00`), booking.start_hour);
+  const isFinished = booking.status === "completed" || booking.status === "cancelled";
   const km = booking.start_km !== null && booking.end_km !== null
     ? Math.max(0, booking.end_km - booking.start_km)
     : null;
@@ -214,9 +247,19 @@ function BookingDetailPage() {
             <InfoLine icon={<RouteIcon className="w-3 h-3" />} label="Gefahrene km">
               {km !== null ? `${km} km` : "-"}
             </InfoLine>
-            <InfoLine icon={<Hash className="w-3 h-3" />} label="Abhol-Code">
-              <span className="font-mono">{booking.pickup_code}</span>
+            <InfoLine icon={<Calendar className="w-3 h-3" />} label={isFinished ? "Mietende (geplant)" : "Mietende"}>
+              {format(plannedEnd, "dd.MM.yyyy HH:mm", { locale: de })}
             </InfoLine>
+            {booking.status === "completed" && (
+              <InfoLine icon={<Calendar className="w-3 h-3" />} label="Rückgabe erfasst">
+                {format(new Date(booking.updated_at), "dd.MM.yyyy HH:mm", { locale: de })}
+              </InfoLine>
+            )}
+            {!isFinished && (
+              <InfoLine icon={<Hash className="w-3 h-3" />} label="Abhol-Code">
+                <span className="font-mono">{booking.pickup_code}</span>
+              </InfoLine>
+            )}
           </div>
         </section>
 
