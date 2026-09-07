@@ -247,6 +247,17 @@ export async function sendBookingConfirmationImpl(
       } catch {}
     }
 
+    // Exactly-once: Platz im Protokoll VOR dem Versand belegen.
+    if (!data.force) {
+      const reserved = await reserveActionLog({
+        bookingId: booking.id,
+        userId: booking.user_id,
+        title: CONFIRM_LOG_TITLE,
+        type: "booking_created",
+      });
+      if (!reserved) return { sent: false, reason: "already_sent" };
+    }
+
     const sent = await sendEmail(
       email,
       `MyTransporter · Buchungsbestätigung für ${startStr} Uhr`,
@@ -254,13 +265,11 @@ export async function sendBookingConfirmationImpl(
       invoiceAttachment ? [invoiceAttachment] : undefined,
     );
 
-    await supabaseAdmin.from("admin_notifications").insert({
-      type: "booking_created",
-      title: CONFIRM_LOG_TITLE,
-      body: `${booking.vehicle_name} · Start ${booking.start_date} ${booking.start_hour}:00${sent ? " (E-Mail gesendet)" : " (E-Mail fehlgeschlagen)"}`,
-      booking_id: booking.id,
-      user_id: booking.user_id,
-    });
+    await finishActionLog(
+      booking.id,
+      CONFIRM_LOG_TITLE,
+      `${booking.vehicle_name} · Start ${booking.start_date} ${booking.start_hour}:00${sent ? " (E-Mail gesendet)" : " (E-Mail fehlgeschlagen)"}`,
+    );
 
     return { sent };
 }
