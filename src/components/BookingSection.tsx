@@ -18,6 +18,7 @@ import { PreDriveFlow } from "./PreDriveFlow";
 import { ActiveDriveScreen } from "./ActiveDriveScreen";
 import { ReturnFlow } from "./ReturnFlow";
 import { supabase } from "@/integrations/supabase/client";
+import { getSupabaseAccessToken } from "@/lib/safe-auth-attacher";
 import { trackCompleteRegistration, trackEvent } from "@/lib/analytics";
 import { getBusySlots, type BusySlot } from "@/lib/availability.functions";
 import { bookingWindowMsForDay } from "@/lib/booking-window";
