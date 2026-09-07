@@ -1779,6 +1779,19 @@ export function BookingSection() {
                     setCheckoutClientSecret(null);
                     setShowCheckout(true);
                    try {
+                     // Anmeldung muss aktiv sein, sonst antwortet der Server mit
+                     // "Unauthorized" – direkt nach der Registrierung kann die
+                     // Sitzung noch einen Moment brauchen.
+                     let token = await getSupabaseAccessToken();
+                     if (!token) {
+                       await new Promise((r) => setTimeout(r, 1200));
+                       token = await getSupabaseAccessToken();
+                     }
+                     if (!token) {
+                       throw new Error(
+                         "Deine Anmeldung wird noch abgeschlossen. Bitte tippe in wenigen Sekunden erneut auf „Sicher bezahlen“."
+                       );
+                     }
                      const origin = window.location.origin;
                      const result = await startBookingCheckout({
                        data: {
@@ -1806,7 +1819,13 @@ export function BookingSection() {
                       });
                    } catch (e) {
                      console.error(e);
-                     setCheckoutError(e instanceof Error ? e.message : "Zahlung konnte nicht gestartet werden.");
+                     const raw = e instanceof Error ? e.message : "";
+                     const friendly = /unauthorized|401/i.test(raw)
+                       ? "Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an und starte die Zahlung neu."
+                       : /internal server error|unexpected|500/i.test(raw) || !raw
+                         ? "Die Zahlung konnte nicht gestartet werden. Bitte versuche es erneut."
+                         : raw;
+                     setCheckoutError(friendly);
                       setCheckoutClientSecret(null);
                    }
                 }}
