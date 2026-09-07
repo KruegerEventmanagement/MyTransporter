@@ -75,7 +75,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      // viewport-fit=cover: iOS-Safari Safe-Areas (Notch/Home-Indicator) korrekt nutzen
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "MyTransporter, Transporter mieten" },
       { name: "description", content: "My Transporter Hub is a modern web application for booking rental vans with an integrated verification and payment system." },
       { name: "author", content: "MyTransporter" },
