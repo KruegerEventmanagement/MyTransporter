@@ -1,6 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import logoAsset from "@/assets/invoice-logo.png.asset.json";
-import { getRequest } from "@tanstack/react-start/server";
+import { embedBrandLogo } from "@/lib/brand-logo.server";
 import { computeDocTotals, type DocItemInput } from "@/lib/doc-totals";
 
 export type { DocItemInput };
