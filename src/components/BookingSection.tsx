@@ -95,6 +95,22 @@ const AUTH_CONFIRM_URL = "https://www.mytransporter.org/auth/confirm";
 const AUTH_BOOKING_DRAFT_KEY = "mt_auth_booking_draft";
 const RESEND_COOLDOWN_SECONDS = 60;
 const RESEND_LAST_SENT_KEY = "mt_resend_last_sent";
+/** Auth-Aufrufe dürfen nie endlos hängen (iOS/Safari-Sperren, schlechtes Netz). */
+const AUTH_TIMEOUT_MS = 20_000;
+class AuthTimeoutError extends Error {
+  constructor() {
+    super("auth_timeout");
+  }
+}
+function withAuthTimeout<T>(promise: PromiseLike<T>): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new AuthTimeoutError()), AUTH_TIMEOUT_MS),
+    ),
+  ]);
+}
+
 
 export function BookingSection() {
   const [step, setStep] = useState(0);
