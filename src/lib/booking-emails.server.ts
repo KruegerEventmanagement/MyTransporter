@@ -109,6 +109,49 @@ async function alreadyLogged(bookingId: string, title: string): Promise<boolean>
   }
 }
 
+function isDuplicateLog(err: { code?: string; message?: string } | null): boolean {
+  if (!err) return false;
+  return err.code === "23505" || (err.message ?? "").includes("duplicate key");
+}
+
+/**
+ * Exactly-once-Reservierung: legt den Protokolleintrag VOR dem Versand an.
+ * Der Unique-Index (booking_id, title) macht parallele Doppelversendungen
+ * (z. B. Stripe-Retries) unmoeglich. Gibt false zurueck, wenn bereits belegt.
+ */
+async function reserveActionLog(params: {
+  bookingId: string;
+  userId: string | null;
+  title: string;
+  type: string;
+}): Promise<boolean> {
+  const { error } = await supabaseAdmin.from("admin_notifications").insert({
+    type: params.type,
+    title: params.title,
+    body: "wird verarbeitet …",
+    booking_id: params.bookingId,
+    user_id: params.userId,
+  });
+  if (!error) return true;
+  if (isDuplicateLog(error)) return false;
+  // Protokoll nicht moeglich (z. B. temporaerer DB-Fehler): Versand trotzdem
+  // zulassen, damit der Kunde seine Bestaetigung erhaelt.
+  console.warn("[emails] Protokolleintrag fehlgeschlagen, sende trotzdem:", error.message);
+  return true;
+}
+
+async function finishActionLog(bookingId: string, title: string, body: string): Promise<void> {
+  try {
+    await supabaseAdmin
+      .from("admin_notifications")
+      .update({ body })
+      .eq("booking_id", bookingId)
+      .eq("title", title);
+  } catch (e) {
+    console.warn("[emails] Protokoll-Update fehlgeschlagen:", e);
+  }
+}
+
 const CONFIRM_LOG_TITLE = "Buchungsbestaetigung versendet";
 const ADMIN_LOG_TITLE = "Admin-Buchungsmail versendet";
 
