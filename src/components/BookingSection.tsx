@@ -535,16 +535,24 @@ export function BookingSection() {
       // Kurzer Retry, falls das Konto serverseitig noch nicht bereit ist.
       for (let attempt = 0; attempt < 3 && !session; attempt++) {
         if (attempt > 0) await new Promise((r) => setTimeout(r, 900));
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: regForm.email,
-          password: regPassword,
-        });
-        if (signInData?.session) {
-          session = signInData.session;
+        try {
+          const { data: signInData, error: signInError } = await withAuthTimeout(
+            supabase.auth.signInWithPassword({
+              email: regForm.email,
+              password: regPassword,
+            }),
+          );
+          if (signInData?.session) {
+            session = signInData.session;
+            break;
+          }
+          if (signInError && /Email not confirmed/i.test(signInError.message)) break;
+        } catch (e) {
+          console.warn("Automatische Anmeldung fehlgeschlagen:", e);
           break;
         }
-        if (signInError && /Email not confirmed/i.test(signInError.message)) break;
       }
+
     }
     setAuthLoading(false);
     if (!session) {
