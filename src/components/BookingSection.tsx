@@ -588,23 +588,34 @@ export function BookingSection() {
   const handleLogin = async () => {
     setAuthError(null);
     setAuthLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: loginForm.email,
-      password: loginForm.password,
-    });
-    setAuthLoading(false);
-    if (error) {
-      setAuthError(error.message);
-      return;
-    }
-    if (data.user) {
-      setIsLoggedIn(true);
-      setAuthUser({ id: data.user.id, email: data.user.email ?? undefined });
-      setProfileComplete(true);
-      setShowLogin(false);
-      setStep(5);
+    try {
+      const { data, error } = await withAuthTimeout(
+        supabase.auth.signInWithPassword({
+          email: loginForm.email,
+          password: loginForm.password,
+        }),
+      );
+      setAuthLoading(false);
+      if (error) {
+        setAuthError(error.message);
+        return;
+      }
+      if (data.user) {
+        setIsLoggedIn(true);
+        setAuthUser({ id: data.user.id, email: data.user.email ?? undefined });
+        setProfileComplete(true);
+        setShowLogin(false);
+        setStep(5);
+      }
+    } catch (e) {
+      setAuthLoading(false);
+      console.error("Anmeldung fehlgeschlagen:", e);
+      setAuthError(
+        "Die Anmeldung hat zu lange gedauert. Bitte prüfe deine Internetverbindung und versuche es erneut.",
+      );
     }
   };
+
 
   const handleResendConfirmation = async () => {
     if (!signupEmailSent) return;
