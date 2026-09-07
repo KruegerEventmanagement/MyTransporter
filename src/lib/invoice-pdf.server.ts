@@ -1,8 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computePlanReturn } from "@/lib/booking-rules";
-import logoAsset from "@/assets/invoice-logo.png.asset.json";
-import { getRequest } from "@tanstack/react-start/server";
+import { embedBrandLogo } from "@/lib/brand-logo.server";
 
 type Addon = { id: string; label: string; price_cents: number };
 
@@ -101,19 +100,8 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   let logoDrawn = false;
   let logoBottomY = y; // untere Kante des Logos, damit Text nicht überlappt
   try {
-    let origin = "https://mytransporter.org";
-    try {
-      const req = getRequest();
-      const proto = req.headers.get("x-forwarded-proto") ?? "https";
-      const host = req.headers.get("host");
-      if (host) origin = `${proto}://${host}`;
-    } catch {
-      // kein Request-Kontext (z.B. Hintergrund-Job) — Fallback nutzen
-    }
-    const logoRes = await fetch(`${origin}${logoAsset.url}`);
-    if (logoRes.ok) {
-      const logoBytes = new Uint8Array(await logoRes.arrayBuffer());
-      const logoImg = await pdf.embedPng(logoBytes);
+    const logoImg = await embedBrandLogo(pdf);
+    if (logoImg) {
       const logoH = 48;
       const logoW = (logoImg.width / logoImg.height) * logoH;
       const logoY = y - logoH + 16;

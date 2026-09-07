@@ -31,6 +31,7 @@ import { Route as ApiPublicResendBookingMailsRouteImport } from './routes/api/pu
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
 import { Route as ApiPublicHooksNotifyAdminRouteImport } from './routes/api/public/hooks/notify-admin'
+import { Route as ApiPublicHealthAutomationsRouteImport } from './routes/api/public/health/automations'
 
 const WerbungRoute = WerbungRouteImport.update({
   id: '/werbung',
@@ -147,6 +148,12 @@ const ApiPublicHooksNotifyAdminRoute =
     path: '/api/public/hooks/notify-admin',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHealthAutomationsRoute =
+  ApiPublicHealthAutomationsRouteImport.update({
+    id: '/api/public/health/automations',
+    path: '/api/public/health/automations',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -168,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/resend-booking-mails': typeof ApiPublicResendBookingMailsRoute
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
+  '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -192,6 +200,7 @@ export interface FileRoutesByTo {
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/resend-booking-mails': typeof ApiPublicResendBookingMailsRoute
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
+  '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -217,6 +226,7 @@ export interface FileRoutesById {
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/resend-booking-mails': typeof ApiPublicResendBookingMailsRoute
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
+  '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/trip/$bookingId'
     | '/api/public/resend-booking-mails'
     | '/api/public/send-test-invoice'
+    | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/send-reminders'
     | '/api/public/payments/webhook'
@@ -267,6 +278,7 @@ export interface FileRouteTypes {
     | '/trip/$bookingId'
     | '/api/public/resend-booking-mails'
     | '/api/public/send-test-invoice'
+    | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/send-reminders'
     | '/api/public/payments/webhook'
@@ -291,6 +303,7 @@ export interface FileRouteTypes {
     | '/trip/$bookingId'
     | '/api/public/resend-booking-mails'
     | '/api/public/send-test-invoice'
+    | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/send-reminders'
     | '/api/public/payments/webhook'
@@ -316,6 +329,7 @@ export interface RootRouteChildren {
   TripBookingIdRoute: typeof TripBookingIdRoute
   ApiPublicResendBookingMailsRoute: typeof ApiPublicResendBookingMailsRoute
   ApiPublicSendTestInvoiceRoute: typeof ApiPublicSendTestInvoiceRoute
+  ApiPublicHealthAutomationsRoute: typeof ApiPublicHealthAutomationsRoute
   ApiPublicHooksNotifyAdminRoute: typeof ApiPublicHooksNotifyAdminRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -477,6 +491,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksNotifyAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/health/automations': {
+      id: '/api/public/health/automations'
+      path: '/api/public/health/automations'
+      fullPath: '/api/public/health/automations'
+      preLoaderRoute: typeof ApiPublicHealthAutomationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -500,6 +521,7 @@ const rootRouteChildren: RootRouteChildren = {
   TripBookingIdRoute: TripBookingIdRoute,
   ApiPublicResendBookingMailsRoute: ApiPublicResendBookingMailsRoute,
   ApiPublicSendTestInvoiceRoute: ApiPublicSendTestInvoiceRoute,
+  ApiPublicHealthAutomationsRoute: ApiPublicHealthAutomationsRoute,
   ApiPublicHooksNotifyAdminRoute: ApiPublicHooksNotifyAdminRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,

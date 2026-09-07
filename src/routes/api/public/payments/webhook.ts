@@ -44,6 +44,17 @@ function isVehicleConflictError(err: { message?: string; code?: string } | null)
 }
 
 /**
+ * Unique-Verletzung auf stripe_payment_intent_id: derselbe Zahlungsvorgang
+ * wurde parallel/erneut verarbeitet. Idempotent behandeln, nicht erstatten.
+ */
+function isDuplicatePaymentError(err: { message?: string; code?: string } | null): boolean {
+  if (!err) return false;
+  if (err.code === "23505") return true;
+  const msg = err.message ?? "";
+  return msg.includes("bookings_stripe_payment_intent_uniq") || msg.includes("duplicate key");
+}
+
+/**
  * Zahlung ist erfolgt, aber das Fahrzeug ist belegt: idempotent erstatten und
  * Admin informieren – ohne zweite Buchung zu speichern.
  */
@@ -143,17 +154,32 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
     }
   }
   if (!resolvedName || !resolvedPlate) {
-    const { data: activeVehicle } = await supabaseAdmin
+    // Fallback nur, wenn es genau EIN aktives Fahrzeug gibt. Sobald weitere
+    // Fahrzeuge existieren, wäre "das älteste" eine falsche Annahme und würde
+    // fremde Kalender belegen – dann lieber sauber protokollieren.
+    const { data: activeVehicles } = await supabaseAdmin
       .from("vehicles")
       .select("name, model, plate")
       .eq("is_active", true)
       .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (activeVehicle) {
-      resolvedName = resolvedName ?? (activeVehicle.name as string);
-      resolvedPlate = resolvedPlate ?? (activeVehicle.plate as string);
-      resolvedModel = resolvedModel ?? ((activeVehicle.model as string | null) ?? null);
+      .limit(2);
+    const only = activeVehicles?.length === 1 ? activeVehicles[0] : null;
+    if (only) {
+      resolvedName = resolvedName ?? (only.name as string);
+      resolvedPlate = resolvedPlate ?? (only.plate as string);
+      resolvedModel = resolvedModel ?? ((only.model as string | null) ?? null);
+    } else {
+      console.error("[webhook] Fahrzeug nicht eindeutig bestimmbar", session.id, {
+        hasName: !!resolvedName,
+        hasPlate: !!resolvedPlate,
+        activeVehicles: activeVehicles?.length ?? 0,
+      });
+      await supabaseAdmin.from("admin_notifications").insert({
+        type: "email_failed",
+        title: "Buchung ohne eindeutiges Fahrzeug",
+        body: `Session ${session.id} · PaymentIntent ${paymentIntentId} · Fahrzeug fehlt in den Buchungsdaten und ist nicht eindeutig. Bitte manuell zuordnen.`,
+        user_id: userId,
+      });
     }
   }
 
@@ -227,6 +253,12 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
     .single();
 
   if (insertError || !booking) {
+    // Exactly-once: paralleler Webhook-Retry hat die Buchung schon angelegt
+    // (Unique-Index auf stripe_payment_intent_id). Kein Fehler, kein Duplikat.
+    if (isDuplicatePaymentError(insertError)) {
+      console.log("[webhook] Buchung existiert bereits (Unique-Index), überspringe", session.id);
+      return;
+    }
     // Letzte Schranke der DB (Trigger bookings_enforce_vehicle_availability_trigger):
     // Fahrzeug wurde zwischen Vorprüfung und Insert belegt → erstatten, nicht speichern.
     if (isVehicleConflictError(insertError)) {
@@ -263,13 +295,21 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
     .eq("start_date", startDate)
     .eq("start_hour", startHour);
 
-  await supabaseAdmin.from("admin_notifications").insert({
-    type: "booking_created",
-    title: "Neue Buchung",
-    body: `${planLabel} · Start ${startDate} ${String(startHour).padStart(2, "0")}:00 · Code ${pickupCode}`,
-    booking_id: bookingId,
-    user_id: userId,
-  });
+  // Genau ein Kalender-/Buchungseintrag: Unique-Index (booking_id, title)
+  // verhindert Duplikate bei Webhook-Retries; Fehler hier darf die bezahlte
+  // Buchung nicht zurückrollen.
+  {
+    const { error: notifyError } = await supabaseAdmin.from("admin_notifications").insert({
+      type: "booking_created",
+      title: "Neue Buchung",
+      body: `${planLabel} · Start ${startDate} ${String(startHour).padStart(2, "0")}:00 · Code ${pickupCode}`,
+      booking_id: bookingId,
+      user_id: userId,
+    });
+    if (notifyError && !isDuplicatePaymentError(notifyError)) {
+      console.error("[webhook] Kalender-/Buchungseintrag fehlgeschlagen", bookingId, notifyError.message);
+    }
+  }
 
   // Nachaktionen laufen unabhängig voneinander: ein Fehler darf die anderen
   // nicht verhindern. Wichtig: die server-only Implementierungen direkt

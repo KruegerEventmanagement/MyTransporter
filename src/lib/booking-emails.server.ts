@@ -109,6 +109,49 @@ async function alreadyLogged(bookingId: string, title: string): Promise<boolean>
   }
 }
 
+function isDuplicateLog(err: { code?: string; message?: string } | null): boolean {
+  if (!err) return false;
+  return err.code === "23505" || (err.message ?? "").includes("duplicate key");
+}
+
+/**
+ * Exactly-once-Reservierung: legt den Protokolleintrag VOR dem Versand an.
+ * Der Unique-Index (booking_id, title) macht parallele Doppelversendungen
+ * (z. B. Stripe-Retries) unmoeglich. Gibt false zurueck, wenn bereits belegt.
+ */
+async function reserveActionLog(params: {
+  bookingId: string;
+  userId: string | null;
+  title: string;
+  type: string;
+}): Promise<boolean> {
+  const { error } = await supabaseAdmin.from("admin_notifications").insert({
+    type: params.type,
+    title: params.title,
+    body: "wird verarbeitet …",
+    booking_id: params.bookingId,
+    user_id: params.userId,
+  });
+  if (!error) return true;
+  if (isDuplicateLog(error)) return false;
+  // Protokoll nicht moeglich (z. B. temporaerer DB-Fehler): Versand trotzdem
+  // zulassen, damit der Kunde seine Bestaetigung erhaelt.
+  console.warn("[emails] Protokolleintrag fehlgeschlagen, sende trotzdem:", error.message);
+  return true;
+}
+
+async function finishActionLog(bookingId: string, title: string, body: string): Promise<void> {
+  try {
+    await supabaseAdmin
+      .from("admin_notifications")
+      .update({ body })
+      .eq("booking_id", bookingId)
+      .eq("title", title);
+  } catch (e) {
+    console.warn("[emails] Protokoll-Update fehlgeschlagen:", e);
+  }
+}
+
 const CONFIRM_LOG_TITLE = "Buchungsbestaetigung versendet";
 const ADMIN_LOG_TITLE = "Admin-Buchungsmail versendet";
 
@@ -120,8 +163,10 @@ const ADMIN_LOG_TITLE = "Admin-Buchungsmail versendet";
 export async function sendBookingConfirmationImpl(
   data: { bookingId: string; force?: boolean },
 ): Promise<{ sent: boolean; reason?: string }> {
-  if (!data.force && (await alreadyLogged(data.bookingId, CONFIRM_LOG_TITLE))) {
-    return { sent: false, reason: "already_sent" };
+  if (!data.force) {
+    if (await alreadyLogged(data.bookingId, CONFIRM_LOG_TITLE)) {
+      return { sent: false, reason: "already_sent" };
+    }
   }
     const { data: booking, error } = await supabaseAdmin
       .from("bookings")
@@ -202,6 +247,17 @@ export async function sendBookingConfirmationImpl(
       } catch {}
     }
 
+    // Exactly-once: Platz im Protokoll VOR dem Versand belegen.
+    if (!data.force) {
+      const reserved = await reserveActionLog({
+        bookingId: booking.id,
+        userId: booking.user_id,
+        title: CONFIRM_LOG_TITLE,
+        type: "booking_created",
+      });
+      if (!reserved) return { sent: false, reason: "already_sent" };
+    }
+
     const sent = await sendEmail(
       email,
       `MyTransporter · Buchungsbestätigung für ${startStr} Uhr`,
@@ -209,13 +265,11 @@ export async function sendBookingConfirmationImpl(
       invoiceAttachment ? [invoiceAttachment] : undefined,
     );
 
-    await supabaseAdmin.from("admin_notifications").insert({
-      type: "booking_created",
-      title: CONFIRM_LOG_TITLE,
-      body: `${booking.vehicle_name} · Start ${booking.start_date} ${booking.start_hour}:00${sent ? " (E-Mail gesendet)" : " (E-Mail fehlgeschlagen)"}`,
-      booking_id: booking.id,
-      user_id: booking.user_id,
-    });
+    await finishActionLog(
+      booking.id,
+      CONFIRM_LOG_TITLE,
+      `${booking.vehicle_name} · Start ${booking.start_date} ${booking.start_hour}:00${sent ? " (E-Mail gesendet)" : " (E-Mail fehlgeschlagen)"}`,
+    );
 
     return { sent };
 }
@@ -266,6 +320,16 @@ export async function sendAdminBookingNotificationImpl(
         </p>
       </div>`;
 
+    if (!data.force) {
+      const reserved = await reserveActionLog({
+        bookingId: booking.id,
+        userId: booking.user_id,
+        title: ADMIN_LOG_TITLE,
+        type: "booking_created",
+      });
+      if (!reserved) return { sent: false, reason: "already_sent" };
+    }
+
     const sent = await sendEmail(
       getAdminEmail(),
       `🚐 Neue Buchung · ${customerName} · ${startStr}`,
@@ -280,13 +344,11 @@ export async function sendAdminBookingNotificationImpl(
       tag: `booking-${booking.id}`,
     }).catch((e) => console.warn("Admin-Push (Buchung) fehlgeschlagen:", e));
 
-    await supabaseAdmin.from("admin_notifications").insert({
-      type: "booking_created",
-      title: ADMIN_LOG_TITLE,
-      body: `${customerName} · ${booking.plan_label} · ${startStr}${sent ? " (E-Mail gesendet)" : " (E-Mail fehlgeschlagen)"}`,
-      booking_id: booking.id,
-      user_id: booking.user_id,
-    });
+    await finishActionLog(
+      booking.id,
+      ADMIN_LOG_TITLE,
+      `${customerName} · ${booking.plan_label} · ${startStr}${sent ? " (E-Mail gesendet)" : " (E-Mail fehlgeschlagen)"}`,
+    );
 
     return { sent };
 }
