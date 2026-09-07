@@ -101,19 +101,8 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   let logoDrawn = false;
   let logoBottomY = y; // untere Kante des Logos, damit Text nicht überlappt
   try {
-    let origin = "https://mytransporter.org";
-    try {
-      const req = getRequest();
-      const proto = req.headers.get("x-forwarded-proto") ?? "https";
-      const host = req.headers.get("host");
-      if (host) origin = `${proto}://${host}`;
-    } catch {
-      // kein Request-Kontext (z.B. Hintergrund-Job) — Fallback nutzen
-    }
-    const logoRes = await fetch(`${origin}${logoAsset.url}`);
-    if (logoRes.ok) {
-      const logoBytes = new Uint8Array(await logoRes.arrayBuffer());
-      const logoImg = await pdf.embedPng(logoBytes);
+    const logoImg = await embedBrandLogo(pdf);
+    if (logoImg) {
       const logoH = 48;
       const logoW = (logoImg.width / logoImg.height) * logoH;
       const logoY = y - logoH + 16;
