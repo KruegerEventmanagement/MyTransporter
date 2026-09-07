@@ -13,11 +13,14 @@ export const Route = createFileRoute("/api/public/resend-booking-mails")({
         }
         if (!bookingId) return new Response("missing bookingId", { status: 400 });
 
-        const { sendBookingConfirmation, sendAdminBookingNotification } = await import(
-          "@/lib/booking-emails.functions"
+        const force = url.searchParams.get("force") === "1";
+        const { sendBookingConfirmationImpl, sendAdminBookingNotificationImpl } = await import(
+          "@/lib/booking-emails.server"
         );
-        const customer = await sendBookingConfirmation({ data: { bookingId } });
-        const admin = await sendAdminBookingNotification({ data: { bookingId } });
+        const [customer, admin] = await Promise.allSettled([
+          sendBookingConfirmationImpl({ bookingId, force }),
+          sendAdminBookingNotificationImpl({ bookingId, force }),
+        ]);
         return new Response(JSON.stringify({ customer, admin }), {
           status: 200,
           headers: { "Content-Type": "application/json" },

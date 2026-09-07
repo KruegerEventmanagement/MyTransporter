@@ -11,7 +11,6 @@ import {
   type VehicleClass,
 } from "@/lib/booking-rules";
 import { buildAddonSnapshot } from "@/lib/addons";
-import { sendBookingConfirmation, sendAdminBookingNotification } from "@/lib/booking-emails.functions";
 
 type StripeCheckoutSession = {
   id: string;
@@ -272,16 +271,34 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
     user_id: userId,
   });
 
-  // E-Mails still im Hintergrund — Fehler nur loggen, Webhook liefert 200
-  try {
-    await sendBookingConfirmation({ data: { bookingId } });
-  } catch (e) {
-    console.warn("[webhook] Bestätigungs-Mail fehlgeschlagen", e);
-  }
-  try {
-    await sendAdminBookingNotification({ data: { bookingId } });
-  } catch (e) {
-    console.warn("[webhook] Admin-Benachrichtigung fehlgeschlagen", e);
+  // Nachaktionen laufen unabhängig voneinander: ein Fehler darf die anderen
+  // nicht verhindern. Wichtig: die server-only Implementierungen direkt
+  // aufrufen — createServerFn-Wrapper sind auf dem Server RPC-Stubs.
+  const { sendBookingConfirmationImpl, sendAdminBookingNotificationImpl } = await import(
+    "@/lib/booking-emails.server"
+  );
+  const results = await Promise.allSettled([
+    sendBookingConfirmationImpl({ bookingId }),
+    sendAdminBookingNotificationImpl({ bookingId }),
+  ]);
+  const labels = ["Kundenbestätigung", "Admin-Buchungsmail"];
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    if (r.status === "rejected") {
+      const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
+      console.error(`[webhook] ${labels[i]} fehlgeschlagen für ${bookingId}:`, msg);
+      try {
+        await supabaseAdmin.from("admin_notifications").insert({
+          type: "email_failed",
+          title: `${labels[i]} fehlgeschlagen`,
+          body: `Buchung ${bookingId} · ${msg.slice(0, 400)}`,
+          booking_id: bookingId,
+          user_id: userId,
+        });
+      } catch {}
+    } else {
+      console.log(`[webhook] ${labels[i]} ok für ${bookingId}`, r.value);
+    }
   }
 }
 
