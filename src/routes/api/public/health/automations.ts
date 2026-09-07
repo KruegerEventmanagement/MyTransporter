@@ -22,15 +22,20 @@ export const Route = createFileRoute("/api/public/health/automations")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const since = new Date(Date.now() - 24 * 3600_000).toISOString();
 
-        type CountQuery = ReturnType<
-          ReturnType<typeof supabaseAdmin.from<"admin_notifications">>["select"]
-        >;
-        const countSince = async (filter: (q: CountQuery) => PromiseLike<{ count: number | null }>) => {
-          const { count } = await filter(
-            supabaseAdmin
-              .from("admin_notifications")
-              .select("id", { count: "exact", head: true }) as unknown as CountQuery,
-          );
+        const countByTitle = async (title: string) => {
+          const { count } = await supabaseAdmin
+            .from("admin_notifications")
+            .select("id", { count: "exact", head: true })
+            .eq("title", title)
+            .gte("created_at", since);
+          return count ?? 0;
+        };
+        const countByTypes = async (types: string[]) => {
+          const { count } = await supabaseAdmin
+            .from("admin_notifications")
+            .select("id", { count: "exact", head: true })
+            .in("type", types)
+            .gte("created_at", since);
           return count ?? 0;
         };
 
@@ -44,11 +49,11 @@ export const Route = createFileRoute("/api/public/health/automations")({
                 .gte("created_at", since);
               return count ?? 0;
             })(),
-            countSince((q) => q.eq("title", "Neue Buchung")),
-            countSince((q) => q.eq("title", "Buchungsbestaetigung versendet")),
-            countSince((q) => q.eq("title", "Admin-Buchungsmail versendet")),
-            countSince((q) => q.in("type", ["email_failed", "invoice_failed"])),
-            countSince((q) => q.eq("type", "booking_conflict")),
+            countByTitle("Neue Buchung"),
+            countByTitle("Buchungsbestaetigung versendet"),
+            countByTitle("Admin-Buchungsmail versendet"),
+            countByTypes(["email_failed", "invoice_failed"]),
+            countByTypes(["booking_conflict"]),
           ]);
 
         // Rechnungs-PDF-Rendering (inkl. Logo) verifizieren, ohne E-Mail zu senden
