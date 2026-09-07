@@ -22,12 +22,14 @@ export const Route = createFileRoute("/api/public/health/automations")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const since = new Date(Date.now() - 24 * 3600_000).toISOString();
 
-        const countSince = async (filter: (q: any) => any) => {
+        type CountQuery = ReturnType<
+          ReturnType<typeof supabaseAdmin.from<"admin_notifications">>["select"]
+        >;
+        const countSince = async (filter: (q: CountQuery) => PromiseLike<{ count: number | null }>) => {
           const { count } = await filter(
             supabaseAdmin
               .from("admin_notifications")
-              .select("id", { count: "exact", head: true })
-              .gte("created_at", since),
+              .select("id", { count: "exact", head: true }) as unknown as CountQuery,
           );
           return count ?? 0;
         };
