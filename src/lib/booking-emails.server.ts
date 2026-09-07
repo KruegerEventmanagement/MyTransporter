@@ -344,13 +344,11 @@ export async function sendAdminBookingNotificationImpl(
       tag: `booking-${booking.id}`,
     }).catch((e) => console.warn("Admin-Push (Buchung) fehlgeschlagen:", e));
 
-    await supabaseAdmin.from("admin_notifications").insert({
-      type: "booking_created",
-      title: ADMIN_LOG_TITLE,
-      body: `${customerName} · ${booking.plan_label} · ${startStr}${sent ? " (E-Mail gesendet)" : " (E-Mail fehlgeschlagen)"}`,
-      booking_id: booking.id,
-      user_id: booking.user_id,
-    });
+    await finishActionLog(
+      booking.id,
+      ADMIN_LOG_TITLE,
+      `${customerName} · ${booking.plan_label} · ${startStr}${sent ? " (E-Mail gesendet)" : " (E-Mail fehlgeschlagen)"}`,
+    );
 
     return { sent };
 }
