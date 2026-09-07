@@ -30,25 +30,21 @@ export function Navbar() {
     vatId: "",
   });
 
+  const [userId, setUserId] = useState<string | null>(null);
+
   useEffect(() => {
-    const apply = async (user: { id?: string; email?: string | null; user_metadata?: Record<string, unknown> } | null) => {
+    // WICHTIG: im onAuthStateChange-Callback niemals auf Supabase-Aufrufe warten –
+    // das blockiert die interne Auth-Sperre (Deadlock, besonders iOS/Safari).
+    const apply = (user: { id?: string; email?: string | null; user_metadata?: Record<string, unknown> } | null) => {
       if (user) {
         setIsLoggedIn(true);
         const meta = (user.user_metadata ?? {}) as { first_name?: string };
         setUserName(meta.first_name || (user.email?.split("@")[0] ?? "Konto"));
-        if (user.id) {
-          const { data } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", user.id)
-            .eq("role", "admin");
-          setIsAdmin(!!data && data.length > 0);
-        } else {
-          setIsAdmin(false);
-        }
+        setUserId(user.id ?? null);
       } else {
         setIsLoggedIn(false);
         setUserName("");
+        setUserId(null);
         setIsAdmin(false);
       }
     };
@@ -56,10 +52,32 @@ export function Navbar() {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       // Nur auf echte Identitätswechsel reagieren – nicht auf TOKEN_REFRESHED / INITIAL_SESSION.
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
-      apply(session?.user ?? null);
+      const user = session?.user ?? null;
+      setTimeout(() => apply(user), 0);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Admin-Rolle nachgelagert laden (außerhalb des Auth-Callbacks)
+  useEffect(() => {
+    if (!userId) {
+      setIsAdmin(false);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .then(({ data }) => {
+        if (!cancelled) setIsAdmin(!!data && data.length > 0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
 
   // Aus einem Buchungslink ohne Sitzung: Login automatisch öffnen
   useEffect(() => {
