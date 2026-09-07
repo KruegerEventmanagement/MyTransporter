@@ -154,17 +154,32 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
     }
   }
   if (!resolvedName || !resolvedPlate) {
-    const { data: activeVehicle } = await supabaseAdmin
+    // Fallback nur, wenn es genau EIN aktives Fahrzeug gibt. Sobald weitere
+    // Fahrzeuge existieren, wäre "das älteste" eine falsche Annahme und würde
+    // fremde Kalender belegen – dann lieber sauber protokollieren.
+    const { data: activeVehicles } = await supabaseAdmin
       .from("vehicles")
       .select("name, model, plate")
       .eq("is_active", true)
       .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (activeVehicle) {
-      resolvedName = resolvedName ?? (activeVehicle.name as string);
-      resolvedPlate = resolvedPlate ?? (activeVehicle.plate as string);
-      resolvedModel = resolvedModel ?? ((activeVehicle.model as string | null) ?? null);
+      .limit(2);
+    const only = activeVehicles?.length === 1 ? activeVehicles[0] : null;
+    if (only) {
+      resolvedName = resolvedName ?? (only.name as string);
+      resolvedPlate = resolvedPlate ?? (only.plate as string);
+      resolvedModel = resolvedModel ?? ((only.model as string | null) ?? null);
+    } else {
+      console.error("[webhook] Fahrzeug nicht eindeutig bestimmbar", session.id, {
+        hasName: !!resolvedName,
+        hasPlate: !!resolvedPlate,
+        activeVehicles: activeVehicles?.length ?? 0,
+      });
+      await supabaseAdmin.from("admin_notifications").insert({
+        type: "email_failed",
+        title: "Buchung ohne eindeutiges Fahrzeug",
+        body: `Session ${session.id} · PaymentIntent ${paymentIntentId} · Fahrzeug fehlt in den Buchungsdaten und ist nicht eindeutig. Bitte manuell zuordnen.`,
+        user_id: userId,
+      });
     }
   }
 
