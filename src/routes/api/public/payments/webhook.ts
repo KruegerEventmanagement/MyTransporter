@@ -280,13 +280,21 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
     .eq("start_date", startDate)
     .eq("start_hour", startHour);
 
-  await supabaseAdmin.from("admin_notifications").insert({
-    type: "booking_created",
-    title: "Neue Buchung",
-    body: `${planLabel} · Start ${startDate} ${String(startHour).padStart(2, "0")}:00 · Code ${pickupCode}`,
-    booking_id: bookingId,
-    user_id: userId,
-  });
+  // Genau ein Kalender-/Buchungseintrag: Unique-Index (booking_id, title)
+  // verhindert Duplikate bei Webhook-Retries; Fehler hier darf die bezahlte
+  // Buchung nicht zurückrollen.
+  {
+    const { error: notifyError } = await supabaseAdmin.from("admin_notifications").insert({
+      type: "booking_created",
+      title: "Neue Buchung",
+      body: `${planLabel} · Start ${startDate} ${String(startHour).padStart(2, "0")}:00 · Code ${pickupCode}`,
+      booking_id: bookingId,
+      user_id: userId,
+    });
+    if (notifyError && !isDuplicatePaymentError(notifyError)) {
+      console.error("[webhook] Kalender-/Buchungseintrag fehlgeschlagen", bookingId, notifyError.message);
+    }
+  }
 
   // Nachaktionen laufen unabhängig voneinander: ein Fehler darf die anderen
   // nicht verhindern. Wichtig: die server-only Implementierungen direkt
