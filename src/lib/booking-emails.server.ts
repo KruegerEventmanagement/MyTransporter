@@ -19,7 +19,7 @@ function getFrom(): string {
   return isValidEmailish(v) ? (v as string) : DEFAULT_FROM;
 }
 
-function getAdminEmail(): string {
+export function getAdminEmail(): string {
   const v = process.env.ADMIN_NOTIFY_EMAIL;
   return isValidEmailish(v, 320) ? (v as string) : DEFAULT_ADMIN_EMAIL;
 }
@@ -59,7 +59,7 @@ function cancellationTable(): string {
 
 type Attachment = { filename: string; content: string };
 
-async function sendEmail(to: string, subject: string, html: string, attachments?: Attachment[]): Promise<boolean> {
+export async function sendEmail(to: string, subject: string, html: string, attachments?: Attachment[]): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn("RESEND_API_KEY missing, Buchungsbestätigung wird nicht versendet");
