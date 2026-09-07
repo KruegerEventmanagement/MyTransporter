@@ -320,6 +320,16 @@ export async function sendAdminBookingNotificationImpl(
         </p>
       </div>`;
 
+    if (!data.force) {
+      const reserved = await reserveActionLog({
+        bookingId: booking.id,
+        userId: booking.user_id,
+        title: ADMIN_LOG_TITLE,
+        type: "booking_created",
+      });
+      if (!reserved) return { sent: false, reason: "already_sent" };
+    }
+
     const sent = await sendEmail(
       getAdminEmail(),
       `🚐 Neue Buchung · ${customerName} · ${startStr}`,
