@@ -163,8 +163,10 @@ const ADMIN_LOG_TITLE = "Admin-Buchungsmail versendet";
 export async function sendBookingConfirmationImpl(
   data: { bookingId: string; force?: boolean },
 ): Promise<{ sent: boolean; reason?: string }> {
-  if (!data.force && (await alreadyLogged(data.bookingId, CONFIRM_LOG_TITLE))) {
-    return { sent: false, reason: "already_sent" };
+  if (!data.force) {
+    if (await alreadyLogged(data.bookingId, CONFIRM_LOG_TITLE)) {
+      return { sent: false, reason: "already_sent" };
+    }
   }
     const { data: booking, error } = await supabaseAdmin
       .from("bookings")
