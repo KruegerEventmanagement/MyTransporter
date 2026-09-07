@@ -454,21 +454,51 @@ export function BookingSection() {
         selectedPlanId,
       }),
     );
-    const { data, error } = await supabase.auth.signUp({
-      email: regForm.email,
-      password: regPassword,
-      options: {
-        emailRedirectTo: AUTH_CONFIRM_URL,
-        data: {
-          first_name: regForm.firstName,
-          last_name: regForm.lastName,
-          phone: regForm.phone,
-          account_type: regForm.accountType,
-          company_name: regForm.accountType === "business" ? regForm.companyName : "",
-          vat_id: regForm.accountType === "business" ? regForm.vatId : "",
-        },
-      },
-    });
+    type SignUpResult = Awaited<ReturnType<typeof supabase.auth.signUp>>;
+    let result: SignUpResult;
+    try {
+      result = await withAuthTimeout<SignUpResult>(
+        supabase.auth.signUp({
+          email: regForm.email,
+          password: regPassword,
+          options: {
+            emailRedirectTo: AUTH_CONFIRM_URL,
+            data: {
+              first_name: regForm.firstName,
+              last_name: regForm.lastName,
+              phone: regForm.phone,
+              account_type: regForm.accountType,
+              company_name: regForm.accountType === "business" ? regForm.companyName : "",
+              vat_id: regForm.accountType === "business" ? regForm.vatId : "",
+            },
+          },
+        }),
+      );
+    } catch (e) {
+      // Zeitgrenze erreicht: prüfen, ob das Konto trotzdem schon aktiv ist.
+      const { data: sessionData } = await supabase.auth
+        .getSession()
+        .catch(() => ({ data: { session: null } }));
+      const existing = sessionData?.session ?? null;
+      setAuthLoading(false);
+      if (existing?.user) {
+        setIsLoggedIn(true);
+        setProfileComplete(true);
+        setAuthUser({ id: existing.user.id, email: existing.user.email ?? undefined });
+        setShowLogin(false);
+        setStep(5);
+        return;
+      }
+      console.error("Registrierung fehlgeschlagen:", e);
+      setAuthError(
+        e instanceof AuthTimeoutError
+          ? "Die Registrierung hat zu lange gedauert. Bitte prüfe deine Internetverbindung und versuche es erneut – falls dein Konto schon angelegt wurde, melde dich einfach an."
+          : "Die Registrierung hat nicht funktioniert. Bitte versuche es erneut.",
+      );
+      return;
+    }
+    const { data, error } = result;
+
     if (error) {
       setAuthLoading(false);
       const msg = /already registered|already been registered|User already/i.test(error.message)
