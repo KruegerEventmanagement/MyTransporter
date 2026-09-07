@@ -1,8 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computePlanReturn } from "@/lib/booking-rules";
-import logoAsset from "@/assets/invoice-logo.png.asset.json";
-import { getRequest } from "@tanstack/react-start/server";
+import { embedBrandLogo } from "@/lib/brand-logo.server";
 
 type Addon = { id: string; label: string; price_cents: number };
 
