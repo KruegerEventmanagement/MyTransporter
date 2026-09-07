@@ -20,7 +20,7 @@ describe("Fahrzeugbezogene Verfügbarkeit (skaliert mit beliebig vielen Fahrzeug
   it("nur das gebuchte Fahrzeug ist gesperrt", () => {
     const map = slotsByPlate(busy);
     expect(isVehicleFree(map, "LEO MY 101", at(10, 10), at(10, 12))).toBe(false);
-    expect(isVehicleFree(map, "LEO MY 102", at(10, 10), at(10, 12))).toBe(false + true); // truthy check below
+    expect(isVehicleFree(map, "LEO MY 102", at(10, 10), at(10, 12))).toBe(true);
   });
 
   it("anderes Fahrzeug bleibt im gleichen Zeitraum buchbar", () => {
