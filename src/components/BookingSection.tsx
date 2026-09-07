@@ -95,6 +95,22 @@ const AUTH_CONFIRM_URL = "https://www.mytransporter.org/auth/confirm";
 const AUTH_BOOKING_DRAFT_KEY = "mt_auth_booking_draft";
 const RESEND_COOLDOWN_SECONDS = 60;
 const RESEND_LAST_SENT_KEY = "mt_resend_last_sent";
+/** Auth-Aufrufe dürfen nie endlos hängen (iOS/Safari-Sperren, schlechtes Netz). */
+const AUTH_TIMEOUT_MS = 20_000;
+class AuthTimeoutError extends Error {
+  constructor() {
+    super("auth_timeout");
+  }
+}
+function withAuthTimeout<T>(promise: PromiseLike<T>): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new AuthTimeoutError()), AUTH_TIMEOUT_MS),
+    ),
+  ]);
+}
+
 
 export function BookingSection() {
   const [step, setStep] = useState(0);
@@ -438,21 +454,51 @@ export function BookingSection() {
         selectedPlanId,
       }),
     );
-    const { data, error } = await supabase.auth.signUp({
-      email: regForm.email,
-      password: regPassword,
-      options: {
-        emailRedirectTo: AUTH_CONFIRM_URL,
-        data: {
-          first_name: regForm.firstName,
-          last_name: regForm.lastName,
-          phone: regForm.phone,
-          account_type: regForm.accountType,
-          company_name: regForm.accountType === "business" ? regForm.companyName : "",
-          vat_id: regForm.accountType === "business" ? regForm.vatId : "",
-        },
-      },
-    });
+    type SignUpResult = Awaited<ReturnType<typeof supabase.auth.signUp>>;
+    let result: SignUpResult;
+    try {
+      result = await withAuthTimeout<SignUpResult>(
+        supabase.auth.signUp({
+          email: regForm.email,
+          password: regPassword,
+          options: {
+            emailRedirectTo: AUTH_CONFIRM_URL,
+            data: {
+              first_name: regForm.firstName,
+              last_name: regForm.lastName,
+              phone: regForm.phone,
+              account_type: regForm.accountType,
+              company_name: regForm.accountType === "business" ? regForm.companyName : "",
+              vat_id: regForm.accountType === "business" ? regForm.vatId : "",
+            },
+          },
+        }),
+      );
+    } catch (e) {
+      // Zeitgrenze erreicht: prüfen, ob das Konto trotzdem schon aktiv ist.
+      const { data: sessionData } = await supabase.auth
+        .getSession()
+        .catch(() => ({ data: { session: null } }));
+      const existing = sessionData?.session ?? null;
+      setAuthLoading(false);
+      if (existing?.user) {
+        setIsLoggedIn(true);
+        setProfileComplete(true);
+        setAuthUser({ id: existing.user.id, email: existing.user.email ?? undefined });
+        setShowLogin(false);
+        setStep(5);
+        return;
+      }
+      console.error("Registrierung fehlgeschlagen:", e);
+      setAuthError(
+        e instanceof AuthTimeoutError
+          ? "Die Registrierung hat zu lange gedauert. Bitte prüfe deine Internetverbindung und versuche es erneut – falls dein Konto schon angelegt wurde, melde dich einfach an."
+          : "Die Registrierung hat nicht funktioniert. Bitte versuche es erneut.",
+      );
+      return;
+    }
+    const { data, error } = result;
+
     if (error) {
       setAuthLoading(false);
       const msg = /already registered|already been registered|User already/i.test(error.message)
@@ -489,16 +535,24 @@ export function BookingSection() {
       // Kurzer Retry, falls das Konto serverseitig noch nicht bereit ist.
       for (let attempt = 0; attempt < 3 && !session; attempt++) {
         if (attempt > 0) await new Promise((r) => setTimeout(r, 900));
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: regForm.email,
-          password: regPassword,
-        });
-        if (signInData?.session) {
-          session = signInData.session;
+        try {
+          const { data: signInData, error: signInError } = await withAuthTimeout(
+            supabase.auth.signInWithPassword({
+              email: regForm.email,
+              password: regPassword,
+            }),
+          );
+          if (signInData?.session) {
+            session = signInData.session;
+            break;
+          }
+          if (signInError && /Email not confirmed/i.test(signInError.message)) break;
+        } catch (e) {
+          console.warn("Automatische Anmeldung fehlgeschlagen:", e);
           break;
         }
-        if (signInError && /Email not confirmed/i.test(signInError.message)) break;
       }
+
     }
     setAuthLoading(false);
     if (!session) {
@@ -534,23 +588,34 @@ export function BookingSection() {
   const handleLogin = async () => {
     setAuthError(null);
     setAuthLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: loginForm.email,
-      password: loginForm.password,
-    });
-    setAuthLoading(false);
-    if (error) {
-      setAuthError(error.message);
-      return;
-    }
-    if (data.user) {
-      setIsLoggedIn(true);
-      setAuthUser({ id: data.user.id, email: data.user.email ?? undefined });
-      setProfileComplete(true);
-      setShowLogin(false);
-      setStep(5);
+    try {
+      const { data, error } = await withAuthTimeout(
+        supabase.auth.signInWithPassword({
+          email: loginForm.email,
+          password: loginForm.password,
+        }),
+      );
+      setAuthLoading(false);
+      if (error) {
+        setAuthError(error.message);
+        return;
+      }
+      if (data.user) {
+        setIsLoggedIn(true);
+        setAuthUser({ id: data.user.id, email: data.user.email ?? undefined });
+        setProfileComplete(true);
+        setShowLogin(false);
+        setStep(5);
+      }
+    } catch (e) {
+      setAuthLoading(false);
+      console.error("Anmeldung fehlgeschlagen:", e);
+      setAuthError(
+        "Die Anmeldung hat zu lange gedauert. Bitte prüfe deine Internetverbindung und versuche es erneut.",
+      );
     }
   };
+
 
   const handleResendConfirmation = async () => {
     if (!signupEmailSent) return;
