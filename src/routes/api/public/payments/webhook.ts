@@ -44,6 +44,17 @@ function isVehicleConflictError(err: { message?: string; code?: string } | null)
 }
 
 /**
+ * Unique-Verletzung auf stripe_payment_intent_id: derselbe Zahlungsvorgang
+ * wurde parallel/erneut verarbeitet. Idempotent behandeln, nicht erstatten.
+ */
+function isDuplicatePaymentError(err: { message?: string; code?: string } | null): boolean {
+  if (!err) return false;
+  if (err.code === "23505") return true;
+  const msg = err.message ?? "";
+  return msg.includes("bookings_stripe_payment_intent_uniq") || msg.includes("duplicate key");
+}
+
+/**
  * Zahlung ist erfolgt, aber das Fahrzeug ist belegt: idempotent erstatten und
  * Admin informieren – ohne zweite Buchung zu speichern.
  */
@@ -227,6 +238,12 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
     .single();
 
   if (insertError || !booking) {
+    // Exactly-once: paralleler Webhook-Retry hat die Buchung schon angelegt
+    // (Unique-Index auf stripe_payment_intent_id). Kein Fehler, kein Duplikat.
+    if (isDuplicatePaymentError(insertError)) {
+      console.log("[webhook] Buchung existiert bereits (Unique-Index), überspringe", session.id);
+      return;
+    }
     // Letzte Schranke der DB (Trigger bookings_enforce_vehicle_availability_trigger):
     // Fahrzeug wurde zwischen Vorprüfung und Insert belegt → erstatten, nicht speichern.
     if (isVehicleConflictError(insertError)) {
