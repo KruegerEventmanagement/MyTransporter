@@ -42,22 +42,7 @@ function fmtDate(iso: string): string {
 }
 
 async function loadLogo(pdf: PDFDocument) {
-  try {
-    let origin = "https://mytransporter.org";
-    try {
-      const req = getRequest();
-      const proto = req.headers.get("x-forwarded-proto") ?? "https";
-      const host = req.headers.get("host");
-      if (host) origin = `${proto}://${host}`;
-    } catch {
-      /* kein Request-Kontext */
-    }
-    const res = await fetch(`${origin}${logoAsset.url}`);
-    if (!res.ok) return null;
-    return await pdf.embedPng(new Uint8Array(await res.arrayBuffer()));
-  } catch {
-    return null;
-  }
+  return await embedBrandLogo(pdf);
 }
 
 export async function generateCustomDocumentPdf(
