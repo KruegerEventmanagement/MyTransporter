@@ -1758,6 +1758,7 @@ export function BookingSection() {
                     </span>
                   </span>
                 </label>
+              <FuelInfoNote freeKm={selectedPlanEntry?.freeKm} className="mt-4" />
               <button
                 disabled={!liabilityAccepted}
                 onClick={async () => {
