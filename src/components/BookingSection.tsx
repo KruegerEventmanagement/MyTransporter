@@ -6,6 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, differenceInCalendarDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { FuelInfoNote } from "./FuelInfoNote";
 import { createBookingCheckout } from "@/lib/payments.functions";
 import { createBookingHold, releaseBookingHold } from "@/lib/booking-holds.functions";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
@@ -1165,6 +1166,11 @@ export function BookingSection() {
                 <p className="font-medium text-foreground">{DEPOSIT} €</p>
               </div>
             </div>
+
+            {/* Kraftstoff- & Freikilometer-Hinweis (rein informativ) */}
+            {selectedPlanEntry && (
+              <FuelInfoNote freeKm={selectedPlanEntry.freeKm} />
+            )}
 
             <div className="mt-10 flex justify-between">
               <button
