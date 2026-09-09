@@ -59,7 +59,14 @@ function cancellationTable(): string {
 
 type Attachment = { filename: string; content: string };
 
-export async function sendEmail(to: string, subject: string, html: string, attachments?: Attachment[]): Promise<boolean> {
+export async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  attachments?: Attachment[],
+  /** Stabiler Schlüssel pro Buchung/Aktion – verhindert Doppelversand bei Netzwerk-Ambiguität. */
+  idempotencyKey?: string,
+): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn("RESEND_API_KEY missing, Buchungsbestätigung wird nicht versendet");
@@ -69,9 +76,15 @@ export async function sendEmail(to: string, subject: string, html: string, attac
   const safeTo = isValidEmailish(to, 320) ? to : DEFAULT_ADMIN_EMAIL;
   const body: Record<string, unknown> = { from, to: safeTo, subject, html };
   if (attachments && attachments.length > 0) body.attachments = attachments;
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey.slice(0, 256);
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers,
+
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -93,67 +106,38 @@ export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-/** Idempotenz: wurde fuer diese Buchung bereits eine Bestaetigung protokolliert? */
-async function alreadyLogged(bookingId: string, title: string): Promise<boolean> {
-  try {
-    const { data } = await supabaseAdmin
-      .from("admin_notifications")
-      .select("id")
-      .eq("booking_id", bookingId)
-      .eq("title", title)
-      .limit(1)
-      .maybeSingle();
-    return !!data?.id;
-  } catch {
-    return false;
-  }
-}
-
 function isDuplicateLog(err: { code?: string; message?: string } | null): boolean {
   if (!err) return false;
   return err.code === "23505" || (err.message ?? "").includes("duplicate key");
 }
 
 /**
- * Exactly-once-Reservierung: legt den Protokolleintrag VOR dem Versand an.
- * Der Unique-Index (booking_id, title) macht parallele Doppelversendungen
- * (z. B. Stripe-Retries) unmoeglich. Gibt false zurueck, wenn bereits belegt.
+ * Protokolliert eine ERFOLGREICH abgeschlossene Aktion. Bewusst NACH dem
+ * Versand: ein Eintrag bedeutet immer „wirklich erledigt“. Die Exactly-once-
+ * Garantie liefert die Action-State-Machine (public.booking_actions).
  */
-async function reserveActionLog(params: {
+async function logActionSuccess(params: {
   bookingId: string;
   userId: string | null;
   title: string;
   type: string;
-}): Promise<boolean> {
+  body: string;
+}): Promise<void> {
   const { error } = await supabaseAdmin.from("admin_notifications").insert({
     type: params.type,
     title: params.title,
-    body: "wird verarbeitet …",
+    body: params.body,
     booking_id: params.bookingId,
     user_id: params.userId,
   });
-  if (!error) return true;
-  if (isDuplicateLog(error)) return false;
-  // Protokoll nicht moeglich (z. B. temporaerer DB-Fehler): Versand trotzdem
-  // zulassen, damit der Kunde seine Bestaetigung erhaelt.
-  console.warn("[emails] Protokolleintrag fehlgeschlagen, sende trotzdem:", error.message);
-  return true;
-}
-
-async function finishActionLog(bookingId: string, title: string, body: string): Promise<void> {
-  try {
-    await supabaseAdmin
-      .from("admin_notifications")
-      .update({ body })
-      .eq("booking_id", bookingId)
-      .eq("title", title);
-  } catch (e) {
-    console.warn("[emails] Protokoll-Update fehlgeschlagen:", e);
+  if (error && !isDuplicateLog(error)) {
+    console.warn("[emails] Protokolleintrag fehlgeschlagen:", error.message);
   }
 }
 
-const CONFIRM_LOG_TITLE = "Buchungsbestaetigung versendet";
-const ADMIN_LOG_TITLE = "Admin-Buchungsmail versendet";
+export const CONFIRM_LOG_TITLE = "Buchungsbestätigung versendet";
+export const ADMIN_LOG_TITLE = "Admin-Buchungsmail versendet";
+
 
 /**
  * Server-only Implementierung. MUSS aus Server-Routen (Webhook) direkt
