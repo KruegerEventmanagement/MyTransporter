@@ -23,9 +23,8 @@ export const Route = createFileRoute("/api/public/resend-booking-mails")({
         const bookingId = url.searchParams.get("bookingId");
         if (!bookingId) return new Response("missing bookingId", { status: 400 });
 
-        const { reconcileBookingPostActions, BOOKING_ACTION_KEYS } = await import(
-          "@/lib/booking-actions.server"
-        );
+        const { reconcileBookingPostActions, BOOKING_ACTION_KEYS } =
+          await import("@/lib/booking-actions.server");
         const requested = (url.searchParams.get("actions") ?? "")
           .split(",")
           .map((s) => s.trim())

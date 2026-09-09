@@ -1,9 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import {
-  sendEmail,
-  escapeHtml,
-  getAdminEmail,
-} from "@/lib/booking-emails.server";
+import { sendEmail, escapeHtml, getAdminEmail } from "@/lib/booking-emails.server";
 import { pushToAdmins } from "@/lib/push.functions";
 import { renderEmail } from "@/lib/email-template";
 
@@ -32,14 +28,23 @@ export const sendAdminBookingNotification = createServerFn({ method: "POST" })
     return reconcileBookingPostActions(data.bookingId, ["admin_booking_email"]);
   });
 
-
 export const sendAdminRegistrationNotification = createServerFn({ method: "POST" })
-  .inputValidator((data: { email: string; firstName?: string; lastName?: string; phone?: string; accountType?: "private" | "business"; companyName?: string; vatId?: string }) => {
-    if (!data?.email || typeof data.email !== "string") {
-      throw new Error("email fehlt");
-    }
-    return data;
-  })
+  .inputValidator(
+    (data: {
+      email: string;
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      accountType?: "private" | "business";
+      companyName?: string;
+      vatId?: string;
+    }) => {
+      if (!data?.email || typeof data.email !== "string") {
+        throw new Error("email fehlt");
+      }
+      return data;
+    },
+  )
   .handler(async ({ data }) => {
     const name = [data.firstName, data.lastName].filter(Boolean).join(" ") || "Unbekannt";
     const isBusiness = data.accountType === "business";
@@ -59,7 +64,7 @@ export const sendAdminRegistrationNotification = createServerFn({ method: "POST"
       </div>`;
     const sent = await sendEmail(
       getAdminEmail(),
-      `${isBusiness ? "🏢" : "👤"} Neue Registrierung · ${isBusiness ? (data.companyName || name) : name}`,
+      `${isBusiness ? "🏢" : "👤"} Neue Registrierung · ${isBusiness ? data.companyName || name : name}`,
       html,
     );
 

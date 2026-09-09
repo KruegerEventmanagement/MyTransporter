@@ -128,10 +128,7 @@ describe("Folgeaktionen nach bezahlter Buchung", () => {
       customer_confirmation_invoice: slow,
       admin_booking_email: slow,
     });
-    await Promise.all([
-      runBookingActions(BOOKING, store, h),
-      runBookingActions(BOOKING, store, h),
-    ]);
+    await Promise.all([runBookingActions(BOOKING, store, h), runBookingActions(BOOKING, store, h)]);
     for (const key of BOOKING_ACTION_KEYS) {
       expect(calls.filter((c) => c === key)).toHaveLength(1);
     }

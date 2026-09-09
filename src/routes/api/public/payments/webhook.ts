@@ -25,7 +25,12 @@ type StripeCheckoutSession = {
 function extractId(x: unknown): string | null {
   if (!x) return null;
   if (typeof x === "string") return x;
-  if (typeof x === "object" && x !== null && "id" in x && typeof (x as { id: unknown }).id === "string") {
+  if (
+    typeof x === "object" &&
+    x !== null &&
+    "id" in x &&
+    typeof (x as { id: unknown }).id === "string"
+  ) {
     return (x as { id: string }).id;
   }
   return null;
@@ -35,7 +40,6 @@ function extractPaymentMethodId(pi: StripeCheckoutSession["payment_intent"]): st
   if (!pi || typeof pi === "string") return null;
   return extractId(pi.payment_method ?? null);
 }
-
 
 /** Erkennt die Ablehnung des atomaren BEFORE-INSERT-Triggers auf bookings. */
 function isVehicleConflictError(err: { message?: string; code?: string } | null): boolean {
@@ -70,7 +74,10 @@ async function refundConflictingPayment(params: {
   try {
     const stripe = createStripeClient(params.env);
     // Idempotenz: bereits vorhandene Erstattung wiederverwenden
-    const existing = await stripe.refunds.list({ payment_intent: params.paymentIntentId, limit: 1 });
+    const existing = await stripe.refunds.list({
+      payment_intent: params.paymentIntentId,
+      limit: 1,
+    });
     refundId = existing.data[0]?.id ?? null;
     if (!refundId) {
       const refund = await stripe.refunds.create(
@@ -124,9 +131,6 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
     return res.hasFailures;
   }
 
-
-
-
   const md = session.metadata ?? {};
   const userId = (md.userId as string | undefined) ?? session.client_reference_id ?? null;
   const planId = (md.planId as string | undefined) ?? null;
@@ -176,7 +180,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
     if (only) {
       resolvedName = resolvedName ?? (only.name as string);
       resolvedPlate = resolvedPlate ?? (only.plate as string);
-      resolvedModel = resolvedModel ?? ((only.model as string | null) ?? null);
+      resolvedModel = resolvedModel ?? (only.model as string | null) ?? null;
     } else {
       console.error("[webhook] Fahrzeug nicht eindeutig bestimmbar", session.id, {
         hasName: !!resolvedName,
@@ -226,7 +230,6 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
     }
   }
 
-
   const planEntry = getPlanById(planId, vehicleClass);
   const planLabel = planEntry ? planLabelWithClass(planEntry) : (md.plan ?? "Transporter-Miete");
   const planPrice = planEntry?.price ?? KM_TARIFF_MIN_EUR[vehicleClass];
@@ -271,7 +274,11 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
     // Letzte Schranke der DB (Trigger bookings_enforce_vehicle_availability_trigger):
     // Fahrzeug wurde zwischen Vorprüfung und Insert belegt → erstatten, nicht speichern.
     if (isVehicleConflictError(insertError)) {
-      console.error("[webhook] Doppelbelegung durch DB-Trigger verhindert", session.id, insertError?.message);
+      console.error(
+        "[webhook] Doppelbelegung durch DB-Trigger verhindert",
+        session.id,
+        insertError?.message,
+      );
       await refundConflictingPayment({
         env,
         sessionId: session.id,
@@ -324,8 +331,6 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
   return res.hasFailures;
 }
 
-
-
 export const Route = createFileRoute("/api/public/payments/webhook")({
   server: {
     handlers: {
@@ -357,7 +362,11 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
                 return new Response("post-actions incomplete", { status: 500 });
               }
             } else {
-              console.log("[webhook] Session nicht bezahlt, ignoriere", session.id, session.payment_status);
+              console.log(
+                "[webhook] Session nicht bezahlt, ignoriere",
+                session.id,
+                session.payment_status,
+              );
             }
           } else {
             // Weitere Events (payment_intent.succeeded, invoice.*, …) hier ergänzen
@@ -370,7 +379,6 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
           return new Response("handler error", { status: 500 });
         }
         return Response.json({ received: true });
-
       },
     },
   },

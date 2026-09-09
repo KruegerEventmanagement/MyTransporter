@@ -44,7 +44,9 @@ export async function runBookingActions(
   handlers: BookingActionHandlers,
   only?: readonly BookingActionKey[],
 ): Promise<ReconcileResult> {
-  const keys = (only && only.length > 0 ? only : BOOKING_ACTION_KEYS) as readonly BookingActionKey[];
+  const keys = (
+    only && only.length > 0 ? only : BOOKING_ACTION_KEYS
+  ) as readonly BookingActionKey[];
   const results = {} as Record<BookingActionKey, BookingActionOutcome>;
   for (const key of BOOKING_ACTION_KEYS) results[key] = "skipped";
 
@@ -87,11 +89,12 @@ export async function runBookingActions(
 }
 
 /** Supabase-gestützter Store (service_role, RLS-unabhängig). */
-export function createSupabaseActionStore(
-  supabase: {
-    rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
-  },
-): BookingActionStore {
+export function createSupabaseActionStore(supabase: {
+  rpc: (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { message: string } | null }>;
+}): BookingActionStore {
   return {
     async claim(bookingId, key) {
       const { data, error } = await supabase.rpc("claim_booking_action", {
@@ -137,7 +140,11 @@ async function createNewBookingNotification(bookingId: string): Promise<void> {
     user_id: booking.user_id,
   });
   // Unique-Index (booking_id, title): bereits vorhanden ⇒ Ziel erreicht.
-  if (insertError && insertError.code !== "23505" && !insertError.message.includes("duplicate key")) {
+  if (
+    insertError &&
+    insertError.code !== "23505" &&
+    !insertError.message.includes("duplicate key")
+  ) {
     throw new Error(insertError.message);
   }
 }
@@ -151,9 +158,8 @@ export async function reconcileBookingPostActions(
   only?: readonly BookingActionKey[],
 ): Promise<ReconcileResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { sendBookingConfirmationImpl, sendAdminBookingNotificationImpl } = await import(
-    "@/lib/booking-emails.server"
-  );
+  const { sendBookingConfirmationImpl, sendAdminBookingNotificationImpl } =
+    await import("@/lib/booking-emails.server");
 
   const store = createSupabaseActionStore(
     supabaseAdmin as unknown as Parameters<typeof createSupabaseActionStore>[0],
@@ -166,11 +172,13 @@ export async function reconcileBookingPostActions(
       new_booking_notification: createNewBookingNotification,
       customer_confirmation_invoice: async (id) => {
         const res = await sendBookingConfirmationImpl({ bookingId: id });
-        if (!res.sent) throw new Error(`Kundenbestätigung nicht versendet (${res.reason ?? "unbekannt"})`);
+        if (!res.sent)
+          throw new Error(`Kundenbestätigung nicht versendet (${res.reason ?? "unbekannt"})`);
       },
       admin_booking_email: async (id) => {
         const res = await sendAdminBookingNotificationImpl({ bookingId: id });
-        if (!res.sent) throw new Error(`Admin-Buchungsmail nicht versendet (${res.reason ?? "unbekannt"})`);
+        if (!res.sent)
+          throw new Error(`Admin-Buchungsmail nicht versendet (${res.reason ?? "unbekannt"})`);
       },
     },
     only,
