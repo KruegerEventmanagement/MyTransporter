@@ -141,17 +141,17 @@ export const ADMIN_LOG_TITLE = "Admin-Buchungsmail versendet";
 
 /**
  * Server-only Implementierung. MUSS aus Server-Routen (Webhook) direkt
- * aufgerufen werden – nie ueber den createServerFn-Wrapper, da dessen
- * Aufruf auf dem Server ein RPC-Stub ist und fehlschlaegt.
+ * aufgerufen werden – nie über den createServerFn-Wrapper, da dessen
+ * Aufruf auf dem Server ein RPC-Stub ist und fehlschlägt.
+ *
+ * Exactly-once wird NICHT hier entschieden, sondern von der Action-State-
+ * Machine (public.booking_actions). Diese Funktion meldet ehrlich zurück,
+ * ob wirklich versendet wurde, und wirft bei harten Fehlern.
  */
 export async function sendBookingConfirmationImpl(
   data: { bookingId: string; force?: boolean },
 ): Promise<{ sent: boolean; reason?: string }> {
-  if (!data.force) {
-    if (await alreadyLogged(data.bookingId, CONFIRM_LOG_TITLE)) {
-      return { sent: false, reason: "already_sent" };
-    }
-  }
+
     const { data: booking, error } = await supabaseAdmin
       .from("bookings")
       .select("id, user_id, vehicle_name, vehicle_plate, plan_id, plan_label, start_date, start_hour, pickup_code, addons, addons_total_cents")
@@ -214,49 +214,48 @@ export async function sendBookingConfirmationImpl(
     });
 
 
-    let invoiceAttachment: Attachment | undefined;
+    // Die Rechnung ist Bestandteil der Kundenbestätigung: schlägt das PDF fehl,
+    // wird NICHT gesendet und die Aktion bleibt retrybar.
+    let invoiceAttachment: Attachment;
     try {
       const { generateBookingInvoicePdf } = await import("@/lib/invoice-pdf.server");
       const inv = await generateBookingInvoicePdf(booking.id);
       invoiceAttachment = { filename: inv.filename, content: inv.pdfBase64 };
     } catch (e) {
-      console.warn("Rechnungs-PDF konnte nicht erzeugt werden:", e);
+      const msg = String((e as Error)?.message ?? e).slice(0, 300);
+      console.warn("Rechnungs-PDF konnte nicht erzeugt werden:", msg);
       try {
         await supabaseAdmin.from("admin_notifications").insert({
           type: "invoice_failed",
           title: "Rechnungs-PDF fehlgeschlagen",
-          body: `Buchung ${booking.id}: ${String((e as Error)?.message ?? e).slice(0, 300)}`,
+          body: `Buchung ${booking.id}: ${msg}`,
           booking_id: booking.id,
         });
       } catch {}
-    }
-
-    // Exactly-once: Platz im Protokoll VOR dem Versand belegen.
-    if (!data.force) {
-      const reserved = await reserveActionLog({
-        bookingId: booking.id,
-        userId: booking.user_id,
-        title: CONFIRM_LOG_TITLE,
-        type: "booking_created",
-      });
-      if (!reserved) return { sent: false, reason: "already_sent" };
+      throw new Error(`Rechnungs-PDF fehlgeschlagen: ${msg}`);
     }
 
     const sent = await sendEmail(
       email,
       `MyTransporter · Buchungsbestätigung für ${startStr} Uhr`,
       html,
-      invoiceAttachment ? [invoiceAttachment] : undefined,
+      [invoiceAttachment],
+      `booking-confirmation-${booking.id}`,
     );
 
-    await finishActionLog(
-      booking.id,
-      CONFIRM_LOG_TITLE,
-      `${booking.vehicle_name} · Start ${booking.start_date} ${booking.start_hour}:00${sent ? " (E-Mail gesendet)" : " (E-Mail fehlgeschlagen)"}`,
-    );
+    if (sent) {
+      await logActionSuccess({
+        bookingId: booking.id,
+        userId: booking.user_id,
+        title: CONFIRM_LOG_TITLE,
+        type: "booking_created",
+        body: `${booking.vehicle_name} · Start ${booking.start_date} ${booking.start_hour}:00 (E-Mail inkl. Rechnung gesendet)`,
+      });
+    }
 
-    return { sent };
+    return { sent, ...(sent ? {} : { reason: "send_failed" }) };
 }
+
 
 export async function sendAdminBookingNotificationImpl(
   data: { bookingId: string; force?: boolean },
