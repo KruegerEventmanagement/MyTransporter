@@ -301,23 +301,16 @@ export async function sendAdminBookingNotificationImpl(
         </p>
       </div>`;
 
-    if (!data.force) {
-      const reserved = await reserveActionLog({
-        bookingId: booking.id,
-        userId: booking.user_id,
-        title: ADMIN_LOG_TITLE,
-        type: "booking_created",
-      });
-      if (!reserved) return { sent: false, reason: "already_sent" };
-    }
-
     const sent = await sendEmail(
       getAdminEmail(),
       `🚐 Neue Buchung · ${customerName} · ${startStr}`,
       html,
+      undefined,
+      `admin-booking-${booking.id}`,
     );
 
-    // Push an alle Admin-Geräte (still im Hintergrund, Fehler werden in admin_notifications geloggt)
+    // Push an alle Admin-Geräte. Ein Push-Fehler darf die erfolgreich
+    // versendete Admin-E-Mail NICHT in einen Fehlzustand versetzen.
     await pushToAdmins({
       title: "Neue Buchung",
       body: `${customerName} · ${booking.plan_label} · ${startStr}`,
@@ -325,11 +318,16 @@ export async function sendAdminBookingNotificationImpl(
       tag: `booking-${booking.id}`,
     }).catch((e) => console.warn("Admin-Push (Buchung) fehlgeschlagen:", e));
 
-    await finishActionLog(
-      booking.id,
-      ADMIN_LOG_TITLE,
-      `${customerName} · ${booking.plan_label} · ${startStr}${sent ? " (E-Mail gesendet)" : " (E-Mail fehlgeschlagen)"}`,
-    );
+    if (sent) {
+      await logActionSuccess({
+        bookingId: booking.id,
+        userId: booking.user_id,
+        title: ADMIN_LOG_TITLE,
+        type: "booking_created",
+        body: `${customerName} · ${booking.plan_label} · ${startStr} (E-Mail gesendet)`,
+      });
+    }
 
-    return { sent };
+    return { sent, ...(sent ? {} : { reason: "send_failed" }) };
+
 }
