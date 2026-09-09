@@ -10,7 +10,9 @@
 
 export const SUPPORT_EMAIL = "info@mytransporter.org";
 export const SITE_URL = "https://www.mytransporter.org";
-export const LOGO_URL = `${SITE_URL}/icons/icon-192.png`;
+/** Offizielles MyTransporter-Logo (Wort-/Bildmarke), stabil unter /email-logo.png. */
+export const LOGO_URL = `${SITE_URL}/email-logo.png`;
+
 export const COMPANY_ADDRESS = "MyTransporter · Römerstraße 36 · 71229 Leonberg";
 
 /** HTML-Escaping für alle dynamischen Werte. */

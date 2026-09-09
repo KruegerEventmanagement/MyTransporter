@@ -84,6 +84,7 @@ export const Route = createFileRoute("/api/public/health/automations")({
 
         const healthy =
           failures === 0 &&
+          stuckActions === 0 &&
           confirmations >= Math.min(paidBookings, newBookings) &&
           adminMails >= Math.min(paidBookings, newBookings) &&
           invoiceRender !== "too_small" &&
@@ -98,9 +99,11 @@ export const Route = createFileRoute("/api/public/health/automations")({
           adminMails,
           failures,
           conflicts,
+          openActions: stuckActions,
           invoiceRender,
           checkedAt: new Date().toISOString(),
         });
+
       },
     },
   },
