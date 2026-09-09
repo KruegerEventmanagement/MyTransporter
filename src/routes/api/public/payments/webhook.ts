@@ -324,7 +324,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
   return res.hasFailures;
 }
 
-}
+
 
 export const Route = createFileRoute("/api/public/payments/webhook")({
   server: {
@@ -349,7 +349,13 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
           if (event.type === "checkout.session.completed") {
             const session = event.data.object as StripeCheckoutSession;
             if (session.payment_status === "paid") {
-              await reconcileBooking(session, env);
+              const hasFailures = await reconcileBooking(session, env);
+              if (hasFailures) {
+                // Buchungsanlage ist idempotent (Unique-Index auf PaymentIntent)
+                // und Folgeaktionen sind exactly-once: ein Stripe-Retry ist
+                // sicher und heilt temporäre Fehler, ohne Doppelmail/-buchung.
+                return new Response("post-actions incomplete", { status: 500 });
+              }
             } else {
               console.log("[webhook] Session nicht bezahlt, ignoriere", session.id, session.payment_status);
             }
@@ -359,10 +365,12 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
           }
         } catch (e) {
           console.error("[webhook] Handler-Fehler", e);
-          // Trotzdem 200 zurückgeben — Stripe würde sonst 3 Tage lang retryen;
-          // Fehler landen in admin_notifications zur manuellen Prüfung.
+          // Retry zulassen: alle Schritte sind idempotent, die bezahlte Buchung
+          // bleibt in jedem Fall bestehen.
+          return new Response("handler error", { status: 500 });
         }
         return Response.json({ received: true });
+
       },
     },
   },
