@@ -3,26 +3,35 @@ import {
   sendEmail,
   escapeHtml,
   getAdminEmail,
-  sendBookingConfirmationImpl,
-  sendAdminBookingNotificationImpl,
 } from "@/lib/booking-emails.server";
 import { pushToAdmins } from "@/lib/push.functions";
 import { renderEmail } from "@/lib/email-template";
 
-const bookingIdValidator = (data: { bookingId: string; force?: boolean }) => {
+const bookingIdValidator = (data: { bookingId: string }) => {
   if (!data?.bookingId || typeof data.bookingId !== "string") {
     throw new Error("bookingId fehlt");
   }
-  return data;
+  return { bookingId: data.bookingId };
 };
 
+/**
+ * Beide Funktionen laufen über die Action-State-Machine: sie holen nur
+ * fehlende/fehlgeschlagene Aktionen nach und senden nie doppelt.
+ */
 export const sendBookingConfirmation = createServerFn({ method: "POST" })
   .inputValidator(bookingIdValidator)
-  .handler(async ({ data }) => sendBookingConfirmationImpl(data));
+  .handler(async ({ data }) => {
+    const { reconcileBookingPostActions } = await import("@/lib/booking-actions.server");
+    return reconcileBookingPostActions(data.bookingId, ["customer_confirmation_invoice"]);
+  });
 
 export const sendAdminBookingNotification = createServerFn({ method: "POST" })
   .inputValidator(bookingIdValidator)
-  .handler(async ({ data }) => sendAdminBookingNotificationImpl(data));
+  .handler(async ({ data }) => {
+    const { reconcileBookingPostActions } = await import("@/lib/booking-actions.server");
+    return reconcileBookingPostActions(data.bookingId, ["admin_booking_email"]);
+  });
+
 
 export const sendAdminRegistrationNotification = createServerFn({ method: "POST" })
   .inputValidator((data: { email: string; firstName?: string; lastName?: string; phone?: string; accountType?: "private" | "business"; companyName?: string; vatId?: string }) => {
