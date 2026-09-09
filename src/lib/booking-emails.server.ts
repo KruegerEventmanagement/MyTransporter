@@ -260,9 +260,7 @@ export async function sendBookingConfirmationImpl(
 export async function sendAdminBookingNotificationImpl(
   data: { bookingId: string; force?: boolean },
 ): Promise<{ sent: boolean; reason?: string }> {
-  if (!data.force && (await alreadyLogged(data.bookingId, ADMIN_LOG_TITLE))) {
-    return { sent: false, reason: "already_sent" };
-  }
+
     const { data: booking } = await supabaseAdmin
       .from("bookings")
       .select("id, user_id, vehicle_name, vehicle_plate, plan_label, plan_price, start_date, start_hour, pickup_code, addons, addons_total_cents")
