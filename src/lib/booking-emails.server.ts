@@ -95,7 +95,9 @@ export async function sendEmail(
         title: "E-Mail-Versand fehlgeschlagen",
         body: `${subject} → ${safeTo} · ${res.status} · ${errText.slice(0, 400)}`,
       });
-    } catch {}
+    } catch {
+      /* Protokollierung ist optional */
+    }
     return false;
   }
   return true;
@@ -238,7 +240,9 @@ export async function sendBookingConfirmationImpl(data: {
         body: `Buchung ${booking.id}: ${msg}`,
         booking_id: booking.id,
       });
-    } catch {}
+    } catch {
+      /* Protokollierung ist optional */
+    }
     throw new Error(`Rechnungs-PDF fehlgeschlagen: ${msg}`);
   }
 

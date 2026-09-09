@@ -326,7 +326,9 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
         booking_id: bookingId,
         user_id: userId,
       });
-    } catch {}
+    } catch {
+      /* Protokollierung ist optional */
+    }
   }
   return res.hasFailures;
 }
