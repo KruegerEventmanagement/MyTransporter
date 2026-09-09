@@ -144,7 +144,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
       title: "Zahlung ohne Buchungsdaten",
       body: `Session ${session.id} · PaymentIntent ${paymentIntentId} · fehlende Metadata (${Object.keys(md).join(",")}). Bitte manuell prüfen.`,
     });
-    return;
+    return false;
   }
 
   // Fahrzeug-Fallback aus DB, falls Metadata nichts enthält
@@ -222,7 +222,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
           `${resolvedPlate} · ${startDate} ${String(startHour).padStart(2, "0")}:00 · Tarif ${planId} · ` +
           `Konflikt: ${conflicts.map((c) => `${c.source} ${c.start_at}–${c.end_at}`).join(", ")}`,
       });
-      return;
+      return false;
     }
   }
 
@@ -266,7 +266,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
     // (Unique-Index auf stripe_payment_intent_id). Kein Fehler, kein Duplikat.
     if (isDuplicatePaymentError(insertError)) {
       console.log("[webhook] Buchung existiert bereits (Unique-Index), überspringe", session.id);
-      return;
+      return false;
     }
     // Letzte Schranke der DB (Trigger bookings_enforce_vehicle_availability_trigger):
     // Fahrzeug wurde zwischen Vorprüfung und Insert belegt → erstatten, nicht speichern.
@@ -281,7 +281,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
           `${resolvedPlate ?? "ohne Kennzeichen"} · ${startDate} ${String(startHour).padStart(2, "0")}:00 · ` +
           `Tarif ${planId} · ${insertError?.message ?? "VEHICLE_UNAVAILABLE"}`,
       });
-      return;
+      return false;
     }
     // Andere DB-Fehler NICHT als Doppelbuchung behandeln (keine Erstattung).
     console.error("[webhook] Booking-Insert fehlgeschlagen", insertError);
@@ -291,7 +291,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
       body: `Session ${session.id} · PaymentIntent ${paymentIntentId} · ${insertError?.message ?? "unbekannter Fehler"}`,
       user_id: userId,
     });
-    return;
+    return false;
   }
 
   const bookingId = booking.id as string;
