@@ -304,51 +304,26 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
     .eq("start_date", startDate)
     .eq("start_hour", startHour);
 
-  // Genau ein Kalender-/Buchungseintrag: Unique-Index (booking_id, title)
-  // verhindert Duplikate bei Webhook-Retries; Fehler hier darf die bezahlte
-  // Buchung nicht zurückrollen.
-  {
-    const { error: notifyError } = await supabaseAdmin.from("admin_notifications").insert({
-      type: "booking_created",
-      title: "Neue Buchung",
-      body: `${planLabel} · Start ${startDate} ${String(startHour).padStart(2, "0")}:00 · Code ${pickupCode}`,
-      booking_id: bookingId,
-      user_id: userId,
-    });
-    if (notifyError && !isDuplicatePaymentError(notifyError)) {
-      console.error("[webhook] Kalender-/Buchungseintrag fehlgeschlagen", bookingId, notifyError.message);
-    }
+  // Alle Folgeaktionen laufen über die Action-State-Machine: genau einmal
+  // pro Buchung, unabhängig voneinander, nach Fehlern retrybar.
+  const res = await reconcileBookingPostActions(bookingId);
+  console.log("[webhook] Folgeaktionen", bookingId, res.results);
+  if (res.hasFailures) {
+    try {
+      await supabaseAdmin.from("admin_notifications").insert({
+        type: "email_failed",
+        title: "Folgeaktionen nach Zahlung unvollständig",
+        body: `Buchung ${bookingId} · ${Object.entries(res.results)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(", ")}`,
+        booking_id: bookingId,
+        user_id: userId,
+      });
+    } catch {}
   }
+  return res.hasFailures;
+}
 
-  // Nachaktionen laufen unabhängig voneinander: ein Fehler darf die anderen
-  // nicht verhindern. Wichtig: die server-only Implementierungen direkt
-  // aufrufen — createServerFn-Wrapper sind auf dem Server RPC-Stubs.
-  const { sendBookingConfirmationImpl, sendAdminBookingNotificationImpl } = await import(
-    "@/lib/booking-emails.server"
-  );
-  const results = await Promise.allSettled([
-    sendBookingConfirmationImpl({ bookingId }),
-    sendAdminBookingNotificationImpl({ bookingId }),
-  ]);
-  const labels = ["Kundenbestätigung", "Admin-Buchungsmail"];
-  for (let i = 0; i < results.length; i++) {
-    const r = results[i];
-    if (r.status === "rejected") {
-      const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
-      console.error(`[webhook] ${labels[i]} fehlgeschlagen für ${bookingId}:`, msg);
-      try {
-        await supabaseAdmin.from("admin_notifications").insert({
-          type: "email_failed",
-          title: `${labels[i]} fehlgeschlagen`,
-          body: `Buchung ${bookingId} · ${msg.slice(0, 400)}`,
-          booking_id: bookingId,
-          user_id: userId,
-        });
-      } catch {}
-    } else {
-      console.log(`[webhook] ${labels[i]} ok für ${bookingId}`, r.value);
-    }
-  }
 }
 
 export const Route = createFileRoute("/api/public/payments/webhook")({
