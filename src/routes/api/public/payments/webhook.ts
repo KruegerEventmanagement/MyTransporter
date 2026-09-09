@@ -97,25 +97,34 @@ async function refundConflictingPayment(params: {
   });
 }
 
-async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) {
+/** true ⇒ mindestens eine Folgeaktion ist temporär fehlgeschlagen (Stripe darf retryen). */
+async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv): Promise<boolean> {
   const paymentIntentId = extractId(session.payment_intent ?? null);
   const customerId = extractId(session.customer ?? null);
   const paymentMethodId = extractPaymentMethodId(session.payment_intent ?? null);
 
   if (!paymentIntentId) {
     console.warn("[webhook] session ohne payment_intent, überspringe", session.id);
-    return;
+    return false;
   }
 
+  const { reconcileBookingPostActions } = await import("@/lib/booking-actions.server");
+
   // Idempotenz: existiert bereits eine Buchung für diesen PaymentIntent?
+  // Wichtig: NICHT einfach returnen – fehlende/fehlgeschlagene Folgeaktionen
+  // dieser bestehenden Buchung werden nachgeholt (Selbstheilung bei Retry).
   const { data: existing } = await supabaseAdmin
     .from("bookings")
     .select("id")
     .eq("stripe_payment_intent_id", paymentIntentId)
     .maybeSingle();
   if (existing?.id) {
-    return;
+    const res = await reconcileBookingPostActions(existing.id as string);
+    console.log("[webhook] bestehende Buchung reconciled", existing.id, res.results);
+    return res.hasFailures;
   }
+
+
 
 
   const md = session.metadata ?? {};
