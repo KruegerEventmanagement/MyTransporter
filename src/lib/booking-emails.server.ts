@@ -3,7 +3,6 @@ import { computePlanReturn } from "@/lib/booking-rules";
 import { pushToAdmins } from "@/lib/push.functions";
 import { renderEmail, noteBlock, listBlock, rawListBlock, esc } from "@/lib/email-template";
 
-
 const DEFAULT_FROM = "MyTransporter <info@mytransporter.org>";
 const DEFAULT_ADMIN_EMAIL = "info@mytransporter.org";
 
@@ -59,7 +58,14 @@ function cancellationTable(): string {
 
 type Attachment = { filename: string; content: string };
 
-export async function sendEmail(to: string, subject: string, html: string, attachments?: Attachment[]): Promise<boolean> {
+export async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  attachments?: Attachment[],
+  /** Stabiler Schlüssel pro Buchung/Aktion – verhindert Doppelversand bei Netzwerk-Ambiguität. */
+  idempotencyKey?: string,
+): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn("RESEND_API_KEY missing, Buchungsbestätigung wird nicht versendet");
@@ -69,9 +75,15 @@ export async function sendEmail(to: string, subject: string, html: string, attac
   const safeTo = isValidEmailish(to, 320) ? to : DEFAULT_ADMIN_EMAIL;
   const body: Record<string, unknown> = { from, to: safeTo, subject, html };
   if (attachments && attachments.length > 0) body.attachments = attachments;
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey.slice(0, 256);
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers,
+
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -83,30 +95,20 @@ export async function sendEmail(to: string, subject: string, html: string, attac
         title: "E-Mail-Versand fehlgeschlagen",
         body: `${subject} → ${safeTo} · ${res.status} · ${errText.slice(0, 400)}`,
       });
-    } catch {}
+    } catch {
+      /* Protokollierung ist optional */
+    }
     return false;
   }
   return true;
 }
 
 export function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-/** Idempotenz: wurde fuer diese Buchung bereits eine Bestaetigung protokolliert? */
-async function alreadyLogged(bookingId: string, title: string): Promise<boolean> {
-  try {
-    const { data } = await supabaseAdmin
-      .from("admin_notifications")
-      .select("id")
-      .eq("booking_id", bookingId)
-      .eq("title", title)
-      .limit(1)
-      .maybeSingle();
-    return !!data?.id;
-  } catch {
-    return false;
-  }
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function isDuplicateLog(err: { code?: string; message?: string } | null): boolean {
@@ -115,194 +117,189 @@ function isDuplicateLog(err: { code?: string; message?: string } | null): boolea
 }
 
 /**
- * Exactly-once-Reservierung: legt den Protokolleintrag VOR dem Versand an.
- * Der Unique-Index (booking_id, title) macht parallele Doppelversendungen
- * (z. B. Stripe-Retries) unmoeglich. Gibt false zurueck, wenn bereits belegt.
+ * Protokolliert eine ERFOLGREICH abgeschlossene Aktion. Bewusst NACH dem
+ * Versand: ein Eintrag bedeutet immer „wirklich erledigt“. Die Exactly-once-
+ * Garantie liefert die Action-State-Machine (public.booking_actions).
  */
-async function reserveActionLog(params: {
+async function logActionSuccess(params: {
   bookingId: string;
   userId: string | null;
   title: string;
   type: string;
-}): Promise<boolean> {
+  body: string;
+}): Promise<void> {
   const { error } = await supabaseAdmin.from("admin_notifications").insert({
     type: params.type,
     title: params.title,
-    body: "wird verarbeitet …",
+    body: params.body,
     booking_id: params.bookingId,
     user_id: params.userId,
   });
-  if (!error) return true;
-  if (isDuplicateLog(error)) return false;
-  // Protokoll nicht moeglich (z. B. temporaerer DB-Fehler): Versand trotzdem
-  // zulassen, damit der Kunde seine Bestaetigung erhaelt.
-  console.warn("[emails] Protokolleintrag fehlgeschlagen, sende trotzdem:", error.message);
-  return true;
-}
-
-async function finishActionLog(bookingId: string, title: string, body: string): Promise<void> {
-  try {
-    await supabaseAdmin
-      .from("admin_notifications")
-      .update({ body })
-      .eq("booking_id", bookingId)
-      .eq("title", title);
-  } catch (e) {
-    console.warn("[emails] Protokoll-Update fehlgeschlagen:", e);
+  if (error && !isDuplicateLog(error)) {
+    console.warn("[emails] Protokolleintrag fehlgeschlagen:", error.message);
   }
 }
 
-const CONFIRM_LOG_TITLE = "Buchungsbestaetigung versendet";
-const ADMIN_LOG_TITLE = "Admin-Buchungsmail versendet";
+export const CONFIRM_LOG_TITLE = "Buchungsbestätigung versendet";
+export const ADMIN_LOG_TITLE = "Admin-Buchungsmail versendet";
 
 /**
  * Server-only Implementierung. MUSS aus Server-Routen (Webhook) direkt
- * aufgerufen werden – nie ueber den createServerFn-Wrapper, da dessen
- * Aufruf auf dem Server ein RPC-Stub ist und fehlschlaegt.
+ * aufgerufen werden – nie über den createServerFn-Wrapper, da dessen
+ * Aufruf auf dem Server ein RPC-Stub ist und fehlschlägt.
+ *
+ * Exactly-once wird NICHT hier entschieden, sondern von der Action-State-
+ * Machine (public.booking_actions). Diese Funktion meldet ehrlich zurück,
+ * ob wirklich versendet wurde, und wirft bei harten Fehlern.
  */
-export async function sendBookingConfirmationImpl(
-  data: { bookingId: string; force?: boolean },
-): Promise<{ sent: boolean; reason?: string }> {
-  if (!data.force) {
-    if (await alreadyLogged(data.bookingId, CONFIRM_LOG_TITLE)) {
-      return { sent: false, reason: "already_sent" };
-    }
-  }
-    const { data: booking, error } = await supabaseAdmin
-      .from("bookings")
-      .select("id, user_id, vehicle_name, vehicle_plate, plan_id, plan_label, start_date, start_hour, pickup_code, addons, addons_total_cents")
-      .eq("id", data.bookingId)
-      .maybeSingle();
-    if (error || !booking) throw new Error("Buchung nicht gefunden");
+export async function sendBookingConfirmationImpl(data: {
+  bookingId: string;
+  force?: boolean;
+}): Promise<{ sent: boolean; reason?: string }> {
+  const { data: booking, error } = await supabaseAdmin
+    .from("bookings")
+    .select(
+      "id, user_id, vehicle_name, vehicle_plate, plan_id, plan_label, start_date, start_hour, pickup_code, addons, addons_total_cents",
+    )
+    .eq("id", data.bookingId)
+    .maybeSingle();
+  if (error || !booking) throw new Error("Buchung nicht gefunden");
 
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("email, first_name")
-      .eq("id", booking.user_id)
-      .maybeSingle();
-    const email = profile?.email;
-    if (!email) return { sent: false, reason: "no_email" };
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("email, first_name")
+    .eq("id", booking.user_id)
+    .maybeSingle();
+  const email = profile?.email;
+  if (!email) return { sent: false, reason: "no_email" };
 
-    const greeting = profile?.first_name ? `Hallo ${profile.first_name},` : "Hallo,";
-    const startStr = fmtDate(booking.start_date, booking.start_hour);
-    const startDateObj = new Date(`${booking.start_date}T00:00:00`);
-    const returnDateObj = computePlanReturn(booking.plan_id, startDateObj, booking.start_hour);
-    const returnStr = fmtDateObj(returnDateObj);
-    const tripUrl = `https://www.mytransporter.org/trip/${booking.id}`;
-    const profilUrl = `https://www.mytransporter.org/profil`;
+  const greeting = profile?.first_name ? `Hallo ${profile.first_name},` : "Hallo,";
+  const startStr = fmtDate(booking.start_date, booking.start_hour);
+  const startDateObj = new Date(`${booking.start_date}T00:00:00`);
+  const returnDateObj = computePlanReturn(booking.plan_id, startDateObj, booking.start_hour);
+  const returnStr = fmtDateObj(returnDateObj);
+  const tripUrl = `https://www.mytransporter.org/trip/${booking.id}`;
+  const profilUrl = `https://www.mytransporter.org/profil`;
 
-    const addons = Array.isArray(booking.addons)
-      ? (booking.addons as Array<{ id: string; label: string; price_cents: number }>)
-      : [];
-    const addonsHtmlBlock =
-      addons.length === 0
-        ? ""
-        : rawListBlock(
-            "Gebuchtes Zubehör",
-            addons.map((a) => `${esc(a.label)} · <strong>${(a.price_cents / 100).toFixed(2)} €</strong>`),
-          ) +
-          noteBlock(
-            `Summe Zubehör: <strong>${(((booking.addons_total_cents ?? 0) as number) / 100).toFixed(2)} €</strong>. Bitte vollständig &amp; unbeschädigt zurückgeben.`,
-          );
-
-    const html = renderEmail({
-      firstName: profile?.first_name,
-      heading: "Deine Buchung ist bestätigt",
-      intro: ["vielen Dank für deine Buchung bei MyTransporter. Hier findest du alle Mietdaten auf einen Blick."],
-      rowsTitle: "Deine Mietdaten",
-      rows: [
-        { label: "Fahrzeug", value: `${booking.vehicle_name} · ${booking.vehicle_plate}` },
-        { label: "Tarif", value: booking.plan_label },
-        { label: "Abholung", value: `${startStr} Uhr` },
-        { label: "Rückgabe spätestens", value: `${returnStr} Uhr` },
-      ],
-      button: { label: "Zur Buchung", url: tripUrl },
-      extraHtml:
-        addonsHtmlBlock +
-        listBlock("So geht es weiter", [
-          "Dein Schlüssel-Code wird automatisch 30 Minuten vor der Abholung in der App freigeschaltet.",
-          "Du bekommst eine Erinnerung 24 Stunden vorher und nochmal 30 Minuten vor Start.",
-          "Über den Button oben kommst du jederzeit zu deiner Buchung.",
-        ]) +
+  const addons = Array.isArray(booking.addons)
+    ? (booking.addons as Array<{ id: string; label: string; price_cents: number }>)
+    : [];
+  const addonsHtmlBlock =
+    addons.length === 0
+      ? ""
+      : rawListBlock(
+          "Gebuchtes Zubehör",
+          addons.map(
+            (a) => `${esc(a.label)} · <strong>${(a.price_cents / 100).toFixed(2)} €</strong>`,
+          ),
+        ) +
         noteBlock(
-          `<strong>Stornierung:</strong> Du kannst deine Fahrt jederzeit im <a href="${profilUrl}" style="color:#000;">Profil</a> stornieren. Bis 13 Stunden vor Abfahrt ist das kostenlos.${cancellationTable()}<br />Die Kaution wird in jedem Fall vollständig zurückerstattet.`,
-        ),
-    });
+          `Summe Zubehör: <strong>${(((booking.addons_total_cents ?? 0) as number) / 100).toFixed(2)} €</strong>. Bitte vollständig &amp; unbeschädigt zurückgeben.`,
+        );
 
+  const html = renderEmail({
+    firstName: profile?.first_name,
+    heading: "Deine Buchung ist bestätigt",
+    intro: [
+      "vielen Dank für deine Buchung bei MyTransporter. Hier findest du alle Mietdaten auf einen Blick.",
+    ],
+    rowsTitle: "Deine Mietdaten",
+    rows: [
+      { label: "Fahrzeug", value: `${booking.vehicle_name} · ${booking.vehicle_plate}` },
+      { label: "Tarif", value: booking.plan_label },
+      { label: "Abholung", value: `${startStr} Uhr` },
+      { label: "Rückgabe spätestens", value: `${returnStr} Uhr` },
+    ],
+    button: { label: "Zur Buchung", url: tripUrl },
+    extraHtml:
+      addonsHtmlBlock +
+      listBlock("So geht es weiter", [
+        "Dein Schlüssel-Code wird automatisch 30 Minuten vor der Abholung in der App freigeschaltet.",
+        "Du bekommst eine Erinnerung 24 Stunden vorher und nochmal 30 Minuten vor Start.",
+        "Über den Button oben kommst du jederzeit zu deiner Buchung.",
+      ]) +
+      noteBlock(
+        `<strong>Stornierung:</strong> Du kannst deine Fahrt jederzeit im <a href="${profilUrl}" style="color:#000;">Profil</a> stornieren. Bis 13 Stunden vor Abfahrt ist das kostenlos.${cancellationTable()}<br />Die Kaution wird in jedem Fall vollständig zurückerstattet.`,
+      ),
+  });
 
-    let invoiceAttachment: Attachment | undefined;
+  // Die Rechnung ist Bestandteil der Kundenbestätigung: schlägt das PDF fehl,
+  // wird NICHT gesendet und die Aktion bleibt retrybar.
+  let invoiceAttachment: Attachment;
+  try {
+    const { generateBookingInvoicePdf } = await import("@/lib/invoice-pdf.server");
+    const inv = await generateBookingInvoicePdf(booking.id);
+    invoiceAttachment = { filename: inv.filename, content: inv.pdfBase64 };
+  } catch (e) {
+    const msg = String((e as Error)?.message ?? e).slice(0, 300);
+    console.warn("Rechnungs-PDF konnte nicht erzeugt werden:", msg);
     try {
-      const { generateBookingInvoicePdf } = await import("@/lib/invoice-pdf.server");
-      const inv = await generateBookingInvoicePdf(booking.id);
-      invoiceAttachment = { filename: inv.filename, content: inv.pdfBase64 };
-    } catch (e) {
-      console.warn("Rechnungs-PDF konnte nicht erzeugt werden:", e);
-      try {
-        await supabaseAdmin.from("admin_notifications").insert({
-          type: "invoice_failed",
-          title: "Rechnungs-PDF fehlgeschlagen",
-          body: `Buchung ${booking.id}: ${String((e as Error)?.message ?? e).slice(0, 300)}`,
-          booking_id: booking.id,
-        });
-      } catch {}
-    }
-
-    // Exactly-once: Platz im Protokoll VOR dem Versand belegen.
-    if (!data.force) {
-      const reserved = await reserveActionLog({
-        bookingId: booking.id,
-        userId: booking.user_id,
-        title: CONFIRM_LOG_TITLE,
-        type: "booking_created",
+      await supabaseAdmin.from("admin_notifications").insert({
+        type: "invoice_failed",
+        title: "Rechnungs-PDF fehlgeschlagen",
+        body: `Buchung ${booking.id}: ${msg}`,
+        booking_id: booking.id,
       });
-      if (!reserved) return { sent: false, reason: "already_sent" };
+    } catch {
+      /* Protokollierung ist optional */
     }
+    throw new Error(`Rechnungs-PDF fehlgeschlagen: ${msg}`);
+  }
 
-    const sent = await sendEmail(
-      email,
-      `MyTransporter · Buchungsbestätigung für ${startStr} Uhr`,
-      html,
-      invoiceAttachment ? [invoiceAttachment] : undefined,
-    );
+  const sent = await sendEmail(
+    email,
+    `MyTransporter · Buchungsbestätigung für ${startStr} Uhr`,
+    html,
+    [invoiceAttachment],
+    `booking-confirmation-${booking.id}`,
+  );
 
-    await finishActionLog(
-      booking.id,
-      CONFIRM_LOG_TITLE,
-      `${booking.vehicle_name} · Start ${booking.start_date} ${booking.start_hour}:00${sent ? " (E-Mail gesendet)" : " (E-Mail fehlgeschlagen)"}`,
-    );
+  if (sent) {
+    await logActionSuccess({
+      bookingId: booking.id,
+      userId: booking.user_id,
+      title: CONFIRM_LOG_TITLE,
+      type: "booking_created",
+      body: `${booking.vehicle_name} · Start ${booking.start_date} ${booking.start_hour}:00 (E-Mail inkl. Rechnung gesendet)`,
+    });
+  }
 
-    return { sent };
+  return { sent, ...(sent ? {} : { reason: "send_failed" }) };
 }
 
-export async function sendAdminBookingNotificationImpl(
-  data: { bookingId: string; force?: boolean },
-): Promise<{ sent: boolean; reason?: string }> {
-  if (!data.force && (await alreadyLogged(data.bookingId, ADMIN_LOG_TITLE))) {
-    return { sent: false, reason: "already_sent" };
-  }
-    const { data: booking } = await supabaseAdmin
-      .from("bookings")
-      .select("id, user_id, vehicle_name, vehicle_plate, plan_label, plan_price, start_date, start_hour, pickup_code, addons, addons_total_cents")
-      .eq("id", data.bookingId)
-      .maybeSingle();
-    if (!booking) return { sent: false, reason: "booking_not_found" };
+export async function sendAdminBookingNotificationImpl(data: {
+  bookingId: string;
+  force?: boolean;
+}): Promise<{ sent: boolean; reason?: string }> {
+  const { data: booking } = await supabaseAdmin
+    .from("bookings")
+    .select(
+      "id, user_id, vehicle_name, vehicle_plate, plan_label, plan_price, start_date, start_hour, pickup_code, addons, addons_total_cents",
+    )
+    .eq("id", data.bookingId)
+    .maybeSingle();
+  if (!booking) return { sent: false, reason: "booking_not_found" };
 
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("email, first_name, last_name, phone")
-      .eq("id", booking.user_id)
-      .maybeSingle();
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("email, first_name, last_name, phone")
+    .eq("id", booking.user_id)
+    .maybeSingle();
 
-    const startStr = fmtDate(booking.start_date, booking.start_hour);
-    const customerName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Unbekannt";
-    const addons = Array.isArray(booking.addons)
-      ? (booking.addons as Array<{ id: string; label: string; price_cents: number }>)
-      : [];
-    const addonsHtml = addons.length === 0
+  const startStr = fmtDate(booking.start_date, booking.start_hour);
+  const customerName =
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Unbekannt";
+  const addons = Array.isArray(booking.addons)
+    ? (booking.addons as Array<{ id: string; label: string; price_cents: number }>)
+    : [];
+  const addonsHtml =
+    addons.length === 0
       ? "<em>keins</em>"
-      : addons.map((a) => `${escapeHtml(a.label)} (${(a.price_cents / 100).toFixed(2)} €)`).join(", ");
+      : addons
+          .map((a) => `${escapeHtml(a.label)} (${(a.price_cents / 100).toFixed(2)} €)`)
+          .join(", ");
 
-    const html = `
+  const html = `
       <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:auto;padding:24px;color:#111;">
         <h2 style="margin:0 0 16px;">🚐 Neue Buchung</h2>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
@@ -320,35 +317,32 @@ export async function sendAdminBookingNotificationImpl(
         </p>
       </div>`;
 
-    if (!data.force) {
-      const reserved = await reserveActionLog({
-        bookingId: booking.id,
-        userId: booking.user_id,
-        title: ADMIN_LOG_TITLE,
-        type: "booking_created",
-      });
-      if (!reserved) return { sent: false, reason: "already_sent" };
-    }
+  const sent = await sendEmail(
+    getAdminEmail(),
+    `🚐 Neue Buchung · ${customerName} · ${startStr}`,
+    html,
+    undefined,
+    `admin-booking-${booking.id}`,
+  );
 
-    const sent = await sendEmail(
-      getAdminEmail(),
-      `🚐 Neue Buchung · ${customerName} · ${startStr}`,
-      html,
-    );
+  // Push an alle Admin-Geräte. Ein Push-Fehler darf die erfolgreich
+  // versendete Admin-E-Mail NICHT in einen Fehlzustand versetzen.
+  await pushToAdmins({
+    title: "Neue Buchung",
+    body: `${customerName} · ${booking.plan_label} · ${startStr}`,
+    url: "/admin",
+    tag: `booking-${booking.id}`,
+  }).catch((e) => console.warn("Admin-Push (Buchung) fehlgeschlagen:", e));
 
-    // Push an alle Admin-Geräte (still im Hintergrund, Fehler werden in admin_notifications geloggt)
-    await pushToAdmins({
-      title: "Neue Buchung",
-      body: `${customerName} · ${booking.plan_label} · ${startStr}`,
-      url: "/admin",
-      tag: `booking-${booking.id}`,
-    }).catch((e) => console.warn("Admin-Push (Buchung) fehlgeschlagen:", e));
+  if (sent) {
+    await logActionSuccess({
+      bookingId: booking.id,
+      userId: booking.user_id,
+      title: ADMIN_LOG_TITLE,
+      type: "booking_created",
+      body: `${customerName} · ${booking.plan_label} · ${startStr} (E-Mail gesendet)`,
+    });
+  }
 
-    await finishActionLog(
-      booking.id,
-      ADMIN_LOG_TITLE,
-      `${customerName} · ${booking.plan_label} · ${startStr}${sent ? " (E-Mail gesendet)" : " (E-Mail fehlgeschlagen)"}`,
-    );
-
-    return { sent };
+  return { sent, ...(sent ? {} : { reason: "send_failed" }) };
 }

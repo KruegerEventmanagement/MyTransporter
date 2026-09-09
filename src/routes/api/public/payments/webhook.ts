@@ -25,7 +25,12 @@ type StripeCheckoutSession = {
 function extractId(x: unknown): string | null {
   if (!x) return null;
   if (typeof x === "string") return x;
-  if (typeof x === "object" && x !== null && "id" in x && typeof (x as { id: unknown }).id === "string") {
+  if (
+    typeof x === "object" &&
+    x !== null &&
+    "id" in x &&
+    typeof (x as { id: unknown }).id === "string"
+  ) {
     return (x as { id: string }).id;
   }
   return null;
@@ -35,7 +40,6 @@ function extractPaymentMethodId(pi: StripeCheckoutSession["payment_intent"]): st
   if (!pi || typeof pi === "string") return null;
   return extractId(pi.payment_method ?? null);
 }
-
 
 /** Erkennt die Ablehnung des atomaren BEFORE-INSERT-Triggers auf bookings. */
 function isVehicleConflictError(err: { message?: string; code?: string } | null): boolean {
@@ -70,7 +74,10 @@ async function refundConflictingPayment(params: {
   try {
     const stripe = createStripeClient(params.env);
     // Idempotenz: bereits vorhandene Erstattung wiederverwenden
-    const existing = await stripe.refunds.list({ payment_intent: params.paymentIntentId, limit: 1 });
+    const existing = await stripe.refunds.list({
+      payment_intent: params.paymentIntentId,
+      limit: 1,
+    });
     refundId = existing.data[0]?.id ?? null;
     if (!refundId) {
       const refund = await stripe.refunds.create(
@@ -97,26 +104,32 @@ async function refundConflictingPayment(params: {
   });
 }
 
-async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) {
+/** true ⇒ mindestens eine Folgeaktion ist temporär fehlgeschlagen (Stripe darf retryen). */
+async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv): Promise<boolean> {
   const paymentIntentId = extractId(session.payment_intent ?? null);
   const customerId = extractId(session.customer ?? null);
   const paymentMethodId = extractPaymentMethodId(session.payment_intent ?? null);
 
   if (!paymentIntentId) {
     console.warn("[webhook] session ohne payment_intent, überspringe", session.id);
-    return;
+    return false;
   }
 
+  const { reconcileBookingPostActions } = await import("@/lib/booking-actions.server");
+
   // Idempotenz: existiert bereits eine Buchung für diesen PaymentIntent?
+  // Wichtig: NICHT einfach returnen – fehlende/fehlgeschlagene Folgeaktionen
+  // dieser bestehenden Buchung werden nachgeholt (Selbstheilung bei Retry).
   const { data: existing } = await supabaseAdmin
     .from("bookings")
     .select("id")
     .eq("stripe_payment_intent_id", paymentIntentId)
     .maybeSingle();
   if (existing?.id) {
-    return;
+    const res = await reconcileBookingPostActions(existing.id as string);
+    console.log("[webhook] bestehende Buchung reconciled", existing.id, res.results);
+    return res.hasFailures;
   }
-
 
   const md = session.metadata ?? {};
   const userId = (md.userId as string | undefined) ?? session.client_reference_id ?? null;
@@ -135,7 +148,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
       title: "Zahlung ohne Buchungsdaten",
       body: `Session ${session.id} · PaymentIntent ${paymentIntentId} · fehlende Metadata (${Object.keys(md).join(",")}). Bitte manuell prüfen.`,
     });
-    return;
+    return false;
   }
 
   // Fahrzeug-Fallback aus DB, falls Metadata nichts enthält
@@ -167,7 +180,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
     if (only) {
       resolvedName = resolvedName ?? (only.name as string);
       resolvedPlate = resolvedPlate ?? (only.plate as string);
-      resolvedModel = resolvedModel ?? ((only.model as string | null) ?? null);
+      resolvedModel = resolvedModel ?? (only.model as string | null) ?? null;
     } else {
       console.error("[webhook] Fahrzeug nicht eindeutig bestimmbar", session.id, {
         hasName: !!resolvedName,
@@ -213,10 +226,9 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
           `${resolvedPlate} · ${startDate} ${String(startHour).padStart(2, "0")}:00 · Tarif ${planId} · ` +
           `Konflikt: ${conflicts.map((c) => `${c.source} ${c.start_at}–${c.end_at}`).join(", ")}`,
       });
-      return;
+      return false;
     }
   }
-
 
   const planEntry = getPlanById(planId, vehicleClass);
   const planLabel = planEntry ? planLabelWithClass(planEntry) : (md.plan ?? "Transporter-Miete");
@@ -257,12 +269,16 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
     // (Unique-Index auf stripe_payment_intent_id). Kein Fehler, kein Duplikat.
     if (isDuplicatePaymentError(insertError)) {
       console.log("[webhook] Buchung existiert bereits (Unique-Index), überspringe", session.id);
-      return;
+      return false;
     }
     // Letzte Schranke der DB (Trigger bookings_enforce_vehicle_availability_trigger):
     // Fahrzeug wurde zwischen Vorprüfung und Insert belegt → erstatten, nicht speichern.
     if (isVehicleConflictError(insertError)) {
-      console.error("[webhook] Doppelbelegung durch DB-Trigger verhindert", session.id, insertError?.message);
+      console.error(
+        "[webhook] Doppelbelegung durch DB-Trigger verhindert",
+        session.id,
+        insertError?.message,
+      );
       await refundConflictingPayment({
         env,
         sessionId: session.id,
@@ -272,7 +288,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
           `${resolvedPlate ?? "ohne Kennzeichen"} · ${startDate} ${String(startHour).padStart(2, "0")}:00 · ` +
           `Tarif ${planId} · ${insertError?.message ?? "VEHICLE_UNAVAILABLE"}`,
       });
-      return;
+      return false;
     }
     // Andere DB-Fehler NICHT als Doppelbuchung behandeln (keine Erstattung).
     console.error("[webhook] Booking-Insert fehlgeschlagen", insertError);
@@ -282,7 +298,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
       body: `Session ${session.id} · PaymentIntent ${paymentIntentId} · ${insertError?.message ?? "unbekannter Fehler"}`,
       user_id: userId,
     });
-    return;
+    return false;
   }
 
   const bookingId = booking.id as string;
@@ -295,51 +311,26 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv) 
     .eq("start_date", startDate)
     .eq("start_hour", startHour);
 
-  // Genau ein Kalender-/Buchungseintrag: Unique-Index (booking_id, title)
-  // verhindert Duplikate bei Webhook-Retries; Fehler hier darf die bezahlte
-  // Buchung nicht zurückrollen.
-  {
-    const { error: notifyError } = await supabaseAdmin.from("admin_notifications").insert({
-      type: "booking_created",
-      title: "Neue Buchung",
-      body: `${planLabel} · Start ${startDate} ${String(startHour).padStart(2, "0")}:00 · Code ${pickupCode}`,
-      booking_id: bookingId,
-      user_id: userId,
-    });
-    if (notifyError && !isDuplicatePaymentError(notifyError)) {
-      console.error("[webhook] Kalender-/Buchungseintrag fehlgeschlagen", bookingId, notifyError.message);
+  // Alle Folgeaktionen laufen über die Action-State-Machine: genau einmal
+  // pro Buchung, unabhängig voneinander, nach Fehlern retrybar.
+  const res = await reconcileBookingPostActions(bookingId);
+  console.log("[webhook] Folgeaktionen", bookingId, res.results);
+  if (res.hasFailures) {
+    try {
+      await supabaseAdmin.from("admin_notifications").insert({
+        type: "email_failed",
+        title: "Folgeaktionen nach Zahlung unvollständig",
+        body: `Buchung ${bookingId} · ${Object.entries(res.results)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(", ")}`,
+        booking_id: bookingId,
+        user_id: userId,
+      });
+    } catch {
+      /* Protokollierung ist optional */
     }
   }
-
-  // Nachaktionen laufen unabhängig voneinander: ein Fehler darf die anderen
-  // nicht verhindern. Wichtig: die server-only Implementierungen direkt
-  // aufrufen — createServerFn-Wrapper sind auf dem Server RPC-Stubs.
-  const { sendBookingConfirmationImpl, sendAdminBookingNotificationImpl } = await import(
-    "@/lib/booking-emails.server"
-  );
-  const results = await Promise.allSettled([
-    sendBookingConfirmationImpl({ bookingId }),
-    sendAdminBookingNotificationImpl({ bookingId }),
-  ]);
-  const labels = ["Kundenbestätigung", "Admin-Buchungsmail"];
-  for (let i = 0; i < results.length; i++) {
-    const r = results[i];
-    if (r.status === "rejected") {
-      const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
-      console.error(`[webhook] ${labels[i]} fehlgeschlagen für ${bookingId}:`, msg);
-      try {
-        await supabaseAdmin.from("admin_notifications").insert({
-          type: "email_failed",
-          title: `${labels[i]} fehlgeschlagen`,
-          body: `Buchung ${bookingId} · ${msg.slice(0, 400)}`,
-          booking_id: bookingId,
-          user_id: userId,
-        });
-      } catch {}
-    } else {
-      console.log(`[webhook] ${labels[i]} ok für ${bookingId}`, r.value);
-    }
-  }
+  return res.hasFailures;
 }
 
 export const Route = createFileRoute("/api/public/payments/webhook")({
@@ -365,9 +356,19 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
           if (event.type === "checkout.session.completed") {
             const session = event.data.object as StripeCheckoutSession;
             if (session.payment_status === "paid") {
-              await reconcileBooking(session, env);
+              const hasFailures = await reconcileBooking(session, env);
+              if (hasFailures) {
+                // Buchungsanlage ist idempotent (Unique-Index auf PaymentIntent)
+                // und Folgeaktionen sind exactly-once: ein Stripe-Retry ist
+                // sicher und heilt temporäre Fehler, ohne Doppelmail/-buchung.
+                return new Response("post-actions incomplete", { status: 500 });
+              }
             } else {
-              console.log("[webhook] Session nicht bezahlt, ignoriere", session.id, session.payment_status);
+              console.log(
+                "[webhook] Session nicht bezahlt, ignoriere",
+                session.id,
+                session.payment_status,
+              );
             }
           } else {
             // Weitere Events (payment_intent.succeeded, invoice.*, …) hier ergänzen
@@ -375,8 +376,9 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
           }
         } catch (e) {
           console.error("[webhook] Handler-Fehler", e);
-          // Trotzdem 200 zurückgeben — Stripe würde sonst 3 Tage lang retryen;
-          // Fehler landen in admin_notifications zur manuellen Prüfung.
+          // Retry zulassen: alle Schritte sind idempotent, die bezahlte Buchung
+          // bleibt in jedem Fall bestehen.
+          return new Response("handler error", { status: 500 });
         }
         return Response.json({ received: true });
       },

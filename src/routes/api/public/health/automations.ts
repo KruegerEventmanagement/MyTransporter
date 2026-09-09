@@ -39,22 +39,36 @@ export const Route = createFileRoute("/api/public/health/automations")({
           return count ?? 0;
         };
 
-        const [paidBookings, newBookings, confirmations, adminMails, failures, conflicts] =
-          await Promise.all([
-            (async () => {
-              const { count } = await supabaseAdmin
-                .from("bookings")
-                .select("id", { count: "exact", head: true })
-                .eq("status", "paid")
-                .gte("created_at", since);
-              return count ?? 0;
-            })(),
-            countByTitle("Neue Buchung"),
-            countByTitle("Buchungsbestaetigung versendet"),
-            countByTitle("Admin-Buchungsmail versendet"),
-            countByTypes(["email_failed", "invoice_failed"]),
-            countByTypes(["booking_conflict"]),
-          ]);
+        const [
+          paidBookings,
+          newBookings,
+          confirmations,
+          adminMails,
+          failures,
+          conflicts,
+          stuckActions,
+        ] = await Promise.all([
+          (async () => {
+            const { count } = await supabaseAdmin
+              .from("bookings")
+              .select("id", { count: "exact", head: true })
+              .eq("status", "paid")
+              .gte("created_at", since);
+            return count ?? 0;
+          })(),
+          countByTitle("Neue Buchung"),
+          countByTitle("Buchungsbestätigung versendet"),
+          countByTitle("Admin-Buchungsmail versendet"),
+          countByTypes(["email_failed", "invoice_failed"]),
+          countByTypes(["booking_conflict"]),
+          (async () => {
+            const { count } = await supabaseAdmin
+              .from("booking_actions")
+              .select("id", { count: "exact", head: true })
+              .neq("status", "succeeded");
+            return count ?? 0;
+          })(),
+        ]);
 
         // Rechnungs-PDF-Rendering (inkl. Logo) verifizieren, ohne E-Mail zu senden
         let invoiceRender: "ok" | "skipped" | string = "skipped";
@@ -76,6 +90,7 @@ export const Route = createFileRoute("/api/public/health/automations")({
 
         const healthy =
           failures === 0 &&
+          stuckActions === 0 &&
           confirmations >= Math.min(paidBookings, newBookings) &&
           adminMails >= Math.min(paidBookings, newBookings) &&
           invoiceRender !== "too_small" &&
@@ -90,6 +105,7 @@ export const Route = createFileRoute("/api/public/health/automations")({
           adminMails,
           failures,
           conflicts,
+          openActions: stuckActions,
           invoiceRender,
           checkedAt: new Date().toISOString(),
         });
