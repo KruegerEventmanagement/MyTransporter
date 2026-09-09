@@ -127,13 +127,13 @@ export function renderEmail(opts: EmailOptions): string {
     <tr>
       <td align="center" style="padding:24px 12px 40px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
-          <!-- Wortmarke -->
+          <!-- Offizielles Logo -->
           <tr>
             <td align="center" style="padding:8px 0 22px;">
-              <img src="${LOGO_URL}" width="48" height="48" alt="MyTransporter" style="display:block;border:0;border-radius:12px;margin:0 auto 10px;" />
-              <div style="font-family:${FONT};font-size:19px;font-weight:800;letter-spacing:-0.3px;color:#000000;">MyTransporter</div>
+              <img src="${LOGO_URL}" width="192" height="64" alt="MyTransporter" style="display:block;border:0;width:192px;height:auto;max-width:100%;margin:0 auto;" />
             </td>
           </tr>
+
           <tr>
             <td style="background:#ffffff;border:1px solid #ececec;border-radius:18px;padding:26px 24px;">
               <h1 style="margin:0 0 14px;font-family:${FONT};font-size:22px;line-height:1.3;font-weight:800;color:#000000;">${esc(opts.heading)}</h1>
