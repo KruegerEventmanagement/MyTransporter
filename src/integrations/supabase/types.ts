@@ -47,6 +47,56 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_actions: {
+        Row: {
+          action_key: string
+          attempts: number
+          booking_id: string
+          created_at: string
+          id: string
+          last_error: string | null
+          locked_at: string | null
+          next_retry_at: string | null
+          status: string
+          succeeded_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          action_key: string
+          attempts?: number
+          booking_id: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          next_retry_at?: string | null
+          status?: string
+          succeeded_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          action_key?: string
+          attempts?: number
+          booking_id?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          next_retry_at?: string | null
+          status?: string
+          succeeded_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_actions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_holds: {
         Row: {
           created_at: string
@@ -666,6 +716,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      claim_booking_action: {
+        Args: {
+          _action_key: string
+          _booking_id: string
+          _lock_timeout_seconds?: number
+        }
+        Returns: boolean
+      }
+      complete_booking_action: {
+        Args: { _action_key: string; _booking_id: string }
+        Returns: undefined
+      }
       create_booking_hold_atomic: {
         Args: {
           _minutes?: number
@@ -682,6 +744,15 @@ export type Database = {
         }[]
       }
       delete_expired_booking_holds: { Args: never; Returns: undefined }
+      fail_booking_action: {
+        Args: {
+          _action_key: string
+          _booking_id: string
+          _error: string
+          _retry_in_seconds?: number
+        }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
