@@ -16,10 +16,12 @@ export function TariffSection() {
             Transporter mieten zum fairen Festpreis
           </h2>
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-            Zwei Fahrzeugklassen: der kurze L1H1 und der lange L4H2 mit noch mehr Ladevolumen.
-            Alle Preise unten gelten für den L1H1 – der L4H2 kostet{" "}
-            {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr; sein Preis steht jeweils direkt dabei.
+            Drei Fahrzeugklassen: der kurze L1H1, der lange L4H2 mit noch mehr Ladevolumen und der
+            extra lange VW Crafter. Alle Preise unten gelten für den L1H1 – der L4H2 kostet{" "}
+            {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr, der Crafter noch einmal rund{" "}
+            {L5H2_SURCHARGE_EUR} € mehr; die Preise stehen jeweils direkt dabei.
           </p>
+
         </div>
 
 
