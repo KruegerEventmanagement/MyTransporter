@@ -44,7 +44,11 @@ export const previewCoupon = createServerFn({ method: "POST" })
     };
   });
 
-async function assertAdmin(supabase: { rpc: Function }, userId: string) {
+type RpcClient = {
+  rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }>;
+};
+
+async function assertAdmin(supabase: RpcClient, userId: string) {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
   if (!data) throw new Error("Nicht autorisiert");
 }
