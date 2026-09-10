@@ -140,7 +140,7 @@ function PreisePage() {
               `Kaution ${DEPOSIT_EUR} € – wird nach ordnungsgemäßer Rückgabe zurückerstattet`,
               "Tankregel Voll/Voll: Das Fahrzeug wird vollgetankt übergeben und muss vollgetankt zurückgegeben werden (Tankbeleg erforderlich)",
               "Selbstbeteiligung im Schadensfall maximal 1.000 €",
-              `Reiner Kilometer-Tarif: ${(KM_TARIFF_CENTS_PER_KM / 100).toFixed(2).replace(".", ",")} € / km (Mindestbetrag ${KM_TARIFF_MIN_EUR.l1h1} € / L4H2 ${KM_TARIFF_MIN_EUR.l4h2} €)`,
+              `Reiner Kilometer-Tarif: ${(KM_TARIFF_CENTS_PER_KM / 100).toFixed(2).replace(".", ",")} € / km (Mindestbetrag ${KM_TARIFF_MIN_EUR.l1h1} € / L4H2 ${KM_TARIFF_MIN_EUR.l4h2} € / Crafter ${KM_TARIFF_MIN_EUR.l5h2} €)`,
               "Mindestalter 25 Jahre, Führerschein Klasse B, digitale Verifizierung",
               "Umzugspaket für 29 € oder Fahrer / Umzugshelfer für 50 € pro Stunde (Mindestabnahme 3 Stunden) optional dazubuchbar",
             ].map((t) => (
