@@ -272,7 +272,7 @@ export function BookingSection() {
     let alive = true;
     supabase
       .from("vehicles")
-      .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active")
+      .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address")
       .eq("is_active", true)
       .order("created_at", { ascending: true })
       .then(({ data }) => {
