@@ -111,9 +111,10 @@ function PreisePage() {
                 <p className="text-sm text-muted-foreground">{p.label}</p>
                 <p className="text-2xl font-bold text-foreground mt-1">{p.price} €</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  L4H2 {p.priceL4h2} € · Tarif mit{" "}
+                  L4H2 {p.priceL4h2} € · Crafter {p.priceL5h2} € · Tarif mit{" "}
                   {p.freeKm.toLocaleString("de-DE")} Kilometern inklusive
                 </p>
+
               </div>
             ))}
           </div>
