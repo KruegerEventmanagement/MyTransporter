@@ -30,6 +30,7 @@ import { Route as ApiPublicSendTestInvoiceRouteImport } from './routes/api/publi
 import { Route as ApiPublicResendBookingMailsRouteImport } from './routes/api/public/resend-booking-mails'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
+import { Route as ApiPublicHooksSendBirthdayEmailsRouteImport } from './routes/api/public/hooks/send-birthday-emails'
 import { Route as ApiPublicHooksNotifyAdminRouteImport } from './routes/api/public/hooks/notify-admin'
 import { Route as ApiPublicHealthAutomationsRouteImport } from './routes/api/public/health/automations'
 
@@ -142,6 +143,12 @@ const ApiPublicHooksSendRemindersRoute =
     path: '/api/public/hooks/send-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSendBirthdayEmailsRoute =
+  ApiPublicHooksSendBirthdayEmailsRouteImport.update({
+    id: '/api/public/hooks/send-birthday-emails',
+    path: '/api/public/hooks/send-birthday-emails',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksNotifyAdminRoute =
   ApiPublicHooksNotifyAdminRouteImport.update({
     id: '/api/public/hooks/notify-admin',
@@ -177,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
+  '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -202,6 +210,7 @@ export interface FileRoutesByTo {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
+  '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -228,6 +237,7 @@ export interface FileRoutesById {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
+  '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -255,6 +265,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
+    | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -280,6 +291,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
+    | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
     | '/api/public/payments/webhook'
   id:
@@ -305,6 +317,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
+    | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
@@ -331,6 +344,7 @@ export interface RootRouteChildren {
   ApiPublicSendTestInvoiceRoute: typeof ApiPublicSendTestInvoiceRoute
   ApiPublicHealthAutomationsRoute: typeof ApiPublicHealthAutomationsRoute
   ApiPublicHooksNotifyAdminRoute: typeof ApiPublicHooksNotifyAdminRoute
+  ApiPublicHooksSendBirthdayEmailsRoute: typeof ApiPublicHooksSendBirthdayEmailsRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
@@ -484,6 +498,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSendRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/send-birthday-emails': {
+      id: '/api/public/hooks/send-birthday-emails'
+      path: '/api/public/hooks/send-birthday-emails'
+      fullPath: '/api/public/hooks/send-birthday-emails'
+      preLoaderRoute: typeof ApiPublicHooksSendBirthdayEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/notify-admin': {
       id: '/api/public/hooks/notify-admin'
       path: '/api/public/hooks/notify-admin'
@@ -523,6 +544,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSendTestInvoiceRoute: ApiPublicSendTestInvoiceRoute,
   ApiPublicHealthAutomationsRoute: ApiPublicHealthAutomationsRoute,
   ApiPublicHooksNotifyAdminRoute: ApiPublicHooksNotifyAdminRoute,
+  ApiPublicHooksSendBirthdayEmailsRoute: ApiPublicHooksSendBirthdayEmailsRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }

@@ -65,6 +65,8 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     vehicleClass?: VehicleClass;
     startDate?: string;
     startHour?: number;
+    /** Optionaler persönlicher Gutscheincode (z. B. Geburtstagsvorteil). */
+    couponCode?: string | null;
   }) => {
     const planId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;
     const plan = getPlanById(planId);
@@ -146,6 +148,18 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
               .replace(".", ",")} €/km, Mindestbetrag ${KM_TARIFF_MIN_EUR[vehicleClass]} €)`,
           };
 
+    // Gutschein: gilt ausschließlich auf die Mietleistung, nie auf Kaution
+    // oder Zusatzpakete. Prüfung ausschließlich serverseitig.
+    const { resolveCouponForRent } = await import("@/lib/birthday.server");
+    const coupon = await resolveCouponForRent(data.couponCode, context.userId, plan.rent);
+    if (!coupon.ok) return { error: coupon.reason ?? "Gutscheincode ungültig." };
+    const discountCents = Math.min(coupon.discountCents ?? 0, Math.max(0, plan.rent - 100));
+    const rentAfterDiscount = plan.rent - discountCents;
+    const rentLabel =
+      discountCents > 0
+        ? `${plan.label} · inkl. ${coupon.discountPercent} % Geburtstagsrabatt`
+        : plan.label;
+
     const line_items: Array<{
       price_data: {
         currency: string;
@@ -154,12 +168,12 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
       };
       quantity: number;
     }> = [];
-    if (plan.rent > 0) {
+    if (rentAfterDiscount > 0) {
       line_items.push({
         price_data: {
           currency: "eur",
-          product_data: { name: plan.label },
-          unit_amount: plan.rent,
+          product_data: { name: rentLabel },
+          unit_amount: rentAfterDiscount,
         },
         quantity: 1,
       });
@@ -210,6 +224,10 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
             ...(data.vehicleName && { vehicleName: String(data.vehicleName).slice(0, 200) }),
             ...(data.vehiclePlate && { vehiclePlate: String(data.vehiclePlate).slice(0, 50) }),
             ...(addonIds.length > 0 && { addonIds: addonIds.join(",") }),
+            ...(discountCents > 0 && {
+              couponCode: coupon.code!,
+              discountCents: String(discountCents),
+            }),
           },
         }),
       });

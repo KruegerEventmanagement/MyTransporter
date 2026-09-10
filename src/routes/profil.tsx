@@ -9,6 +9,7 @@ import { cancelBookingWithRefund } from "@/lib/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { computePlanReturn, type PlanId } from "@/lib/booking-rules";
 import { DocumentScanner, SCAN_DOC_LABELS, type ScanDocType } from "@/components/DocumentScanner";
+import { ageOn, MIN_DRIVER_AGE } from "@/lib/birthday";
 
 export const Route = createFileRoute("/profil")({
   head: () => ({ meta: [{ title: "MyTransporter · Profil" }] }),
@@ -41,6 +42,8 @@ interface Profile {
   last_name: string | null;
   email: string | null;
   phone: string | null;
+  birth_date: string | null;
+  birthday_marketing_consent: boolean | null;
 }
 
 interface UserDoc {
@@ -66,6 +69,49 @@ function ProfilePage() {
   const [docTypes, setDocTypes] = useState<Set<string>>(new Set());
   const [docs, setDocs] = useState<UserDoc[]>([]);
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
+  const [birthDate, setBirthDate] = useState("");
+  const [birthdayConsent, setBirthdayConsent] = useState(false);
+  const [savingData, setSavingData] = useState(false);
+  const [dataMessage, setDataMessage] = useState<string | null>(null);
+
+  const saveMyData = async () => {
+    setDataMessage(null);
+    if (birthDate) {
+      const age = ageOn(birthDate);
+      if (age === null || age < MIN_DRIVER_AGE) {
+        setDataMessage(`Für eine Buchung musst du mindestens ${MIN_DRIVER_AGE} Jahre alt sein.`);
+        return;
+      }
+    }
+    setSavingData(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      if (!user) return;
+      const wasConsented = !!profile?.birthday_marketing_consent;
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          birth_date: birthDate || null,
+          birthday_marketing_consent: birthdayConsent,
+          birthday_consent_at:
+            birthdayConsent && !wasConsented ? new Date().toISOString() : undefined,
+        })
+        .eq("id", user.id);
+      if (error) {
+        setDataMessage("Speichern fehlgeschlagen. Bitte später erneut versuchen.");
+        return;
+      }
+      setProfile((prev) =>
+        prev
+          ? { ...prev, birth_date: birthDate || null, birthday_marketing_consent: birthdayConsent }
+          : prev,
+      );
+      setDataMessage("Gespeichert.");
+    } finally {
+      setSavingData(false);
+    }
+  };
 
   const loadDocs = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -138,11 +184,20 @@ function ProfilePage() {
         return;
       }
       const [p, b] = await Promise.all([
-        supabase.from("profiles").select("first_name, last_name, email, phone").eq("id", user.id).maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("first_name, last_name, email, phone, birth_date, birthday_marketing_consent")
+          .eq("id", user.id)
+          .maybeSingle(),
         supabase.from("bookings").select("*").eq("user_id", user.id).order("start_date", { ascending: false }),
       ]);
       if (!mounted) return;
-      if (p.data) setProfile(p.data as Profile);
+      if (p.data) {
+        const row = p.data as Profile;
+        setProfile(row);
+        setBirthDate(row.birth_date ?? "");
+        setBirthdayConsent(!!row.birthday_marketing_consent);
+      }
       if (b.data) setBookings(b.data as Booking[]);
       const { data: roles } = await supabase
         .from("user_roles")
@@ -242,6 +297,55 @@ function ProfilePage() {
             </div>
           );
         })()}
+
+        {/* Meine Daten: Geburtstag + Einwilligung */}
+        <section>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1">
+            Meine Daten
+          </h2>
+          <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
+            <div>
+              <label htmlFor="profile-birth-date" className="block text-xs font-medium mb-1.5">
+                Geburtsdatum
+              </label>
+              <input
+                id="profile-birth-date"
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+              />
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                Für eine Buchung ist ein Mindestalter von {MIN_DRIVER_AGE} Jahren nötig.
+              </p>
+            </div>
+
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={birthdayConsent}
+                onChange={(e) => setBirthdayConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-foreground"
+              />
+              <span className="text-xs leading-relaxed">
+                Geburtstagsvorteile und Angebote per E-Mail erhalten. Du kannst die Einwilligung
+                jederzeit hier widerrufen.
+              </span>
+            </label>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={saveMyData}
+                disabled={savingData}
+                className="rounded-full bg-foreground text-background px-4 py-2 text-xs font-semibold disabled:opacity-60"
+              >
+                {savingData ? "Speichern…" : "Speichern"}
+              </button>
+              {dataMessage && <p className="text-xs text-muted-foreground">{dataMessage}</p>}
+            </div>
+          </div>
+        </section>
 
         {/* Verifizierung */}
         <section>

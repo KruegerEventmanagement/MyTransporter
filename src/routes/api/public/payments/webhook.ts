@@ -140,6 +140,10 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
   const vehicleName = (md.vehicleName as string | undefined) ?? null;
   const vehiclePlate = (md.vehiclePlate as string | undefined) ?? null;
   const addonIds = (md.addonIds as string | undefined)?.split(",").filter(Boolean) ?? [];
+  // Gutschein (Geburtstagsvorteil): wurde beim Checkout serverseitig geprüft und
+  // ist bereits im gezahlten Betrag berücksichtigt.
+  const couponCode = (md.couponCode as string | undefined) ?? null;
+  const couponDiscountCents = Math.max(0, Math.round(Number(md.discountCents ?? 0)) || 0);
 
   if (!userId || !planId || !startDate || !Number.isFinite(startHour)) {
     console.error("[webhook] Metadata unvollständig für Session", session.id, md);
@@ -232,7 +236,13 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
 
   const planEntry = getPlanById(planId, vehicleClass);
   const planLabel = planEntry ? planLabelWithClass(planEntry) : (md.plan ?? "Transporter-Miete");
-  const planPrice = planEntry?.price ?? KM_TARIFF_MIN_EUR[vehicleClass];
+  const planPriceFull = planEntry?.price ?? KM_TARIFF_MIN_EUR[vehicleClass];
+  // Rabatt wirkt ausschließlich auf die Mietleistung; Kaution bleibt unberührt.
+  const appliedDiscountCents = Math.min(
+    couponDiscountCents,
+    Math.max(0, Math.round(planPriceFull * 100) - 100),
+  );
+  const planPrice = Math.round(planPriceFull * 100 - appliedDiscountCents) / 100;
   const freeKm = planEntry?.freeKm ?? 0;
   const kmPriceCents = planEntry?.extraKmCents ?? KM_TARIFF_CENTS_PER_KM;
 
@@ -260,6 +270,9 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
       ...(resolvedPlate ? { vehicle_plate: resolvedPlate } : {}),
       addons,
       addons_total_cents: addonsTotalCents,
+      ...(appliedDiscountCents > 0 && couponCode
+        ? { coupon_code: couponCode, discount_cents: appliedDiscountCents }
+        : {}),
     })
     .select("id")
     .single();
@@ -302,6 +315,19 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
   }
 
   const bookingId = booking.id as string;
+
+  // Gutschein erst nach bestätigter Zahlung einlösen. Fehler dürfen die
+  // bezahlte Buchung nie zurückrollen.
+  if (appliedDiscountCents > 0 && couponCode) {
+    try {
+      const { redeemCouponForBooking } = await import("@/lib/birthday.server");
+      await redeemCouponForBooking(couponCode, userId, bookingId, appliedDiscountCents);
+    } catch (e) {
+      console.error("[webhook] Gutschein-Einlösung fehlgeschlagen", String((e as Error)?.message ?? e));
+    }
+  }
+
+
 
   // Reservierung freigeben
   await supabaseAdmin

@@ -21,6 +21,7 @@ import {
   Volume2,
   VolumeX,
   Wallet,
+  Gift,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -28,6 +29,7 @@ import { AdminLogin } from "@/components/admin/AdminLogin";
 import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
 import { CalendarAdmin } from "@/components/admin/CalendarAdmin";
 import { DocumentBuilder } from "@/components/admin/DocumentBuilder";
+import { BirthdayAdmin } from "@/components/admin/BirthdayAdmin";
 import { useServerFn } from "@tanstack/react-start";
 import { chargeBookingExtra, settleDeposit } from "@/lib/payments.functions";
 import { sendTestAdminPush } from "@/lib/push.functions";
@@ -121,7 +123,7 @@ interface AdminNotification {
   created_at: string;
 }
 
-type Tab = "customers" | "bookings" | "calendar" | "vehicles" | "documents" | "notifications";
+type Tab = "customers" | "bookings" | "calendar" | "vehicles" | "documents" | "birthdays" | "notifications";
 
 function AdminDashboard() {
   const [authReady, setAuthReady] = useState(false);
@@ -553,6 +555,9 @@ function AdminDashboard() {
           <TabButton active={tab === "documents"} onClick={() => setTab("documents")}>
             <FileText className="w-4 h-4" /> Dokumente
           </TabButton>
+          <TabButton active={tab === "birthdays"} onClick={() => setTab("birthdays")}>
+            <Gift className="w-4 h-4" /> Geburtstage
+          </TabButton>
           <TabButton active={tab === "notifications"} onClick={() => setTab("notifications")}>
             <Bell className="w-4 h-4" /> Push
             {unreadCount > 0 && (
@@ -702,6 +707,8 @@ function AdminDashboard() {
         {tab === "vehicles" && <VehiclesAdmin />}
 
         {tab === "documents" && <DocumentBuilder />}
+
+        {tab === "birthdays" && <BirthdayAdmin />}
       </div>
     </main>
       {alertNotification && (
