@@ -323,10 +323,6 @@ export function BookingSection() {
   const classOfVehicle = (v: DbVehicle): VehicleClass =>
     vehicleClassFromName(v.name, v.model, v.plate);
   const availableClasses = Array.from(new Set(vehicles.map(classOfVehicle)));
-  const selectVehicleClass = (cls: VehicleClass) => {
-    const idx = vehicles.findIndex((v) => classOfVehicle(v) === cls);
-    if (idx >= 0) setVehicleIdx(idx);
-  };
 
   // ---- Verfügbarkeit im gesamten Auswahlprozess ----
   const activePlates = useMemo(
