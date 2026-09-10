@@ -91,7 +91,20 @@ type DbVehicle = {
   seats: number | null;
   photo_urls: string[];
   is_active: boolean;
+  length_cm: number | null;
+  width_cm: number | null;
+  height_cm: number | null;
+  cargo_length_cm: number | null;
+  cargo_width_cm: number | null;
+  cargo_height_cm: number | null;
+  cargo_volume_m3: number | null;
+  pickup_location: string | null;
+  pickup_address: string | null;
 };
+
+/** cm → Meter mit einer Dezimalstelle, deutsch formatiert. */
+const cmToM = (cm: number | null | undefined) =>
+  typeof cm === "number" && cm > 0 ? `${(cm / 100).toFixed(2).replace(".", ",")} m` : null;
 
 const AUTH_CONFIRM_URL = "https://www.mytransporter.org/auth/confirm";
 const AUTH_BOOKING_DRAFT_KEY = "mt_auth_booking_draft";
