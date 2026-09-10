@@ -1441,7 +1441,11 @@ export function BookingSection() {
                             </span>
                           </span>
                           <span className="text-muted-foreground whitespace-nowrap">
-                            {free ? "verfügbar" : "nicht verfügbar"}
+                            {notReleased
+                              ? "aktuell nicht verfügbar"
+                              : free
+                                ? "verfügbar"
+                                : "nicht verfügbar"}
                           </span>
                         </button>
                       );
