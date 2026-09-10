@@ -1141,19 +1141,20 @@ export function BookingSection() {
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-foreground whitespace-nowrap">{plan.price} €</p>
-                      <p className="text-[11px] text-muted-foreground whitespace-nowrap">
-                        {VEHICLE_CLASS_SHORT_LABEL[plan.vehicleClass]}
-                        {plan.vehicleClass === "l1h1"
-                          ? ` · L4H2 ${plan.priceL4h2} €`
-                          : ` · L1H1 ${plan.basePrice} €`}
+                      <p className="text-2xl font-bold text-foreground whitespace-nowrap">
+                        {availableClasses.length > 1 ? "ab " : ""}{plan.basePrice} €
                       </p>
+                      {availableClasses.length > 1 && (
+                        <p className="text-[11px] text-muted-foreground whitespace-nowrap">
+                          langer Transporter {plan.priceL4h2} €
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   {plan.days > 1 && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      ≈ {(plan.price / plan.days).toFixed(2).replace(".", ",")} € pro Tag
+                      ≈ {(plan.basePrice / plan.days).toFixed(2).replace(".", ",")} € pro Tag
                     </p>
                   )}
                 </button>
