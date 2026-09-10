@@ -1379,12 +1379,24 @@ export function BookingSection() {
                           type="button"
                           disabled={!free}
                           onClick={() => setVehicleIdx(i)}
-                          className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition-all hover:bg-secondary ${
+                          className={`w-full flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all hover:bg-secondary ${
                             i === vehicleIdx ? "border-foreground" : "border-border"
                           } ${free ? "" : "opacity-50 grayscale cursor-not-allowed"}`}
                         >
-                          <span className="font-medium text-foreground">{v.name}</span>
-                          <span className="text-muted-foreground">
+                          <span className="min-w-0">
+                            <span className="block font-medium text-foreground">{v.name}</span>
+                            <span className="block text-xs text-muted-foreground">
+                              {[
+                                cmToM(v.length_cm) ? `${cmToM(v.length_cm)} lang` : null,
+                                v.cargo_volume_m3 ? `${String(v.cargo_volume_m3).replace(".", ",")} m³` : null,
+                                v.pickup_location,
+                                `${VEHICLE_CLASS_SHORT_LABEL[classOfVehicle(v)]}-Preis`,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </span>
+                          </span>
+                          <span className="text-muted-foreground whitespace-nowrap">
                             {free ? "verfügbar" : "nicht verfügbar"}
                           </span>
                         </button>
