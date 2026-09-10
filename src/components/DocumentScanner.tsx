@@ -200,8 +200,6 @@ export function DocumentScanner({
       } else {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Nicht angemeldet");
-        // Replacing an existing side: retire the old photo first.
-        if (isComplete && onReset) await onReset();
         const path = `${user.id}/${docType}_${Date.now()}.jpg`;
         const { error: upErr } = await supabase.storage
           .from("user-documents")
@@ -215,6 +213,14 @@ export function DocumentScanner({
           verified_at: new Date().toISOString(),
         });
         if (insErr) throw insErr;
+        // Erst wenn das neue Foto sicher gespeichert ist, das alte zurückziehen.
+        if (isComplete && onReset) {
+          try {
+            await onReset();
+          } catch (resetErr) {
+            console.warn("Altes Dokument konnte nicht zurückgezogen werden:", resetErr);
+          }
+        }
       }
 
       pendingBlobRef.current = null;
