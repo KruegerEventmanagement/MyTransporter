@@ -42,6 +42,8 @@ import {
   EARLIEST_START_HOUR,
   LATEST_RETURN_HOUR,
   L4H2_SURCHARGE_PER_DAY_EUR,
+  L5H2_SURCHARGE_EUR,
+
   DEPOSIT_EUR,
   type VehicleClass,
 } from "@/lib/booking-rules";
