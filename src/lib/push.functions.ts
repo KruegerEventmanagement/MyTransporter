@@ -32,8 +32,14 @@ export async function pushToAdmins(input: {
     }
   };
 
-  const publicKey = VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  // web-push verlangt URL-safe Base64 ohne Padding – Secrets kommen aber oft
+  // im Standard-Base64-Format ("+", "/", "="). Daher hier normalisieren.
+  const toUrlSafeBase64 = (v: string) =>
+    v.trim().replace(/\s+/g, "").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+
+  const publicKey = toUrlSafeBase64(VAPID_PUBLIC_KEY);
+  const rawPrivateKey = process.env.VAPID_PRIVATE_KEY;
+  const privateKey = rawPrivateKey ? toUrlSafeBase64(rawPrivateKey) : undefined;
   const subject = process.env.VAPID_SUBJECT || "mailto:info@mytransporter.org";
   if (!privateKey) {
     await logIssue("vapid_missing", "VAPID_PRIVATE_KEY ist nicht gesetzt.");
