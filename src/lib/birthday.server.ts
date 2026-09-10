@@ -46,10 +46,10 @@ export async function processBirthdayEmails(now: Date = new Date()): Promise<Bir
     failed: 0,
   };
 
+  // Geburtstagsautomatik gilt für alle Kunden mit hinterlegtem Geburtsdatum.
   const { data: profiles, error } = await supabaseAdmin
     .from("profiles")
-    .select("id, first_name, email, birth_date, birthday_marketing_consent")
-    .eq("birthday_marketing_consent", true)
+    .select("id, first_name, email, birth_date")
     .not("birth_date", "is", null);
 
   if (error) throw new Error(`profiles query failed: ${error.message}`);

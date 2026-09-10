@@ -146,7 +146,7 @@ export function BookingSection() {
     email: "",
     phone: "",
     birthDate: "",
-    birthdayConsent: false,
+    
     accountType: "private" as "private" | "business",
     companyName: "",
     vatId: "",
@@ -555,7 +555,7 @@ export function BookingSection() {
               last_name: regForm.lastName,
               phone: regForm.phone,
               birth_date: regForm.birthDate,
-              birthday_marketing_consent: regForm.birthdayConsent,
+              
               account_type: regForm.accountType,
               company_name: regForm.accountType === "business" ? regForm.companyName : "",
               vat_id: regForm.accountType === "business" ? regForm.vatId : "",
@@ -1699,20 +1699,6 @@ export function BookingSection() {
                           Mindestalter für eine Buchung: {MIN_DRIVER_AGE} Jahre.
                         </p>
                       </div>
-                      <label className="flex items-start gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={regForm.birthdayConsent}
-                          onChange={(e) =>
-                            setRegForm({ ...regForm, birthdayConsent: e.target.checked })
-                          }
-                          className="mt-1 h-4 w-4 shrink-0 accent-foreground"
-                        />
-                        <span className="text-sm text-muted-foreground">
-                          Geburtstagsvorteile und Angebote per E-Mail erhalten (freiwillig, jederzeit
-                          im Profil widerrufbar).
-                        </span>
-                      </label>
                       <div>
                         <label className="text-sm font-medium text-foreground">Passwort</label>
                         <div className="relative mt-1">
