@@ -247,7 +247,7 @@ export function DocumentScanner({
       setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");
       setPhase("rejected");
     }
-  }, [docType, isComplete, onReset, onComplete, stopCamera, shotUrl, mode, onCapture]);
+  }, [docType, isComplete, onComplete, stopCamera, shotUrl, mode, onCapture]);
 
   const retakeFromPreview = useCallback(() => {
     pendingBlobRef.current = null;
