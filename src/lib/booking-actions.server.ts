@@ -11,6 +11,7 @@
 export const BOOKING_ACTION_KEYS = [
   "new_booking_notification",
   "customer_confirmation_invoice",
+  "customer_invoice",
   "admin_booking_email",
 ] as const;
 
@@ -158,7 +159,7 @@ export async function reconcileBookingPostActions(
   only?: readonly BookingActionKey[],
 ): Promise<ReconcileResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { sendBookingConfirmationImpl, sendAdminBookingNotificationImpl } =
+  const { sendBookingConfirmationImpl, sendAdminBookingNotificationImpl, ensureInvoiceDeliveredImpl } =
     await import("@/lib/booking-emails.server");
 
   const store = createSupabaseActionStore(
@@ -174,6 +175,12 @@ export async function reconcileBookingPostActions(
         const res = await sendBookingConfirmationImpl({ bookingId: id });
         if (!res.sent)
           throw new Error(`Kundenbestätigung nicht versendet (${res.reason ?? "unbekannt"})`);
+      },
+      // Sicherheitsnetz: Rechnung wird nachgesendet, falls sie der
+      // Bestätigung wegen eines temporären PDF-Fehlers nicht beilag.
+      customer_invoice: async (id) => {
+        const res = await ensureInvoiceDeliveredImpl({ bookingId: id });
+        if (!res.sent) throw new Error(`Rechnung nicht versendet (${res.reason ?? "unbekannt"})`);
       },
       admin_booking_email: async (id) => {
         const res = await sendAdminBookingNotificationImpl({ bookingId: id });

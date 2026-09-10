@@ -84,6 +84,7 @@ export const Route = createFileRoute("/api/public/health/automations")({
 
         // Rechnungs-PDF-Rendering (inkl. Logo) verifizieren, ohne E-Mail zu senden
         let invoiceRender: "ok" | "skipped" | string = "skipped";
+        let invoiceLogo: "ok" | "missing" | "skipped" = "skipped";
         try {
           const { data: bk } = await supabaseAdmin
             .from("bookings")
@@ -95,6 +96,9 @@ export const Route = createFileRoute("/api/public/health/automations")({
             const { generateBookingInvoicePdf } = await import("@/lib/invoice-pdf.server");
             const pdf = await generateBookingInvoicePdf(bk.id);
             invoiceRender = pdf.pdfBase64.length > 1000 ? "ok" : "too_small";
+            // Logo im Rechnungskopf: eingebettetes Bild muss im PDF vorhanden sein.
+            const bin = atob(pdf.pdfBase64.slice(0, 400_000));
+            invoiceLogo = bin.includes("/Image") ? "ok" : "missing";
           }
         } catch (e) {
           invoiceRender = `error: ${String((e as Error)?.message ?? e).slice(0, 200)}`;
@@ -106,6 +110,7 @@ export const Route = createFileRoute("/api/public/health/automations")({
           confirmations >= Math.min(paidBookings, newBookings) &&
           adminMails >= Math.min(paidBookings, newBookings) &&
           invoiceRender !== "too_small" &&
+          invoiceLogo !== "missing" &&
           !String(invoiceRender).startsWith("error");
 
         return Response.json({
@@ -118,7 +123,9 @@ export const Route = createFileRoute("/api/public/health/automations")({
           failures,
           conflicts,
           openActions: stuckActions,
+          invoices: await countByTitle("Rechnung versendet"),
           invoiceRender,
+          invoiceLogo,
           checkedAt: new Date().toISOString(),
         });
       },

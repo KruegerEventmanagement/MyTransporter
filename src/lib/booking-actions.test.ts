@@ -52,6 +52,7 @@ function handlers(calls: string[], failing: Partial<Record<BookingActionKey, () 
   return {
     new_booking_notification: make("new_booking_notification"),
     customer_confirmation_invoice: make("customer_confirmation_invoice"),
+    customer_invoice: make("customer_invoice"),
     admin_booking_email: make("admin_booking_email"),
   };
 }
@@ -63,6 +64,7 @@ describe("Folgeaktionen nach bezahlter Buchung", () => {
     const { store, rows } = createStore({
       new_booking_notification: "succeeded",
       customer_confirmation_invoice: "succeeded",
+      customer_invoice: "succeeded",
     });
     const calls: string[] = [];
     const res = await runBookingActions(BOOKING, store, handlers(calls));
@@ -76,6 +78,7 @@ describe("Folgeaktionen nach bezahlter Buchung", () => {
   it("fehlende Kundenbestätigung: Retry holt NUR Bestätigung inkl. Rechnung nach", async () => {
     const { store } = createStore({
       new_booking_notification: "succeeded",
+      customer_invoice: "succeeded",
       admin_booking_email: "succeeded",
     });
     const calls: string[] = [];
@@ -111,9 +114,9 @@ describe("Folgeaktionen nach bezahlter Buchung", () => {
     const { store } = createStore();
     const calls: string[] = [];
     await runBookingActions(BOOKING, store, handlers(calls));
-    expect(calls).toHaveLength(3);
+    expect(calls).toHaveLength(4);
     const again = await runBookingActions(BOOKING, store, handlers(calls));
-    expect(calls).toHaveLength(3);
+    expect(calls).toHaveLength(4);
     expect(Object.values(again.results).every((r) => r === "skipped")).toBe(true);
   });
 
@@ -126,6 +129,7 @@ describe("Folgeaktionen nach bezahlter Buchung", () => {
     const h = handlers(calls, {
       new_booking_notification: slow,
       customer_confirmation_invoice: slow,
+      customer_invoice: slow,
       admin_booking_email: slow,
     });
     await Promise.all([runBookingActions(BOOKING, store, h), runBookingActions(BOOKING, store, h)]);

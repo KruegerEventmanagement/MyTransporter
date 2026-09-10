@@ -142,6 +142,7 @@ async function logActionSuccess(params: {
 
 export const CONFIRM_LOG_TITLE = "Buchungsbestätigung versendet";
 export const ADMIN_LOG_TITLE = "Admin-Buchungsmail versendet";
+export const INVOICE_LOG_TITLE = "Rechnung versendet";
 
 /**
  * Server-only Implementierung. MUSS aus Server-Routen (Webhook) direkt
@@ -155,7 +156,7 @@ export const ADMIN_LOG_TITLE = "Admin-Buchungsmail versendet";
 export async function sendBookingConfirmationImpl(data: {
   bookingId: string;
   force?: boolean;
-}): Promise<{ sent: boolean; reason?: string }> {
+}): Promise<{ sent: boolean; invoiceAttached?: boolean; reason?: string }> {
   const { data: booking, error } = await supabaseAdmin
     .from("bookings")
     .select(
@@ -261,6 +262,96 @@ export async function sendBookingConfirmationImpl(data: {
       title: CONFIRM_LOG_TITLE,
       type: "booking_created",
       body: `${booking.vehicle_name} · Start ${booking.start_date} ${booking.start_hour}:00 (E-Mail ${invoiceAttachment ? "inkl. Rechnung" : "ohne Rechnungs-PDF"} gesendet)`,
+    });
+    if (invoiceAttachment) {
+      // Rechnung lag der Bestätigung bei ⇒ der separate Rechnungs-Schritt
+      // ist damit erledigt und darf nichts mehr nachsenden.
+      await logActionSuccess({
+        bookingId: booking.id,
+        userId: booking.user_id,
+        title: INVOICE_LOG_TITLE,
+        type: "booking_created",
+        body: `${invoiceAttachment.filename} (mit Buchungsbestätigung gesendet)`,
+      });
+    }
+  }
+
+  return {
+    sent,
+    invoiceAttached: invoiceAttachment != null,
+    ...(sent ? {} : { reason: "send_failed" }),
+  };
+}
+
+/**
+ * Stellt sicher, dass der Kunde die Rechnung erhält – auch wenn sie der
+ * Buchungsbestätigung wegen eines temporären PDF-Fehlers nicht beilag.
+ * Wirft bei Fehlern, damit die Aktion retrybar bleibt.
+ */
+export async function ensureInvoiceDeliveredImpl(data: {
+  bookingId: string;
+}): Promise<{ sent: boolean; reason?: string }> {
+  const { data: booking, error } = await supabaseAdmin
+    .from("bookings")
+    .select("id, user_id, vehicle_name, vehicle_plate, plan_label, start_date, start_hour")
+    .eq("id", data.bookingId)
+    .maybeSingle();
+  if (error || !booking) throw new Error("Buchung nicht gefunden");
+
+  // Bereits zugestellt (z. B. als Anhang der Bestätigung)? Dann nichts tun.
+  const { data: existing } = await supabaseAdmin
+    .from("admin_notifications")
+    .select("id")
+    .eq("booking_id", booking.id)
+    .eq("title", INVOICE_LOG_TITLE)
+    .limit(1)
+    .maybeSingle();
+  if (existing) return { sent: true, reason: "already_delivered" };
+
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("email, first_name")
+    .eq("id", booking.user_id)
+    .maybeSingle();
+  const email = profile?.email;
+  if (!email) return { sent: false, reason: "no_email" };
+
+  const { generateBookingInvoicePdf } = await import("@/lib/invoice-pdf.server");
+  const inv = await generateBookingInvoicePdf(booking.id);
+
+  const startStr = fmtDate(booking.start_date, booking.start_hour);
+  const html = renderEmail({
+    firstName: profile?.first_name,
+    heading: "Deine Rechnung",
+    intro: ["im Anhang findest du die Rechnung zu deiner Buchung bei MyTransporter."],
+    rowsTitle: "Deine Buchung",
+    rows: [
+      { label: "Fahrzeug", value: `${booking.vehicle_name} · ${booking.vehicle_plate}` },
+      { label: "Tarif", value: booking.plan_label },
+      { label: "Abholung", value: `${startStr} Uhr` },
+      { label: "Rechnungsnummer", value: inv.invoiceNo },
+    ],
+    button: { label: "Zur Buchung", url: `https://www.mytransporter.org/trip/${booking.id}` },
+    extraHtml: noteBlock(
+      "Die Buchungsbestätigung hast du bereits erhalten. Diese E-Mail enthält ausschließlich die Rechnung.",
+    ),
+  });
+
+  const sent = await sendEmail(
+    email,
+    `MyTransporter · Rechnung ${inv.invoiceNo}`,
+    html,
+    [{ filename: inv.filename, content: inv.pdfBase64 }],
+    `booking-invoice-${booking.id}`,
+  );
+
+  if (sent) {
+    await logActionSuccess({
+      bookingId: booking.id,
+      userId: booking.user_id,
+      title: INVOICE_LOG_TITLE,
+      type: "booking_created",
+      body: `${inv.filename} (separat nachgesendet)`,
     });
   }
 
