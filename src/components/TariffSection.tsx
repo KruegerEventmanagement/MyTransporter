@@ -1,4 +1,4 @@
-import { PLAN_CATALOG, L4H2_SURCHARGE_PER_DAY_EUR } from "@/lib/booking-rules";
+import { PLAN_CATALOG, L4H2_SURCHARGE_PER_DAY_EUR, L5H2_SURCHARGE_EUR } from "@/lib/booking-rules";
 
 const SINGLE = PLAN_CATALOG.filter((p) => p.days === 1);
 const MULTI = PLAN_CATALOG.filter((p) => p.days > 1);
@@ -16,10 +16,12 @@ export function TariffSection() {
             Transporter mieten zum fairen Festpreis
           </h2>
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-            Zwei Fahrzeugklassen: der kurze L1H1 und der lange L4H2 mit noch mehr Ladevolumen.
-            Alle Preise unten gelten für den L1H1 – der L4H2 kostet{" "}
-            {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr; sein Preis steht jeweils direkt dabei.
+            Drei Fahrzeugklassen: der kurze L1H1, der lange L4H2 mit noch mehr Ladevolumen und der
+            extra lange VW Crafter. Alle Preise unten gelten für den L1H1 – der L4H2 kostet{" "}
+            {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr, der Crafter noch einmal rund{" "}
+            {L5H2_SURCHARGE_EUR} € mehr; die Preise stehen jeweils direkt dabei.
           </p>
+
         </div>
 
 
@@ -42,8 +44,9 @@ export function TariffSection() {
                 <h3 className="text-lg font-bold text-foreground">{plan.shortLabel}</h3>
                 <p className="text-3xl font-bold text-foreground mt-2">{plan.price} €</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  L1H1 · L4H2 {plan.priceL4h2} €
+                  L1H1 · L4H2 {plan.priceL4h2} € · Crafter {plan.priceL5h2} €
                 </p>
+
                 <p className="text-xs text-muted-foreground mt-1">inkl. {plan.freeKm} km</p>
                 {plan.idealFor && (
                   <p className="text-xs text-muted-foreground mt-3 leading-relaxed flex-1">
@@ -73,7 +76,7 @@ export function TariffSection() {
             </h3>
             <p className="mt-2 text-sm text-muted-foreground max-w-2xl mx-auto">
               Wenn ein Tag nicht reicht: Buche einen Transporter einfach mehrere Tage
-              und profitiere von günstigeren Tagespreisen. Preise L1H1 / L4H2.
+              und profitiere von günstigeren Tagespreisen. Preise L1H1 / L4H2 / Crafter.
             </p>
           </div>
 
@@ -82,7 +85,7 @@ export function TariffSection() {
               <thead className="bg-secondary text-foreground">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold">Tarif</th>
-                  <th className="text-right px-4 py-3 font-semibold">L1H1 / L4H2</th>
+                  <th className="text-right px-4 py-3 font-semibold">L1H1 / L4H2 / Crafter</th>
                   <th className="text-right px-4 py-3 font-semibold hidden sm:table-cell">Inklusive km</th>
                   <th className="text-right px-4 py-3 font-semibold">pro Tag</th>
                   <th className="px-2 py-3"></th>
@@ -106,7 +109,7 @@ export function TariffSection() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right font-bold text-foreground whitespace-nowrap">
-                        {plan.price} € / {plan.priceL4h2} €
+                        {plan.price} € / {plan.priceL4h2} € / {plan.priceL5h2} €
                       </td>
 
                       <td className="px-4 py-3 text-right text-muted-foreground whitespace-nowrap hidden sm:table-cell">

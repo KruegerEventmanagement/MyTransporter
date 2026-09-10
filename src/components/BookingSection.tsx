@@ -42,6 +42,8 @@ import {
   EARLIEST_START_HOUR,
   LATEST_RETURN_HOUR,
   L4H2_SURCHARGE_PER_DAY_EUR,
+  L5H2_SURCHARGE_EUR,
+
   DEPOSIT_EUR,
   type VehicleClass,
 } from "@/lib/booking-rules";
@@ -1107,10 +1109,12 @@ export function BookingSection() {
                 {availableClasses.length > 1 && (
                   <p className="text-center text-xs text-muted-foreground mb-6">
                     Preise ab kurzem Transporter. Der lange Transporter mit Hochdach kostet{" "}
-                    {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr – deinen Endpreis siehst du im
-                    nächsten Schritt bei der Fahrzeugauswahl.
+                    {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr, der extra lange Crafter noch
+                    einmal rund {L5H2_SURCHARGE_EUR} € mehr – deinen Endpreis siehst du im nächsten
+                    Schritt bei der Fahrzeugauswahl.
                   </p>
                 )}
+
                 <div className="space-y-4">
                   {availablePlans.map((plan) => {
                 const planBlocked = isPlanUnavailable(plan.id);
@@ -1152,9 +1156,12 @@ export function BookingSection() {
                       </p>
                       {availableClasses.length > 1 && (
                         <p className="text-[11px] text-muted-foreground whitespace-nowrap">
-                          langer Transporter {plan.priceL4h2} €
+                          {availableClasses.includes("l4h2") && `langer Transporter ${plan.priceL4h2} €`}
+                          {availableClasses.includes("l4h2") && availableClasses.includes("l5h2") && " · "}
+                          {availableClasses.includes("l5h2") && `Crafter ${plan.priceL5h2} €`}
                         </p>
                       )}
+
                     </div>
                   </div>
 
@@ -1466,6 +1473,14 @@ export function BookingSection() {
                     pro Miettag). Kurzer Transporter: {selectedPlanEntry.basePrice} € Miete.
                   </p>
                 )}
+                {selectedPlanEntry && selectedPlanEntry.vehicleClass === "l5h2" && (
+                  <p className="text-xs opacity-80 mt-2">
+                    Endpreis für den extra langen Crafter. Kurzer Transporter:{" "}
+                    {selectedPlanEntry.basePrice} € · langer Transporter{" "}
+                    {selectedPlanEntry.priceL4h2} € Miete.
+                  </p>
+                )}
+
               </div>
             )}
 

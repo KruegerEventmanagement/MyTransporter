@@ -5,6 +5,8 @@ import { AddonPackagesSection } from "@/components/AddonPackagesSection";
 import {
   PLAN_CATALOG,
   L4H2_SURCHARGE_PER_DAY_EUR,
+  L5H2_SURCHARGE_EUR,
+
   DEPOSIT_EUR,
   KM_TARIFF_CENTS_PER_KM,
   KM_TARIFF_MIN_EUR,
@@ -80,7 +82,9 @@ function PreisePage() {
             Alle Festpreise für die Transporter-Miete in Leonberg, Stuttgart, Böblingen und
             Sindelfingen – ob Umzug, Möbeltransport, Baumarkt-Fahrt oder Kleinanzeigen-Abholung.
             Angegeben ist der Preis für den kurzen L1H1; der lange L4H2 mit Hochdach kostet{" "}
-            {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr.
+            {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr, der extra lange VW Crafter noch einmal
+            rund {L5H2_SURCHARGE_EUR} € mehr.
+
           </p>
           <p className="mt-4 inline-block rounded-xl border-2 border-foreground bg-secondary/40 px-4 py-3 text-sm font-medium text-foreground">
             Viele Freikilometer und maximal 1.000 € Selbstbeteiligung bereits inklusive –
@@ -93,8 +97,9 @@ function PreisePage() {
                 <p className="text-sm text-muted-foreground">{p.shortLabel}</p>
                 <p className="text-3xl font-bold text-foreground mt-1">{p.price} €</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  L4H2 {p.priceL4h2} €
+                  L4H2 {p.priceL4h2} € · Crafter {p.priceL5h2} €
                 </p>
+
                 <p className="text-xs text-muted-foreground mt-1">inkl. {p.freeKm} km</p>
               </div>
             ))}
@@ -106,9 +111,10 @@ function PreisePage() {
                 <p className="text-sm text-muted-foreground">{p.label}</p>
                 <p className="text-2xl font-bold text-foreground mt-1">{p.price} €</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  L4H2 {p.priceL4h2} € · Tarif mit{" "}
+                  L4H2 {p.priceL4h2} € · Crafter {p.priceL5h2} € · Tarif mit{" "}
                   {p.freeKm.toLocaleString("de-DE")} Kilometern inklusive
                 </p>
+
               </div>
             ))}
           </div>
@@ -134,7 +140,7 @@ function PreisePage() {
               `Kaution ${DEPOSIT_EUR} € – wird nach ordnungsgemäßer Rückgabe zurückerstattet`,
               "Tankregel Voll/Voll: Das Fahrzeug wird vollgetankt übergeben und muss vollgetankt zurückgegeben werden (Tankbeleg erforderlich)",
               "Selbstbeteiligung im Schadensfall maximal 1.000 €",
-              `Reiner Kilometer-Tarif: ${(KM_TARIFF_CENTS_PER_KM / 100).toFixed(2).replace(".", ",")} € / km (Mindestbetrag ${KM_TARIFF_MIN_EUR.l1h1} € / L4H2 ${KM_TARIFF_MIN_EUR.l4h2} €)`,
+              `Reiner Kilometer-Tarif: ${(KM_TARIFF_CENTS_PER_KM / 100).toFixed(2).replace(".", ",")} € / km (Mindestbetrag ${KM_TARIFF_MIN_EUR.l1h1} € / L4H2 ${KM_TARIFF_MIN_EUR.l4h2} € / Crafter ${KM_TARIFF_MIN_EUR.l5h2} €)`,
               "Mindestalter 25 Jahre, Führerschein Klasse B, digitale Verifizierung",
               "Umzugspaket für 29 € oder Fahrer / Umzugshelfer für 50 € pro Stunde (Mindestabnahme 3 Stunden) optional dazubuchbar",
             ].map((t) => (
