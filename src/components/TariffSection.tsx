@@ -76,7 +76,7 @@ export function TariffSection() {
             </h3>
             <p className="mt-2 text-sm text-muted-foreground max-w-2xl mx-auto">
               Wenn ein Tag nicht reicht: Buche einen Transporter einfach mehrere Tage
-              und profitiere von günstigeren Tagespreisen. Preise L1H1 / L4H2.
+              und profitiere von günstigeren Tagespreisen. Preise L1H1 / L4H2 / Crafter.
             </p>
           </div>
 
