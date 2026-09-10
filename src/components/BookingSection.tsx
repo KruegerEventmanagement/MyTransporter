@@ -174,12 +174,22 @@ export function BookingSection() {
   const [pendingVolatile, setPendingVolatile] = useState(false);
 
 
-  const toggleAddon = (id: string) => {
+  const toggleAddon = (selectionId: string) => {
+    const base = addonBaseId(selectionId);
     setSelectedAddonIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+      prev.some((x) => addonBaseId(x) === base)
+        ? prev.filter((x) => addonBaseId(x) !== base)
+        : [...prev, selectionId],
+    );
+  };
+  const changeAddonSelection = (selectionId: string) => {
+    const base = addonBaseId(selectionId);
+    setSelectedAddonIds((prev) =>
+      prev.map((x) => (addonBaseId(x) === base ? selectionId : x)),
     );
   };
   const addonsTotal = sumAddonsEur(selectedAddonIds);
+
 
   const refreshBusySlots = () => {
     getBusySlots()
