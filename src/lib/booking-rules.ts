@@ -83,6 +83,7 @@ export type PlanEntry = {
   price: number;           // € für die konkrete Fahrzeugklasse
   basePrice: number;       // € für L1H1 (Basis)
   priceL4h2: number;       // € für L4H2 (verbindlicher Katalogpreis)
+  priceL5h2: number;       // € für den extra langen Crafter (L5H2)
   vehicleClass: VehicleClass;
   classLabel: string;
   freeKm: number;
@@ -93,10 +94,14 @@ export type PlanEntry = {
   highlightLabel?: string;
 };
 
-type PlanTemplate = Omit<PlanEntry, "price" | "basePrice" | "priceL4h2" | "vehicleClass" | "classLabel"> & {
+type PlanTemplate = Omit<
+  PlanEntry,
+  "price" | "basePrice" | "priceL4h2" | "priceL5h2" | "vehicleClass" | "classLabel"
+> & {
   basePrice: number;
   basePriceL4h2: number;
 };
+
 
 /** Alle aktiven Tarife – verbindliche Preise für L1H1 und L4H2. */
 const PLAN_TEMPLATES: PlanTemplate[] = [
