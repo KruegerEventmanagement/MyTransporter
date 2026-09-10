@@ -67,7 +67,6 @@ export function DocumentScanner({
   docType,
   isComplete,
   onComplete,
-  onReset,
   previewUrl: storedPreviewUrl = null,
   mode = "upload",
   onCapture,
