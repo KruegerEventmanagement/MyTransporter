@@ -586,15 +586,21 @@ export type Database = {
           axles: number | null
           body_type: string | null
           brand: string | null
+          cargo_height_cm: number | null
+          cargo_length_cm: number | null
+          cargo_volume_m3: number | null
+          cargo_width_cm: number | null
           color: string | null
           created_at: string
           displacement_ccm: number | null
           empty_weight_kg: number | null
           first_registration: string | null
           fuel_type: string | null
+          height_cm: number | null
           hsn: string | null
           id: string
           is_active: boolean
+          length_cm: number | null
           manufacturer: string | null
           max_weight_kg: number | null
           model: string | null
@@ -603,6 +609,8 @@ export type Database = {
           owner_name: string | null
           payload_kg: number | null
           photo_urls: string[]
+          pickup_address: string | null
+          pickup_location: string | null
           plate: string
           power_kw: number | null
           registration_doc_url: string | null
@@ -615,20 +623,27 @@ export type Database = {
           updated_at: string
           vehicle_class: string | null
           vin: string | null
+          width_cm: number | null
         }
         Insert: {
           axles?: number | null
           body_type?: string | null
           brand?: string | null
+          cargo_height_cm?: number | null
+          cargo_length_cm?: number | null
+          cargo_volume_m3?: number | null
+          cargo_width_cm?: number | null
           color?: string | null
           created_at?: string
           displacement_ccm?: number | null
           empty_weight_kg?: number | null
           first_registration?: string | null
           fuel_type?: string | null
+          height_cm?: number | null
           hsn?: string | null
           id?: string
           is_active?: boolean
+          length_cm?: number | null
           manufacturer?: string | null
           max_weight_kg?: number | null
           model?: string | null
@@ -637,6 +652,8 @@ export type Database = {
           owner_name?: string | null
           payload_kg?: number | null
           photo_urls?: string[]
+          pickup_address?: string | null
+          pickup_location?: string | null
           plate?: string
           power_kw?: number | null
           registration_doc_url?: string | null
@@ -649,20 +666,27 @@ export type Database = {
           updated_at?: string
           vehicle_class?: string | null
           vin?: string | null
+          width_cm?: number | null
         }
         Update: {
           axles?: number | null
           body_type?: string | null
           brand?: string | null
+          cargo_height_cm?: number | null
+          cargo_length_cm?: number | null
+          cargo_volume_m3?: number | null
+          cargo_width_cm?: number | null
           color?: string | null
           created_at?: string
           displacement_ccm?: number | null
           empty_weight_kg?: number | null
           first_registration?: string | null
           fuel_type?: string | null
+          height_cm?: number | null
           hsn?: string | null
           id?: string
           is_active?: boolean
+          length_cm?: number | null
           manufacturer?: string | null
           max_weight_kg?: number | null
           model?: string | null
@@ -671,6 +695,8 @@ export type Database = {
           owner_name?: string | null
           payload_kg?: number | null
           photo_urls?: string[]
+          pickup_address?: string | null
+          pickup_location?: string | null
           plate?: string
           power_kw?: number | null
           registration_doc_url?: string | null
@@ -683,6 +709,7 @@ export type Database = {
           updated_at?: string
           vehicle_class?: string | null
           vin?: string | null
+          width_cm?: number | null
         }
         Relationships: []
       }

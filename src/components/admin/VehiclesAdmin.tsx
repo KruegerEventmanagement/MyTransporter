@@ -33,6 +33,15 @@ interface Vehicle {
   photo_urls: string[];
   registration_doc_url: string | null;
   is_active: boolean;
+  length_cm: number | null;
+  width_cm: number | null;
+  height_cm: number | null;
+  cargo_length_cm: number | null;
+  cargo_width_cm: number | null;
+  cargo_height_cm: number | null;
+  cargo_volume_m3: number | null;
+  pickup_location: string | null;
+  pickup_address: string | null;
 }
 
 const empty: Partial<Vehicle> = {
@@ -235,6 +244,15 @@ function VehicleEditor({
         notes: form.notes,
         photo_urls: form.photo_urls,
         registration_doc_url: form.registration_doc_url,
+        length_cm: form.length_cm,
+        width_cm: form.width_cm,
+        height_cm: form.height_cm,
+        cargo_length_cm: form.cargo_length_cm,
+        cargo_width_cm: form.cargo_width_cm,
+        cargo_height_cm: form.cargo_height_cm,
+        cargo_volume_m3: form.cargo_volume_m3,
+        pickup_location: form.pickup_location,
+        pickup_address: form.pickup_address,
         is_active: form.is_active,
       };
       if (isNew) {
@@ -350,6 +368,18 @@ function VehicleEditor({
         <Field label="R · Farbe"><input className={inp} {...txtField("color")} /></Field>
         <Field label="S.1 · Sitzplätze"><input className={inp} {...numField("seats")} /></Field>
         <Field label="Nutzlast (kg)"><input className={inp} {...numField("payload_kg")} /></Field>
+      </Section>
+
+      <Section title="Maße & Abholort">
+        <Field label="Außenlänge (cm)"><input className={inp} {...numField("length_cm")} /></Field>
+        <Field label="Außenbreite (cm)"><input className={inp} {...numField("width_cm")} /></Field>
+        <Field label="Außenhöhe (cm)"><input className={inp} {...numField("height_cm")} /></Field>
+        <Field label="Ladefläche Länge (cm)"><input className={inp} {...numField("cargo_length_cm")} /></Field>
+        <Field label="Ladefläche Breite (cm)"><input className={inp} {...numField("cargo_width_cm")} /></Field>
+        <Field label="Ladefläche Höhe (cm)"><input className={inp} {...numField("cargo_height_cm")} /></Field>
+        <Field label="Ladevolumen (m³)"><input className={inp} {...numField("cargo_volume_m3")} /></Field>
+        <Field label="Abholort (Kurzform)"><input className={inp} {...txtField("pickup_location")} /></Field>
+        <Field label="Abholadresse"><input className={inp} {...txtField("pickup_address")} /></Field>
       </Section>
 
       <Section title="Notizen">

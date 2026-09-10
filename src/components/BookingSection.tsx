@@ -37,7 +37,7 @@ import {
   getAvailablePlans,
   planLabelWithClass,
   vehicleClassFromName,
-  VEHICLE_CLASS_LABEL,
+  
   VEHICLE_CLASS_SHORT_LABEL,
   EARLIEST_START_HOUR,
   LATEST_RETURN_HOUR,
@@ -91,7 +91,20 @@ type DbVehicle = {
   seats: number | null;
   photo_urls: string[];
   is_active: boolean;
+  length_cm: number | null;
+  width_cm: number | null;
+  height_cm: number | null;
+  cargo_length_cm: number | null;
+  cargo_width_cm: number | null;
+  cargo_height_cm: number | null;
+  cargo_volume_m3: number | null;
+  pickup_location: string | null;
+  pickup_address: string | null;
 };
+
+/** cm → Meter mit einer Dezimalstelle, deutsch formatiert. */
+const cmToM = (cm: number | null | undefined) =>
+  typeof cm === "number" && cm > 0 ? `${(cm / 100).toFixed(2).replace(".", ",")} m` : null;
 
 const AUTH_CONFIRM_URL = "https://www.mytransporter.org/auth/confirm";
 const AUTH_BOOKING_DRAFT_KEY = "mt_auth_booking_draft";
@@ -259,7 +272,7 @@ export function BookingSection() {
     let alive = true;
     supabase
       .from("vehicles")
-      .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active")
+      .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address")
       .eq("is_active", true)
       .order("created_at", { ascending: true })
       .then(({ data }) => {
@@ -280,8 +293,26 @@ export function BookingSection() {
         payload: currentVehicle.payload_kg ? `${currentVehicle.payload_kg.toLocaleString("de-DE")} kg` : VEHICLE.payload,
         seats: currentVehicle.seats,
         power: currentVehicle.power_kw,
+        totalLength: cmToM(currentVehicle.length_cm),
+        totalWidth: cmToM(currentVehicle.width_cm),
+        totalHeight: cmToM(currentVehicle.height_cm),
+        cargoLength: cmToM(currentVehicle.cargo_length_cm),
+        cargoWidth: cmToM(currentVehicle.cargo_width_cm),
+        cargoHeight: cmToM(currentVehicle.cargo_height_cm),
+        cargoVolume: currentVehicle.cargo_volume_m3
+          ? `${String(currentVehicle.cargo_volume_m3).replace(".", ",")} m³`
+          : null,
+        pickupLocation: currentVehicle.pickup_location,
+        pickupAddress: currentVehicle.pickup_address,
       }
-    : { name: "", plate: "", photo: fiatDucato, fuel: VEHICLE.fuel, payload: VEHICLE.payload, seats: null as number | null, power: null as number | null };
+    : {
+        name: "", plate: "", photo: fiatDucato, fuel: VEHICLE.fuel, payload: VEHICLE.payload,
+        seats: null as number | null, power: null as number | null,
+        totalLength: null as string | null, totalWidth: null as string | null, totalHeight: null as string | null,
+        cargoLength: null as string | null, cargoWidth: null as string | null, cargoHeight: null as string | null,
+        cargoVolume: null as string | null,
+        pickupLocation: null as string | null, pickupAddress: null as string | null,
+      };
 
   // Fahrzeugklasse des aktuell gewählten Transporters – steuert den Preis
   const vehicleClass: VehicleClass = vehicleClassFromName(
@@ -292,10 +323,6 @@ export function BookingSection() {
   const classOfVehicle = (v: DbVehicle): VehicleClass =>
     vehicleClassFromName(v.name, v.model, v.plate);
   const availableClasses = Array.from(new Set(vehicles.map(classOfVehicle)));
-  const selectVehicleClass = (cls: VehicleClass) => {
-    const idx = vehicles.findIndex((v) => classOfVehicle(v) === cls);
-    if (idx >= 0) setVehicleIdx(idx);
-  };
 
   // ---- Verfügbarkeit im gesamten Auswahlprozess ----
   const activePlates = useMemo(
@@ -1066,42 +1093,14 @@ export function BookingSection() {
 
             {startHour !== null && (
               <>
-                {/* Fahrzeugklasse: bestimmt eindeutig den Preis */}
+                <p className="text-center text-muted-foreground text-lg mt-10 mb-2">Wähle deinen Tarif</p>
                 {availableClasses.length > 1 && (
-                  <div className="mt-10">
-                    <p className="text-center text-muted-foreground text-lg mb-3">
-                      Wähle deine Fahrzeugklasse
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {(["l1h1", "l4h2"] as VehicleClass[])
-                        .filter((cls) => availableClasses.includes(cls))
-                        .map((cls) => (
-                          <button
-                            key={cls}
-                            type="button"
-                            onClick={() => selectVehicleClass(cls)}
-                            className={`rounded-2xl border-2 p-4 text-left transition-all ${
-                              vehicleClass === cls
-                                ? "border-accent bg-accent/5 shadow-md"
-                                : "border-border hover:border-accent/50"
-                            }`}
-                          >
-                            <p className="font-bold text-foreground">{VEHICLE_CLASS_LABEL[cls]}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {cls === "l1h1"
-                                ? "Kurzer Kastenwagen, günstigster Preis"
-                                : `Langer Kastenwagen, mehr Ladevolumen · +${L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag`}
-                            </p>
-                          </button>
-                        ))}
-                    </div>
-                    <p className="mt-2 text-xs text-muted-foreground text-center">
-                      Die angezeigten Tarifpreise gelten für {VEHICLE_CLASS_LABEL[vehicleClass]}.
-                    </p>
-                  </div>
+                  <p className="text-center text-xs text-muted-foreground mb-6">
+                    Preise ab kurzem Transporter. Der lange Transporter mit Hochdach kostet{" "}
+                    {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr – deinen Endpreis siehst du im
+                    nächsten Schritt bei der Fahrzeugauswahl.
+                  </p>
                 )}
-
-                <p className="text-center text-muted-foreground text-lg mt-10 mb-6">Wähle deinen Tarif</p>
                 <div className="space-y-4">
                   {availablePlans.map((plan) => {
                 const planBlocked = isPlanUnavailable(plan.id);
@@ -1138,19 +1137,20 @@ export function BookingSection() {
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-foreground whitespace-nowrap">{plan.price} €</p>
-                      <p className="text-[11px] text-muted-foreground whitespace-nowrap">
-                        {VEHICLE_CLASS_SHORT_LABEL[plan.vehicleClass]}
-                        {plan.vehicleClass === "l1h1"
-                          ? ` · L4H2 ${plan.priceL4h2} €`
-                          : ` · L1H1 ${plan.basePrice} €`}
+                      <p className="text-2xl font-bold text-foreground whitespace-nowrap">
+                        {availableClasses.length > 1 ? "ab " : ""}{plan.basePrice} €
                       </p>
+                      {availableClasses.length > 1 && (
+                        <p className="text-[11px] text-muted-foreground whitespace-nowrap">
+                          langer Transporter {plan.priceL4h2} €
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   {plan.days > 1 && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      ≈ {(plan.price / plan.days).toFixed(2).replace(".", ",")} € pro Tag
+                      ≈ {(plan.basePrice / plan.days).toFixed(2).replace(".", ",")} € pro Tag
                     </p>
                   )}
                 </button>
@@ -1307,7 +1307,47 @@ export function BookingSection() {
                         <p className="font-medium text-foreground">{displayVehicle.seats}</p>
                       </div>
                     )}
+                    {displayVehicle.totalLength && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Außenlänge</p>
+                        <p className="font-medium text-foreground">{displayVehicle.totalLength}</p>
+                      </div>
+                    )}
+                    {displayVehicle.totalHeight && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Außenhöhe</p>
+                        <p className="font-medium text-foreground">{displayVehicle.totalHeight}</p>
+                      </div>
+                    )}
+                    {displayVehicle.cargoVolume && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Ladevolumen</p>
+                        <p className="font-medium text-foreground">{displayVehicle.cargoVolume}</p>
+                      </div>
+                    )}
+                    {displayVehicle.cargoLength && (
+                      <div className="col-span-2">
+                        <p className="text-xs text-muted-foreground">Ladefläche (L × B × H)</p>
+                        <p className="font-medium text-foreground">
+                          {[displayVehicle.cargoLength, displayVehicle.cargoWidth, displayVehicle.cargoHeight]
+                            .filter(Boolean)
+                            .join(" × ")}
+                        </p>
+                      </div>
+                    )}
                   </div>
+
+                  {(displayVehicle.pickupLocation || displayVehicle.pickupAddress) && (
+                    <div className="mt-4 rounded-xl border border-border bg-secondary/50 p-4">
+                      <p className="text-xs text-muted-foreground">Abholort</p>
+                      <p className="font-medium text-foreground">
+                        {displayVehicle.pickupLocation ?? "Abholung"}
+                      </p>
+                      {displayVehicle.pickupAddress && (
+                        <p className="text-sm text-muted-foreground">{displayVehicle.pickupAddress}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1335,12 +1375,24 @@ export function BookingSection() {
                           type="button"
                           disabled={!free}
                           onClick={() => setVehicleIdx(i)}
-                          className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition-all hover:bg-secondary ${
+                          className={`w-full flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all hover:bg-secondary ${
                             i === vehicleIdx ? "border-foreground" : "border-border"
                           } ${free ? "" : "opacity-50 grayscale cursor-not-allowed"}`}
                         >
-                          <span className="font-medium text-foreground">{v.name}</span>
-                          <span className="text-muted-foreground">
+                          <span className="min-w-0">
+                            <span className="block font-medium text-foreground">{v.name}</span>
+                            <span className="block text-xs text-muted-foreground">
+                              {[
+                                cmToM(v.length_cm) ? `${cmToM(v.length_cm)} lang` : null,
+                                v.cargo_volume_m3 ? `${String(v.cargo_volume_m3).replace(".", ",")} m³` : null,
+                                v.pickup_location,
+                                `${VEHICLE_CLASS_SHORT_LABEL[classOfVehicle(v)]}-Preis`,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </span>
+                          </span>
+                          <span className="text-muted-foreground whitespace-nowrap">
                             {free ? "verfügbar" : "nicht verfügbar"}
                           </span>
                         </button>
@@ -1391,6 +1443,12 @@ export function BookingSection() {
                       addonsTotal > 0 ? ` + ${addonsTotal} € Zubehör` : ""
                     } + ${DEPOSIT} € Kaution`}
                 </p>
+                {selectedPlanEntry && selectedPlanEntry.vehicleClass === "l4h2" && (
+                  <p className="text-xs opacity-80 mt-2">
+                    Endpreis für den langen Transporter mit Hochdach (+{L4H2_SURCHARGE_PER_DAY_EUR} €
+                    pro Miettag). Kurzer Transporter: {selectedPlanEntry.basePrice} € Miete.
+                  </p>
+                )}
               </div>
             )}
 
