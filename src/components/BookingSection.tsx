@@ -264,7 +264,15 @@ export function BookingSection() {
     return bookingWindowMsForDay(selectedPlanId, date, startHour);
   }, [date, startHour, selectedPlanId]);
 
+  /** Noch nicht freigegebene Fahrzeuge sind sichtbar, aber nie buchbar. */
+  const isPlateBookableVehicle = (plate: string) => {
+    const norm = (p: string) => p.replace(/\s+/g, "").toUpperCase();
+    const v = vehicles.find((x) => norm(x.plate ?? "") === norm(plate));
+    return v ? v.is_active : true;
+  };
+
   const isPlateAvailable = (plate: string) => {
+    if (!isPlateBookableVehicle(plate)) return false;
     if (!selectionWindow) return true;
     return isVehicleFree(busyMap, plate, selectionWindow.start, selectionWindow.end);
   };
