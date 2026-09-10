@@ -109,7 +109,7 @@ export function TariffSection() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right font-bold text-foreground whitespace-nowrap">
-                        {plan.price} € / {plan.priceL4h2} €
+                        {plan.price} € / {plan.priceL4h2} € / {plan.priceL5h2} €
                       </td>
 
                       <td className="px-4 py-3 text-right text-muted-foreground whitespace-nowrap hidden sm:table-cell">
