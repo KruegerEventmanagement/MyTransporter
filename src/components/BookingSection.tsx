@@ -899,6 +899,7 @@ export function BookingSection() {
       }).catch(() => {});
     }
     setHoldExpiresAt(null);
+    setOwnHold(null);
     setStep(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holdExpired]);
