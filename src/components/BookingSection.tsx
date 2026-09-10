@@ -264,7 +264,15 @@ export function BookingSection() {
     return bookingWindowMsForDay(selectedPlanId, date, startHour);
   }, [date, startHour, selectedPlanId]);
 
+  /** Noch nicht freigegebene Fahrzeuge sind sichtbar, aber nie buchbar. */
+  const isPlateBookableVehicle = (plate: string) => {
+    const norm = (p: string) => p.replace(/\s+/g, "").toUpperCase();
+    const v = vehicles.find((x) => norm(x.plate ?? "") === norm(plate));
+    return v ? v.is_active : true;
+  };
+
   const isPlateAvailable = (plate: string) => {
+    if (!isPlateBookableVehicle(plate)) return false;
     if (!selectionWindow) return true;
     return isVehicleFree(busyMap, plate, selectionWindow.start, selectionWindow.end);
   };
@@ -285,10 +293,14 @@ export function BookingSection() {
     supabase
       .from("vehicles")
       .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address")
-      .eq("is_active", true)
       .order("created_at", { ascending: true })
       .then(({ data }) => {
-        if (alive && data) setVehicles(data as DbVehicle[]);
+        if (!alive || !data) return;
+        // Freigegebene Fahrzeuge zuerst, gesperrte danach (sichtbar, aber nicht buchbar)
+        const list = [...(data as DbVehicle[])].sort(
+          (a, b) => Number(b.is_active) - Number(a.is_active),
+        );
+        setVehicles(list);
       });
     return () => {
       alive = false;
@@ -334,15 +346,20 @@ export function BookingSection() {
   );
   const classOfVehicle = (v: DbVehicle): VehicleClass =>
     vehicleClassFromName(v.name, v.model, v.plate);
-  const availableClasses = Array.from(new Set(vehicles.map(classOfVehicle)));
+  /** Nur freigegebene Fahrzeuge zählen für Preisklassen und Verfügbarkeit. */
+  const bookableVehicles = useMemo(() => vehicles.filter((v) => v.is_active), [vehicles]);
+  const availableClasses = Array.from(new Set(bookableVehicles.map(classOfVehicle)));
 
   // ---- Verfügbarkeit im gesamten Auswahlprozess ----
   const activePlates = useMemo(
-    () => vehicles.map((v) => v.plate ?? "").filter(Boolean),
-    [vehicles],
+    () => bookableVehicles.map((v) => v.plate ?? "").filter(Boolean),
+    [bookableVehicles],
   );
   const platesOfClass = (cls: VehicleClass) =>
-    vehicles.filter((v) => classOfVehicle(v) === cls).map((v) => v.plate ?? "").filter(Boolean);
+    bookableVehicles
+      .filter((v) => classOfVehicle(v) === cls)
+      .map((v) => v.plate ?? "")
+      .filter(Boolean);
 
   /** Kalendertag: nur sperren, wenn für KEIN Fahrzeug irgendein Fenster frei ist. */
   const isDayUnavailable = (d: Date) => {
@@ -380,6 +397,8 @@ export function BookingSection() {
     if (step > 2) return;
     if (!selectionWindow || vehicles.length === 0) return;
     const cur = vehicles[vehicleIdx];
+    // Noch nicht freigegebene Fahrzeuge darf man ansehen – nicht automatisch wegspringen
+    if (cur && !cur.is_active) return;
     if (cur && isPlateAvailable(cur.plate ?? "")) return;
     const cls = cur ? classOfVehicle(cur) : null;
     const sameClass = vehicles.findIndex(
@@ -1282,7 +1301,16 @@ export function BookingSection() {
                       {displayVehicle.plate}
                     </span>
                   </div>
-                  {currentVehicleUnavailable && (
+                  {currentVehicle && !currentVehicle.is_active && (
+                    <div className="mb-4 rounded-xl border border-border bg-secondary p-3 text-sm">
+                      <p className="font-semibold text-foreground">Aktuell nicht verfügbar</p>
+                      <p className="text-muted-foreground mt-1">
+                        Dieser Transporter ist noch nicht freigegeben und kann derzeit nicht gebucht
+                        werden.
+                      </p>
+                    </div>
+                  )}
+                  {currentVehicleUnavailable && currentVehicle?.is_active && (
                     <div className="mb-4 rounded-xl border border-border bg-secondary p-3 text-sm">
                       <p className="font-semibold text-foreground">
                         {selectionWindow
@@ -1385,16 +1413,19 @@ export function BookingSection() {
                   </div>
                   <div className="mt-4 space-y-2">
                     {vehicles.map((v, i) => {
-                      const free = isPlateAvailable(v.plate ?? "");
+                       const free = isPlateAvailable(v.plate ?? "");
+                      const notReleased = !v.is_active;
                       return (
                         <button
                           key={v.plate ?? i}
                           type="button"
-                          disabled={!free}
+                          disabled={!free && !notReleased}
                           onClick={() => setVehicleIdx(i)}
                           className={`w-full flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all hover:bg-secondary ${
                             i === vehicleIdx ? "border-foreground" : "border-border"
-                          } ${free ? "" : "opacity-50 grayscale cursor-not-allowed"}`}
+                          } ${free ? "" : "opacity-50 grayscale"} ${
+                            !free && !notReleased ? "cursor-not-allowed" : ""
+                          }`}
                         >
                           <span className="min-w-0">
                             <span className="block font-medium text-foreground">{v.name}</span>
@@ -1410,7 +1441,11 @@ export function BookingSection() {
                             </span>
                           </span>
                           <span className="text-muted-foreground whitespace-nowrap">
-                            {free ? "verfügbar" : "nicht verfügbar"}
+                            {notReleased
+                              ? "aktuell nicht verfügbar"
+                              : free
+                                ? "verfügbar"
+                                : "nicht verfügbar"}
                           </span>
                         </button>
                       );
