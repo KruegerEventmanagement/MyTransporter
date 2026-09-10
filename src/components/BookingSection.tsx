@@ -397,6 +397,8 @@ export function BookingSection() {
     if (step > 2) return;
     if (!selectionWindow || vehicles.length === 0) return;
     const cur = vehicles[vehicleIdx];
+    // Noch nicht freigegebene Fahrzeuge darf man ansehen – nicht automatisch wegspringen
+    if (cur && !cur.is_active) return;
     if (cur && isPlateAvailable(cur.plate ?? "")) return;
     const cls = cur ? classOfVehicle(cur) : null;
     const sameClass = vehicles.findIndex(
