@@ -45,7 +45,7 @@ import {
   DEPOSIT_EUR,
   type VehicleClass,
 } from "@/lib/booking-rules";
-import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot } from "@/lib/addons";
+import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot, addonBaseId, resolveAddonSelection } from "@/lib/addons";
 import { AddonPackageCard } from "./AddonPackageCard";
 import {
   PENDING_DOC_TYPES,
