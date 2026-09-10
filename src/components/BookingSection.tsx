@@ -336,6 +336,9 @@ export function BookingSection() {
 
   // Nicht verfügbares Fahrzeug: automatisch auf ein freies (möglichst gleiche Klasse) springen
   useEffect(() => {
+    // Nur in der Auswahlphase umschalten – ab der Verifizierung/Bezahlung
+    // muss das gewählte Fahrzeug (und dessen Reservierung) stabil bleiben.
+    if (step > 2) return;
     if (!selectionWindow || vehicles.length === 0) return;
     const cur = vehicles[vehicleIdx];
     if (cur && isPlateAvailable(cur.plate ?? "")) return;
