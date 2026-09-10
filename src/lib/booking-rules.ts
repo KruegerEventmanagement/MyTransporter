@@ -184,17 +184,31 @@ const LEGACY_PLAN_ALIASES: Record<string, string> = {
   "24h_long": "24h_500",
 };
 
+function priceForClass(
+  vehicleClass: VehicleClass,
+  basePrice: number,
+  priceL4h2: number,
+  priceL5h2: number,
+): number {
+  if (vehicleClass === "l5h2") return priceL5h2;
+  if (vehicleClass === "l4h2") return priceL4h2;
+  return basePrice;
+}
+
 function withClass(tpl: PlanTemplate, vehicleClass: VehicleClass): PlanEntry {
   const { basePriceL4h2, ...rest } = tpl;
+  const priceL5h2 = l5h2PriceFrom(basePriceL4h2);
   return {
     ...rest,
     vehicleClass,
     classLabel: VEHICLE_CLASS_LABEL[vehicleClass],
     basePrice: tpl.basePrice,
     priceL4h2: basePriceL4h2,
-    price: vehicleClass === "l4h2" ? basePriceL4h2 : tpl.basePrice,
+    priceL5h2,
+    price: priceForClass(vehicleClass, tpl.basePrice, basePriceL4h2, priceL5h2),
   };
 }
+
 
 /** Tarif-Katalog für eine Fahrzeugklasse. */
 export function planCatalog(vehicleClass: VehicleClass = "l1h1"): PlanEntry[] {
