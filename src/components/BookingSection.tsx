@@ -152,6 +152,8 @@ export function BookingSection() {
   const [vehicles, setVehicles] = useState<DbVehicle[]>([]);
   const [vehicleIdx, setVehicleIdx] = useState(0);
   const [busySlots, setBusySlots] = useState<BusySlot[]>([]);
+  // Eigene 15-Minuten-Reservierung: darf die eigene Auswahl nicht blockieren.
+  const [ownHold, setOwnHold] = useState<{ plate: string; start: number; end: number } | null>(null);
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
   const [pendingDocTypes, setPendingDocTypes] = useState<Set<string>>(new Set());
   const [pendingUploading, setPendingUploading] = useState(false);
