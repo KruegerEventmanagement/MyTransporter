@@ -231,6 +231,7 @@ export function getPlanById(planId: string, vehicleClass: VehicleClass = "l1h1")
     const days = n * 7;
     const basePrice = base.basePrice * n;
     const priceL4h2 = base.basePriceL4h2 * n;
+    const priceL5h2 = l5h2PriceFrom(base.basePriceL4h2) * n;
     return {
       ...withClass(base, vehicleClass),
       id: resolvedId,
@@ -240,7 +241,9 @@ export function getPlanById(planId: string, vehicleClass: VehicleClass = "l1h1")
       durationHours: days * 24,
       basePrice,
       priceL4h2,
-      price: vehicleClass === "l4h2" ? priceL4h2 : basePrice,
+      priceL5h2,
+      price: priceForClass(vehicleClass, basePrice, priceL4h2, priceL5h2),
+
       freeKm: base.freeKm * n,
       returnRule: `Rückgabe nach ${days} Tagen zur gleichen Uhrzeit`,
       idealFor: n > 1 ? `Längere Miete: ${n} volle Wochen` : base.idealFor,
