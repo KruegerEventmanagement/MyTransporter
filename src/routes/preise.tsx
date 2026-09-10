@@ -80,7 +80,9 @@ function PreisePage() {
             Alle Festpreise für die Transporter-Miete in Leonberg, Stuttgart, Böblingen und
             Sindelfingen – ob Umzug, Möbeltransport, Baumarkt-Fahrt oder Kleinanzeigen-Abholung.
             Angegeben ist der Preis für den kurzen L1H1; der lange L4H2 mit Hochdach kostet{" "}
-            {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr.
+            {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr, der extra lange VW Crafter noch einmal
+            rund {L5H2_SURCHARGE_EUR} € mehr.
+
           </p>
           <p className="mt-4 inline-block rounded-xl border-2 border-foreground bg-secondary/40 px-4 py-3 text-sm font-medium text-foreground">
             Viele Freikilometer und maximal 1.000 € Selbstbeteiligung bereits inklusive –
