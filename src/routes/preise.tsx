@@ -5,6 +5,8 @@ import { AddonPackagesSection } from "@/components/AddonPackagesSection";
 import {
   PLAN_CATALOG,
   L4H2_SURCHARGE_PER_DAY_EUR,
+  L5H2_SURCHARGE_EUR,
+
   DEPOSIT_EUR,
   KM_TARIFF_CENTS_PER_KM,
   KM_TARIFF_MIN_EUR,
