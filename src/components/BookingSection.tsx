@@ -1311,7 +1311,47 @@ export function BookingSection() {
                         <p className="font-medium text-foreground">{displayVehicle.seats}</p>
                       </div>
                     )}
+                    {displayVehicle.totalLength && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Außenlänge</p>
+                        <p className="font-medium text-foreground">{displayVehicle.totalLength}</p>
+                      </div>
+                    )}
+                    {displayVehicle.totalHeight && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Außenhöhe</p>
+                        <p className="font-medium text-foreground">{displayVehicle.totalHeight}</p>
+                      </div>
+                    )}
+                    {displayVehicle.cargoVolume && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Ladevolumen</p>
+                        <p className="font-medium text-foreground">{displayVehicle.cargoVolume}</p>
+                      </div>
+                    )}
+                    {displayVehicle.cargoLength && (
+                      <div className="col-span-2">
+                        <p className="text-xs text-muted-foreground">Ladefläche (L × B × H)</p>
+                        <p className="font-medium text-foreground">
+                          {[displayVehicle.cargoLength, displayVehicle.cargoWidth, displayVehicle.cargoHeight]
+                            .filter(Boolean)
+                            .join(" × ")}
+                        </p>
+                      </div>
+                    )}
                   </div>
+
+                  {(displayVehicle.pickupLocation || displayVehicle.pickupAddress) && (
+                    <div className="mt-4 rounded-xl border border-border bg-secondary/50 p-4">
+                      <p className="text-xs text-muted-foreground">Abholort</p>
+                      <p className="font-medium text-foreground">
+                        {displayVehicle.pickupLocation ?? "Abholung"}
+                      </p>
+                      {displayVehicle.pickupAddress && (
+                        <p className="text-sm text-muted-foreground">{displayVehicle.pickupAddress}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
