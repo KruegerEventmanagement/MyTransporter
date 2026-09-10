@@ -1413,16 +1413,19 @@ export function BookingSection() {
                   </div>
                   <div className="mt-4 space-y-2">
                     {vehicles.map((v, i) => {
-                      const free = isPlateAvailable(v.plate ?? "");
+                       const free = isPlateAvailable(v.plate ?? "");
+                      const notReleased = !v.is_active;
                       return (
                         <button
                           key={v.plate ?? i}
                           type="button"
-                          disabled={!free}
+                          disabled={!free && !notReleased}
                           onClick={() => setVehicleIdx(i)}
                           className={`w-full flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all hover:bg-secondary ${
                             i === vehicleIdx ? "border-foreground" : "border-border"
-                          } ${free ? "" : "opacity-50 grayscale cursor-not-allowed"}`}
+                          } ${free ? "" : "opacity-50 grayscale"} ${
+                            !free && !notReleased ? "cursor-not-allowed" : ""
+                          }`}
                         >
                           <span className="min-w-0">
                             <span className="block font-medium text-foreground">{v.name}</span>
