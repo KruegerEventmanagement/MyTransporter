@@ -31,12 +31,12 @@ export const ADDONS: Addon[] = [
   {
     id: "fahrer_helfer",
     name: "Fahrer / Umzugshelfer",
-    priceEur: 50,
+    priceEur: 25,
     badge: "Hilfe dazubuchen",
     description:
       "Du entscheidest vor Ort, wie geholfen wird: nur fahren, fahren und mit anpacken oder ausschließlich beim Umzug helfen. Der Preis kommt zum Mietpreis dazu.",
     items: [
-      "50 € pro Stunde",
+      "25 € pro Stunde",
       "Mindestabnahme 3 Stunden",
       "Optional als Fahrer einsetzbar",
       "Hilft beim Tragen, Ein- und Ausladen",
