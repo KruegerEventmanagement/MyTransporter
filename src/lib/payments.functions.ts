@@ -166,17 +166,18 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     }
     const addonIds = data.addonIds ?? [];
     for (const id of addonIds) {
-      const a = getAddonById(id);
-      if (!a) continue;
+      const sel = resolveAddonSelection(id);
+      if (!sel) continue;
       line_items.push({
         price_data: {
           currency: "eur",
-          product_data: { name: a.name },
-          unit_amount: a.priceEur * 100,
+          product_data: { name: sel.label },
+          unit_amount: sel.priceCents,
         },
         quantity: 1,
       });
     }
+
     line_items.push({
       price_data: {
         currency: "eur",
