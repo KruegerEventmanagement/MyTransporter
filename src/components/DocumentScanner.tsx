@@ -205,21 +205,29 @@ export function DocumentScanner({
           .from("user-documents")
           .upload(path, blob, { contentType: "image/jpeg", upsert: false });
         if (upErr) throw upErr;
-        const { error: insErr } = await supabase.from("user_documents").insert({
-          user_id: user.id,
-          doc_type: docType,
-          photo_url: path,
-          ai_verified: true,
-          verified_at: new Date().toISOString(),
-        });
+        const { data: inserted, error: insErr } = await supabase
+          .from("user_documents")
+          .insert({
+            user_id: user.id,
+            doc_type: docType,
+            photo_url: path,
+            ai_verified: true,
+            verified_at: new Date().toISOString(),
+          })
+          .select("id")
+          .single();
         if (insErr) throw insErr;
-        // Erst wenn das neue Foto sicher gespeichert ist, das alte zurückziehen.
-        if (isComplete && onReset) {
-          try {
-            await onReset();
-          } catch (resetErr) {
-            console.warn("Altes Dokument konnte nicht zurückgezogen werden:", resetErr);
-          }
+        // Erst wenn das neue Foto sicher gespeichert ist, ältere Aufnahmen
+        // derselben Seite zurückziehen – so geht bei Uploadfehlern nichts verloren.
+        if (isComplete && inserted?.id) {
+          const { error: retireErr } = await supabase
+            .from("user_documents")
+            .update({ deleted_by_user_at: new Date().toISOString() })
+            .eq("user_id", user.id)
+            .eq("doc_type", docType)
+            .is("deleted_by_user_at", null)
+            .neq("id", inserted.id);
+          if (retireErr) console.warn("Altes Dokument bleibt gespeichert:", retireErr.message);
         }
       }
 
