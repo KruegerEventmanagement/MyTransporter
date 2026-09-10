@@ -67,7 +67,6 @@ export function DocumentScanner({
   docType,
   isComplete,
   onComplete,
-  onReset,
   previewUrl: storedPreviewUrl = null,
   mode = "upload",
   onCapture,
@@ -200,21 +199,35 @@ export function DocumentScanner({
       } else {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Nicht angemeldet");
-        // Replacing an existing side: retire the old photo first.
-        if (isComplete && onReset) await onReset();
         const path = `${user.id}/${docType}_${Date.now()}.jpg`;
         const { error: upErr } = await supabase.storage
           .from("user-documents")
           .upload(path, blob, { contentType: "image/jpeg", upsert: false });
         if (upErr) throw upErr;
-        const { error: insErr } = await supabase.from("user_documents").insert({
-          user_id: user.id,
-          doc_type: docType,
-          photo_url: path,
-          ai_verified: true,
-          verified_at: new Date().toISOString(),
-        });
+        const { data: inserted, error: insErr } = await supabase
+          .from("user_documents")
+          .insert({
+            user_id: user.id,
+            doc_type: docType,
+            photo_url: path,
+            ai_verified: true,
+            verified_at: new Date().toISOString(),
+          })
+          .select("id")
+          .single();
         if (insErr) throw insErr;
+        // Erst wenn das neue Foto sicher gespeichert ist, ältere Aufnahmen
+        // derselben Seite zurückziehen – so geht bei Uploadfehlern nichts verloren.
+        if (isComplete && inserted?.id) {
+          const { error: retireErr } = await supabase
+            .from("user_documents")
+            .update({ deleted_by_user_at: new Date().toISOString() })
+            .eq("user_id", user.id)
+            .eq("doc_type", docType)
+            .is("deleted_by_user_at", null)
+            .neq("id", inserted.id);
+          if (retireErr) console.warn("Altes Dokument bleibt gespeichert:", retireErr.message);
+        }
       }
 
       pendingBlobRef.current = null;
@@ -234,7 +247,7 @@ export function DocumentScanner({
       setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");
       setPhase("rejected");
     }
-  }, [docType, isComplete, onReset, onComplete, stopCamera, shotUrl, mode, onCapture]);
+  }, [docType, isComplete, onComplete, stopCamera, shotUrl, mode, onCapture]);
 
   const retakeFromPreview = useCallback(() => {
     pendingBlobRef.current = null;

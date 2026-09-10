@@ -62,11 +62,23 @@ export const Route = createFileRoute("/api/public/health/automations")({
           countByTypes(["email_failed", "invoice_failed"]),
           countByTypes(["booking_conflict"]),
           (async () => {
-            const { count } = await supabaseAdmin
-              .from("booking_actions")
-              .select("id", { count: "exact", head: true })
-              .neq("status", "succeeded");
-            return count ?? 0;
+            // Nur aktuelle Hänger zählen: fehlgeschlagene Aktionen im Fenster
+            // sowie Locks, die deutlich zu lange laufen. Kurzzeitig laufende
+            // oder alte historische Zeilen machen den Check nicht "unhealthy".
+            const staleLock = new Date(Date.now() - 15 * 60_000).toISOString();
+            const [failed, stale] = await Promise.all([
+              supabaseAdmin
+                .from("booking_actions")
+                .select("id", { count: "exact", head: true })
+                .eq("status", "failed")
+                .gte("created_at", since),
+              supabaseAdmin
+                .from("booking_actions")
+                .select("id", { count: "exact", head: true })
+                .eq("status", "processing")
+                .lt("locked_at", staleLock),
+            ]);
+            return (failed.count ?? 0) + (stale.count ?? 0);
           })(),
         ]);
 

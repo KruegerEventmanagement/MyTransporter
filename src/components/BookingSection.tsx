@@ -152,6 +152,8 @@ export function BookingSection() {
   const [vehicles, setVehicles] = useState<DbVehicle[]>([]);
   const [vehicleIdx, setVehicleIdx] = useState(0);
   const [busySlots, setBusySlots] = useState<BusySlot[]>([]);
+  // Eigene 15-Minuten-Reservierung: darf die eigene Auswahl nicht blockieren.
+  const [ownHold, setOwnHold] = useState<{ plate: string; start: number; end: number } | null>(null);
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
   const [pendingDocTypes, setPendingDocTypes] = useState<Set<string>>(new Set());
   const [pendingUploading, setPendingUploading] = useState(false);
@@ -191,7 +193,17 @@ export function BookingSection() {
   }, [step]);
 
   const currentPlate = vehicles[vehicleIdx]?.plate ?? "";
-  const busyMap = useMemo(() => slotsByPlate(busySlots), [busySlots]);
+  const visibleBusySlots = useMemo(() => {
+    if (!ownHold) return busySlots;
+    const norm = (p: string) => p.replace(/\s+/g, "").toUpperCase();
+    return busySlots.filter((s) => {
+      if (norm(s.vehiclePlate ?? "") !== norm(ownHold.plate)) return true;
+      const start = new Date(s.start).getTime();
+      const end = new Date(s.end).getTime();
+      return !(Math.abs(start - ownHold.start) < 60_000 && Math.abs(end - ownHold.end) < 60_000);
+    });
+  }, [busySlots, ownHold]);
+  const busyMap = useMemo(() => slotsByPlate(visibleBusySlots), [visibleBusySlots]);
   
 
   // Convenience: range start/end + Nächtezahl
@@ -324,6 +336,9 @@ export function BookingSection() {
 
   // Nicht verfügbares Fahrzeug: automatisch auf ein freies (möglichst gleiche Klasse) springen
   useEffect(() => {
+    // Nur in der Auswahlphase umschalten – ab der Verifizierung/Bezahlung
+    // muss das gewählte Fahrzeug (und dessen Reservierung) stabil bleiben.
+    if (step > 2) return;
     if (!selectionWindow || vehicles.length === 0) return;
     const cur = vehicles[vehicleIdx];
     if (cur && isPlateAvailable(cur.plate ?? "")) return;
@@ -334,7 +349,7 @@ export function BookingSection() {
     const next = sameClass >= 0 ? sameClass : vehicles.findIndex((v) => isPlateAvailable(v.plate ?? ""));
     if (next >= 0 && next !== vehicleIdx) setVehicleIdx(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectionWindow, busyMap, vehicles, vehicleIdx]);
+  }, [step, selectionWindow, busyMap, vehicles, vehicleIdx]);
 
   /** Tarif: sperren, wenn kein Fahrzeug der gewählten Klasse den kompletten Zeitraum frei hat. */
   const isPlanUnavailable = (planId: string) => {
@@ -845,6 +860,13 @@ export function BookingSection() {
       .then((res) => {
         if (cancelled) return;
         setHoldExpiresAt(new Date(res.expiresAt).getTime());
+        if (selectionWindow && displayVehicle.plate) {
+          setOwnHold({
+            plate: displayVehicle.plate,
+            start: selectionWindow.start,
+            end: selectionWindow.end,
+          });
+        }
         refreshBusySlots();
       })
       .catch((e: unknown) => {
@@ -877,6 +899,7 @@ export function BookingSection() {
       }).catch(() => {});
     }
     setHoldExpiresAt(null);
+    setOwnHold(null);
     setStep(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holdExpired]);

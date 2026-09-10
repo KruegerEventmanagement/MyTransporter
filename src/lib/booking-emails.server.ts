@@ -223,9 +223,10 @@ export async function sendBookingConfirmationImpl(data: {
       ),
   });
 
-  // Die Rechnung ist Bestandteil der Kundenbestätigung: schlägt das PDF fehl,
-  // wird NICHT gesendet und die Aktion bleibt retrybar.
-  let invoiceAttachment: Attachment;
+  // Die Rechnung liegt der Bestätigung bei. Scheitert das PDF, geht die
+  // Bestätigung trotzdem raus (der Kunde braucht Code + Abholdetails) und der
+  // Rechnungsfehler wird für den Admin protokolliert.
+  let invoiceAttachment: Attachment | null = null;
   try {
     const { generateBookingInvoicePdf } = await import("@/lib/invoice-pdf.server");
     const inv = await generateBookingInvoicePdf(booking.id);
@@ -243,14 +244,13 @@ export async function sendBookingConfirmationImpl(data: {
     } catch {
       /* Protokollierung ist optional */
     }
-    throw new Error(`Rechnungs-PDF fehlgeschlagen: ${msg}`);
   }
 
   const sent = await sendEmail(
     email,
     `MyTransporter · Buchungsbestätigung für ${startStr} Uhr`,
     html,
-    [invoiceAttachment],
+    invoiceAttachment ? [invoiceAttachment] : undefined,
     `booking-confirmation-${booking.id}`,
   );
 
@@ -260,7 +260,7 @@ export async function sendBookingConfirmationImpl(data: {
       userId: booking.user_id,
       title: CONFIRM_LOG_TITLE,
       type: "booking_created",
-      body: `${booking.vehicle_name} · Start ${booking.start_date} ${booking.start_hour}:00 (E-Mail inkl. Rechnung gesendet)`,
+      body: `${booking.vehicle_name} · Start ${booking.start_date} ${booking.start_hour}:00 (E-Mail ${invoiceAttachment ? "inkl. Rechnung" : "ohne Rechnungs-PDF"} gesendet)`,
     });
   }
 
