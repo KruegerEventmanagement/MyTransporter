@@ -346,15 +346,20 @@ export function BookingSection() {
   );
   const classOfVehicle = (v: DbVehicle): VehicleClass =>
     vehicleClassFromName(v.name, v.model, v.plate);
-  const availableClasses = Array.from(new Set(vehicles.map(classOfVehicle)));
+  /** Nur freigegebene Fahrzeuge zählen für Preisklassen und Verfügbarkeit. */
+  const bookableVehicles = useMemo(() => vehicles.filter((v) => v.is_active), [vehicles]);
+  const availableClasses = Array.from(new Set(bookableVehicles.map(classOfVehicle)));
 
   // ---- Verfügbarkeit im gesamten Auswahlprozess ----
   const activePlates = useMemo(
-    () => vehicles.map((v) => v.plate ?? "").filter(Boolean),
-    [vehicles],
+    () => bookableVehicles.map((v) => v.plate ?? "").filter(Boolean),
+    [bookableVehicles],
   );
   const platesOfClass = (cls: VehicleClass) =>
-    vehicles.filter((v) => classOfVehicle(v) === cls).map((v) => v.plate ?? "").filter(Boolean);
+    bookableVehicles
+      .filter((v) => classOfVehicle(v) === cls)
+      .map((v) => v.plate ?? "")
+      .filter(Boolean);
 
   /** Kalendertag: nur sperren, wenn für KEIN Fahrzeug irgendein Fenster frei ist. */
   const isDayUnavailable = (d: Date) => {
