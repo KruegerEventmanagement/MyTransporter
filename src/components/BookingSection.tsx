@@ -8,6 +8,8 @@ import { de } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { FuelInfoNote } from "./FuelInfoNote";
 import { createBookingCheckout } from "@/lib/payments.functions";
+import { previewCoupon, type CouponPreview } from "@/lib/birthday.functions";
+import { ageOn, MIN_DRIVER_AGE } from "@/lib/birthday";
 import { createBookingHold, releaseBookingHold } from "@/lib/booking-holds.functions";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
@@ -143,10 +145,15 @@ export function BookingSection() {
     lastName: "",
     email: "",
     phone: "",
+    birthDate: "",
+    birthdayConsent: false,
     accountType: "private" as "private" | "business",
     companyName: "",
     vatId: "",
   });
+  const [couponCode, setCouponCode] = useState("");
+  const [couponInfo, setCouponInfo] = useState<CouponPreview | null>(null);
+  const [couponChecking, setCouponChecking] = useState(false);
   const [regPassword, setRegPassword] = useState("");
   const [regPasswordConfirm, setRegPasswordConfirm] = useState("");
   const [showRegPassword, setShowRegPassword] = useState(false);
@@ -519,6 +526,11 @@ export function BookingSection() {
       setAuthError("Passwort muss mindestens 6 Zeichen lang sein.");
       return;
     }
+    const regAge = regForm.birthDate ? ageOn(regForm.birthDate) : null;
+    if (regAge === null || regAge < MIN_DRIVER_AGE) {
+      setAuthError(`Für eine Buchung musst du mindestens ${MIN_DRIVER_AGE} Jahre alt sein.`);
+      return;
+    }
     setAuthLoading(true);
     localStorage.setItem(
       AUTH_BOOKING_DRAFT_KEY,
@@ -542,6 +554,8 @@ export function BookingSection() {
               first_name: regForm.firstName,
               last_name: regForm.lastName,
               phone: regForm.phone,
+              birth_date: regForm.birthDate,
+              birthday_marketing_consent: regForm.birthdayConsent,
               account_type: regForm.accountType,
               company_name: regForm.accountType === "business" ? regForm.companyName : "",
               vat_id: regForm.accountType === "business" ? regForm.vatId : "",
@@ -748,6 +762,7 @@ export function BookingSection() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const startBookingCheckout = useServerFn(createBookingCheckout);
+  const checkCouponCode = useServerFn(previewCoupon);
   const startBookingHold = useServerFn(createBookingHold);
   const dropBookingHold = useServerFn(releaseBookingHold);
 
@@ -1673,6 +1688,32 @@ export function BookingSection() {
                         />
                       </div>
                       <div>
+                        <label className="text-sm font-medium text-foreground">Geburtsdatum</label>
+                        <input
+                          type="date"
+                          value={regForm.birthDate}
+                          onChange={(e) => setRegForm({ ...regForm, birthDate: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                        />
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Mindestalter für eine Buchung: {MIN_DRIVER_AGE} Jahre.
+                        </p>
+                      </div>
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={regForm.birthdayConsent}
+                          onChange={(e) =>
+                            setRegForm({ ...regForm, birthdayConsent: e.target.checked })
+                          }
+                          className="mt-1 h-4 w-4 shrink-0 accent-foreground"
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          Geburtstagsvorteile und Angebote per E-Mail erhalten (freiwillig, jederzeit
+                          im Profil widerrufbar).
+                        </span>
+                      </label>
+                      <div>
                         <label className="text-sm font-medium text-foreground">Passwort</label>
                         <div className="relative mt-1">
                           <input
@@ -1723,7 +1764,7 @@ export function BookingSection() {
                       <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
                     )}
                     <button
-                      disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regPassword || !regPasswordConfirm || authLoading || (regForm.accountType === "business" && !regForm.companyName)}
+                      disabled={!regForm.firstName || !regForm.lastName || !regForm.email || !regForm.phone || !regForm.birthDate || !regPassword || !regPasswordConfirm || authLoading || (regForm.accountType === "business" && !regForm.companyName)}
                       onClick={handleSignUp}
                       className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
                     >
@@ -1907,6 +1948,56 @@ export function BookingSection() {
                   </span>
                 </label>
               <FuelInfoNote freeKm={selectedPlanEntry?.freeKm} className="mt-4" />
+
+              {/* Gutscheincode (z. B. Geburtstagsvorteil) – Prüfung erfolgt serverseitig */}
+              <div className="mt-4 rounded-2xl border border-border bg-background p-4">
+                <label htmlFor="coupon-code" className="text-sm font-medium text-foreground">
+                  Gutscheincode
+                </label>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    id="coupon-code"
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => {
+                      setCouponCode(e.target.value.toUpperCase());
+                      setCouponInfo(null);
+                    }}
+                    placeholder="z. B. MTBDAY-XXXXXXXX"
+                    className="flex-1 rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                  />
+                  <button
+                    type="button"
+                    disabled={!couponCode.trim() || couponChecking}
+                    onClick={async () => {
+                      setCouponChecking(true);
+                      try {
+                        const res = await checkCouponCode({ data: { couponCode } });
+                        setCouponInfo(res);
+                      } catch {
+                        setCouponInfo({ valid: false, reason: "Prüfung nicht möglich. Bitte erneut versuchen." });
+                      } finally {
+                        setCouponChecking(false);
+                      }
+                    }}
+                    className="rounded-xl border border-border px-4 py-3 text-sm font-medium hover:bg-muted disabled:opacity-40"
+                  >
+                    {couponChecking ? "Prüfen…" : "Prüfen"}
+                  </button>
+                </div>
+                {couponInfo && (
+                  <p className={`mt-2 text-sm ${couponInfo.valid ? "text-foreground" : "text-destructive"}`}>
+                    {couponInfo.valid
+                      ? `${couponInfo.discountPercent} % Rabatt auf den Mietpreis werden beim Bezahlen abgezogen.`
+                      : couponInfo.reason}
+                  </p>
+                )}
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Der Rabatt gilt nur auf den Mietpreis, nicht auf Kaution oder Zusatzleistungen.
+                  Nicht mit anderen Rabatten kombinierbar.
+                </p>
+              </div>
+
               <button
                 disabled={!liabilityAccepted}
                 onClick={async () => {
@@ -1961,6 +2052,7 @@ export function BookingSection() {
                           vehicleClass,
                           startDate: date ? format(date, "yyyy-MM-dd") : undefined,
                           startHour: startHour ?? undefined,
+                          couponCode: couponInfo?.valid ? couponCode.trim() : undefined,
                        },
                      });
                       if ("error" in result) throw new Error(result.error);

@@ -47,6 +47,71 @@ export type Database = {
         }
         Relationships: []
       }
+      birthday_campaigns: {
+        Row: {
+          birthday_on: string
+          coupon_code: string
+          created_at: string
+          discount_cents: number | null
+          discount_percent: number
+          email_error: string | null
+          email_status: string
+          id: string
+          redeemed_at: string | null
+          redeemed_booking_id: string | null
+          sent_at: string | null
+          updated_at: string
+          user_id: string
+          valid_from: string
+          valid_until: string
+          year: number
+        }
+        Insert: {
+          birthday_on: string
+          coupon_code: string
+          created_at?: string
+          discount_cents?: number | null
+          discount_percent?: number
+          email_error?: string | null
+          email_status?: string
+          id?: string
+          redeemed_at?: string | null
+          redeemed_booking_id?: string | null
+          sent_at?: string | null
+          updated_at?: string
+          user_id: string
+          valid_from: string
+          valid_until: string
+          year: number
+        }
+        Update: {
+          birthday_on?: string
+          coupon_code?: string
+          created_at?: string
+          discount_cents?: number | null
+          discount_percent?: number
+          email_error?: string | null
+          email_status?: string
+          id?: string
+          redeemed_at?: string | null
+          redeemed_booking_id?: string | null
+          sent_at?: string | null
+          updated_at?: string
+          user_id?: string
+          valid_from?: string
+          valid_until?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "birthday_campaigns_redeemed_booking_id_fkey"
+            columns: ["redeemed_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_actions: {
         Row: {
           action_key: string
@@ -149,6 +214,7 @@ export type Database = {
           ai_end_km: number | null
           ai_start_fuel_percent: number | null
           ai_start_km: number | null
+          coupon_code: string | null
           created_at: string
           deposit: number
           deposit_deducted_cents: number | null
@@ -156,6 +222,7 @@ export type Database = {
           deposit_released_at: string | null
           deposit_released_by: string | null
           deposit_status: string
+          discount_cents: number
           end_km: number | null
           extra_charge_cents: number | null
           extra_charge_intent_id: string | null
@@ -194,6 +261,7 @@ export type Database = {
           ai_end_km?: number | null
           ai_start_fuel_percent?: number | null
           ai_start_km?: number | null
+          coupon_code?: string | null
           created_at?: string
           deposit?: number
           deposit_deducted_cents?: number | null
@@ -201,6 +269,7 @@ export type Database = {
           deposit_released_at?: string | null
           deposit_released_by?: string | null
           deposit_status?: string
+          discount_cents?: number
           end_km?: number | null
           extra_charge_cents?: number | null
           extra_charge_intent_id?: string | null
@@ -239,6 +308,7 @@ export type Database = {
           ai_end_km?: number | null
           ai_start_fuel_percent?: number | null
           ai_start_km?: number | null
+          coupon_code?: string | null
           created_at?: string
           deposit?: number
           deposit_deducted_cents?: number | null
@@ -246,6 +316,7 @@ export type Database = {
           deposit_released_at?: string | null
           deposit_released_by?: string | null
           deposit_status?: string
+          discount_cents?: number
           end_km?: number | null
           extra_charge_cents?: number | null
           extra_charge_intent_id?: string | null
@@ -382,6 +453,9 @@ export type Database = {
       profiles: {
         Row: {
           account_type: string
+          birth_date: string | null
+          birthday_consent_at: string | null
+          birthday_marketing_consent: boolean
           company_name: string | null
           created_at: string
           email: string | null
@@ -393,6 +467,9 @@ export type Database = {
         }
         Insert: {
           account_type?: string
+          birth_date?: string | null
+          birthday_consent_at?: string | null
+          birthday_marketing_consent?: boolean
           company_name?: string | null
           created_at?: string
           email?: string | null
@@ -404,6 +481,9 @@ export type Database = {
         }
         Update: {
           account_type?: string
+          birth_date?: string | null
+          birthday_consent_at?: string | null
+          birthday_marketing_consent?: boolean
           company_name?: string | null
           created_at?: string
           email?: string | null
