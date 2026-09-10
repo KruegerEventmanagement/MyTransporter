@@ -1097,42 +1097,14 @@ export function BookingSection() {
 
             {startHour !== null && (
               <>
-                {/* Fahrzeugklasse: bestimmt eindeutig den Preis */}
+                <p className="text-center text-muted-foreground text-lg mt-10 mb-2">Wähle deinen Tarif</p>
                 {availableClasses.length > 1 && (
-                  <div className="mt-10">
-                    <p className="text-center text-muted-foreground text-lg mb-3">
-                      Wähle deine Fahrzeugklasse
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {(["l1h1", "l4h2"] as VehicleClass[])
-                        .filter((cls) => availableClasses.includes(cls))
-                        .map((cls) => (
-                          <button
-                            key={cls}
-                            type="button"
-                            onClick={() => selectVehicleClass(cls)}
-                            className={`rounded-2xl border-2 p-4 text-left transition-all ${
-                              vehicleClass === cls
-                                ? "border-accent bg-accent/5 shadow-md"
-                                : "border-border hover:border-accent/50"
-                            }`}
-                          >
-                            <p className="font-bold text-foreground">{VEHICLE_CLASS_LABEL[cls]}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {cls === "l1h1"
-                                ? "Kurzer Kastenwagen, günstigster Preis"
-                                : `Langer Kastenwagen, mehr Ladevolumen · +${L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag`}
-                            </p>
-                          </button>
-                        ))}
-                    </div>
-                    <p className="mt-2 text-xs text-muted-foreground text-center">
-                      Die angezeigten Tarifpreise gelten für {VEHICLE_CLASS_LABEL[vehicleClass]}.
-                    </p>
-                  </div>
+                  <p className="text-center text-xs text-muted-foreground mb-6">
+                    Preise ab kurzem Transporter. Der lange Transporter mit Hochdach kostet{" "}
+                    {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr – deinen Endpreis siehst du im
+                    nächsten Schritt bei der Fahrzeugauswahl.
+                  </p>
                 )}
-
-                <p className="text-center text-muted-foreground text-lg mt-10 mb-6">Wähle deinen Tarif</p>
                 <div className="space-y-4">
                   {availablePlans.map((plan) => {
                 const planBlocked = isPlanUnavailable(plan.id);
