@@ -1152,9 +1152,12 @@ export function BookingSection() {
                       </p>
                       {availableClasses.length > 1 && (
                         <p className="text-[11px] text-muted-foreground whitespace-nowrap">
-                          langer Transporter {plan.priceL4h2} €
+                          {availableClasses.includes("l4h2") && `langer Transporter ${plan.priceL4h2} €`}
+                          {availableClasses.includes("l4h2") && availableClasses.includes("l5h2") && " · "}
+                          {availableClasses.includes("l5h2") && `Crafter ${plan.priceL5h2} €`}
                         </p>
                       )}
+
                     </div>
                   </div>
 
