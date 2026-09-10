@@ -43,7 +43,7 @@ interface Profile {
   email: string | null;
   phone: string | null;
   birth_date: string | null;
-  birthday_marketing_consent: boolean | null;
+  
 }
 
 interface UserDoc {
@@ -70,7 +70,7 @@ function ProfilePage() {
   const [docs, setDocs] = useState<UserDoc[]>([]);
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
   const [birthDate, setBirthDate] = useState("");
-  const [birthdayConsent, setBirthdayConsent] = useState(false);
+  
   const [savingData, setSavingData] = useState(false);
   const [dataMessage, setDataMessage] = useState<string | null>(null);
 
@@ -176,7 +176,7 @@ function ProfilePage() {
       const [p, b] = await Promise.all([
         supabase
           .from("profiles")
-          .select("first_name, last_name, email, phone, birth_date, birthday_marketing_consent")
+          .select("first_name, last_name, email, phone, birth_date")
           .eq("id", user.id)
           .maybeSingle(),
         supabase.from("bookings").select("*").eq("user_id", user.id).order("start_date", { ascending: false }),
@@ -186,7 +186,7 @@ function ProfilePage() {
         const row = p.data as Profile;
         setProfile(row);
         setBirthDate(row.birth_date ?? "");
-        setBirthdayConsent(!!row.birthday_marketing_consent);
+        
       }
       if (b.data) setBookings(b.data as Booking[]);
       const { data: roles } = await supabase
