@@ -1447,6 +1447,12 @@ export function BookingSection() {
                       addonsTotal > 0 ? ` + ${addonsTotal} € Zubehör` : ""
                     } + ${DEPOSIT} € Kaution`}
                 </p>
+                {selectedPlanEntry && selectedPlanEntry.vehicleClass === "l4h2" && (
+                  <p className="text-xs opacity-80 mt-2">
+                    Endpreis für den langen Transporter mit Hochdach (+{L4H2_SURCHARGE_PER_DAY_EUR} €
+                    pro Miettag). Kurzer Transporter: {selectedPlanEntry.basePrice} € Miete.
+                  </p>
+                )}
               </div>
             )}
 
