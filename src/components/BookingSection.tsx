@@ -1301,7 +1301,16 @@ export function BookingSection() {
                       {displayVehicle.plate}
                     </span>
                   </div>
-                  {currentVehicleUnavailable && (
+                  {currentVehicle && !currentVehicle.is_active && (
+                    <div className="mb-4 rounded-xl border border-border bg-secondary p-3 text-sm">
+                      <p className="font-semibold text-foreground">Aktuell nicht verfügbar</p>
+                      <p className="text-muted-foreground mt-1">
+                        Dieser Transporter ist noch nicht freigegeben und kann derzeit nicht gebucht
+                        werden.
+                      </p>
+                    </div>
+                  )}
+                  {currentVehicleUnavailable && currentVehicle?.is_active && (
                     <div className="mb-4 rounded-xl border border-border bg-secondary p-3 text-sm">
                       <p className="font-semibold text-foreground">
                         {selectionWindow
