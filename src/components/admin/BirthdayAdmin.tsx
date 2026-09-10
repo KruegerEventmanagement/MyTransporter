@@ -98,7 +98,9 @@ export function BirthdayAdmin() {
                         <span className="block text-xs text-destructive">{r.email_error}</span>
                       ) : null}
                     </td>
-                    <td className="px-3 py-2">{r.redeemed_at ? `ja · ${de(r.redeemed_at)}` : "nein"}</td>
+                    <td className="px-3 py-2">
+                      {r.redeemed_at ? `ja · ${de(r.redeemed_at)}` : "nein"}
+                    </td>
                   </tr>
                 ))}
               </tbody>

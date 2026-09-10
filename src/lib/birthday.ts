@@ -57,7 +57,7 @@ export function isBirthdayOn(
 ): boolean {
   const [, mRaw, dRaw] = birthDate.split("-").map(Number);
   if (!mRaw || !dRaw) return false;
-  let month = mRaw;
+  const month = mRaw;
   let day = dRaw;
   if (month === 2 && day === 29 && !isLeapYear(today.year)) day = 28;
   return month === today.month && day === today.day;
@@ -116,16 +116,10 @@ export interface CouponRow {
   redeemed_at: string | null;
 }
 
-export type CouponCheck =
-  | { ok: true; discountPercent: number }
-  | { ok: false; reason: string };
+export type CouponCheck = { ok: true; discountPercent: number } | { ok: false; reason: string };
 
 /** Serverseitige Prüfung eines Gutscheins gegen Nutzer und Zeitraum. */
-export function checkCoupon(
-  row: CouponRow | null,
-  userId: string,
-  todayIso: string,
-): CouponCheck {
+export function checkCoupon(row: CouponRow | null, userId: string, todayIso: string): CouponCheck {
   if (!row) return { ok: false, reason: "Dieser Gutscheincode ist unbekannt." };
   if (row.user_id !== userId) {
     return { ok: false, reason: "Dieser Gutschein ist persönlich und nicht übertragbar." };

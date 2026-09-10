@@ -127,11 +127,11 @@ export async function processBirthdayEmails(now: Date = new Date()): Promise<Bir
 }
 
 export interface CouponResolution {
-  ok: boolean
-  reason?: string
-  code?: string
-  discountPercent?: number
-  discountCents?: number
+  ok: boolean;
+  reason?: string;
+  code?: string;
+  discountPercent?: number;
+  discountCents?: number;
 }
 
 /**

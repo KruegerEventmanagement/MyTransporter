@@ -78,8 +78,9 @@ describe("Gutscheinprüfung", () => {
   });
 
   it("lehnt bereits eingelöste Gutscheine ab", () => {
-    expect(checkCoupon({ ...base, redeemed_at: "2026-09-20T10:00:00Z" }, "user-1", "2026-09-25").ok)
-      .toBe(false);
+    expect(
+      checkCoupon({ ...base, redeemed_at: "2026-09-20T10:00:00Z" }, "user-1", "2026-09-25").ok,
+    ).toBe(false);
   });
 
   it("lehnt abgelaufene und zu frühe Gutscheine ab", () => {
