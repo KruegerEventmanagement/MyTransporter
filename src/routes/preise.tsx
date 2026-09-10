@@ -93,8 +93,9 @@ function PreisePage() {
                 <p className="text-sm text-muted-foreground">{p.shortLabel}</p>
                 <p className="text-3xl font-bold text-foreground mt-1">{p.price} €</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  L4H2 {p.priceL4h2} €
+                  L4H2 {p.priceL4h2} € · Crafter {p.priceL5h2} €
                 </p>
+
                 <p className="text-xs text-muted-foreground mt-1">inkl. {p.freeKm} km</p>
               </div>
             ))}
