@@ -1107,10 +1107,12 @@ export function BookingSection() {
                 {availableClasses.length > 1 && (
                   <p className="text-center text-xs text-muted-foreground mb-6">
                     Preise ab kurzem Transporter. Der lange Transporter mit Hochdach kostet{" "}
-                    {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr – deinen Endpreis siehst du im
-                    nächsten Schritt bei der Fahrzeugauswahl.
+                    {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag mehr, der extra lange Crafter noch
+                    einmal rund {L5H2_SURCHARGE_EUR} € mehr – deinen Endpreis siehst du im nächsten
+                    Schritt bei der Fahrzeugauswahl.
                   </p>
                 )}
+
                 <div className="space-y-4">
                   {availablePlans.map((plan) => {
                 const planBlocked = isPlanUnavailable(plan.id);
