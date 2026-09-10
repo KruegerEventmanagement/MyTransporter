@@ -293,8 +293,26 @@ export function BookingSection() {
         payload: currentVehicle.payload_kg ? `${currentVehicle.payload_kg.toLocaleString("de-DE")} kg` : VEHICLE.payload,
         seats: currentVehicle.seats,
         power: currentVehicle.power_kw,
+        totalLength: cmToM(currentVehicle.length_cm),
+        totalWidth: cmToM(currentVehicle.width_cm),
+        totalHeight: cmToM(currentVehicle.height_cm),
+        cargoLength: cmToM(currentVehicle.cargo_length_cm),
+        cargoWidth: cmToM(currentVehicle.cargo_width_cm),
+        cargoHeight: cmToM(currentVehicle.cargo_height_cm),
+        cargoVolume: currentVehicle.cargo_volume_m3
+          ? `${String(currentVehicle.cargo_volume_m3).replace(".", ",")} m³`
+          : null,
+        pickupLocation: currentVehicle.pickup_location,
+        pickupAddress: currentVehicle.pickup_address,
       }
-    : { name: "", plate: "", photo: fiatDucato, fuel: VEHICLE.fuel, payload: VEHICLE.payload, seats: null as number | null, power: null as number | null };
+    : {
+        name: "", plate: "", photo: fiatDucato, fuel: VEHICLE.fuel, payload: VEHICLE.payload,
+        seats: null as number | null, power: null as number | null,
+        totalLength: null as string | null, totalWidth: null as string | null, totalHeight: null as string | null,
+        cargoLength: null as string | null, cargoWidth: null as string | null, cargoHeight: null as string | null,
+        cargoVolume: null as string | null,
+        pickupLocation: null as string | null, pickupAddress: null as string | null,
+      };
 
   // Fahrzeugklasse des aktuell gewählten Transporters – steuert den Preis
   const vehicleClass: VehicleClass = vehicleClassFromName(
