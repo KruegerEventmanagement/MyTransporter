@@ -14,7 +14,7 @@ import {
   VEHICLE_CLASS_SHORT_LABEL,
   type VehicleClass,
 } from "@/lib/booking-rules";
-import { getAddonById } from "@/lib/addons";
+import { getAddonById, resolveAddonSelection } from "@/lib/addons";
 
 const DEPOSIT_CENTS = 200_00;
 
