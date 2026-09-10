@@ -370,6 +370,18 @@ function VehicleEditor({
         <Field label="Nutzlast (kg)"><input className={inp} {...numField("payload_kg")} /></Field>
       </Section>
 
+      <Section title="Maße & Abholort">
+        <Field label="Außenlänge (cm)"><input className={inp} {...numField("length_cm")} /></Field>
+        <Field label="Außenbreite (cm)"><input className={inp} {...numField("width_cm")} /></Field>
+        <Field label="Außenhöhe (cm)"><input className={inp} {...numField("height_cm")} /></Field>
+        <Field label="Ladefläche Länge (cm)"><input className={inp} {...numField("cargo_length_cm")} /></Field>
+        <Field label="Ladefläche Breite (cm)"><input className={inp} {...numField("cargo_width_cm")} /></Field>
+        <Field label="Ladefläche Höhe (cm)"><input className={inp} {...numField("cargo_height_cm")} /></Field>
+        <Field label="Ladevolumen (m³)"><input className={inp} {...numField("cargo_volume_m3")} /></Field>
+        <Field label="Abholort (Kurzform)"><input className={inp} {...txtField("pickup_location")} /></Field>
+        <Field label="Abholadresse"><input className={inp} {...txtField("pickup_address")} /></Field>
+      </Section>
+
       <Section title="Notizen">
         <textarea
           className={`${inp} min-h-[100px]`}
