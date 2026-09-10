@@ -85,7 +85,7 @@ export function TariffSection() {
               <thead className="bg-secondary text-foreground">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold">Tarif</th>
-                  <th className="text-right px-4 py-3 font-semibold">L1H1 / L4H2</th>
+                  <th className="text-right px-4 py-3 font-semibold">L1H1 / L4H2 / Crafter</th>
                   <th className="text-right px-4 py-3 font-semibold hidden sm:table-cell">Inklusive km</th>
                   <th className="text-right px-4 py-3 font-semibold">pro Tag</th>
                   <th className="px-2 py-3"></th>
