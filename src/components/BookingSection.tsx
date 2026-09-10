@@ -349,7 +349,7 @@ export function BookingSection() {
     const next = sameClass >= 0 ? sameClass : vehicles.findIndex((v) => isPlateAvailable(v.plate ?? ""));
     if (next >= 0 && next !== vehicleIdx) setVehicleIdx(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectionWindow, busyMap, vehicles, vehicleIdx]);
+  }, [step, selectionWindow, busyMap, vehicles, vehicleIdx]);
 
   /** Tarif: sperren, wenn kein Fahrzeug der gewählten Klasse den kompletten Zeitraum frei hat. */
   const isPlanUnavailable = (planId: string) => {
