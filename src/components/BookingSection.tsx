@@ -1473,6 +1473,14 @@ export function BookingSection() {
                     pro Miettag). Kurzer Transporter: {selectedPlanEntry.basePrice} € Miete.
                   </p>
                 )}
+                {selectedPlanEntry && selectedPlanEntry.vehicleClass === "l5h2" && (
+                  <p className="text-xs opacity-80 mt-2">
+                    Endpreis für den extra langen Crafter. Kurzer Transporter:{" "}
+                    {selectedPlanEntry.basePrice} € · langer Transporter{" "}
+                    {selectedPlanEntry.priceL4h2} € Miete.
+                  </p>
+                )}
+
               </div>
             )}
 
