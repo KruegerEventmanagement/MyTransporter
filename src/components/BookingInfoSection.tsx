@@ -2,7 +2,7 @@ const POINTS = [
   "Kaution 200 € – wird nach ordnungsgemäßer Rückgabe zurückerstattet",
   "Führerschein und Ausweis erforderlich",
   "Übergabe mit Fotos und Protokoll",
-  "Umzugspaket mit Spanngurten, Zurrgurten, Decken, Klebeband und Handschuhen optional für 29 €",
+  "Umzugspaket für 29 € oder Fahrer / Umzugshelfer für 50 € pro Stunde (ab 3 Stunden) optional dazubuchbar",
   "Tankregel Voll/Voll: vollgetankt übernehmen, vollgetankt zurückgeben",
   "Besenrein zurückgeben",
   "Rauchen im Fahrzeug verboten",
