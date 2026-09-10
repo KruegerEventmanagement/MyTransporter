@@ -1,4 +1,4 @@
-import { PLAN_CATALOG, L4H2_SURCHARGE_PER_DAY_EUR } from "@/lib/booking-rules";
+import { PLAN_CATALOG, L4H2_SURCHARGE_PER_DAY_EUR, L5H2_SURCHARGE_EUR } from "@/lib/booking-rules";
 
 const SINGLE = PLAN_CATALOG.filter((p) => p.days === 1);
 const MULTI = PLAN_CATALOG.filter((p) => p.days > 1);
