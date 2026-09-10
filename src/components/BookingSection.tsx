@@ -860,6 +860,13 @@ export function BookingSection() {
       .then((res) => {
         if (cancelled) return;
         setHoldExpiresAt(new Date(res.expiresAt).getTime());
+        if (selectionWindow && displayVehicle.plate) {
+          setOwnHold({
+            plate: displayVehicle.plate,
+            start: selectionWindow.start,
+            end: selectionWindow.end,
+          });
+        }
         refreshBusySlots();
       })
       .catch((e: unknown) => {
