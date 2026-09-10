@@ -21,19 +21,21 @@ export const KM_TARIFF_CENTS_PER_KM = 90;
 
 export type PlanId = string;
 
-/** Fahrzeugklassen: kurzer L1H1 und langer L4H2 (jeweils +10 €). */
-export type VehicleClass = "l1h1" | "l4h2";
+/** Fahrzeugklassen: kurzer L1H1, langer L4H2 und der extra lange Crafter (L5H2). */
+export type VehicleClass = "l1h1" | "l4h2" | "l5h2";
 
-export const VEHICLE_CLASSES: VehicleClass[] = ["l1h1", "l4h2"];
+export const VEHICLE_CLASSES: VehicleClass[] = ["l1h1", "l4h2", "l5h2"];
 
 export const VEHICLE_CLASS_LABEL: Record<VehicleClass, string> = {
   l1h1: "L1H1 (kurz)",
   l4h2: "L4H2 (lang)",
+  l5h2: "L5H2 (extra lang)",
 };
 
 export const VEHICLE_CLASS_SHORT_LABEL: Record<VehicleClass, string> = {
   l1h1: "L1H1",
   l4h2: "L4H2",
+  l5h2: "L5H2",
 };
 
 /**
@@ -43,22 +45,33 @@ export const VEHICLE_CLASS_SHORT_LABEL: Record<VehicleClass, string> = {
  */
 export const L4H2_SURCHARGE_PER_DAY_EUR = 10;
 
+/** Aufpreis des extra langen Crafters (L5H2) gegenüber L4H2, aufgerundet auf 5 €. */
+export const L5H2_SURCHARGE_EUR = 15;
+
+/** L5H2-Preis aus dem L4H2-Preis: +15 €, auf volle 5 € aufgerundet (z. B. 59 → 75). */
+export function l5h2PriceFrom(priceL4h2: number): number {
+  return Math.ceil((priceL4h2 + L5H2_SURCHARGE_EUR) / 5) * 5;
+}
+
 /** Mindestbetrag beim reinen Kilometer-Tarif. */
 export const KM_TARIFF_MIN_EUR: Record<VehicleClass, number> = {
   l1h1: 100,
   l4h2: 110,
+  l5h2: 125,
 };
 
 export function isVehicleClass(value: unknown): value is VehicleClass {
-  return value === "l1h1" || value === "l4h2";
+  return value === "l1h1" || value === "l4h2" || value === "l5h2";
 }
 
 /** Leitet die Fahrzeugklasse aus Name / Modell / Kennzeichen-Bezeichnung ab. */
 export function vehicleClassFromName(...parts: Array<string | null | undefined>): VehicleClass {
   const haystack = parts.filter(Boolean).join(" ").toLowerCase().replace(/[\s-]/g, "");
+  if (haystack.includes("l5h2") || haystack.includes("crafter")) return "l5h2";
   if (haystack.includes("l4h2")) return "l4h2";
   return "l1h1";
 }
+
 
 
 export type PlanEntry = {
