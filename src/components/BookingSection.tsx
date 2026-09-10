@@ -193,7 +193,17 @@ export function BookingSection() {
   }, [step]);
 
   const currentPlate = vehicles[vehicleIdx]?.plate ?? "";
-  const busyMap = useMemo(() => slotsByPlate(busySlots), [busySlots]);
+  const visibleBusySlots = useMemo(() => {
+    if (!ownHold) return busySlots;
+    const norm = (p: string) => p.replace(/\s+/g, "").toUpperCase();
+    return busySlots.filter((s) => {
+      if (norm(s.vehiclePlate ?? "") !== norm(ownHold.plate)) return true;
+      const start = new Date(s.start).getTime();
+      const end = new Date(s.end).getTime();
+      return !(Math.abs(start - ownHold.start) < 60_000 && Math.abs(end - ownHold.end) < 60_000);
+    });
+  }, [busySlots, ownHold]);
+  const busyMap = useMemo(() => slotsByPlate(visibleBusySlots), [visibleBusySlots]);
   
 
   // Convenience: range start/end + Nächtezahl
