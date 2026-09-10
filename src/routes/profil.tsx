@@ -88,25 +88,15 @@ function ProfilePage() {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
       if (!user) return;
-      const wasConsented = !!profile?.birthday_marketing_consent;
       const { error } = await supabase
         .from("profiles")
-        .update({
-          birth_date: birthDate || null,
-          birthday_marketing_consent: birthdayConsent,
-          birthday_consent_at:
-            birthdayConsent && !wasConsented ? new Date().toISOString() : undefined,
-        })
+        .update({ birth_date: birthDate || null })
         .eq("id", user.id);
       if (error) {
         setDataMessage("Speichern fehlgeschlagen. Bitte später erneut versuchen.");
         return;
       }
-      setProfile((prev) =>
-        prev
-          ? { ...prev, birth_date: birthDate || null, birthday_marketing_consent: birthdayConsent }
-          : prev,
-      );
+      setProfile((prev) => (prev ? { ...prev, birth_date: birthDate || null } : prev));
       setDataMessage("Gespeichert.");
     } finally {
       setSavingData(false);
@@ -320,18 +310,10 @@ function ProfilePage() {
               </p>
             </div>
 
-            <label className="flex items-start gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={birthdayConsent}
-                onChange={(e) => setBirthdayConsent(e.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-foreground"
-              />
-              <span className="text-xs leading-relaxed">
-                Geburtstagsvorteile und Angebote per E-Mail erhalten. Du kannst die Einwilligung
-                jederzeit hier widerrufen.
-              </span>
-            </label>
+            <p className="text-[11px] text-muted-foreground">
+              Mit hinterlegtem Geburtsdatum erhältst du an deinem Geburtstag automatisch deinen
+              persönlichen Gutschein per E-Mail.
+            </p>
 
             <div className="flex items-center gap-3">
               <button
