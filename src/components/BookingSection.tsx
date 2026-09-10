@@ -37,7 +37,7 @@ import {
   getAvailablePlans,
   planLabelWithClass,
   vehicleClassFromName,
-  VEHICLE_CLASS_LABEL,
+  
   VEHICLE_CLASS_SHORT_LABEL,
   EARLIEST_START_HOUR,
   LATEST_RETURN_HOUR,

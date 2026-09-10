@@ -33,6 +33,15 @@ interface Vehicle {
   photo_urls: string[];
   registration_doc_url: string | null;
   is_active: boolean;
+  length_cm: number | null;
+  width_cm: number | null;
+  height_cm: number | null;
+  cargo_length_cm: number | null;
+  cargo_width_cm: number | null;
+  cargo_height_cm: number | null;
+  cargo_volume_m3: number | null;
+  pickup_location: string | null;
+  pickup_address: string | null;
 }
 
 const empty: Partial<Vehicle> = {
