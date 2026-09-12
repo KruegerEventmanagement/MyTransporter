@@ -6,6 +6,8 @@ Der Audit ist abgeschlossen und hat nichts verändert. Buchung, Zahlung, Rechnun
 
 Bei jeder Registrierung und jedem Buchungsschritt am 12.09.2026 (10:32:25 bis 10:34:10 UTC) bricht der Benachrichtigungs-Hook mit demselben Fehler ab: der hinterlegte Push-Schlüssel hat ein ungültiges Format (`Vapid private key must be a URL safe Base 64 (without "=")`). Der Hook antwortet dadurch mit Fehler 500. E-Mails, Rechnung und Buchung sind davon nicht betroffen — die liefen alle erfolgreich.
 
+Der Fehler tritt weiterhin auf: bei der Erinnerung „Dein Schlüssel-Code ist jetzt freigeschaltet“ am 12.09.2026 um 15:30:02 UTC exakt derselbe Schlüsselformat-Fehler, Hook-Antwort 500 um 15:30:03 UTC.
+
 ## Vorschlag zur Behebung (nur nach Freigabe)
 
 1. Push-Schlüsselpaar neu in korrektem URL-safe-Base64-Format erzeugen und als Secrets hinterlegen (der private Schlüssel darf nur serverseitig liegen, der öffentliche Schlüssel geht in die App).
