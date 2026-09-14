@@ -96,7 +96,7 @@ export function Navbar() {
     setShowModal(null);
     setError(null);
     setInfo(null);
-    setForm({ firstName: "", lastName: "", email: "", phone: "", password: "", accountType: "private", companyName: "", vatId: "" });
+    setForm({ firstName: "", lastName: "", email: "", phone: "", birthDate: "", password: "", accountType: "private", companyName: "", vatId: "" });
   };
 
   const handleLogin = async () => {
@@ -123,6 +123,19 @@ export function Navbar() {
       setError("Passwort muss mindestens 6 Zeichen lang sein.");
       return;
     }
+    if (!isValidIsoDate(form.birthDate)) {
+      setError("Bitte gib dein Geburtsdatum an.");
+      return;
+    }
+    const todayIso = todayIsoBerlin();
+    if (form.birthDate > todayIso) {
+      setError("Das Geburtsdatum kann nicht in der Zukunft liegen.");
+      return;
+    }
+    if (!meetsMinimumAge(form.birthDate, todayIso)) {
+      setError(MIN_AGE_MESSAGE);
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email: form.email,
@@ -133,6 +146,7 @@ export function Navbar() {
           first_name: form.firstName,
           last_name: form.lastName,
           phone: form.phone,
+          birth_date: form.birthDate,
           account_type: form.accountType,
           company_name: form.accountType === "business" ? form.companyName : "",
           vat_id: form.accountType === "business" ? form.vatId : "",
