@@ -19,10 +19,21 @@ export const LONG_TERM_WEEK_DISCOUNT_PERCENT = 10;
 
 /** Ziel-Ankerpreise (Mietpreis in Euro, ohne Kaution) je Fahrzeugklasse. */
 export const LONG_TERM_ANCHORS: Record<VehicleClass, Record<30 | 45 | 60, number>> = {
-  l1h1: { 30: 949, 45: 1399, 60: 1799 },
-  l4h2: { 30: 1049, 45: 1549, 60: 1999 },
-  l5h2: { 30: 1149, 45: 1699, 60: 2199 },
+  l1h1: { 30: 999, 45: 1499, 60: 1899 },
+  l4h2: { 30: 1399, 45: 1999, 60: 2599 },
+  l5h2: { 30: 1699, 45: 2399, 60: 3099 },
 };
+
+/** Inklusiv-Kilometer je 30 Miettage. */
+export const LONG_TERM_FREE_KM_PER_30_DAYS = 4000;
+/** Mehrkilometer-Satz (Wochen-/Langzeitniveau) in Euro pro km. */
+export const LONG_TERM_EXTRA_KM_EUR = 0.29;
+
+/** Inklusiv-Kilometer für eine Anzahl Miettage (proportional, auf ganze km gerundet). */
+export function longTermFreeKm(days: number): number {
+  if (!Number.isFinite(days) || days <= 0) return 0;
+  return Math.round((LONG_TERM_FREE_KM_PER_30_DAYS / 30) * days);
+}
 
 /** Wochenpreis (7 Tage) der Fahrzeugklasse in Euro. */
 export function weeklyBasePriceEur(vehicleClass: VehicleClass): number {
@@ -105,6 +116,10 @@ export type LongTermQuote =
       effectivePricePerDayEur: number;
       tierLabel: string | null;
       depositEur: number;
+      /** Inklusiv-Kilometer für die Laufzeit. */
+      freeKm: number;
+      /** Preis je Mehrkilometer in Euro. */
+      extraKmEur: number;
     };
 
 /** Langzeitpreis für einen Zeitraum ab 7 Tagen. */
@@ -135,6 +150,8 @@ export function quoteLongTerm(
     effectivePricePerDayEur: roundCents(totalEur / days),
     tierLabel: longTermTierLabel(days),
     depositEur: DEPOSIT_EUR,
+    freeKm: longTermFreeKm(days),
+    extraKmEur: LONG_TERM_EXTRA_KM_EUR,
   };
 }
 
