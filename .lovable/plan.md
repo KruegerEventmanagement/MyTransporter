@@ -15,7 +15,7 @@ Keine Änderung an Preislogik, Eingabefeldern, Ergebnisbereich oder Tests. Der `
   - Badge-Pill (Sparkles + Text) über dem `<h1>` löschen.
   - Block „Strecke Start → Rückgabe" mit Progressbar löschen.
   - `progress`-Zeile (`const progress = …`) löschen, da danach ungenutzt.
-  - Falls `Sparkles`/`RouteIcon` nach dem Entfernen nirgends mehr importiert werden, die ungenutzten Imports aufräumen.
+  - `RouteIcon` wird nur im entfernten Regler verwendet → Import entfernen. `Sparkles` bleibt (wird unten in den Feature-Karten weiter genutzt).
 
 ## Prüfung
 
