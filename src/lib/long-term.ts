@@ -116,6 +116,10 @@ export type LongTermQuote =
       effectivePricePerDayEur: number;
       tierLabel: string | null;
       depositEur: number;
+      /** Inklusiv-Kilometer für die Laufzeit. */
+      freeKm: number;
+      /** Preis je Mehrkilometer in Euro. */
+      extraKmEur: number;
     };
 
 /** Langzeitpreis für einen Zeitraum ab 7 Tagen. */
