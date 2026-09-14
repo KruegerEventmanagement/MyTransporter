@@ -4,6 +4,13 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { trackCompleteRegistration } from "@/lib/analytics";
 import { consumeLoginRequest, takeLoginRedirect } from "@/lib/login-redirect";
+import {
+  ageOnIsoDate,
+  isValidIsoDate,
+  meetsMinimumAge,
+  MIN_AGE_MESSAGE,
+  todayIsoBerlin,
+} from "@/lib/age";
 
 const AUTH_CONFIRM_URL = `${typeof window !== "undefined" ? window.location.origin : "https://www.mytransporter.org"}/auth/confirm`;
 
@@ -24,6 +31,7 @@ export function Navbar() {
     lastName: "",
     email: "",
     phone: "",
+    birthDate: "",
     password: "",
     accountType: "private" as "private" | "business",
     companyName: "",
