@@ -1,10 +1,9 @@
 # Roadmap
 
-## Offen
-- [ ] Registrierung: Pflichtfeld Geburtsdatum + Mindestalter 25 (Navbar-Modal, user_metadata + profiles.birth_date, Admin-Benachrichtigung mit Alter)
-- [ ] Neue Nav-Kategorie „Langzeitmiete“ + Route `/langzeitmiete` mit animiertem Preisrechner (ab 7 Tage, Tagespreis aus Wochenpreis, 10 % Rabatt, Kaution separat)
-- [ ] Unit-Tests: Altersberechnung/25-Jahre-Grenze, Langzeitpreis (7/10/14 Tage, alle Klassen, <7 Tage)
-- [ ] Typecheck + Build + bestehende Tests grün
+## Erledigt
+- [x] Registrierung: Pflichtfeld Geburtsdatum, Mindestalter 25 (kalendergenau), Speicherung in user_metadata + profiles, Admin-Mail mit Geburtsdatum/Alter
+- [x] Neue Nav-Kategorie „Langzeitmiete" + Route /langzeitmiete mit animiertem Preisrechner (ab 7 Tagen, 10 % Rabatt, Kaution separat)
+- [x] Unit-Tests Alter + Langzeitpreis (65 Tests grün), Typecheck, Produktionsbuild
 
-## Bekannt offen (separat)
-- [ ] Admin-Push: VAPID-Schlüsselformat ungültig (Hook 500) – noch nicht beauftragt
+## Offen (extern blockiert)
+- [ ] Admin-Push VAPID-Konfigurationsfehler (Push-Schlüssel serverseitig) — braucht gültige VAPID-Zugangsdaten
