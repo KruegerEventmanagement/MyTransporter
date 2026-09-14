@@ -35,6 +35,8 @@ export const sendAdminRegistrationNotification = createServerFn({ method: "POST"
       firstName?: string;
       lastName?: string;
       phone?: string;
+      birthDate?: string;
+      age?: number;
       accountType?: "private" | "business";
       companyName?: string;
       vatId?: string;
@@ -57,6 +59,7 @@ export const sendAdminRegistrationNotification = createServerFn({ method: "POST"
           <tr><td style="padding:6px 0;color:#666;width:140px;">Name</td><td><strong>${escapeHtml(name)}</strong></td></tr>
           <tr><td style="padding:6px 0;color:#666;">E-Mail</td><td>${escapeHtml(data.email)}</td></tr>
           <tr><td style="padding:6px 0;color:#666;">Telefon</td><td>${escapeHtml(data.phone ?? "-")}</td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Geburtsdatum</td><td>${escapeHtml(formatBirthDate(data.birthDate))}${typeof data.age === "number" ? ` · ${data.age} Jahre` : ""}</td></tr>
         </table>
         <p style="margin:24px 0;">
           <a href="https://www.mytransporter.org/admin" style="background:#000;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:600;display:inline-block;">Im Admin öffnen</a>
