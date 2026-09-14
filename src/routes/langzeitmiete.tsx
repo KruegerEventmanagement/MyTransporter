@@ -120,23 +120,6 @@ function LangzeitmietePage() {
               </div>
             </div>
 
-            {/* Strecke Start → Rückgabe */}
-            <div className="mt-6">
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                <span>Start</span>
-                <span className="inline-flex items-center gap-1">
-                  <RouteIcon className="w-3.5 h-3.5" />
-                  {quote.days ? `${quote.days} Miettage` : "Zeitraum wählen"}
-                </span>
-                <span>Rückgabe</span>
-              </div>
-              <div className="mt-2 h-2 rounded-full bg-secondary overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-foreground transition-[width] duration-500 ease-out motion-reduce:transition-none"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
           </div>
 
           {/* Ergebnis */}
