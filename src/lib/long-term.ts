@@ -150,6 +150,8 @@ export function quoteLongTerm(
     effectivePricePerDayEur: roundCents(totalEur / days),
     tierLabel: longTermTierLabel(days),
     depositEur: DEPOSIT_EUR,
+    freeKm: longTermFreeKm(days),
+    extraKmEur: LONG_TERM_EXTRA_KM_EUR,
   };
 }
 
