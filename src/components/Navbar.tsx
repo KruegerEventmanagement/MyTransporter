@@ -163,6 +163,19 @@ export function Navbar() {
       !data.session && Array.isArray(data.user?.identities) && data.user!.identities!.length === 0;
     if (data.user?.id && !isExisting) trackCompleteRegistration(data.user.id);
 
+    // Sicherheitsnetz: Der Profil-Trigger schreibt birth_date bereits aus den
+    // Metadaten. Falls schon eine Sitzung besteht, zusätzlich still nachziehen.
+    if (data.session && data.user?.id) {
+      supabase
+        .from("profiles")
+        .update({ birth_date: form.birthDate })
+        .eq("id", data.user.id)
+        .is("birth_date", null)
+        .then(({ error: e }) => {
+          if (e) console.warn("Geburtsdatum-Nachtrag fehlgeschlagen:", e.message);
+        });
+    }
+
     // Admin-Benachrichtigung über neue Registrierung (still im Hintergrund)
     import("@/lib/booking-emails.functions").then(({ sendAdminRegistrationNotification }) =>
       sendAdminRegistrationNotification({
@@ -171,6 +184,8 @@ export function Navbar() {
           firstName: form.firstName,
           lastName: form.lastName,
           phone: form.phone,
+          birthDate: form.birthDate,
+          age: ageOnIsoDate(form.birthDate, todayIso) ?? undefined,
           accountType: form.accountType,
           companyName: form.accountType === "business" ? form.companyName : undefined,
           vatId: form.accountType === "business" ? form.vatId : undefined,
