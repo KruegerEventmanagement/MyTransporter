@@ -188,6 +188,17 @@ function LangzeitmietePage() {
                     </div>
                   )}
                   <div className="flex justify-between">
+                    <dt className="text-muted-foreground">
+                      Inklusiv-Kilometer
+                      <span className="block text-[10px]">
+                        4.000 km je 30 Miettage · Mehrkilometer {formatEur(quote.extraKmEur)} €/km
+                      </span>
+                    </dt>
+                    <dd className="text-foreground">
+                      inkl. {quote.freeKm.toLocaleString("de-DE")} km
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
                     <dt className="text-muted-foreground">Kaution (separat, ohne Rabatt)</dt>
                     <dd className="text-foreground">{formatEur(quote.depositEur)} €</dd>
                   </div>
