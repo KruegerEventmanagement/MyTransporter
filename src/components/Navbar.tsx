@@ -208,12 +208,20 @@ export function Navbar() {
     <>
       <nav className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50">
         <div className="max-w-5xl mx-auto px-3 sm:px-4 h-12 flex items-center justify-end gap-2 sm:gap-3">
-          <Link
-            to="/werbung"
-            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors mr-auto"
-          >
-            Werbefläche
-          </Link>
+          <div className="mr-auto flex items-center gap-2 sm:gap-3 min-w-0">
+            <Link
+              to="/werbung"
+              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+            >
+              Werbefläche
+            </Link>
+            <Link
+              to="/langzeitmiete"
+              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+            >
+              Langzeitmiete
+            </Link>
+          </div>
           <Link
             to="/preise"
             className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -393,6 +401,22 @@ export function Navbar() {
                   inputMode="tel"
                   className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                 />
+              )}
+              {showModal === "register" && (
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                    Geburtsdatum (Mindestalter 25 Jahre)
+                  </span>
+                  <input
+                    type="date"
+                    required
+                    value={form.birthDate}
+                    max={todayIsoBerlin()}
+                    onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
+                    autoComplete="bday"
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                  />
+                </label>
               )}
               <div className="relative">
                 <input
