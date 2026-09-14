@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  LONG_TERM_DISCOUNT_PERCENT,
+  longTermPriceEur,
+  longTermTierLabel,
   quoteLongTerm,
   rentalDaysBetween,
   weeklyBasePriceEur,
@@ -42,36 +43,62 @@ describe("Langzeitmiete", () => {
     expect(weeklyBasePriceEur("l5h2")).toBe(585);
   });
 
-  it("7 Tage L1H1: 499 € → 10 % → 449,10 €", () => {
+  it("7 Tage = Wochenpreis minus 10 %", () => {
     const q = quoteLongTerm("2026-10-01", "2026-10-08", "l1h1");
     expect(q.eligible).toBe(true);
     if (!q.eligible) return;
     expect(q.days).toBe(7);
-    expect(q.normalPriceEur).toBe(499);
-    expect(q.discountPercent).toBe(LONG_TERM_DISCOUNT_PERCENT);
-    expect(q.discountEur).toBe(49.9);
     expect(q.totalEur).toBe(449.1);
+    expect(q.referencePriceEur).toBe(499);
+    expect(q.savingsEur).toBe(49.9);
+    expect(q.isExactWeekDiscount).toBe(true);
     expect(q.depositEur).toBe(200);
+    expect(longTermPriceEur(7, "l4h2")).toBe(512.1);
+    expect(longTermPriceEur(7, "l5h2")).toBe(526.5);
   });
 
-  it("rundet nicht auf volle Wochen auf (10 und 14 Tage, alle Klassen)", () => {
-    const cases: Array<[Parameters<typeof quoteLongTerm>[2], number, number, number]> = [
-      ["l1h1", 10, 712.86, 641.57],
-      ["l4h2", 10, 812.86, 731.57],
-      ["l5h2", 10, 835.71, 752.14],
-      ["l1h1", 14, 998, 898.2],
-      ["l4h2", 14, 1138, 1024.2],
-      ["l5h2", 14, 1170, 1053],
-    ];
-    for (const [cls, days, normal, total] of cases) {
-      const end = new Date(Date.UTC(2026, 9, 1) + days * 86_400_000).toISOString().slice(0, 10);
-      const q = quoteLongTerm("2026-10-01", end, cls);
-      expect(q.eligible).toBe(true);
-      if (!q.eligible) continue;
-      expect(q.days).toBe(days);
-      expect(q.normalPriceEur).toBeCloseTo(normal, 2);
-      expect(q.totalEur).toBeCloseTo(total, 2);
+  it("trifft die Ankerpreise für 30, 45 und 60 Tage exakt", () => {
+    expect(longTermPriceEur(30, "l1h1")).toBe(949);
+    expect(longTermPriceEur(45, "l1h1")).toBe(1399);
+    expect(longTermPriceEur(60, "l1h1")).toBe(1799);
+    expect(longTermPriceEur(30, "l4h2")).toBe(1049);
+    expect(longTermPriceEur(45, "l4h2")).toBe(1549);
+    expect(longTermPriceEur(60, "l4h2")).toBe(1999);
+    expect(longTermPriceEur(30, "l5h2")).toBe(1149);
+    expect(longTermPriceEur(45, "l5h2")).toBe(1699);
+    expect(longTermPriceEur(60, "l5h2")).toBe(2199);
+  });
+
+  it("interpoliert tagesgenau zwischen den Ankern", () => {
+    // 14 Tage L1H1: 449,10 + (949 − 449,10) × 7/23
+    expect(longTermPriceEur(14, "l1h1")).toBeCloseTo(601.24, 2);
+    // 37 Tage L4H2: 1049 + (1549 − 1049) × 7/15
+    expect(longTermPriceEur(37, "l4h2")).toBeCloseTo(1282.33, 2);
+    // 50 Tage L5H2: 1699 + (2199 − 1699) × 5/15
+    expect(longTermPriceEur(50, "l5h2")).toBeCloseTo(1865.67, 2);
+  });
+
+  it("über 60 Tage bleibt der Tagespreis auf 60-Tage-Niveau", () => {
+    expect(longTermPriceEur(90, "l1h1")).toBeCloseTo((1799 / 60) * 90, 2);
+    const perDay60 = 2199 / 60;
+    expect(longTermPriceEur(75, "l5h2") / 75).toBeCloseTo(perDay60, 4);
+    expect(longTermPriceEur(120, "l4h2") / 120).toBeCloseTo(1999 / 60, 4);
+  });
+
+  it("der effektive Tagespreis sinkt mit der Mietdauer", () => {
+    let prev = Infinity;
+    for (const days of [7, 10, 14, 21, 30, 37, 45, 52, 60]) {
+      const perDay = longTermPriceEur(days, "l1h1") / days;
+      expect(perDay).toBeLessThan(prev);
+      prev = perDay;
     }
+  });
+
+  it("kennzeichnet runde Laufzeiten", () => {
+    expect(longTermTierLabel(30)).toBe("Monatspreis");
+    expect(longTermTierLabel(45)).toBe("1,5-Monats-Preis");
+    expect(longTermTierLabel(60)).toBe("2-Monats-Preis");
+    expect(longTermTierLabel(31)).toBeNull();
   });
 
   it("unter 7 Tagen und bei ungültigem Zeitraum kein Preis", () => {

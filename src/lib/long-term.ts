@@ -1,17 +1,28 @@
 /**
  * Langzeitmiete – reine Preislogik.
  *
- * Basis ist immer der aktuelle 7-Tage-Wochenmietpreis aus der zentralen
- * Preisquelle (booking-rules.ts). Tarifänderungen ziehen damit automatisch mit.
+ * Marktorientiertes Ankermodell: Für jede Fahrzeugklasse sind Zielpreise für
+ * 7, 30, 45 und 60 Miettage hinterlegt. Zwischen den Ankern wird tagesgenau
+ * linear interpoliert, damit es keine Preissprünge gibt. Über 60 Tage gilt der
+ * effektive 60-Tage-Tagespreis, der Preis pro Tag steigt also nie wieder.
  *
- * Rechenweg: Wochenpreis / 7 = Tagespreis · × echte Miettage = Normalpreis
- * · − 10 % Langzeit-Rabatt = Mietpreis. Die Kaution bleibt unberührt.
+ * Der 7-Tage-Anker leitet sich weiterhin aus dem zentralen Wochenmietpreis
+ * (booking-rules.ts) minus 10 % ab, damit Tarifänderungen automatisch mitziehen.
+ * Die Kaution bleibt immer unberührt und wird nicht rabattiert.
  */
 
 import { DEPOSIT_EUR, getPlanById, type VehicleClass } from "@/lib/booking-rules";
 
 export const LONG_TERM_MIN_DAYS = 7;
-export const LONG_TERM_DISCOUNT_PERCENT = 10;
+/** Rabatt, der bei genau 7 Tagen gegenüber dem Wochenpreis gilt. */
+export const LONG_TERM_WEEK_DISCOUNT_PERCENT = 10;
+
+/** Ziel-Ankerpreise (Mietpreis in Euro, ohne Kaution) je Fahrzeugklasse. */
+export const LONG_TERM_ANCHORS: Record<VehicleClass, Record<30 | 45 | 60, number>> = {
+  l1h1: { 30: 949, 45: 1399, 60: 1799 },
+  l4h2: { 30: 1049, 45: 1549, 60: 1999 },
+  l5h2: { 30: 1149, 45: 1699, 60: 2199 },
+};
 
 /** Wochenpreis (7 Tage) der Fahrzeugklasse in Euro. */
 export function weeklyBasePriceEur(vehicleClass: VehicleClass): number {
@@ -33,7 +44,48 @@ export function rentalDaysBetween(startIso: string, endIso: string): number | nu
 
 /** Kaufmännisch auf Cent runden. */
 function roundCents(eur: number): number {
-  return Math.round(eur * 100) / 100;
+  return Math.round(eur * 100 + Number.EPSILON) / 100;
+}
+
+/** Preis-Anker der Klasse als aufsteigende Stützpunkte. */
+function anchorPoints(vehicleClass: VehicleClass): Array<{ days: number; price: number }> {
+  const week = roundCents(
+    (weeklyBasePriceEur(vehicleClass) * (100 - LONG_TERM_WEEK_DISCOUNT_PERCENT)) / 100,
+  );
+  const a = LONG_TERM_ANCHORS[vehicleClass];
+  return [
+    { days: 7, price: week },
+    { days: 30, price: a[30] },
+    { days: 45, price: a[45] },
+    { days: 60, price: a[60] },
+  ];
+}
+
+/** Mietpreis (ohne Kaution) für eine Anzahl Miettage ab 7 Tagen. */
+export function longTermPriceEur(days: number, vehicleClass: VehicleClass): number {
+  const points = anchorPoints(vehicleClass);
+  const last = points[points.length - 1]!;
+  if (days >= last.days) {
+    // Über 60 Tage: effektiver 60-Tage-Tagespreis, kein Wiederanstieg pro Tag.
+    return roundCents((last.price / last.days) * days);
+  }
+  for (let i = 0; i < points.length - 1; i++) {
+    const lo = points[i]!;
+    const hi = points[i + 1]!;
+    if (days >= lo.days && days <= hi.days) {
+      const ratio = (days - lo.days) / (hi.days - lo.days);
+      return roundCents(lo.price + (hi.price - lo.price) * ratio);
+    }
+  }
+  return roundCents(points[0]!.price);
+}
+
+/** Dezentes Badge für runde Laufzeiten. */
+export function longTermTierLabel(days: number): string | null {
+  if (days === 30) return "Monatspreis";
+  if (days === 45) return "1,5-Monats-Preis";
+  if (days === 60) return "2-Monats-Preis";
+  return null;
 }
 
 export type LongTermQuote =
@@ -43,12 +95,15 @@ export type LongTermQuote =
       days: number;
       vehicleClass: VehicleClass;
       weeklyBasePriceEur: number;
-      pricePerDayEur: number;
-      normalPriceEur: number;
-      discountPercent: number;
-      discountEur: number;
+      /** Vergleichswert: Wochenpreis tagesgenau hochgerechnet (kein echter Listenpreis). */
+      referencePriceEur: number;
       totalEur: number;
+      savingsEur: number;
+      savingsPercent: number;
+      /** true bei genau 7 Tagen – dann sind es exakt 10 % gegenüber dem Wochenpreis. */
+      isExactWeekDiscount: boolean;
       effectivePricePerDayEur: number;
+      tierLabel: string | null;
       depositEur: number;
     };
 
@@ -63,22 +118,22 @@ export function quoteLongTerm(
   if (days < LONG_TERM_MIN_DAYS) return { eligible: false, days, reason: "below_minimum" };
 
   const weekly = weeklyBasePriceEur(vehicleClass);
-  const perDay = weekly / LONG_TERM_MIN_DAYS;
-  const normalPriceEur = roundCents(perDay * days);
-  const discountEur = roundCents((normalPriceEur * LONG_TERM_DISCOUNT_PERCENT) / 100);
-  const totalEur = roundCents(normalPriceEur - discountEur);
+  const referencePriceEur = roundCents((weekly / LONG_TERM_MIN_DAYS) * days);
+  const totalEur = longTermPriceEur(days, vehicleClass);
+  const savingsEur = roundCents(referencePriceEur - totalEur);
 
   return {
     eligible: true,
     days,
     vehicleClass,
     weeklyBasePriceEur: weekly,
-    pricePerDayEur: roundCents(perDay),
-    normalPriceEur,
-    discountPercent: LONG_TERM_DISCOUNT_PERCENT,
-    discountEur,
+    referencePriceEur,
     totalEur,
+    savingsEur,
+    savingsPercent: Math.round((savingsEur / referencePriceEur) * 100),
+    isExactWeekDiscount: days === LONG_TERM_MIN_DAYS,
     effectivePricePerDayEur: roundCents(totalEur / days),
+    tierLabel: longTermTierLabel(days),
     depositEur: DEPOSIT_EUR,
   };
 }
