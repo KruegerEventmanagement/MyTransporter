@@ -53,11 +53,7 @@ function LangzeitmietePage() {
       <Navbar />
       <main className="max-w-5xl mx-auto px-4 pt-20 pb-16">
         <header className="text-center max-w-2xl mx-auto">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-muted-foreground">
-            <Sparkles className="w-3.5 h-3.5" />
-            Ab {LONG_TERM_MIN_DAYS} Tagen automatisch günstiger
-          </span>
-          <h1 className="mt-4 text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
+          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
             Langzeitmiete
           </h1>
           <p className="mt-3 text-base text-muted-foreground">
