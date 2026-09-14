@@ -4,6 +4,13 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { trackCompleteRegistration } from "@/lib/analytics";
 import { consumeLoginRequest, takeLoginRedirect } from "@/lib/login-redirect";
+import {
+  ageOnIsoDate,
+  isValidIsoDate,
+  meetsMinimumAge,
+  MIN_AGE_MESSAGE,
+  todayIsoBerlin,
+} from "@/lib/age";
 
 const AUTH_CONFIRM_URL = `${typeof window !== "undefined" ? window.location.origin : "https://www.mytransporter.org"}/auth/confirm`;
 
@@ -24,6 +31,7 @@ export function Navbar() {
     lastName: "",
     email: "",
     phone: "",
+    birthDate: "",
     password: "",
     accountType: "private" as "private" | "business",
     companyName: "",
@@ -88,7 +96,7 @@ export function Navbar() {
     setShowModal(null);
     setError(null);
     setInfo(null);
-    setForm({ firstName: "", lastName: "", email: "", phone: "", password: "", accountType: "private", companyName: "", vatId: "" });
+    setForm({ firstName: "", lastName: "", email: "", phone: "", birthDate: "", password: "", accountType: "private", companyName: "", vatId: "" });
   };
 
   const handleLogin = async () => {
@@ -115,6 +123,19 @@ export function Navbar() {
       setError("Passwort muss mindestens 6 Zeichen lang sein.");
       return;
     }
+    if (!isValidIsoDate(form.birthDate)) {
+      setError("Bitte gib dein Geburtsdatum an.");
+      return;
+    }
+    const todayIso = todayIsoBerlin();
+    if (form.birthDate > todayIso) {
+      setError("Das Geburtsdatum kann nicht in der Zukunft liegen.");
+      return;
+    }
+    if (!meetsMinimumAge(form.birthDate, todayIso)) {
+      setError(MIN_AGE_MESSAGE);
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email: form.email,
@@ -125,6 +146,7 @@ export function Navbar() {
           first_name: form.firstName,
           last_name: form.lastName,
           phone: form.phone,
+          birth_date: form.birthDate,
           account_type: form.accountType,
           company_name: form.accountType === "business" ? form.companyName : "",
           vat_id: form.accountType === "business" ? form.vatId : "",
@@ -141,6 +163,19 @@ export function Navbar() {
       !data.session && Array.isArray(data.user?.identities) && data.user!.identities!.length === 0;
     if (data.user?.id && !isExisting) trackCompleteRegistration(data.user.id);
 
+    // Sicherheitsnetz: Der Profil-Trigger schreibt birth_date bereits aus den
+    // Metadaten. Falls schon eine Sitzung besteht, zusätzlich still nachziehen.
+    if (data.session && data.user?.id) {
+      supabase
+        .from("profiles")
+        .update({ birth_date: form.birthDate })
+        .eq("id", data.user.id)
+        .is("birth_date", null)
+        .then(({ error: e }) => {
+          if (e) console.warn("Geburtsdatum-Nachtrag fehlgeschlagen:", e.message);
+        });
+    }
+
     // Admin-Benachrichtigung über neue Registrierung (still im Hintergrund)
     import("@/lib/booking-emails.functions").then(({ sendAdminRegistrationNotification }) =>
       sendAdminRegistrationNotification({
@@ -149,6 +184,8 @@ export function Navbar() {
           firstName: form.firstName,
           lastName: form.lastName,
           phone: form.phone,
+          birthDate: form.birthDate,
+          age: ageOnIsoDate(form.birthDate, todayIso) ?? undefined,
           accountType: form.accountType,
           companyName: form.accountType === "business" ? form.companyName : undefined,
           vatId: form.accountType === "business" ? form.vatId : undefined,
@@ -171,12 +208,20 @@ export function Navbar() {
     <>
       <nav className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50">
         <div className="max-w-5xl mx-auto px-3 sm:px-4 h-12 flex items-center justify-end gap-2 sm:gap-3">
-          <Link
-            to="/werbung"
-            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors mr-auto"
-          >
-            Werbefläche
-          </Link>
+          <div className="mr-auto flex items-center gap-2 sm:gap-3 min-w-0">
+            <Link
+              to="/werbung"
+              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+            >
+              Werbefläche
+            </Link>
+            <Link
+              to="/langzeitmiete"
+              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+            >
+              Langzeitmiete
+            </Link>
+          </div>
           <Link
             to="/preise"
             className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -356,6 +401,22 @@ export function Navbar() {
                   inputMode="tel"
                   className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                 />
+              )}
+              {showModal === "register" && (
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                    Geburtsdatum (Mindestalter 25 Jahre)
+                  </span>
+                  <input
+                    type="date"
+                    required
+                    value={form.birthDate}
+                    max={todayIsoBerlin()}
+                    onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
+                    autoComplete="bday"
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                  />
+                </label>
               )}
               <div className="relative">
                 <input
