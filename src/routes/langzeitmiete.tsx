@@ -6,8 +6,8 @@ import { RollingNumber } from "@/components/RollingNumber";
 import { VEHICLE_CLASSES, VEHICLE_CLASS_LABEL, type VehicleClass } from "@/lib/booking-rules";
 import {
   formatEur,
-  LONG_TERM_DISCOUNT_PERCENT,
   LONG_TERM_MIN_DAYS,
+  LONG_TERM_WEEK_DISCOUNT_PERCENT,
   quoteLongTerm,
   weeklyBasePriceEur,
 } from "@/lib/long-term";
@@ -55,7 +55,7 @@ function LangzeitmietePage() {
         <header className="text-center max-w-2xl mx-auto">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-muted-foreground">
             <Sparkles className="w-3.5 h-3.5" />
-            Ab {LONG_TERM_MIN_DAYS} Tagen automatisch {LONG_TERM_DISCOUNT_PERCENT} % Langzeit-Rabatt
+            Ab {LONG_TERM_MIN_DAYS} Tagen automatisch günstiger
           </span>
           <h1 className="mt-4 text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
             Langzeitmiete
@@ -147,31 +147,46 @@ function LangzeitmietePage() {
           <div className="rounded-3xl border border-border bg-gradient-to-b from-secondary/70 to-card p-5 sm:p-7 shadow-sm">
             {quote.eligible ? (
               <>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Mietpreis für {quote.days} Tage
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Dein Langzeitpreis · {quote.days} Tage
+                  </p>
+                  {quote.tierLabel && (
+                    <span className="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-foreground">
+                      {quote.tierLabel}
+                    </span>
+                  )}
+                </div>
                 <div className="mt-1 text-4xl sm:text-6xl font-bold text-foreground">
                   <RollingNumber value={formatEur(quote.totalEur)} />
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   entspricht {formatEur(quote.effectivePricePerDayEur)} € pro Tag
+                  {quote.isExactWeekDiscount
+                    ? ` · ${LONG_TERM_WEEK_DISCOUNT_PERCENT} % günstiger als der Wochenpreis`
+                    : ""}
                 </p>
 
                 <dl className="mt-6 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Normalpreis</dt>
-                    <dd className="text-foreground">{formatEur(quote.normalPriceEur)} €</dd>
-                  </div>
-                  <div className="flex justify-between">
                     <dt className="text-muted-foreground">
-                      {quote.discountPercent} % Langzeit-Rabatt
+                      Regulärer Wochenpreis hochgerechnet
+                      <span className="block text-[10px]">Vergleichswert</span>
                     </dt>
-                    <dd className="text-foreground">− {formatEur(quote.discountEur)} €</dd>
+                    <dd className="text-muted-foreground line-through">
+                      {formatEur(quote.referencePriceEur)} €
+                    </dd>
                   </div>
                   <div className="flex justify-between border-t border-border pt-2 font-semibold">
-                    <dt className="text-foreground">Mietpreis</dt>
+                    <dt className="text-foreground">Dein Langzeitpreis</dt>
                     <dd className="text-foreground">{formatEur(quote.totalEur)} €</dd>
                   </div>
+                  {quote.savingsEur > 0 && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Du sparst</dt>
+                      <dd className="text-foreground">{formatEur(quote.savingsEur)} €</dd>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Kaution (separat, ohne Rabatt)</dt>
                     <dd className="text-foreground">{formatEur(quote.depositEur)} €</dd>
