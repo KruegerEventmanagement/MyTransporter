@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  LONG_TERM_DISCOUNT_PERCENT,
+  longTermPriceEur,
+  longTermTierLabel,
   quoteLongTerm,
   rentalDaysBetween,
   weeklyBasePriceEur,

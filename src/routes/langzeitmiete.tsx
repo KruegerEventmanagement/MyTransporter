@@ -234,8 +234,8 @@ function LangzeitmietePage() {
             },
             {
               icon: Sparkles,
-              title: `${LONG_TERM_DISCOUNT_PERCENT} % Rabatt`,
-              text: `Ab ${LONG_TERM_MIN_DAYS} Tagen automatisch günstiger, ohne Verhandeln.`,
+              title: "Langzeitvorteil",
+              text: `Ab ${LONG_TERM_MIN_DAYS} Tagen automatisch günstiger – je länger du mietest, desto stärker der Vorteil.`,
             },
             {
               icon: Truck,
