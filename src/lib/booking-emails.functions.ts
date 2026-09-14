@@ -28,6 +28,12 @@ export const sendAdminBookingNotification = createServerFn({ method: "POST" })
     return reconcileBookingPostActions(data.bookingId, ["admin_booking_email"]);
   });
 
+function formatBirthDate(iso?: string): string {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "-";
+  const [y, m, d] = iso.split("-");
+  return `${d}.${m}.${y}`;
+}
+
 export const sendAdminRegistrationNotification = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
