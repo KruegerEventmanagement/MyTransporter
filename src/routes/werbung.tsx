@@ -1,9 +1,15 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronLeft, Megaphone, Repeat, Eye, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronDown, Megaphone, Repeat, Eye, MapPin } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { TransporterPhotoDiagram } from "@/components/partner/TransporterPhotoDiagram";
 import { PartnerPackages } from "@/components/partner/PartnerPackages";
+import { PartnerAreaPicker } from "@/components/partner/PartnerAreaPicker";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { PartnerBenefits } from "@/components/partner/PartnerBenefits";
 import { PartnerInquiryForm } from "@/components/partner/PartnerInquiryForm";
 import type { PartnerPackageId } from "@/lib/partner-packages";
@@ -172,8 +178,17 @@ function WerbungPage() {
             Bearbeitungsgebühr für die Produktion der Magnetfolie.
           </p>
           <div className="mt-8">
-            <PartnerPackages highlight={selected} onSelect={handleSelect} />
+            <PartnerAreaPicker highlight={selected} onSelect={handleSelect} />
           </div>
+          <Collapsible className="mt-6">
+            <CollapsibleTrigger className="mx-auto flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-medium text-foreground transition-colors hover:border-foreground/40">
+              Alle Flächen anzeigen
+              <ChevronDown className="h-3.5 w-3.5" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-8">
+              <PartnerPackages highlight={selected} onSelect={handleSelect} />
+            </CollapsibleContent>
+          </Collapsible>
           <p className="mt-6 text-center text-xs text-muted-foreground">
             Weitere kleine Flächen (z. B. Stoßstange, Säulen) auf Anfrage individuell verfügbar.
           </p>

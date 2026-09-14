@@ -51,13 +51,13 @@ export function TransporterPhotoDiagram({ highlight }: Props) {
         ))}
       </div>
 
-      <div className="flex justify-center gap-2 mb-4 overflow-x-auto">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
         {(Object.keys(VIEWS) as ViewId[]).map((v) => (
           <button
             key={v}
             type="button"
             onClick={() => setView(v)}
-            className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${
+            className={`w-full px-2 py-2 rounded-full text-[11px] sm:text-xs font-medium text-center whitespace-nowrap transition-colors border ${
               view === v
                 ? "bg-foreground text-background border-foreground"
                 : "bg-background text-foreground border-border hover:border-foreground/40"
