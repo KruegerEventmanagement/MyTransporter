@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarDays, Truck, Route as RouteIcon, Sparkles, ArrowRight } from "lucide-react";
+import { CalendarDays, Truck, Sparkles, ArrowRight } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { RollingNumber } from "@/components/RollingNumber";
 import { VEHICLE_CLASSES, VEHICLE_CLASS_LABEL, type VehicleClass } from "@/lib/booking-rules";
@@ -46,18 +46,14 @@ function LangzeitmietePage() {
   const [vehicleClass, setVehicleClass] = useState<VehicleClass>("l1h1");
 
   const quote = useMemo(() => quoteLongTerm(start, end, vehicleClass), [start, end, vehicleClass]);
-  const progress = quote.eligible ? Math.min(100, (quote.days / 28) * 100) : 8;
+  
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="max-w-5xl mx-auto px-4 pt-20 pb-16">
         <header className="text-center max-w-2xl mx-auto">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-muted-foreground">
-            <Sparkles className="w-3.5 h-3.5" />
-            Ab {LONG_TERM_MIN_DAYS} Tagen automatisch günstiger
-          </span>
-          <h1 className="mt-4 text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
+          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
             Langzeitmiete
           </h1>
           <p className="mt-3 text-base text-muted-foreground">
@@ -124,23 +120,6 @@ function LangzeitmietePage() {
               </div>
             </div>
 
-            {/* Strecke Start → Rückgabe */}
-            <div className="mt-6">
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                <span>Start</span>
-                <span className="inline-flex items-center gap-1">
-                  <RouteIcon className="w-3.5 h-3.5" />
-                  {quote.days ? `${quote.days} Miettage` : "Zeitraum wählen"}
-                </span>
-                <span>Rückgabe</span>
-              </div>
-              <div className="mt-2 h-2 rounded-full bg-secondary overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-foreground transition-[width] duration-500 ease-out motion-reduce:transition-none"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
           </div>
 
           {/* Ergebnis */}
