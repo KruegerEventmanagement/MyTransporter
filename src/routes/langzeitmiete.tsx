@@ -46,7 +46,7 @@ function LangzeitmietePage() {
   const [vehicleClass, setVehicleClass] = useState<VehicleClass>("l1h1");
 
   const quote = useMemo(() => quoteLongTerm(start, end, vehicleClass), [start, end, vehicleClass]);
-  const progress = quote.eligible ? Math.min(100, (quote.days / 28) * 100) : 8;
+  
 
   return (
     <div className="min-h-screen bg-background">
