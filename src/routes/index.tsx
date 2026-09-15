@@ -99,7 +99,7 @@ function Index() {
           >
             <p className="text-sm font-semibold text-foreground">Pforzheim &amp; Calw: Abholung Grunbach</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Calwer Straße 29, 75331 Engelsbrand-Grunbach · VW Crafter L5H2
+              Calwer Straße 29, 75331 Engelsbrand-Grunbach · VW Crafter L5H2 · ab {CRAFTER_ENTRY} € für 3 Stunden
             </p>
           </Link>
         </div>
