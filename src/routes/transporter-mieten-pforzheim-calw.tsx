@@ -184,7 +184,8 @@ function PforzheimCalwPage() {
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Diese Preise gelten für den extra langen Crafter mit Hochdach – nicht für den kleineren
-            Transporter in Leonberg. Kaution {DEPOSIT_EUR} € (wird zurückerstattet).
+            Transporter in Leonberg. Kaution {DEPOSIT_EUR} € zusätzlich; Abrechnung und Rückzahlung
+            gemäß Mietbedingungen. Mehrkilometer {EXTRA_KM_TEXT} €/km, Kraftstoff separat.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {ENTRY.map((plan) => (
