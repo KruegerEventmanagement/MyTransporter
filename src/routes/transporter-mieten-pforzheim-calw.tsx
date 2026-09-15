@@ -11,6 +11,8 @@ const ADDRESS = "Calwer Straße 29, 75331 Engelsbrand-Grunbach";
 /** Einstiegstarife – Preise für den extra langen Crafter (L5H2) aus der zentralen Preisquelle. */
 const ENTRY = ["3h", "6h", "24h_300"].map((id) => PLAN_CATALOG.find((p) => p.id === id)!);
 const CRAFTER_ENTRY_PRICE = Math.min(...ENTRY.map((p) => p.priceL5h2));
+/** Mehrkilometer-Satz der Einstiegstarife aus dem zentralen Katalog (Cent → €). */
+const EXTRA_KM_TEXT = (ENTRY[0].extraKmCents / 100).toFixed(2).replace(".", ",");
 
 const TITLE = "Transporter mieten Pforzheim & Calw – Abholung Grunbach | MyTransporter";
 const DESCRIPTION = `Transporter für Pforzheim & Calw mieten: VW Crafter L5H2 mit Hochdach, Abholung in ${ADDRESS}. Ab ${CRAFTER_ENTRY_PRICE} € für 3 Stunden, persönliche Schlüsselübergabe, online buchbar.`;
@@ -88,7 +90,11 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "Was kostet die Kaution?",
-    a: `Die Kaution beträgt ${DEPOSIT_EUR} € und wird nach der Rückgabe zurückerstattet.`,
+    a: `Die Kaution beträgt ${DEPOSIT_EUR} € zusätzlich zum Mietpreis; Abrechnung und Rückzahlung erfolgen gemäß Mietbedingungen.`,
+  },
+  {
+    q: "Wie ist die Tankregel?",
+    a: "Rückgabe mit gleichem Tankstand wie bei Übergabe. Kraftstoff wird separat von dir getragen.",
   },
 ];
 
@@ -166,7 +172,7 @@ function PforzheimCalwPage() {
               </li>
               <li className="flex gap-2">
                 <MapPin className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
-                Diesel · 3 Sitze · Rückgabe vollgetankt (Voll/Voll)
+                Diesel · 3 Sitze · Rückgabe mit gleichem Tankstand wie bei Übergabe
               </li>
             </ul>
           </div>
@@ -180,7 +186,8 @@ function PforzheimCalwPage() {
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Diese Preise gelten für den extra langen Crafter mit Hochdach – nicht für den kleineren
-            Transporter in Leonberg. Kaution {DEPOSIT_EUR} € (wird zurückerstattet).
+            Transporter in Leonberg. Kaution {DEPOSIT_EUR} € zusätzlich; Abrechnung und Rückzahlung
+            gemäß Mietbedingungen. Mehrkilometer {EXTRA_KM_TEXT} €/km, Kraftstoff separat.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {ENTRY.map((plan) => (
