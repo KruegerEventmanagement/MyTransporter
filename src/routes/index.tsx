@@ -89,7 +89,9 @@ function Index() {
         <div className="max-w-3xl mx-auto grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border-2 border-border bg-card p-4">
             <p className="text-sm font-semibold text-foreground">Leonberg &amp; Stuttgart: Abholung Leonberg</p>
-            <p className="mt-1 text-xs text-muted-foreground">Poststraße 60, 71229 Leonberg</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Poststraße 60, 71229 Leonberg · ab {LEO_ENTRY} € für 3 Stunden
+            </p>
           </div>
           <Link
             to="/transporter-mieten-pforzheim-calw"
