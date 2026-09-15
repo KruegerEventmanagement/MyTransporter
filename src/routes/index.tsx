@@ -9,12 +9,13 @@ import { AdBanner } from "@/components/AdBanner";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Transporter mieten ab 49 € – Leonberg & Stuttgart | MyTransporter" },
+      { title: "Transporter mieten ab 49 € – Leonberg, Stuttgart, Pforzheim & Calw | MyTransporter" },
       {
         name: "description",
         content:
-          "Transporter mieten ab 49 € in Leonberg, Stuttgart, Böblingen und Sindelfingen: 3 h 49 €, 6 h 69 €, 24 h 99 €. Online buchen für Umzug, Möbeltransport, Baumarkt und Kleinanzeigen-Abholung.",
+          "Transporter mieten ab 49 € – Abholung Leonberg für Leonberg & Stuttgart, Abholung Grunbach für Pforzheim & Calw: 3 h 49 €, 6 h 69 €, 24 h 99 €. Online buchen für Umzug, Möbeltransport, Baumarkt und Kleinanzeigen-Abholung.",
       },
+
       { name: "robots", content: "index,follow" },
       { name: "geo.region", content: "DE-BW" },
       { name: "geo.placename", content: "Leonberg, Stuttgart" },
