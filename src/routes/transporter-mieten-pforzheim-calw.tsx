@@ -88,7 +88,11 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "Was kostet die Kaution?",
-    a: `Die Kaution beträgt ${DEPOSIT_EUR} € und wird nach der Rückgabe zurückerstattet.`,
+    a: `Die Kaution beträgt ${DEPOSIT_EUR} € zusätzlich zum Mietpreis; Abrechnung und Rückzahlung erfolgen gemäß Mietbedingungen.`,
+  },
+  {
+    q: "Wie ist die Tankregel?",
+    a: "Rückgabe mit gleichem Tankstand wie bei Übergabe. Kraftstoff wird separat von dir getragen.",
   },
 ];
 
@@ -166,7 +170,7 @@ function PforzheimCalwPage() {
               </li>
               <li className="flex gap-2">
                 <MapPin className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
-                Diesel · 3 Sitze · Rückgabe vollgetankt (Voll/Voll)
+                Diesel · 3 Sitze · Rückgabe mit gleichem Tankstand wie bei Übergabe
               </li>
             </ul>
           </div>
