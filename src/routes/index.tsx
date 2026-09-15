@@ -30,8 +30,7 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "Transporter mieten – Leonberg, Stuttgart, Pforzheim & Calw" },
       {
         property: "og:description",
-        content:
-          "Festpreise ab 49 €: 3 Stunden 49 €, 6 Stunden 69 €, 24 Stunden 99 €, Langstrecke 189 € (500 km). Abholung Leonberg für Leonberg & Stuttgart, Abholung Grunbach für Pforzheim & Calw. Kaution 200 €, Rückgabe vollgetankt (Voll/Voll).",
+        content: META_DESCRIPTION,
       },
 
       { property: "og:locale", content: "de_DE" },
