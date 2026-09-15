@@ -11,6 +11,8 @@ const ADDRESS = "Calwer Straße 29, 75331 Engelsbrand-Grunbach";
 /** Einstiegstarife – Preise für den extra langen Crafter (L5H2) aus der zentralen Preisquelle. */
 const ENTRY = ["3h", "6h", "24h_300"].map((id) => PLAN_CATALOG.find((p) => p.id === id)!);
 const CRAFTER_ENTRY_PRICE = Math.min(...ENTRY.map((p) => p.priceL5h2));
+/** Mehrkilometer-Satz der Einstiegstarife aus dem zentralen Katalog (Cent → €). */
+const EXTRA_KM_TEXT = (ENTRY[0].extraKmCents / 100).toFixed(2).replace(".", ",");
 
 const TITLE = "Transporter mieten Pforzheim & Calw – Abholung Grunbach | MyTransporter";
 const DESCRIPTION = `Transporter für Pforzheim & Calw mieten: VW Crafter L5H2 mit Hochdach, Abholung in ${ADDRESS}. Ab ${CRAFTER_ENTRY_PRICE} € für 3 Stunden, persönliche Schlüsselübergabe, online buchbar.`;
