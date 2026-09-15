@@ -18,15 +18,16 @@ export const Route = createFileRoute("/")({
 
       { name: "robots", content: "index,follow" },
       { name: "geo.region", content: "DE-BW" },
-      { name: "geo.placename", content: "Leonberg, Stuttgart" },
+      { name: "geo.placename", content: "Leonberg, Stuttgart, Pforzheim, Calw" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { property: "og:title", content: "Transporter mieten ab 49 € – Leonberg & Stuttgart" },
+      { property: "og:title", content: "Transporter mieten – Leonberg, Stuttgart, Pforzheim & Calw" },
       {
         property: "og:description",
         content:
-          "Festpreise ab 49 €: 3 Stunden 49 €, 6 Stunden 69 €, 24 Stunden 99 €, Langstrecke 189 € (500 km). Kaution 200 €, Rückgabe vollgetankt (Voll/Voll), online buchbar in Leonberg und Stuttgart.",
+          "Festpreise ab 49 €: 3 Stunden 49 €, 6 Stunden 69 €, 24 Stunden 99 €, Langstrecke 189 € (500 km). Abholung Leonberg für Leonberg & Stuttgart, Abholung Grunbach für Pforzheim & Calw. Kaution 200 €, Rückgabe vollgetankt (Voll/Voll).",
       },
+
       { property: "og:locale", content: "de_DE" },
     ],
     links: [{ rel: "canonical", href: "https://www.mytransporter.org/" }],
