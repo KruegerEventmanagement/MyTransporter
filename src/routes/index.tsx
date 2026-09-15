@@ -80,7 +80,25 @@ function Index() {
       <HeroSection />
       <AdBanner />
       <h1 className="sr-only">Transporter mieten in Leonberg &amp; Stuttgart ab 49 € – Umzug, Möbeltransport &amp; Baumarkt</h1>
+      <section className="px-4 pb-2">
+        <div className="max-w-3xl mx-auto grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border-2 border-border bg-card p-4">
+            <p className="text-sm font-semibold text-foreground">Leonberg &amp; Stuttgart: Abholung Leonberg</p>
+            <p className="mt-1 text-xs text-muted-foreground">Poststraße 60, 71229 Leonberg</p>
+          </div>
+          <Link
+            to="/transporter-mieten-pforzheim-calw"
+            className="rounded-2xl border-2 border-border bg-card p-4 hover:border-foreground transition-colors"
+          >
+            <p className="text-sm font-semibold text-foreground">Pforzheim &amp; Calw: Abholung Grunbach</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Calwer Straße 29, 75331 Engelsbrand-Grunbach · VW Crafter L5H2
+            </p>
+          </Link>
+        </div>
+      </section>
       <BookingSection />
+
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
         <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
         <div className="mt-3 flex flex-wrap justify-center gap-4">
