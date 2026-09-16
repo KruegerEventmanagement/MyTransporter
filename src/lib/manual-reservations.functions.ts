@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isValidIsoDate, todayIsoBerlin } from "@/lib/age";
 
 export type ManualReservation = {
   id: string;
@@ -12,14 +13,39 @@ export type ManualReservation = {
   customer_name: string;
   customer_phone: string | null;
   customer_email: string | null;
+  customer_birth_date: string | null;
+  customer_street: string | null;
+  customer_city: string | null;
+  customer_id_number: string | null;
+  customer_license_number: string | null;
   note: string | null;
   reminder_enabled: boolean;
   notify_customer: boolean;
   created_at: string;
 };
 
+export type ManualReservationDocument = {
+  id: string;
+  reservation_id: string;
+  doc_type: string;
+  file_path: string;
+  original_name: string | null;
+  created_at: string;
+};
+
 const SELECT_COLUMNS =
-  "id, vehicle_id, vehicle_plate, vehicle_name, start_at, end_at, customer_name, customer_phone, customer_email, note, reminder_enabled, notify_customer, created_at";
+  "id, vehicle_id, vehicle_plate, vehicle_name, start_at, end_at, customer_name, customer_phone, customer_email, customer_birth_date, customer_street, customer_city, customer_id_number, customer_license_number, note, reminder_enabled, notify_customer, created_at";
+
+const DOC_SELECT_COLUMNS = "id, reservation_id, doc_type, file_path, original_name, created_at";
+
+const isoDate = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Ungültiges Geburtsdatum")
+  .refine((v) => isValidIsoDate(v), "Ungültiges Geburtsdatum")
+  .refine((v) => v <= todayIsoBerlin(), "Das Geburtsdatum darf nicht in der Zukunft liegen");
+
+const optionalText = (max: number) => z.string().trim().max(max).nullable().optional();
 
 const upsertSchema = z.object({
   id: z.string().uuid().optional(),
@@ -29,9 +55,14 @@ const upsertSchema = z.object({
   startAt: z.string().min(1),
   endAt: z.string().min(1),
   customerName: z.string().trim().min(1, "Name fehlt").max(120),
-  customerPhone: z.string().trim().max(40).nullable().optional(),
+  customerPhone: optionalText(40),
   customerEmail: z.string().trim().email("Ungültige E-Mail").max(255).nullable().optional(),
-  note: z.string().trim().max(1000).nullable().optional(),
+  customerBirthDate: isoDate.nullable().optional(),
+  customerStreet: optionalText(160),
+  customerCity: optionalText(160),
+  customerIdNumber: optionalText(60),
+  customerLicenseNumber: optionalText(60),
+  note: optionalText(1000),
   reminderEnabled: z.boolean().default(true),
   notifyCustomer: z.boolean().default(false),
 });
@@ -40,6 +71,14 @@ const listSchema = z.object({
   fromIso: z.string().min(1),
   toIso: z.string().min(1),
 });
+
+const DOC_TYPES = [
+  "id_front",
+  "id_back",
+  "license_front",
+  "license_back",
+  "other",
+] as const;
 
 async function assertAdmin(context: { supabase: any; userId: string }) {
   const { data, error } = await context.supabase.rpc("has_role", {
