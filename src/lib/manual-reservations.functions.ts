@@ -163,10 +163,108 @@ export const deleteManualReservation = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+
+    // Dateien im geschützten Speicher mit aufräumen (Zeilen entfernt die Kaskade)
+    const { data: docs } = await context.supabase
+      .from("manual_reservation_documents")
+      .select("file_path")
+      .eq("reservation_id", data.id);
+    const paths = (docs ?? []).map((d: { file_path: string }) => d.file_path).filter(Boolean);
+    if (paths.length > 0) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.storage.from("user-documents").remove(paths);
+    }
+
     const { error } = await context.supabase
       .from("manual_reservations")
       .delete()
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
+/** Dokumente eines manuellen Termins inkl. zeitlich begrenzter Ansichts-Links. */
+export const listManualReservationDocuments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ reservationId: z.string().uuid() }).parse(input),
+  )
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<Array<ManualReservationDocument & { signedUrl: string | null }>> => {
+      await assertAdmin(context);
+      const { data: rows, error } = await context.supabase
+        .from("manual_reservation_documents")
+        .select(DOC_SELECT_COLUMNS)
+        .eq("reservation_id", data.reservationId)
+        .order("created_at", { ascending: true });
+      if (error) throw new Error(error.message);
+
+      const docs = (rows ?? []) as ManualReservationDocument[];
+      return await Promise.all(
+        docs.map(async (doc) => {
+          const { data: signed } = await context.supabase.storage
+            .from("user-documents")
+            .createSignedUrl(doc.file_path, 3600);
+          return { ...doc, signedUrl: signed?.signedUrl ?? null };
+        }),
+      );
+    },
+  );
+
+/** Legt einen Dokumenteintrag zu einem manuellen Termin an (Datei liegt bereits im Speicher). */
+export const addManualReservationDocument = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        reservationId: z.string().uuid(),
+        docType: z.enum(DOC_TYPES).default("other"),
+        filePath: z.string().trim().min(1).max(400),
+        originalName: z.string().trim().max(200).nullable().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }): Promise<ManualReservationDocument> => {
+    await assertAdmin(context);
+    const { data: row, error } = await context.supabase
+      .from("manual_reservation_documents")
+      .insert({
+        reservation_id: data.reservationId,
+        doc_type: data.docType,
+        file_path: data.filePath,
+        original_name: data.originalName || null,
+        created_by: context.userId,
+      })
+      .select(DOC_SELECT_COLUMNS)
+      .single();
+    if (error) throw new Error(error.message);
+    return row as ManualReservationDocument;
+  });
+
+/** Entfernt ein Dokument samt Datei aus dem geschützten Speicher. */
+export const deleteManualReservationDocument = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: row } = await context.supabase
+      .from("manual_reservation_documents")
+      .select("file_path")
+      .eq("id", data.id)
+      .maybeSingle();
+
+    const { error } = await context.supabase
+      .from("manual_reservation_documents")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+
+    if (row?.file_path) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.storage.from("user-documents").remove([row.file_path]);
+    }
     return { ok: true as const };
   });
