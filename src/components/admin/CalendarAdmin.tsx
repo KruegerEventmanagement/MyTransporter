@@ -811,6 +811,179 @@ export function CalendarAdmin() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Geburtsdatum (optional)
+                </label>
+                <input
+                  type="date"
+                  value={form.customerBirthDate}
+                  max={todayIsoBerlin()}
+                  onChange={(ev) => setForm({ ...form, customerBirthDate: ev.target.value })}
+                  className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                />
+                {birthLabel(form.customerBirthDate) && (
+                  <p className="text-[11px] text-muted-foreground">
+                    {birthLabel(form.customerBirthDate)}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Straße (optional)
+                </label>
+                <input
+                  value={form.customerStreet}
+                  maxLength={160}
+                  onChange={(ev) => setForm({ ...form, customerStreet: ev.target.value })}
+                  placeholder="Hauptstraße 20"
+                  className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  PLZ / Ort (optional)
+                </label>
+                <input
+                  value={form.customerCity}
+                  maxLength={160}
+                  onChange={(ev) => setForm({ ...form, customerCity: ev.target.value })}
+                  placeholder="71229 Leonberg"
+                  className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Ausweisnummer (optional)
+                </label>
+                <input
+                  value={form.customerIdNumber}
+                  maxLength={60}
+                  onChange={(ev) => setForm({ ...form, customerIdNumber: ev.target.value })}
+                  className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                />
+              </div>
+              <div className="space-y-1 col-span-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Führerscheinnummer (optional)
+                </label>
+                <input
+                  value={form.customerLicenseNumber}
+                  maxLength={60}
+                  onChange={(ev) => setForm({ ...form, customerLicenseNumber: ev.target.value })}
+                  className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-2xl border border-border p-3">
+              <p className="text-xs font-semibold flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5" /> Dokumente (optional)
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Ausweis oder Führerschein fotografieren oder Datei auswählen. Nur für dich
+                sichtbar.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  value={nextDocKind}
+                  onChange={(ev) => setNextDocKind(ev.target.value as DocKind)}
+                  className="flex-1 rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                >
+                  {DOC_KINDS.map((d) => (
+                    <option key={d.value} value={d.value}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+                <label className="rounded-full bg-secondary px-4 py-2.5 text-xs font-medium text-center cursor-pointer">
+                  Datei / Foto wählen
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    multiple
+                    className="hidden"
+                    onChange={(ev) => {
+                      const files = Array.from(ev.target.files ?? []);
+                      if (files.length === 0) return;
+                      setPendingDocs((prev) => [
+                        ...prev,
+                        ...files.map((file, i) => ({
+                          key: `${Date.now()}-${i}-${file.name}`,
+                          docType: nextDocKind,
+                          file,
+                        })),
+                      ]);
+                      ev.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+
+              {pendingDocs.length > 0 && (
+                <ul className="space-y-1">
+                  {pendingDocs.map((d) => (
+                    <li
+                      key={d.key}
+                      className="flex items-center justify-between gap-2 text-xs rounded-xl bg-secondary px-3 py-2"
+                    >
+                      <span className="truncate">
+                        {docLabel(d.docType)} · {d.file.name}
+                      </span>
+                      <button
+                        onClick={() =>
+                          setPendingDocs((prev) => prev.filter((p) => p.key !== d.key))
+                        }
+                        className="shrink-0"
+                        aria-label="Datei entfernen"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                  <li className="text-[11px] text-muted-foreground">
+                    Wird beim Speichern des Termins hochgeladen.
+                  </li>
+                </ul>
+              )}
+
+              {storedDocs.length > 0 && (
+                <ul className="space-y-1">
+                  {storedDocs.map((d) => (
+                    <li
+                      key={d.id}
+                      className="flex items-center justify-between gap-2 text-xs rounded-xl border border-border px-3 py-2"
+                    >
+                      {d.signedUrl ? (
+                        <a
+                          href={d.signedUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="truncate underline"
+                        >
+                          {docLabel(d.doc_type)}
+                          {d.original_name ? ` · ${d.original_name}` : ""}
+                        </a>
+                      ) : (
+                        <span className="truncate">{docLabel(d.doc_type)}</span>
+                      )}
+                      <button
+                        onClick={() => handleDeleteDoc(d.id)}
+                        className="shrink-0"
+                        aria-label="Dokument löschen"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+
+
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Notiz (optional)</label>
               <textarea
