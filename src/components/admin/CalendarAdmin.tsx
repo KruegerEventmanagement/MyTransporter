@@ -357,6 +357,8 @@ export function CalendarAdmin() {
 
   const openCreate = () => {
     setFormError(null);
+    setStoredDocs([]);
+    setPendingDocs([]);
     setForm(emptyForm(selectedDay));
   };
 
@@ -364,6 +366,9 @@ export function CalendarAdmin() {
     const s = toLocalInput(new Date(m.start_at));
     const e = toLocalInput(new Date(m.end_at));
     const vehicle = vehicles.find((v) => v.plate === m.vehicle_plate);
+    setFormError(null);
+    setPendingDocs([]);
+    setStoredDocs([]);
     setForm({
       id: m.id,
       vehicleKey: vehicle?.id ?? "",
@@ -374,10 +379,16 @@ export function CalendarAdmin() {
       customerName: m.customer_name,
       customerPhone: m.customer_phone ?? "",
       customerEmail: m.customer_email ?? "",
+      customerBirthDate: m.customer_birth_date ?? "",
+      customerStreet: m.customer_street ?? "",
+      customerCity: m.customer_city ?? "",
+      customerIdNumber: m.customer_id_number ?? "",
+      customerLicenseNumber: m.customer_license_number ?? "",
       note: m.note ?? "",
       reminderEnabled: m.reminder_enabled,
       notifyCustomer: m.notify_customer,
     });
+    void loadDocs(m.id);
   };
 
   const fail = (msg: string) => {
