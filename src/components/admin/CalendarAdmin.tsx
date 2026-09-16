@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   CalendarDays,
+  Cake,
   ChevronLeft,
   ChevronRight,
+  FileText,
   Mail,
   Phone,
   Plus,
@@ -16,9 +18,51 @@ import {
   listManualReservations,
   upsertManualReservation,
   deleteManualReservation,
+  listManualReservationDocuments,
+  addManualReservationDocument,
+  deleteManualReservationDocument,
   type ManualReservation,
 } from "@/lib/manual-reservations.functions";
 import { bookingWindowMs } from "@/lib/booking-window";
+import { ageOnIsoDate, isValidIsoDate, todayIsoBerlin } from "@/lib/age";
+
+const DOC_KINDS = [
+  { value: "id_front", label: "Personalausweis · Vorderseite" },
+  { value: "id_back", label: "Personalausweis · Rückseite" },
+  { value: "license_front", label: "Führerschein · Vorderseite" },
+  { value: "license_back", label: "Führerschein · Rückseite" },
+  { value: "other", label: "Sonstiges Dokument" },
+] as const;
+
+type DocKind = (typeof DOC_KINDS)[number]["value"];
+
+function docLabel(type: string): string {
+  return DOC_KINDS.find((d) => d.value === type)?.label ?? "Dokument";
+}
+
+interface StoredDoc {
+  id: string;
+  doc_type: string;
+  original_name: string | null;
+  signedUrl: string | null;
+}
+
+interface PendingDoc {
+  key: string;
+  docType: DocKind;
+  file: File;
+}
+
+function fmtBirth(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${d}.${m}.${y}`;
+}
+
+function birthLabel(iso: string | null | undefined): string | null {
+  if (!iso || !isValidIsoDate(iso)) return null;
+  const age = ageOnIsoDate(iso, todayIsoBerlin());
+  return age === null ? fmtBirth(iso) : `${fmtBirth(iso)} · ${age} Jahre`;
+}
 
 interface VehicleOption {
   id: string;
