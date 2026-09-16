@@ -382,13 +382,56 @@ export type Database = {
           },
         ]
       }
+      manual_reservation_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          doc_type: string
+          file_path: string
+          id: string
+          original_name: string | null
+          reservation_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          doc_type?: string
+          file_path: string
+          id?: string
+          original_name?: string | null
+          reservation_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          doc_type?: string
+          file_path?: string
+          id?: string
+          original_name?: string | null
+          reservation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_reservation_documents_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "manual_reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manual_reservations: {
         Row: {
           created_at: string
           created_by: string | null
+          customer_birth_date: string | null
+          customer_city: string | null
           customer_email: string | null
+          customer_id_number: string | null
+          customer_license_number: string | null
           customer_name: string
           customer_phone: string | null
+          customer_street: string | null
           end_at: string
           id: string
           note: string | null
@@ -405,9 +448,14 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          customer_birth_date?: string | null
+          customer_city?: string | null
           customer_email?: string | null
+          customer_id_number?: string | null
+          customer_license_number?: string | null
           customer_name: string
           customer_phone?: string | null
+          customer_street?: string | null
           end_at: string
           id?: string
           note?: string | null
@@ -424,9 +472,14 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          customer_birth_date?: string | null
+          customer_city?: string | null
           customer_email?: string | null
+          customer_id_number?: string | null
+          customer_license_number?: string | null
           customer_name?: string
           customer_phone?: string | null
+          customer_street?: string | null
           end_at?: string
           id?: string
           note?: string | null
