@@ -634,7 +634,19 @@ export function CalendarAdmin() {
                           <Mail className="w-3 h-3" /> {e.manual.customer_email}
                         </span>
                       )}
+                      {birthLabel(e.manual.customer_birth_date) && (
+                        <span className="flex items-center gap-1">
+                          <Cake className="w-3 h-3" /> {birthLabel(e.manual.customer_birth_date)}
+                        </span>
+                      )}
                     </p>
+                    {(e.manual.customer_street || e.manual.customer_city) && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {[e.manual.customer_street, e.manual.customer_city]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </p>
+                    )}
                     {e.manual.note && (
                       <p className="text-xs text-muted-foreground mt-1">{e.manual.note}</p>
                     )}
