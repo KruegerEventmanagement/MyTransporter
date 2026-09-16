@@ -422,10 +422,21 @@ export function CalendarAdmin() {
       fail("Für die Kunden-Erinnerung wird eine E-Mail-Adresse benötigt");
       return;
     }
+    const birth = form.customerBirthDate.trim();
+    if (birth) {
+      if (!isValidIsoDate(birth)) {
+        fail("Bitte ein gültiges Geburtsdatum eingeben");
+        return;
+      }
+      if (birth > todayIsoBerlin()) {
+        fail("Das Geburtsdatum darf nicht in der Zukunft liegen");
+        return;
+      }
+    }
 
     setSaving(true);
     try {
-      await saveManual({
+      const saved = await saveManual({
         data: {
           id: form.id,
           vehicleId: vehicle.id,
@@ -436,15 +447,32 @@ export function CalendarAdmin() {
           customerName: form.customerName.trim(),
           customerPhone: form.customerPhone.trim() || null,
           customerEmail: form.customerEmail.trim() || null,
+          customerBirthDate: birth || null,
+          customerStreet: form.customerStreet.trim() || null,
+          customerCity: form.customerCity.trim() || null,
+          customerIdNumber: form.customerIdNumber.trim() || null,
+          customerLicenseNumber: form.customerLicenseNumber.trim() || null,
           note: form.note.trim() || null,
           reminderEnabled: form.reminderEnabled,
           notifyCustomer: form.notifyCustomer,
         },
       });
+
+      let docWarning: string | null = null;
+      try {
+        await uploadPendingDocs(saved.id);
+      } catch (docErr) {
+        docWarning = docErr instanceof Error ? docErr.message : "Dateien nicht gespeichert";
+      }
+
       toast.success(form.id ? "Termin aktualisiert" : "Termin eingetragen", {
-        description: `${vehicle.plate} ist im Zeitraum jetzt blockiert.`,
+        description: docWarning
+          ? `${vehicle.plate} ist blockiert – aber: ${docWarning}`
+          : `${vehicle.plate} ist im Zeitraum jetzt blockiert.`,
       });
       setForm(null);
+      setStoredDocs([]);
+      setPendingDocs([]);
       setSelectedDay(start);
       await load();
     } catch (e) {
