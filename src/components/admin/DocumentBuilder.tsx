@@ -136,7 +136,9 @@ export function DocumentBuilder() {
       URL.revokeObjectURL(url);
       toast.success("PDF erstellt");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "PDF konnte nicht erstellt werden");
+      toast.error(
+        friendlyError(e, "PDF konnte nicht erstellt werden – bitte Eingaben prüfen."),
+      );
     } finally {
       setBusy(null);
     }
@@ -158,7 +160,9 @@ export function DocumentBuilder() {
       await send({ data: { doc, to: email.trim(), subject: subj, message: msg } });
       toast.success(`Per E-Mail an ${email.trim()} gesendet`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "E-Mail konnte nicht gesendet werden");
+      toast.error(
+        friendlyError(e, "E-Mail konnte nicht gesendet werden – bitte Eingaben prüfen."),
+      );
     } finally {
       setBusy(null);
     }
