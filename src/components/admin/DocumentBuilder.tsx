@@ -23,6 +23,16 @@ function autoNumber(kind: Kind) {
   return `${kind === "offer" ? "AN" : "MT"}-${ym}-${rand}`;
 }
 
+/** Nimmt Komma oder Punkt als Dezimaltrennzeichen; ungültige Eingabe = null. */
+function parseNum(value: string): number | null {
+  const cleaned = value.replace(/\s/g, "").replace(/\./g, (m, i, s) =>
+    s.includes(",") ? "" : m,
+  ).replace(",", ".");
+  if (!cleaned) return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
 export function DocumentBuilder() {
   const [kind, setKind] = useState<Kind>("invoice");
   const [number, setNumber] = useState(() => autoNumber("invoice"));
