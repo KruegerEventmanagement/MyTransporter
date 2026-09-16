@@ -25,10 +25,10 @@ function autoNumber(kind: Kind) {
 
 /** Nimmt Komma oder Punkt als Dezimaltrennzeichen; ungültige Eingabe = null. */
 function parseNum(value: string): number | null {
-  const cleaned = value.replace(/\s/g, "").replace(/\./g, (m, i, s) =>
-    s.includes(",") ? "" : m,
-  ).replace(",", ".");
-  if (!cleaned) return null;
+  let cleaned = value.replace(/\s/g, "").replace(/€/g, "");
+  if (cleaned.includes(",")) cleaned = cleaned.replace(/\./g, "");
+  cleaned = cleaned.replace(",", ".");
+  if (!cleaned || cleaned === "-" || cleaned === "." || cleaned === "-.") return null;
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }
@@ -79,8 +79,17 @@ export function DocumentBuilder() {
   function buildDoc() {
     const cleanedItems = items
       .filter((it) => it.label.trim().length > 0)
-      .map((it) => ({ ...it, label: it.label.trim(), amount: Number(it.amount) || 0 }));
-    if (cleanedItems.length === 0) throw new Error("Bitte mindestens eine Position mit Bezeichnung angeben.");
+      .map((it) => ({
+        ...it,
+        label: it.label.trim(),
+        amount: Number.isFinite(Number(it.amount)) ? Number(it.amount) : 0,
+      }));
+    if (cleanedItems.length === 0)
+      throw new Error("Bitte mindestens eine Position mit Bezeichnung angeben.");
+    if (!number.trim()) throw new Error("Bitte eine Nummer für das Dokument angeben.");
+
+    const freeKmNum = parseNum(freeKm);
+    const kmPriceNum = parseNum(kmPrice);
     return {
       kind,
       number: number.trim(),
@@ -98,12 +107,17 @@ export function DocumentBuilder() {
         vin: vin.trim() || undefined,
         pickup: pickup.trim() || undefined,
         ret: ret.trim() || undefined,
-        freeKm: freeKm.trim() ? Number(freeKm) : null,
-        kmPrice: kmPrice.trim() ? Number(kmPrice) : null,
+        freeKm: freeKmNum === null ? null : Math.max(0, Math.round(freeKmNum)),
+        kmPrice: kmPriceNum === null ? null : Math.max(0, kmPriceNum),
       },
       items: cleanedItems,
       note: note.trim() || undefined,
     };
+  }
+
+  function friendlyError(e: unknown, fallback: string): string {
+    if (e instanceof Error && e.message.trim().startsWith("[")) return fallback;
+    return e instanceof Error && e.message ? e.message : fallback;
   }
 
   async function handleDownload() {
