@@ -276,7 +276,7 @@ export function DocumentBuilder() {
                   className={inputCls}
                   inputMode="decimal"
                   value={String(it.amount)}
-                  onChange={(e) => updateItem(i, { amount: Number(e.target.value.replace(",", ".")) || 0 })}
+                  onChange={(e) => updateItem(i, { amount: parseNum(e.target.value) ?? 0 })}
                 />
               </div>
               <div className="col-span-4 sm:col-span-2">
