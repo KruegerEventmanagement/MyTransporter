@@ -129,6 +129,11 @@ interface FormState {
   customerName: string;
   customerPhone: string;
   customerEmail: string;
+  customerBirthDate: string;
+  customerStreet: string;
+  customerCity: string;
+  customerIdNumber: string;
+  customerLicenseNumber: string;
   note: string;
   reminderEnabled: boolean;
   notifyCustomer: boolean;
@@ -148,6 +153,11 @@ function emptyForm(day: Date): FormState {
     customerName: "",
     customerPhone: "",
     customerEmail: "",
+    customerBirthDate: "",
+    customerStreet: "",
+    customerCity: "",
+    customerIdNumber: "",
+    customerLicenseNumber: "",
     note: "",
     reminderEnabled: true,
     notifyCustomer: false,
@@ -167,10 +177,70 @@ export function CalendarAdmin() {
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [storedDocs, setStoredDocs] = useState<StoredDoc[]>([]);
+  const [pendingDocs, setPendingDocs] = useState<PendingDoc[]>([]);
+  const [nextDocKind, setNextDocKind] = useState<DocKind>("id_front");
 
   const fetchManual = useServerFn(listManualReservations);
   const saveManual = useServerFn(upsertManualReservation);
   const removeManual = useServerFn(deleteManualReservation);
+  const fetchDocs = useServerFn(listManualReservationDocuments);
+  const addDoc = useServerFn(addManualReservationDocument);
+  const removeDoc = useServerFn(deleteManualReservationDocument);
+
+  const loadDocs = async (reservationId: string) => {
+    try {
+      const rows = await fetchDocs({ data: { reservationId } });
+      setStoredDocs(
+        rows.map((r) => ({
+          id: r.id,
+          doc_type: r.doc_type,
+          original_name: r.original_name,
+          signedUrl: r.signedUrl,
+        })),
+      );
+    } catch {
+      setStoredDocs([]);
+    }
+  };
+
+  /** Lädt vorgemerkte Dateien in den geschützten Speicher und verknüpft sie mit dem Termin. */
+  const uploadPendingDocs = async (reservationId: string) => {
+    if (pendingDocs.length === 0) return;
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) throw new Error("Sitzung abgelaufen – bitte neu anmelden.");
+
+    for (const doc of pendingDocs) {
+      const ext = doc.file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${uid}/manual/${reservationId}/${doc.docType}-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage
+        .from("user-documents")
+        .upload(path, doc.file, { contentType: doc.file.type || undefined, upsert: false });
+      if (error) throw new Error(`Datei „${doc.file.name}" konnte nicht gespeichert werden`);
+      await addDoc({
+        data: {
+          reservationId,
+          docType: doc.docType,
+          filePath: path,
+          originalName: doc.file.name.slice(0, 200),
+        },
+      });
+    }
+    setPendingDocs([]);
+  };
+
+  const handleDeleteDoc = async (id: string) => {
+    try {
+      await removeDoc({ data: { id } });
+      setStoredDocs((prev) => prev.filter((d) => d.id !== id));
+      toast.success("Dokument gelöscht");
+    } catch {
+      toast.error("Dokument konnte nicht gelöscht werden");
+    }
+  };
 
   const rangeFrom = useMemo(
     () => new Date(month.getFullYear(), month.getMonth() - 1, 1),
