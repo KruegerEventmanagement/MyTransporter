@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   CalendarDays,
+  Cake,
   ChevronLeft,
   ChevronRight,
+  FileText,
   Mail,
   Phone,
   Plus,
@@ -16,9 +18,51 @@ import {
   listManualReservations,
   upsertManualReservation,
   deleteManualReservation,
+  listManualReservationDocuments,
+  addManualReservationDocument,
+  deleteManualReservationDocument,
   type ManualReservation,
 } from "@/lib/manual-reservations.functions";
 import { bookingWindowMs } from "@/lib/booking-window";
+import { ageOnIsoDate, isValidIsoDate, todayIsoBerlin } from "@/lib/age";
+
+const DOC_KINDS = [
+  { value: "id_front", label: "Personalausweis · Vorderseite" },
+  { value: "id_back", label: "Personalausweis · Rückseite" },
+  { value: "license_front", label: "Führerschein · Vorderseite" },
+  { value: "license_back", label: "Führerschein · Rückseite" },
+  { value: "other", label: "Sonstiges Dokument" },
+] as const;
+
+type DocKind = (typeof DOC_KINDS)[number]["value"];
+
+function docLabel(type: string): string {
+  return DOC_KINDS.find((d) => d.value === type)?.label ?? "Dokument";
+}
+
+interface StoredDoc {
+  id: string;
+  doc_type: string;
+  original_name: string | null;
+  signedUrl: string | null;
+}
+
+interface PendingDoc {
+  key: string;
+  docType: DocKind;
+  file: File;
+}
+
+function fmtBirth(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${d}.${m}.${y}`;
+}
+
+function birthLabel(iso: string | null | undefined): string | null {
+  if (!iso || !isValidIsoDate(iso)) return null;
+  const age = ageOnIsoDate(iso, todayIsoBerlin());
+  return age === null ? fmtBirth(iso) : `${fmtBirth(iso)} · ${age} Jahre`;
+}
 
 interface VehicleOption {
   id: string;
@@ -85,6 +129,11 @@ interface FormState {
   customerName: string;
   customerPhone: string;
   customerEmail: string;
+  customerBirthDate: string;
+  customerStreet: string;
+  customerCity: string;
+  customerIdNumber: string;
+  customerLicenseNumber: string;
   note: string;
   reminderEnabled: boolean;
   notifyCustomer: boolean;
@@ -104,6 +153,11 @@ function emptyForm(day: Date): FormState {
     customerName: "",
     customerPhone: "",
     customerEmail: "",
+    customerBirthDate: "",
+    customerStreet: "",
+    customerCity: "",
+    customerIdNumber: "",
+    customerLicenseNumber: "",
     note: "",
     reminderEnabled: true,
     notifyCustomer: false,
@@ -123,10 +177,70 @@ export function CalendarAdmin() {
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [storedDocs, setStoredDocs] = useState<StoredDoc[]>([]);
+  const [pendingDocs, setPendingDocs] = useState<PendingDoc[]>([]);
+  const [nextDocKind, setNextDocKind] = useState<DocKind>("id_front");
 
   const fetchManual = useServerFn(listManualReservations);
   const saveManual = useServerFn(upsertManualReservation);
   const removeManual = useServerFn(deleteManualReservation);
+  const fetchDocs = useServerFn(listManualReservationDocuments);
+  const addDoc = useServerFn(addManualReservationDocument);
+  const removeDoc = useServerFn(deleteManualReservationDocument);
+
+  const loadDocs = async (reservationId: string) => {
+    try {
+      const rows = await fetchDocs({ data: { reservationId } });
+      setStoredDocs(
+        rows.map((r) => ({
+          id: r.id,
+          doc_type: r.doc_type,
+          original_name: r.original_name,
+          signedUrl: r.signedUrl,
+        })),
+      );
+    } catch {
+      setStoredDocs([]);
+    }
+  };
+
+  /** Lädt vorgemerkte Dateien in den geschützten Speicher und verknüpft sie mit dem Termin. */
+  const uploadPendingDocs = async (reservationId: string) => {
+    if (pendingDocs.length === 0) return;
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) throw new Error("Sitzung abgelaufen – bitte neu anmelden.");
+
+    for (const doc of pendingDocs) {
+      const ext = doc.file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${uid}/manual/${reservationId}/${doc.docType}-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage
+        .from("user-documents")
+        .upload(path, doc.file, { contentType: doc.file.type || undefined, upsert: false });
+      if (error) throw new Error(`Datei „${doc.file.name}" konnte nicht gespeichert werden`);
+      await addDoc({
+        data: {
+          reservationId,
+          docType: doc.docType,
+          filePath: path,
+          originalName: doc.file.name.slice(0, 200),
+        },
+      });
+    }
+    setPendingDocs([]);
+  };
+
+  const handleDeleteDoc = async (id: string) => {
+    try {
+      await removeDoc({ data: { id } });
+      setStoredDocs((prev) => prev.filter((d) => d.id !== id));
+      toast.success("Dokument gelöscht");
+    } catch {
+      toast.error("Dokument konnte nicht gelöscht werden");
+    }
+  };
 
   const rangeFrom = useMemo(
     () => new Date(month.getFullYear(), month.getMonth() - 1, 1),
@@ -243,6 +357,8 @@ export function CalendarAdmin() {
 
   const openCreate = () => {
     setFormError(null);
+    setStoredDocs([]);
+    setPendingDocs([]);
     setForm(emptyForm(selectedDay));
   };
 
@@ -250,6 +366,9 @@ export function CalendarAdmin() {
     const s = toLocalInput(new Date(m.start_at));
     const e = toLocalInput(new Date(m.end_at));
     const vehicle = vehicles.find((v) => v.plate === m.vehicle_plate);
+    setFormError(null);
+    setPendingDocs([]);
+    setStoredDocs([]);
     setForm({
       id: m.id,
       vehicleKey: vehicle?.id ?? "",
@@ -260,10 +379,16 @@ export function CalendarAdmin() {
       customerName: m.customer_name,
       customerPhone: m.customer_phone ?? "",
       customerEmail: m.customer_email ?? "",
+      customerBirthDate: m.customer_birth_date ?? "",
+      customerStreet: m.customer_street ?? "",
+      customerCity: m.customer_city ?? "",
+      customerIdNumber: m.customer_id_number ?? "",
+      customerLicenseNumber: m.customer_license_number ?? "",
       note: m.note ?? "",
       reminderEnabled: m.reminder_enabled,
       notifyCustomer: m.notify_customer,
     });
+    void loadDocs(m.id);
   };
 
   const fail = (msg: string) => {
@@ -297,10 +422,21 @@ export function CalendarAdmin() {
       fail("Für die Kunden-Erinnerung wird eine E-Mail-Adresse benötigt");
       return;
     }
+    const birth = form.customerBirthDate.trim();
+    if (birth) {
+      if (!isValidIsoDate(birth)) {
+        fail("Bitte ein gültiges Geburtsdatum eingeben");
+        return;
+      }
+      if (birth > todayIsoBerlin()) {
+        fail("Das Geburtsdatum darf nicht in der Zukunft liegen");
+        return;
+      }
+    }
 
     setSaving(true);
     try {
-      await saveManual({
+      const saved = await saveManual({
         data: {
           id: form.id,
           vehicleId: vehicle.id,
@@ -311,15 +447,32 @@ export function CalendarAdmin() {
           customerName: form.customerName.trim(),
           customerPhone: form.customerPhone.trim() || null,
           customerEmail: form.customerEmail.trim() || null,
+          customerBirthDate: birth || null,
+          customerStreet: form.customerStreet.trim() || null,
+          customerCity: form.customerCity.trim() || null,
+          customerIdNumber: form.customerIdNumber.trim() || null,
+          customerLicenseNumber: form.customerLicenseNumber.trim() || null,
           note: form.note.trim() || null,
           reminderEnabled: form.reminderEnabled,
           notifyCustomer: form.notifyCustomer,
         },
       });
+
+      let docWarning: string | null = null;
+      try {
+        await uploadPendingDocs(saved.id);
+      } catch (docErr) {
+        docWarning = docErr instanceof Error ? docErr.message : "Dateien nicht gespeichert";
+      }
+
       toast.success(form.id ? "Termin aktualisiert" : "Termin eingetragen", {
-        description: `${vehicle.plate} ist im Zeitraum jetzt blockiert.`,
+        description: docWarning
+          ? `${vehicle.plate} ist blockiert – aber: ${docWarning}`
+          : `${vehicle.plate} ist im Zeitraum jetzt blockiert.`,
       });
       setForm(null);
+      setStoredDocs([]);
+      setPendingDocs([]);
       setSelectedDay(start);
       await load();
     } catch (e) {
@@ -481,7 +634,19 @@ export function CalendarAdmin() {
                           <Mail className="w-3 h-3" /> {e.manual.customer_email}
                         </span>
                       )}
+                      {birthLabel(e.manual.customer_birth_date) && (
+                        <span className="flex items-center gap-1">
+                          <Cake className="w-3 h-3" /> {birthLabel(e.manual.customer_birth_date)}
+                        </span>
+                      )}
                     </p>
+                    {(e.manual.customer_street || e.manual.customer_city) && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {[e.manual.customer_street, e.manual.customer_city]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </p>
+                    )}
                     {e.manual.note && (
                       <p className="text-xs text-muted-foreground mt-1">{e.manual.note}</p>
                     )}
@@ -645,6 +810,179 @@ export function CalendarAdmin() {
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Geburtsdatum (optional)
+                </label>
+                <input
+                  type="date"
+                  value={form.customerBirthDate}
+                  max={todayIsoBerlin()}
+                  onChange={(ev) => setForm({ ...form, customerBirthDate: ev.target.value })}
+                  className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                />
+                {birthLabel(form.customerBirthDate) && (
+                  <p className="text-[11px] text-muted-foreground">
+                    {birthLabel(form.customerBirthDate)}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Straße (optional)
+                </label>
+                <input
+                  value={form.customerStreet}
+                  maxLength={160}
+                  onChange={(ev) => setForm({ ...form, customerStreet: ev.target.value })}
+                  placeholder="Hauptstraße 20"
+                  className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  PLZ / Ort (optional)
+                </label>
+                <input
+                  value={form.customerCity}
+                  maxLength={160}
+                  onChange={(ev) => setForm({ ...form, customerCity: ev.target.value })}
+                  placeholder="71229 Leonberg"
+                  className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Ausweisnummer (optional)
+                </label>
+                <input
+                  value={form.customerIdNumber}
+                  maxLength={60}
+                  onChange={(ev) => setForm({ ...form, customerIdNumber: ev.target.value })}
+                  className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                />
+              </div>
+              <div className="space-y-1 col-span-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Führerscheinnummer (optional)
+                </label>
+                <input
+                  value={form.customerLicenseNumber}
+                  maxLength={60}
+                  onChange={(ev) => setForm({ ...form, customerLicenseNumber: ev.target.value })}
+                  className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-2xl border border-border p-3">
+              <p className="text-xs font-semibold flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5" /> Dokumente (optional)
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Ausweis oder Führerschein fotografieren oder Datei auswählen. Nur für dich
+                sichtbar.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  value={nextDocKind}
+                  onChange={(ev) => setNextDocKind(ev.target.value as DocKind)}
+                  className="flex-1 rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                >
+                  {DOC_KINDS.map((d) => (
+                    <option key={d.value} value={d.value}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+                <label className="rounded-full bg-secondary px-4 py-2.5 text-xs font-medium text-center cursor-pointer">
+                  Datei / Foto wählen
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    multiple
+                    className="hidden"
+                    onChange={(ev) => {
+                      const files = Array.from(ev.target.files ?? []);
+                      if (files.length === 0) return;
+                      setPendingDocs((prev) => [
+                        ...prev,
+                        ...files.map((file, i) => ({
+                          key: `${Date.now()}-${i}-${file.name}`,
+                          docType: nextDocKind,
+                          file,
+                        })),
+                      ]);
+                      ev.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+
+              {pendingDocs.length > 0 && (
+                <ul className="space-y-1">
+                  {pendingDocs.map((d) => (
+                    <li
+                      key={d.key}
+                      className="flex items-center justify-between gap-2 text-xs rounded-xl bg-secondary px-3 py-2"
+                    >
+                      <span className="truncate">
+                        {docLabel(d.docType)} · {d.file.name}
+                      </span>
+                      <button
+                        onClick={() =>
+                          setPendingDocs((prev) => prev.filter((p) => p.key !== d.key))
+                        }
+                        className="shrink-0"
+                        aria-label="Datei entfernen"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                  <li className="text-[11px] text-muted-foreground">
+                    Wird beim Speichern des Termins hochgeladen.
+                  </li>
+                </ul>
+              )}
+
+              {storedDocs.length > 0 && (
+                <ul className="space-y-1">
+                  {storedDocs.map((d) => (
+                    <li
+                      key={d.id}
+                      className="flex items-center justify-between gap-2 text-xs rounded-xl border border-border px-3 py-2"
+                    >
+                      {d.signedUrl ? (
+                        <a
+                          href={d.signedUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="truncate underline"
+                        >
+                          {docLabel(d.doc_type)}
+                          {d.original_name ? ` · ${d.original_name}` : ""}
+                        </a>
+                      ) : (
+                        <span className="truncate">{docLabel(d.doc_type)}</span>
+                      )}
+                      <button
+                        onClick={() => handleDeleteDoc(d.id)}
+                        className="shrink-0"
+                        aria-label="Dokument löschen"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+
 
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Notiz (optional)</label>

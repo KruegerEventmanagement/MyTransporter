@@ -23,6 +23,16 @@ function autoNumber(kind: Kind) {
   return `${kind === "offer" ? "AN" : "MT"}-${ym}-${rand}`;
 }
 
+/** Nimmt Komma oder Punkt als Dezimaltrennzeichen; ungültige Eingabe = null. */
+function parseNum(value: string): number | null {
+  let cleaned = value.replace(/\s/g, "").replace(/€/g, "");
+  if (cleaned.includes(",")) cleaned = cleaned.replace(/\./g, "");
+  cleaned = cleaned.replace(",", ".");
+  if (!cleaned || cleaned === "-" || cleaned === "." || cleaned === "-.") return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
 export function DocumentBuilder() {
   const [kind, setKind] = useState<Kind>("invoice");
   const [number, setNumber] = useState(() => autoNumber("invoice"));
@@ -69,8 +79,17 @@ export function DocumentBuilder() {
   function buildDoc() {
     const cleanedItems = items
       .filter((it) => it.label.trim().length > 0)
-      .map((it) => ({ ...it, label: it.label.trim(), amount: Number(it.amount) || 0 }));
-    if (cleanedItems.length === 0) throw new Error("Bitte mindestens eine Position mit Bezeichnung angeben.");
+      .map((it) => ({
+        ...it,
+        label: it.label.trim(),
+        amount: Number.isFinite(Number(it.amount)) ? Number(it.amount) : 0,
+      }));
+    if (cleanedItems.length === 0)
+      throw new Error("Bitte mindestens eine Position mit Bezeichnung angeben.");
+    if (!number.trim()) throw new Error("Bitte eine Nummer für das Dokument angeben.");
+
+    const freeKmNum = parseNum(freeKm);
+    const kmPriceNum = parseNum(kmPrice);
     return {
       kind,
       number: number.trim(),
@@ -88,12 +107,17 @@ export function DocumentBuilder() {
         vin: vin.trim() || undefined,
         pickup: pickup.trim() || undefined,
         ret: ret.trim() || undefined,
-        freeKm: freeKm.trim() ? Number(freeKm) : null,
-        kmPrice: kmPrice.trim() ? Number(kmPrice) : null,
+        freeKm: freeKmNum === null ? null : Math.max(0, Math.round(freeKmNum)),
+        kmPrice: kmPriceNum === null ? null : Math.max(0, kmPriceNum),
       },
       items: cleanedItems,
       note: note.trim() || undefined,
     };
+  }
+
+  function friendlyError(e: unknown, fallback: string): string {
+    if (e instanceof Error && e.message.trim().startsWith("[")) return fallback;
+    return e instanceof Error && e.message ? e.message : fallback;
   }
 
   async function handleDownload() {
@@ -112,7 +136,9 @@ export function DocumentBuilder() {
       URL.revokeObjectURL(url);
       toast.success("PDF erstellt");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "PDF konnte nicht erstellt werden");
+      toast.error(
+        friendlyError(e, "PDF konnte nicht erstellt werden – bitte Eingaben prüfen."),
+      );
     } finally {
       setBusy(null);
     }
@@ -134,7 +160,9 @@ export function DocumentBuilder() {
       await send({ data: { doc, to: email.trim(), subject: subj, message: msg } });
       toast.success(`Per E-Mail an ${email.trim()} gesendet`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "E-Mail konnte nicht gesendet werden");
+      toast.error(
+        friendlyError(e, "E-Mail konnte nicht gesendet werden – bitte Eingaben prüfen."),
+      );
     } finally {
       setBusy(null);
     }
@@ -248,7 +276,7 @@ export function DocumentBuilder() {
                   className={inputCls}
                   inputMode="decimal"
                   value={String(it.amount)}
-                  onChange={(e) => updateItem(i, { amount: Number(e.target.value.replace(",", ".")) || 0 })}
+                  onChange={(e) => updateItem(i, { amount: parseNum(e.target.value) ?? 0 })}
                 />
               </div>
               <div className="col-span-4 sm:col-span-2">
