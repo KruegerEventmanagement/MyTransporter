@@ -26,6 +26,12 @@ export interface AdSenseConfig {
   siteApproved: boolean;
   /** Zertifizierte Google-CMP eingebunden? Ohne true keine Anfragen. */
   certifiedCmpConfigured: boolean;
+  /**
+   * Wurde die echte Einwilligungsmeldung auf der öffentlichen Domain
+   * tatsächlich geprüft (Zustimmen/Ablehnen/Widerruf/Rendering)? Ohne true
+   * keine Anzeigenanfragen.
+   */
+  liveCmpVerified: boolean;
 }
 
 export const ADSENSE_CONFIG: AdSenseConfig = {
