@@ -7,40 +7,69 @@ interface AdRailsProps {
   children: ReactNode;
 }
 
+/** Stabiler Slot-Key für die Inhaltsspalte – darf sich nie ändern. */
+export const AD_RAILS_CONTENT_KEY = "ad-rails-content";
+
+interface AdRailsTreeArgs {
+  suppressed: boolean;
+  left: boolean;
+  right: boolean;
+  children: ReactNode;
+}
+
+/**
+ * Baut die Layoutstruktur der Werbespalten.
+ *
+ * WICHTIG: Die DOM-Vorfahren der Kinder sind IMMER identisch (äußeres div →
+ * Inhalts-div mit stabilem Key), unabhängig von Unterdrückung, Konfiguration
+ * oder Einwilligung. Nur die CSS-Klassen wechseln (inaktiv: `display: contents`,
+ * d. h. kein zusätzlicher Layout-Container) und die Werbespalten daneben werden
+ * ein- oder ausgehängt. So wird der Inhalt (z. B. der Buchungsablauf) niemals
+ * neu gemountet und verliert keinen Zustand.
+ */
+export function buildAdRailsTree({ suppressed, left, right, children }: AdRailsTreeArgs) {
+  const railsActive = !suppressed && (left || right);
+  const asideClass = "hidden xl:block xl:w-[160px] xl:shrink-0 xl:sticky xl:top-20";
+
+  return (
+    <div
+      key="ad-rails-root"
+      className={railsActive ? "xl:flex xl:items-start xl:justify-center xl:gap-6" : "contents"}
+    >
+      {railsActive && left ? (
+        <aside key="ad-rails-left" aria-label="Anzeige" className={asideClass}>
+          <AdSlot slot="railLeft" minHeight={600} />
+        </aside>
+      ) : null}
+      <div
+        key={AD_RAILS_CONTENT_KEY}
+        className={railsActive ? "min-w-0 xl:flex-1" : "contents"}
+      >
+        {children}
+      </div>
+      {railsActive && right ? (
+        <aside key="ad-rails-right" aria-label="Anzeige" className={asideClass}>
+          <AdSlot slot="railRight" minHeight={600} />
+        </aside>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * Responsives Layout mit reservierten Werbespalten links und rechts.
  *
  * - Inaktiv (nicht konfiguriert / keine Einwilligung / transaktionaler Schritt):
- *   die Kinder werden unverändert gerendert, das Layout bleibt exakt wie bisher.
- * - Aktiv: ab xl eigene Außenspalten, die den Inhalt nicht überlagern und die
- *   Inhaltsbreite nicht verkleinern. Auf Handy/Tablet gibt es keine Sidebars.
+ *   keine Werbespalten, Inhalt erscheint per `display: contents` layoutgleich.
+ * - Aktiv: ab xl eigene Außenspalten, die den Inhalt nicht überlagern.
+ *   Auf Handy/Tablet gibt es keine Sidebars.
  */
 export function AdRails({ children }: AdRailsProps) {
   const suppressed = useAdsSuppressed();
-  const left = isSlotReady("railLeft");
-  const right = isSlotReady("railRight");
-
-  if (suppressed || (!left && !right)) return <>{children}</>;
-
-  return (
-    <div className="xl:flex xl:items-start xl:justify-center xl:gap-6">
-      {left && (
-        <aside
-          aria-label="Anzeige"
-          className="hidden xl:block xl:w-[160px] xl:shrink-0 xl:sticky xl:top-20"
-        >
-          <AdSlot slot="railLeft" minHeight={600} />
-        </aside>
-      )}
-      <div className="min-w-0 xl:flex-1">{children}</div>
-      {right && (
-        <aside
-          aria-label="Anzeige"
-          className="hidden xl:block xl:w-[160px] xl:shrink-0 xl:sticky xl:top-20"
-        >
-          <AdSlot slot="railRight" minHeight={600} />
-        </aside>
-      )}
-    </div>
-  );
+  return buildAdRailsTree({
+    suppressed,
+    left: isSlotReady("railLeft"),
+    right: isSlotReady("railRight"),
+    children,
+  });
 }
