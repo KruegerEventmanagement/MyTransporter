@@ -5,13 +5,13 @@ import { Navbar } from "@/components/Navbar";
 import { RollingNumber } from "@/components/RollingNumber";
 import { VEHICLE_CLASSES, VEHICLE_CLASS_LABEL, type VehicleClass } from "@/lib/booking-rules";
 import {
-import { AdRails } from "@/components/ads/AdRails";
   formatEur,
   LONG_TERM_MIN_DAYS,
   LONG_TERM_WEEK_DISCOUNT_PERCENT,
   quoteLongTerm,
   weeklyBasePriceEur,
 } from "@/lib/long-term";
+import { AdRails } from "@/components/ads/AdRails";
 
 export const Route = createFileRoute("/langzeitmiete")({
   head: () => ({

@@ -3,7 +3,6 @@ import { Navbar } from "@/components/Navbar";
 import { TariffSection } from "@/components/TariffSection";
 import { AddonPackagesSection } from "@/components/AddonPackagesSection";
 import {
-import { AdRails } from "@/components/ads/AdRails";
   PLAN_CATALOG,
   L4H2_SURCHARGE_PER_DAY_EUR,
   L5H2_SURCHARGE_EUR,
@@ -12,6 +11,7 @@ import { AdRails } from "@/components/ads/AdRails";
   KM_TARIFF_CENTS_PER_KM,
   KM_TARIFF_MIN_EUR,
 } from "@/lib/booking-rules";
+import { AdRails } from "@/components/ads/AdRails";
 
 const ENTRY = ["3h", "6h", "24h_300"].map((id) => PLAN_CATALOG.find((p) => p.id === id)!);
 const LONG = ["24h_500", "24h_800"].map((id) => PLAN_CATALOG.find((p) => p.id === id)!);
