@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ADSENSE_CONFIG, getSlotId, isSlotReady, type AdSenseSlotKey } from "@/lib/adsense";
 import { useAdsSuppressed } from "@/lib/ad-visibility";
+import { areAdRequestsAllowed, pauseAdRequests } from "@/lib/adsense-cmp";
 import { ensureAdSenseScript } from "./adsense-loader";
 
 interface AdSlotProps {
@@ -42,6 +43,7 @@ export function AdSlot({ slot, minHeight = 250, className, label = "Anzeige" }: 
       if (cancelled || initialized.current) return;
       const width = el.getBoundingClientRect().width;
       if (width <= 0) return; // niemals mit Breite 0 anfragen
+      if (!areAdRequestsAllowed()) return; // QA-Modus/unfertige Konfiguration: nie anfragen
       const loaded = await ensureAdSenseScript();
       if (cancelled || !loaded || initialized.current) return;
       initialized.current = true;
@@ -65,6 +67,8 @@ export function AdSlot({ slot, minHeight = 250, className, label = "Anzeige" }: 
     return () => {
       cancelled = true;
       observer.disconnect();
+      // Verlassen der Fläche/Route: Anfragen sofort anhalten.
+      pauseAdRequests();
     };
   }, [ready, suppressed]);
 
@@ -79,7 +83,7 @@ export function AdSlot({ slot, minHeight = 250, className, label = "Anzeige" }: 
     return () => mo.disconnect();
   }, [active]);
 
-  if (!ready || suppressed) return null;
+  if (!ready || suppressed || !areAdRequestsAllowed()) return null;
 
   const slotId = getSlotId(slot);
   if (!slotId) return null;
