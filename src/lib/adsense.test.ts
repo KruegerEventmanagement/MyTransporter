@@ -20,11 +20,14 @@ const validConfig: AdSenseConfig = {
 };
 
 describe("AdSense-Konfiguration", () => {
-  it("ist standardmäßig deaktiviert und leer", () => {
+  it("ist standardmäßig deaktiviert, Publisher-ID hinterlegt, Slots leer", () => {
     expect(ADSENSE_CONFIG.enabled).toBe(false);
-    expect(ADSENSE_CONFIG.publisherId).toBe("");
+    expect(ADSENSE_CONFIG.publisherId).toBe("ca-pub-6974851907377988");
+    expect(isValidPublisherId(ADSENSE_CONFIG.publisherId)).toBe(true);
     expect(Object.keys(ADSENSE_CONFIG.slots)).toHaveLength(0);
     expect(ADSENSE_CONFIG.autoAds).toBe(false);
+    expect(ADSENSE_CONFIG.siteApproved).toBe(false);
+    expect(ADSENSE_CONFIG.certifiedCmpConfigured).toBe(false);
     expect(isAdSenseConfigured()).toBe(false);
     expect(isSlotReady("railLeft")).toBe(false);
     expect(getSlotId("railLeft")).toBeNull();

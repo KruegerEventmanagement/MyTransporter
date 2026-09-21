@@ -1,24 +1,34 @@
-# AdSense – Aktivierungsnotizen (Stand: noch NICHT aktiv)
+# AdSense – Aktivierungsnotizen (Stand: Verifizierung erledigt, Anzeigen AUS)
 
-Der Code ist vorbereitet, aber vollständig fail-closed: solange die Konfiguration
+Der Code ist vorbereitet und vollständig fail-closed: solange die Konfiguration
 unvollständig ist, wird kein Google-Script geladen und keine Anfrage gesendet.
-Es sind keine echten IDs im Projekt und AdSense ist **nicht aktiv**.
+AdSense ist **nicht aktiv** (keine Anzeigen, kein Script, keine CMP).
+
+## Aktueller Stand (Verifizierungsstufe)
+
+- Publisher-ID: `ca-pub-6974851907377988` — in `src/lib/adsense.ts` eingetragen
+  (`ADSENSE_CONFIG.publisherId`). `enabled=false`, `siteApproved=false`,
+  `certifiedCmpConfigured=false`, `slots` leer – es werden KEINE Anzeigen
+  geladen und KEINE Google-Anfrage gesendet.
+- Website-Verifizierung: `<meta name="google-adsense-account"
+  content="ca-pub-6974851907377988">` in `src/routes/__root.tsx` ergänzt
+  (neben der bestehenden Search-Console-Verifizierung, nicht ersetzt).
+- `public/ads.txt`: echte Zeile
+  `google.com, pub-6974851907377988, DIRECT, f08c47fec0942fa0` angelegt.
+- Google-Review: **ausstehend** – Site noch nicht durch Google freigegeben.
+  Solange `siteApproved=false` bleibt, ist die Konfiguration absichtlich
+  nicht einsatzbereit (`isAdSenseConfigured` = false).
 
 ## Offene Schritte (in dieser Reihenfolge)
 
-1. Echte Publisher-ID (`ca-pub-…`, 16 Ziffern) und echte Slot-IDs im AdSense-Konto erzeugen
-   und in `src/lib/adsense.ts` (`ADSENSE_CONFIG.publisherId`, `slots`) eintragen.
-2. Google-Site-Verification einrichten – bevorzugt als Meta-Tag ohne Tracking
-   im Head der Root-Route (`src/routes/__root.tsx`).
-3. `ads.txt` erst anlegen, wenn die echte Publisher-ID bestätigt ist
-   (`public/ads.txt`, Zeile: `google.com, pub-<ID>, DIRECT, f08c47fec0942fa0`).
-   Keine erfundenen Einträge.
-4. Website-Freigabe durch Google abwarten, danach `siteApproved: true`.
-5. Zertifizierte Google-CMP samt Consent-Message einbinden (TCF v2 `__tcfapi`),
+1. Google-Review abwarten, danach `siteApproved: true`.
+2. Echte Slot-IDs im AdSense-Konto erzeugen und in `ADSENSE_CONFIG.slots`
+   eintragen (`railLeft`, `railRight`, `inlineContent`).
+3. Zertifizierte Google-CMP samt Consent-Message einbinden (TCF v2 `__tcfapi`),
    danach `certifiedCmpConfigured: true`. Ohne CMP-Antwort bleibt alles aus.
    Die bestehende Marketing-Einwilligung des Cookie-Banners (Google Ads /
    Meta Conversion-Tracking) gilt ausdrücklich **nicht** als AdSense-/TCF-Consent.
-6. Erst danach `enabled: true` setzen. Auto Ads bleiben aus (`autoAds: false`).
+4. Erst danach `enabled: true` setzen. Auto Ads bleiben aus (`autoAds: false`).
 
 ## Routen-Ausschlüsse (keine Anzeigen)
 
