@@ -1,7 +1,7 @@
 /**
  * Echter Browser-Adapter für die von Google zertifizierte Einwilligungsmeldung
- * (Funding Choices / Privacy & messaging) inklusive TCF v2.2-Auswertung und
- * Widerruf.
+ * (Funding Choices / Privacy & messaging) inklusive TCF-Auswertung (API-Version
+ * 2, kompatibel mit TCF v2.2/v2.3) und Widerruf.
  *
  * Grundsätze (fail-closed):
  *  - Der CMP-Bootstrap (Laden des AdSense-Tags, damit die Meldung überhaupt
@@ -10,13 +10,17 @@
  *    Tag ausgeliefert), ohne dass je ungewollt eine Anzeige angefragt wird.
  *  - Vor dem Einfügen des Tags werden `googlefc.callbackQueue` und
  *    `adsbygoogle.pauseAdRequests = 1` gesetzt.
- *  - Anzeigenanfragen sind nur erlaubt, wenn die Gesamtkonfiguration
- *    einsatzbereit ist (Freigabe, enabled, bestätigte Live-QA) UND eine
- *    vollständige, geprüfte TCF-Einwilligung vorliegt.
+ *  - Einwilligungsdaten kommen ausschließlich aus der laufenden
+ *    `addEventListener`-Subscription. `getTCData` wird NICHT verwendet (in
+ *    TCF 2.2+ nicht mehr unterstützt).
  *  - Unbekannter/fehlerhafter/ladender Zustand, Ablehnung, erneut geöffnete
- *    Meldung oder Nicht-TCF-Regionen => keine Einwilligung.
+ *    Meldung, Script-Fehler, Timeout oder Nicht-TCF-Regionen => keine
+ *    Einwilligung, Anfragen sofort pausiert.
  *  - Keine eigene localStorage-Einwilligung, keine Umdeutung des
  *    Cookie-Banners.
+ *  - Gerenderte Anzeigen werden NICHT per DOM-Manipulation entfernt (React
+ *    besitzt diese Knoten), sondern über den reaktiven Einwilligungszustand
+ *    ausgehängt.
  */
 
 import {
@@ -91,6 +95,7 @@ function restriction(tcData: TcData, purpose: number): number | undefined {
   return tcData.publisher?.restrictions?.[String(purpose)]?.[String(GOOGLE_VENDOR_ID)];
 }
 
+/** Zwecke, die Consent oder berechtigtes Interesse nutzen dürfen (2/7/9/10). */
 function purposeAllowed(tcData: TcData, purpose: number): boolean {
   const consent = flag(tcData.purpose, "consents", purpose);
   const li = flag(tcData.purpose, "legitimateInterests", purpose);
@@ -101,6 +106,17 @@ function purposeAllowed(tcData: TcData, purpose: number): boolean {
   if (r === 1) return consent && vendorConsent;
   if (r === 2) return li && vendorLi;
   return (consent && vendorConsent) || (li && vendorLi);
+}
+
+/**
+ * Zwecke, die ausschließlich über Einwilligung zulässig sind (1, 3, 4).
+ * Eine Publisher-Restriction "nur berechtigtes Interesse" (2) kann diese
+ * Zwecke daher NICHT erlauben.
+ */
+function consentOnlyPurposeAllowed(tcData: TcData, purpose: number): boolean {
+  const r = restriction(tcData, purpose);
+  if (r === 0 || r === 2) return false;
+  return flag(tcData.purpose, "consents", purpose) && flag(tcData.vendor, "consents", GOOGLE_VENDOR_ID);
 }
 
 /**
@@ -128,14 +144,16 @@ export function evaluateTcData(tcData: unknown, success = true): TcfEvaluation {
   if (!flag(data.vendor, "consents", GOOGLE_VENDOR_ID)) {
     return CLOSED("Keine Einwilligung für Google (Vendor 755)");
   }
-  if (!flag(data.purpose, "consents", 1)) return CLOSED("Zweck 1 ohne Einwilligung");
+  if (!consentOnlyPurposeAllowed(data, 1)) return CLOSED("Zweck 1 ohne Einwilligung");
   for (const purpose of REQUIRED_PURPOSES) {
     if (!purposeAllowed(data, purpose)) return CLOSED(`Zweck ${purpose} nicht erlaubt`);
   }
-  const personalized = PERSONALIZED_PURPOSES.every(
-    (p) => restriction(data, p) !== 0 && flag(data.purpose, "consents", p),
-  );
-  return { consented: true, personalized, reason: personalized ? "Einwilligung (personalisiert)" : "Einwilligung (nicht personalisiert)" };
+  const personalized = PERSONALIZED_PURPOSES.every((p) => consentOnlyPurposeAllowed(data, p));
+  return {
+    consented: true,
+    personalized,
+    reason: personalized ? "Einwilligung (personalisiert)" : "Einwilligung (nicht personalisiert)",
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -225,21 +243,45 @@ export function scriptSrc(config: AdSenseConfig = ADSENSE_CONFIG): string {
   return `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(config.publisherId)}`;
 }
 
+/* ------------------------------------------------------------------ */
+/* Zustand mit Generationszähler (verhindert veraltete Callbacks)       */
+/* ------------------------------------------------------------------ */
+
+let generation = 0;
 let bootstrapped: CmpWindow | null = null;
+let boundWin: CmpWindow | null = null;
 let apiReady = false;
 let lastEvaluation: TcfEvaluation = CLOSED("Noch nicht geprüft");
-const apiReadyWaiters = new Set<(ready: boolean) => void>();
-const changeListeners = new Set<(consented: boolean) => void>();
 let tcfListenerId: number | null = null;
+let tcfListenerPending = false;
+const apiReadyWaiters = new Set<(ready: boolean) => void>();
+const consentWaiters = new Set<(evaluation: TcfEvaluation) => void>();
+const changeListeners = new Set<(consented: boolean) => void>();
+const timers = new Set<ReturnType<typeof setTimeout>>();
+
+function track(timer: ReturnType<typeof setTimeout>) {
+  timers.add(timer);
+  return timer;
+}
+
+function clearTimers() {
+  for (const timer of timers) clearTimeout(timer);
+  timers.clear();
+}
 
 /** Nur für Tests: internen Zustand zurücksetzen. */
 export function resetCmpStateForTests(): void {
+  generation += 1;
   bootstrapped = null;
+  boundWin = null;
   apiReady = false;
   lastEvaluation = CLOSED("Noch nicht geprüft");
-  apiReadyWaiters.clear();
-  changeListeners.clear();
   tcfListenerId = null;
+  tcfListenerPending = false;
+  clearTimers();
+  apiReadyWaiters.clear();
+  consentWaiters.clear();
+  changeListeners.clear();
 }
 
 export function isCmpApiReady(): boolean {
@@ -257,29 +299,79 @@ export function pauseAdRequests(win: CmpWindow | null = defaultWin()): void {
   queue.pauseAdRequests = 1;
 }
 
+/**
+ * Die Einwilligungs-API gilt nur als bereit, wenn die echten Funktionen
+ * tatsächlich vorhanden sind – nicht allein, weil ein Callback gefeuert hat.
+ */
+function apiFunctionsAvailable(win: CmpWindow): boolean {
+  return typeof win.__tcfapi === "function" && typeof win.googlefc?.showRevocationMessage === "function";
+}
+
 function setApiReady(value: boolean) {
   apiReady = value;
-  for (const waiter of apiReadyWaiters) waiter(value);
+  for (const waiter of [...apiReadyWaiters]) waiter(value);
   apiReadyWaiters.clear();
 }
 
+function notifyChange(consented: boolean) {
+  for (const listener of [...changeListeners]) {
+    try {
+      listener(consented);
+    } catch {
+      /* ein fehlerhafter Listener darf den Rest nicht blockieren */
+    }
+  }
+}
+
+/**
+ * Neuen Auswertungszustand setzen. Änderungen der Personalisierung werden
+ * ebenfalls gemeldet (auch bei gleichem `consented`), damit NPA-Umschaltungen
+ * im UI ankommen.
+ */
+function setEvaluation(next: TcfEvaluation, win: CmpWindow | null, forceNotify = false) {
+  const previous = lastEvaluation;
+  lastEvaluation = next;
+  if (!next.consented && win) pauseAdRequests(win);
+  const changed =
+    forceNotify ||
+    previous.consented !== next.consented ||
+    previous.personalized !== next.personalized;
+  if (changed) notifyChange(next.consented);
+  for (const waiter of [...consentWaiters]) waiter(next);
+}
+
 function attachTcfListener(win: CmpWindow) {
+  if (tcfListenerId !== null || tcfListenerPending) return;
   const api = win.__tcfapi;
-  if (!api || tcfListenerId !== null) return;
+  if (typeof api !== "function") return;
+  const gen = generation;
+  tcfListenerPending = true;
+  boundWin = win;
   try {
     api("addEventListener", 2, (tcData, success) => {
+      // Veraltete Callbacks nach Teardown/Routewechsel ignorieren.
+      if (gen !== generation) return;
       const data = tcData as TcData | undefined;
       if (typeof data?.listenerId === "number") tcfListenerId = data.listenerId;
-      const previous = lastEvaluation.consented;
-      lastEvaluation = evaluateTcData(tcData, success);
-      if (!lastEvaluation.consented) pauseAdRequests(win);
-      if (lastEvaluation.consented !== previous) {
-        for (const listener of changeListeners) listener(lastEvaluation.consented);
-      }
+      setEvaluation(evaluateTcData(tcData, success), win);
     });
   } catch {
-    lastEvaluation = CLOSED("TCF-API-Fehler");
+    tcfListenerPending = false;
+    boundWin = null;
+    setEvaluation(CLOSED("TCF-API-Fehler"), win);
   }
+}
+
+/** Wartet (begrenzt) darauf, dass die echten API-Funktionen vorhanden sind. */
+function pollApiFunctions(win: CmpWindow, gen: number, attempts = 20) {
+  if (gen !== generation) return;
+  if (apiFunctionsAvailable(win)) {
+    setApiReady(true);
+    attachTcfListener(win);
+    return;
+  }
+  if (attempts <= 0) return;
+  track(setTimeout(() => pollApiFunctions(win, gen, attempts - 1), 100));
 }
 
 /**
@@ -300,11 +392,13 @@ export function bootstrapAdConsentCmp(
   fc.callbackQueue = fc.callbackQueue || [];
   pauseAdRequests(win);
 
+  const gen = generation;
+
   // 2) CONSENT_API_READY abwarten und dann dauerhaft auf Änderungen hören.
   fc.callbackQueue.push({
     CONSENT_API_READY: () => {
-      setApiReady(true);
-      attachTcfListener(win);
+      if (gen !== generation) return;
+      pollApiFunctions(win, gen);
     },
   });
 
@@ -317,6 +411,13 @@ export function bootstrapAdConsentCmp(
       script.src = src;
       script.async = true;
       script.crossOrigin = "anonymous";
+      script.onerror = () => {
+        if (gen !== generation) return;
+        // Script-Fehler = fail-closed: nichts ist bereit, Anfragen pausiert.
+        setApiReady(false);
+        bootstrapped = null;
+        setEvaluation(CLOSED("CMP-Script konnte nicht geladen werden"), win);
+      };
       doc.head.appendChild(script);
     }
   }
@@ -326,7 +427,36 @@ export function bootstrapAdConsentCmp(
   return true;
 }
 
-/** Wartet auf CONSENT_API_READY (fail-closed bei Timeout). */
+/**
+ * Abbau: Listener entfernen, Timer löschen, Bereitschaft und Bootstrap
+ * zurücksetzen, Anfragen sofort pausieren. Veraltete Callbacks können danach
+ * nichts mehr freigeben (Generationswechsel).
+ */
+export function teardownAdConsentCmp(win: CmpWindow | null = defaultWin()): void {
+  const target = boundWin ?? win;
+  const listenerId = tcfListenerId;
+  generation += 1;
+  if (target && listenerId !== null && typeof target.__tcfapi === "function") {
+    try {
+      target.__tcfapi("removeEventListener", 2, () => {}, listenerId);
+    } catch {
+      /* Abbau darf nie werfen */
+    }
+  }
+  tcfListenerId = null;
+  tcfListenerPending = false;
+  boundWin = null;
+  bootstrapped = null;
+  apiReady = false;
+  clearTimers();
+  apiReadyWaiters.clear();
+  consentWaiters.clear();
+  lastEvaluation = CLOSED("CMP abgebaut");
+  if (target) pauseAdRequests(target);
+  notifyChange(false);
+}
+
+/** Wartet auf die bereite Einwilligungs-API (fail-closed bei Timeout). */
 function waitForApiReady(timeoutMs: number): Promise<boolean> {
   if (apiReady) return Promise.resolve(true);
   return new Promise<boolean>((resolve) => {
@@ -338,41 +468,52 @@ function waitForApiReady(timeoutMs: number): Promise<boolean> {
       resolve(value);
     };
     apiReadyWaiters.add(finish);
-    setTimeout(() => finish(false), timeoutMs);
+    track(setTimeout(() => finish(false), timeoutMs));
   });
 }
 
-/** Einwilligungsabfrage über die echte CMP; jeder Unsicherheitsfall = false. */
+/** Wartet auf das erste Ereignis der laufenden Subscription. */
+function waitForFirstEvaluation(timeoutMs: number): Promise<TcfEvaluation> {
+  return new Promise<TcfEvaluation>((resolve) => {
+    let done = false;
+    const finish = (value: TcfEvaluation) => {
+      if (done) return;
+      done = true;
+      consentWaiters.delete(finish);
+      resolve(value);
+    };
+    consentWaiters.add(finish);
+    track(setTimeout(() => finish(CLOSED("TCF-Ereignis Timeout")), timeoutMs));
+  });
+}
+
+/**
+ * Einwilligungsabfrage über die echte CMP – ausschließlich auf Basis der
+ * `addEventListener`-Subscription (kein `getTCData`). Jeder Unsicherheitsfall
+ * sowie jeder veraltete Aufruf nach Teardown = false.
+ */
 export async function requestTcfAdConsent(
   timeoutMs = 3000,
   win: CmpWindow | null = defaultWin(),
 ): Promise<boolean> {
   if (!win) return false;
+  const gen = generation;
   const ready = await waitForApiReady(timeoutMs);
-  if (!ready) {
+  if (gen !== generation) {
     pauseAdRequests(win);
-    lastEvaluation = CLOSED("CMP nicht bereit (Timeout)");
+    return false;
+  }
+  if (!ready) {
+    setEvaluation(CLOSED("CMP nicht bereit (Timeout)"), win);
     return false;
   }
   attachTcfListener(win);
   if (lastEvaluation.consented) return true;
-  const api = win.__tcfapi;
-  if (!api) return false;
-  const result = await new Promise<TcfEvaluation>((resolve) => {
-    let done = false;
-    const finish = (value: TcfEvaluation) => {
-      if (done) return;
-      done = true;
-      resolve(value);
-    };
-    setTimeout(() => finish(CLOSED("TCF-Abfrage Timeout")), timeoutMs);
-    try {
-      api("getTCData", 2, (tcData, success) => finish(evaluateTcData(tcData, success)));
-    } catch {
-      finish(CLOSED("TCF-Abfrage fehlgeschlagen"));
-    }
-  });
-  lastEvaluation = result;
+  const result = await waitForFirstEvaluation(timeoutMs);
+  if (gen !== generation) {
+    pauseAdRequests(win);
+    return false;
+  }
   if (!result.consented) pauseAdRequests(win);
   return result.consented;
 }
@@ -390,41 +531,30 @@ export function registerRealAdConsentAdapter(win: CmpWindow | null = defaultWin(
 }
 
 /**
- * Widerruf: erst Anfragen anhalten und vorhandene Anzeigen entfernen,
- * danach die offizielle Widerrufs-Meldung öffnen.
+ * Widerruf: erst Anfragen anhalten und den Einwilligungszustand schließen
+ * (React hängt die Werbeflächen daraufhin selbst aus – kein DOM-Eingriff),
+ * danach genau EIN dokumentierter `callbackQueue`-Eintrag, der die offizielle
+ * Widerrufs-Meldung genau einmal öffnet.
  */
-export function showAdConsentRevocationMessage(
-  win: CmpWindow | null = defaultWin(),
-  removeAds: () => void = () => removeRenderedAds(win),
-): boolean {
+export function showAdConsentRevocationMessage(win: CmpWindow | null = defaultWin()): boolean {
   if (!win || !apiReady) return false;
   pauseAdRequests(win);
-  lastEvaluation = CLOSED("Widerruf geöffnet");
-  for (const listener of changeListeners) listener(false);
-  try {
-    removeAds();
-  } catch {
-    /* Aufräumen darf den Widerruf nicht blockieren */
-  }
+  setEvaluation(CLOSED("Widerruf geöffnet"), win, true);
+
   const fc = (win.googlefc = win.googlefc || {});
   fc.callbackQueue = fc.callbackQueue || [];
+  const gen = generation;
+  let opened = false;
   fc.callbackQueue.push({
-    REVOCATION_MESSAGE_READY: () => {
+    CONSENT_API_READY: () => {
+      if (opened || gen !== generation) return;
+      opened = true;
       try {
         win.googlefc?.showRevocationMessage?.();
       } catch {
-        /* ignorieren */
+        /* Fehler der Meldung darf nichts freigeben */
       }
     },
   });
   return true;
-}
-
-/** Entfernt gerenderte Anzeigenflächen aus dem DOM (nur Aufräumen). */
-export function removeRenderedAds(win: CmpWindow | null = defaultWin()): void {
-  if (!win) return;
-  if (typeof document === "undefined") return;
-  for (const ins of Array.from(document.querySelectorAll("ins.adsbygoogle"))) {
-    ins.parentElement?.removeChild(ins);
-  }
 }
