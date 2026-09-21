@@ -1,18 +1,22 @@
 /**
- * Einmaliges, asynchrones Laden des AdSense-Scripts – nur wenn die
- * Konfiguration vollständig gültig ist UND ein echter, geprüfter CMP-Adapter
- * eine Einwilligung bestätigt. Ohne beides wird keine externe Anfrage
- * ausgelöst (fail-closed).
+ * Freigabe für echte Anzeigenanfragen.
+ *
+ * Das Google-Script wird ausschließlich vom CMP-Bootstrap geladen (damit die
+ * Einwilligungsmeldung überhaupt erscheinen kann, siehe adsense-cmp.ts) und
+ * startet immer mit `pauseAdRequests = 1`. Diese Funktion gibt Anfragen nur
+ * frei, wenn die Konfiguration vollständig einsatzbereit ist, der QA-Modus
+ * NICHT aktiv ist und die echte CMP eine vollständige Einwilligung bestätigt.
  */
 
 import { ADSENSE_CONFIG, isAdSenseConfigured, type AdSenseConfig } from "@/lib/adsense";
 import { requestAdConsent, subscribeAdConsent } from "@/lib/adsense-consent";
+import { areAdRequestsAllowed, pauseAdRequests } from "@/lib/adsense-cmp";
 
 let loadPromise: Promise<boolean> | null = null;
 let consentWatcher: (() => void) | null = null;
 let currentToken: object | null = null;
 
-/** Setzt den Ladezustand zurück (z. B. nach Widerruf der Einwilligung). */
+/** Setzt den Freigabezustand zurück (z. B. nach Widerruf der Einwilligung). */
 export function resetAdSenseScriptLoad(): void {
   loadPromise = null;
 }
@@ -20,13 +24,17 @@ export function resetAdSenseScriptLoad(): void {
 function watchConsentRevocation() {
   if (consentWatcher) return;
   consentWatcher = subscribeAdConsent((consented) => {
-    if (!consented) resetAdSenseScriptLoad();
+    if (!consented) {
+      resetAdSenseScriptLoad();
+      pauseAdRequests();
+    }
   });
 }
 
 export function ensureAdSenseScript(config: AdSenseConfig = ADSENSE_CONFIG): Promise<boolean> {
   if (typeof window === "undefined" || typeof document === "undefined") return Promise.resolve(false);
   if (!isAdSenseConfigured(config)) return Promise.resolve(false);
+  if (!areAdRequestsAllowed({ config })) return Promise.resolve(false);
   if (loadPromise) return loadPromise;
 
   const token = {};
@@ -34,28 +42,16 @@ export function ensureAdSenseScript(config: AdSenseConfig = ADSENSE_CONFIG): Pro
   const pending = (async () => {
     const consented = await requestAdConsent();
     if (!consented) {
-      // Kein Script, keine Anfrage. Erneuter Versuch nach Consent-Änderung möglich.
+      // Keine Anfrage. Erneuter Versuch nach Consent-Änderung möglich.
+      pauseAdRequests();
       if (currentToken === token) loadPromise = null;
       return false;
     }
     watchConsentRevocation();
-    return new Promise<boolean>((resolve) => {
-      const src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(
-        config.publisherId,
-      )}`;
-      const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
-      if (existing) return resolve(true);
-      const script = document.createElement("script");
-      script.src = src;
-      script.async = true;
-      script.crossOrigin = "anonymous";
-      script.onload = () => resolve(true);
-      script.onerror = () => {
-        if (currentToken === token) loadPromise = null;
-        resolve(false);
-      };
-      document.head.appendChild(script);
-    });
+    // Anfragen erst jetzt freigeben.
+    const w = window as unknown as { adsbygoogle?: Array<unknown> & { pauseAdRequests?: number } };
+    if (w.adsbygoogle) w.adsbygoogle.pauseAdRequests = 0;
+    return true;
   })();
 
   loadPromise = pending;
