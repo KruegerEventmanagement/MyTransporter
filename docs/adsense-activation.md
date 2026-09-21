@@ -36,3 +36,24 @@ sowie bei Checkout, Bezahlung und laufender Fahrt).
   Handy/Tablet ohne Sidebars.
 - No-Fill: unbefüllte Flächen klappen zusammen, kein Layout-Sprung.
 - Transaktionale Schritte und ausgeschlossene Routen ohne Anzeigen.
+
+## Einwilligung: harte Grenze (Stand aktuell geschlossen)
+
+`src/lib/adsense-consent.ts` liefert **immer `false`**, solange kein echter
+CMP-Adapter über `registerAdConsentAdapter()` registriert ist. Es existiert
+absichtlich keine (auch keine teilweise) TCF-Implementierung.
+
+Konfigurationsflags allein aktivieren NICHTS. Vor Aktivierung nötig:
+
+- zertifizierte Google-CMP (TCF v2.2) inkl. Consent-Message eingebunden
+- Prüfung des Google-Vendors (Google Advertising Products) und aller nötigen
+  Zwecke – Purpose 1 allein genügt nicht
+- `__tcfapi("addEventListener", 2, ...)` für laufende Consent-Änderungen
+- Widerruf: Anzeigen entfernen, `resetAdSenseScriptLoad()` aufrufen
+- manueller Test: Zustimmung, Ablehnung, Widerruf, Timeout
+
+## No-Fill
+
+Leere Flächen werden am echten Attribut `data-ad-status="unfilled"` erkannt und
+komplett inklusive Kennzeichnung ausgeblendet (kein erfundenes Attribut, keine
+globalen CSS-Regeln).
