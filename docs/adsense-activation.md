@@ -1,4 +1,4 @@
-# AdSense – Aktivierungsnotizen (Stand: Inhaberschaft bestätigt, Review angefragt, Anzeigen AUS)
+# AdSense – Aktivierungsnotizen (Stand: Adapter implementiert und mit Mocks getestet, Live-QA offen, Review ausstehend, Anzeigen AUS)
 
 Der Code ist vorbereitet und vollständig fail-closed: solange die Konfiguration
 unvollständig ist, wird kein Google-Script geladen und keine Anfrage gesendet.
@@ -32,12 +32,59 @@ AdSense ist **nicht aktiv** (keine Anzeigen, kein Script, keine CMP).
 - Anzeigen sind **nicht live**. Die Konfiguration bleibt absichtlich nicht
   einsatzbereit (`isAdSenseConfigured` = false).
 
+## Stand der Browser-Integration (NEU)
+
+- `src/lib/adsense-cmp.ts` implementiert den echten Adapter für die von Google
+  zertifizierte Einwilligungsmeldung (Funding Choices / Privacy & messaging):
+  `googlefc.callbackQueue` und `adsbygoogle.pauseAdRequests = 1` werden VOR dem
+  Einfügen des offiziellen Tags gesetzt, das Tag
+  (`.../adsbygoogle.js?client=ca-pub-6974851907377988`, `crossorigin=anonymous`)
+  wird genau einmal geladen. Danach `CONSENT_API_READY` und
+  `__tcfapi("addEventListener", 2, ...)`.
+- Einwilligung gilt nur bei `success`, `cmpStatus="loaded"`,
+  `eventStatus` `tcloaded`/`useractioncomplete`, bekanntem `gdprApplies`,
+  vorhandenem TC-String, Google-Vendor 755 und Zweck 1 sowie erlaubten Zwecken
+  2/7/9/10 (Consent oder berechtigtes Interesse, Publisher-Restrictions
+  beachtet). Personalisiert nur mit Zweck 3 + 4, sonst NPA; den TC-String
+  konsumiert der Google-Tag autoritativ selbst.
+- Unbekannt/Fehler/Laden/Ablehnung/erneut geöffnete Meldung/außerhalb des
+  bekannten TCF-Bereichs => fail-closed. Keine eigene localStorage-Einwilligung;
+  die Marketing-Zustimmung des Cookie-Banners ist ausdrücklich KEINE
+  Google-Einwilligung und wurde nicht verändert.
+- CMP-Bootstrap und Anzeigenerlaubnis sind getrennt (kein Deadlock).
+  `areAdRequestsAllowed()` verlangt `enabled`, `siteApproved`,
+  `certifiedCmpConfigured` und neu `liveCmpVerified` – alle noch `false`.
+  Im Normalbetrieb entsteht deshalb derzeit KEINE Google-Anfrage und keine
+  Anzeigen-UI.
+- Für echte QA auf der öffentlichen Domain ist ausschließlich ein
+  CMP-only-Modus erlaubt: beide offiziellen Parameter `fc=alwaysshow` und
+  `fctype=gdpr` auf den erlaubten öffentlichen Pfaden. Auch dort gilt immer
+  `pauseAdRequests=1`, und es werden NIE `ins`-Flächen initialisiert oder
+  `adsbygoogle.push` aufgerufen.
+- Erlaubte Pfade: `/`, `/werbung`, `/preise`, `/langzeitmiete`, `/faq`,
+  `/ueber-uns`, `/kontakt`. Private, transaktionale, rechtliche, Admin-, API-
+  und Fehlerseiten starten die Meldung nie. Die Unterdrückung im Buchungsablauf
+  (ab Schritt 3, Checkout, bezahlt, aktive Fahrt) gilt auch im QA-Modus.
+- Werbespalten reagieren reaktiv auf Consent-Änderungen (Rendern/Verbergen ohne
+  Remount des Inhalts). Jede sichtbare Fläche wird höchstens einmal angefragt,
+  kein Auto-Refresh, keine Auto Ads. Unbefüllte Flächen klappen weiterhin über
+  das echte `data-ad-status="unfilled"` zusammen.
+- Widerruf: Button „Datenschutz für Werbung“ in der Fußzeile der öffentlichen
+  Seiten, sichtbar nur bei bereiter Einwilligungs-API. Klick pausiert zuerst
+  Anfragen und entfernt vorhandene Anzeigen, dann
+  `googlefc.callbackQueue` → `showRevocationMessage()`.
+- Getestet mit Mocks (`src/lib/adsense-cmp.test.ts`): unbekannt, Ablehnung,
+  Zustimmung, NPA, berechtigtes Interesse, Publisher-Restrictions, Widerruf,
+  Timeout, API-Fehler, einmaliger Bootstrap, keine Anfragen im QA-Modus,
+  Ausschlüsse und Unterdrückung. Eine Live-QA auf der öffentlichen Domain steht
+  noch aus (Veröffentlichung nötig).
+
 ## Offene Schritte (in dieser Reihenfolge)
 
 1. Google-Review-Ergebnis abwarten, danach `siteApproved: true`.
-2. Echte Google-CMP-/Script-Integration im Browser umsetzen (zertifizierte
-   Google-Einwilligungsmeldung, TCF v2.2 `__tcfapi`), Adapter über
-   `registerAdConsentAdapter()` registrieren, danach `certifiedCmpConfigured: true`.
+2. Live-QA der implementierten Meldung auf der öffentlichen Domain
+   (`?fc=alwaysshow&fctype=gdpr`): Zustimmen, Ablehnen, Widerruf, Timeout.
+   Danach `certifiedCmpConfigured: true` und `liveCmpVerified: true`.
    Die bestehende Marketing-Einwilligung des Cookie-Banners (Google Ads /
    Meta Conversion-Tracking) gilt ausdrücklich **nicht** als AdSense-/TCF-Consent.
    **Achtung Deadlock:** laut Google
