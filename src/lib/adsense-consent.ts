@@ -1,64 +1,69 @@
 /**
- * Einwilligungsprüfung für Google-Anzeigen – ausschließlich über eine
- * zertifizierte Google-CMP (TCF v2 `__tcfapi`).
+ * Einwilligungs-Grenze für Google-Anzeigen.
  *
- * Es gibt hier absichtlich KEINE Ersatz-/Fake-CMP und KEINE Umdeutung der
+ * STAND: Es ist KEINE zertifizierte Google-CMP eingebunden. Dieses Modul ist
+ * deshalb ein bewusst geschlossener Integrationspunkt und liefert IMMER `false`,
+ * bis ein echter, geprüfter CMP-Adapter implementiert und registriert ist.
+ *
+ * Es gibt hier absichtlich KEINE Ersatz-/Fake-CMP, keine Umdeutung der
  * bestehenden Marketing-Einwilligung aus dem Cookie-Banner (die gilt nur für
- * Google Ads Conversion-Tracking und Meta, nicht für AdSense/TCF).
- * Ohne CMP-Antwort: keine Einwilligung, keine Anfrage.
+ * Google Ads Conversion-Tracking und Meta) und keine unvollständige
+ * TCF-Abfrage, die nach fertiger Integration aussieht.
+ *
+ * Vor der Aktivierung MUSS der Adapter vollständig umgesetzt werden:
+ *  - Einbindung einer von Google zertifizierten CMP (TCF v2.2) inkl. Message
+ *  - Prüfung des Google-Vendors (Google Advertising Products) und aller
+ *    benötigten Zwecke/Legitimate-Interest-Angaben, nicht nur Purpose 1
+ *  - `__tcfapi("addEventListener", 2, ...)` für laufende Consent-Änderungen
+ *  - Widerruf: laufende Anzeigen entfernen, Script-Ladezustand zurücksetzen
+ *  - Dokumentierter manueller Test (Zustimmung, Ablehnung, Widerruf, Timeout)
+ *
+ * Konfigurationsflags allein (`enabled`, `certifiedCmpConfigured`) aktivieren
+ * NICHTS, solange hier kein Adapter registriert ist.
  */
 
-type TcfApi = (
-  command: string,
-  version: number,
-  callback: (data: unknown, success: boolean) => void,
-) => void;
-
-function getTcfApi(): TcfApi | null {
-  if (typeof window === "undefined") return null;
-  const api = (window as unknown as { __tcfapi?: TcfApi }).__tcfapi;
-  return typeof api === "function" ? api : null;
+export interface AdConsentAdapter {
+  /** Eindeutiger Name des zertifizierten CMP-Anbieters. */
+  provider: string;
+  /** Liefert true nur bei vollständiger, geprüfter Einwilligung für Google-Anzeigen. */
+  hasAdConsent: (timeoutMs: number) => Promise<boolean>;
+  /** Registriert einen Listener für Consent-Änderungen/Widerruf. */
+  subscribe: (onChange: (consented: boolean) => void) => () => void;
 }
 
-/** Ist überhaupt eine CMP im Seitenkontext vorhanden? */
-export function hasCmp(): boolean {
-  return getTcfApi() !== null;
+let adapter: AdConsentAdapter | null = null;
+
+/**
+ * Registriert den echten CMP-Adapter. Wird erst aufgerufen, wenn die
+ * zertifizierte CMP eingebunden und verifiziert ist.
+ */
+export function registerAdConsentAdapter(next: AdConsentAdapter): void {
+  adapter = next;
+}
+
+/** Ist ein echter, geprüfter CMP-Adapter registriert? */
+export function hasAdConsentAdapter(): boolean {
+  return adapter !== null;
 }
 
 /**
- * Fragt die CMP nach einer gültigen Einwilligung für Werbeanzeigen.
- * Ergebnis ist fail-closed: false bei fehlender CMP, Fehler oder Timeout.
+ * Fail-closed Einwilligungsabfrage: ohne registrierten Adapter immer false.
  */
-export function requestAdConsent(timeoutMs = 3000): Promise<boolean> {
-  const api = getTcfApi();
-  if (!api) return Promise.resolve(false);
+export async function requestAdConsent(timeoutMs = 3000): Promise<boolean> {
+  if (!adapter) return false;
+  try {
+    return (await adapter.hasAdConsent(timeoutMs)) === true;
+  } catch {
+    return false;
+  }
+}
 
-  return new Promise<boolean>((resolve) => {
-    let settled = false;
-    const finish = (value: boolean) => {
-      if (settled) return;
-      settled = true;
-      resolve(value);
-    };
-    const timer = setTimeout(() => finish(false), timeoutMs);
-
-    try {
-      api("getTCData", 2, (data, success) => {
-        clearTimeout(timer);
-        if (!success || !data || typeof data !== "object") return finish(false);
-        const d = data as {
-          gdprApplies?: boolean;
-          purpose?: { consents?: Record<string, boolean> };
-        };
-        // Ohne GDPR-Anwendbarkeit gilt die CMP-Antwort als vorhanden, aber wir
-        // verlangen dennoch eine positive Zweck-1-Einwilligung, wenn vorhanden.
-        const purposeOne = d.purpose?.consents?.["1"] === true;
-        if (d.gdprApplies === false) return finish(true);
-        finish(purposeOne);
-      });
-    } catch {
-      clearTimeout(timer);
-      finish(false);
-    }
-  });
+/** Abonniert Consent-Änderungen; ohne Adapter passiert nichts. */
+export function subscribeAdConsent(onChange: (consented: boolean) => void): () => void {
+  if (!adapter) return () => {};
+  try {
+    return adapter.subscribe(onChange);
+  } catch {
+    return () => {};
+  }
 }
