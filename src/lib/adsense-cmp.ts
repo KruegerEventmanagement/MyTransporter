@@ -448,6 +448,7 @@ export function teardownAdConsentCmp(win: CmpWindow | null = defaultWin()): void
   }
   tcfListenerId = null;
   tcfListenerPending = false;
+  hasTcfEvent = false;
   boundWin = null;
   bootstrapped = null;
   apiReady = false;
