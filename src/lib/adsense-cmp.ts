@@ -254,6 +254,7 @@ let apiReady = false;
 let lastEvaluation: TcfEvaluation = CLOSED("Noch nicht geprüft");
 let tcfListenerId: number | null = null;
 let tcfListenerPending = false;
+let hasTcfEvent = false;
 const apiReadyWaiters = new Set<(ready: boolean) => void>();
 const consentWaiters = new Set<(evaluation: TcfEvaluation) => void>();
 const changeListeners = new Set<(consented: boolean) => void>();
@@ -278,6 +279,7 @@ export function resetCmpStateForTests(): void {
   lastEvaluation = CLOSED("Noch nicht geprüft");
   tcfListenerId = null;
   tcfListenerPending = false;
+  hasTcfEvent = false;
   clearTimers();
   apiReadyWaiters.clear();
   consentWaiters.clear();
@@ -510,6 +512,11 @@ export async function requestTcfAdConsent(
   }
   attachTcfListener(win);
   if (lastEvaluation.consented) return true;
+  if (hasTcfEvent) {
+    // Bereits ein echtes TCF-Ereignis ausgewertet: Ergebnis gilt sofort.
+    pauseAdRequests(win);
+    return false;
+  }
   const result = await waitForFirstEvaluation(timeoutMs);
   if (gen !== generation) {
     pauseAdRequests(win);
