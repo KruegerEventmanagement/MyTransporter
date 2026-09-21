@@ -353,6 +353,7 @@ function attachTcfListener(win: CmpWindow) {
       if (gen !== generation) return;
       const data = tcData as TcData | undefined;
       if (typeof data?.listenerId === "number") tcfListenerId = data.listenerId;
+      hasTcfEvent = true;
       setEvaluation(evaluateTcData(tcData, success), win);
     });
   } catch {
