@@ -216,7 +216,12 @@ describe("Einwilligungsabfrage über die echte Meldung", () => {
     expect(showAdConsentRevocationMessage(win, cleanup)).toBe(true);
     expect(cleanup).toHaveBeenCalled();
     expect(win.adsbygoogle?.pauseAdRequests).toBe(1);
+    // REVOCATION_MESSAGE_READY aus der Queue auslösen (wie das echte Script).
+    for (const entry of win.googlefc?.callbackQueue ?? []) {
+      (entry as { REVOCATION_MESSAGE_READY?: () => void }).REVOCATION_MESSAGE_READY?.();
+    }
     expect(show).toHaveBeenCalled();
+    expect(show).toHaveBeenCalledTimes(1);
   });
 
   it("zeigt keinen Widerruf, solange die Meldung nicht bereit ist", () => {

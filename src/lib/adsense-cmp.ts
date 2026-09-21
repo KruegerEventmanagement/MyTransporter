@@ -417,11 +417,6 @@ export function showAdConsentRevocationMessage(
       }
     },
   });
-  try {
-    win.googlefc?.showRevocationMessage?.();
-  } catch {
-    /* ignorieren */
-  }
   return true;
 }
 
