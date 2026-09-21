@@ -1,4 +1,4 @@
-# AdSense – Aktivierungsnotizen (Stand: Verifizierung erledigt, Anzeigen AUS)
+# AdSense – Aktivierungsnotizen (Stand: Verifizierungscode vorbereitet; Google-Bestätigung noch ausstehend, Anzeigen AUS)
 
 Der Code ist vorbereitet und vollständig fail-closed: solange die Konfiguration
 unvollständig ist, wird kein Google-Script geladen und keine Anfrage gesendet.
