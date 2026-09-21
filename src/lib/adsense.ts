@@ -31,7 +31,13 @@ export interface AdSenseConfig {
 export const ADSENSE_CONFIG: AdSenseConfig = {
   enabled: false,
   publisherId: "ca-pub-6974851907377988",
-  slots: {},
+  // Echte, im AdSense-Konto erzeugte Responsive-Display-Einheiten.
+  // railLeft  = "MyTransporter – Seitenleiste links"
+  // railRight = "MyTransporter – Seitenleiste rechts"
+  slots: {
+    railLeft: "4238348588",
+    railRight: "6950298526",
+  },
   autoAds: false,
   siteApproved: false,
   certifiedCmpConfigured: false,
