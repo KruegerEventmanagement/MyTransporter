@@ -30,7 +30,7 @@ export interface AdSenseConfig {
 
 export const ADSENSE_CONFIG: AdSenseConfig = {
   enabled: false,
-  publisherId: "",
+  publisherId: "ca-pub-6974851907377988",
   slots: {},
   autoAds: false,
   siteApproved: false,
