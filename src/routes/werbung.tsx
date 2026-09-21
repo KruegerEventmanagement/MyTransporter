@@ -235,6 +235,61 @@ function WerbungPage() {
       </section>
 
       {/* Form */}
+      {/* Online-Werbung auf der Website */}
+      <section id="online-werbung" className="px-4 pb-16 scroll-mt-20">
+        <div className="max-w-4xl mx-auto rounded-3xl border border-border bg-card p-6 sm:p-10">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center">
+            Online-Werbung auf MyTransporter
+          </h2>
+          <p className="mt-3 text-center text-muted-foreground max-w-2xl mx-auto">
+            Neben der Fläche am Transporter kannst du auch Werbeplätze auf unserer Website buchen.
+            Unsere Seiten werden vor allem von Menschen besucht, die gerade einen Transport, Umzug
+            oder ein Projekt planen – also in einem Moment mit konkretem Bedarf.
+          </p>
+
+          <div className="mt-8 grid sm:grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-border bg-secondary/40 p-5">
+              <h3 className="text-sm font-bold text-foreground">Passende Branchen</h3>
+              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                <li>Umzugsunternehmen &amp; Umzugshelfer</li>
+                <li>Möbelhäuser &amp; Möbelhandel</li>
+                <li>Baumarkt &amp; Baustoffe</li>
+                <li>Handwerk (Maler, Elektro, Sanitär, Montage)</li>
+                <li>Lagerflächen &amp; Selfstorage</li>
+                <li>Fahrzeugservice (Werkstatt, Reifen, Pflege)</li>
+                <li>Gewerbe &amp; Dienstleistungen aus der Region</li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-border bg-secondary/40 p-5">
+              <h3 className="text-sm font-bold text-foreground">Mögliche Platzierungen</h3>
+              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                <li>Desktop: Banner in den seitlichen Werbespalten links und rechts</li>
+                <li>Desktop &amp; Mobil: Banner innerhalb von Inhaltsseiten</li>
+                <li>Mobil: Banner zwischen Inhaltsabschnitten, nicht in Formularen</li>
+                <li>Keine Pop-ups, keine Einblendungen über dem Inhalt</li>
+                <li>Keine Werbung in Registrierung, Verifizierung, Zahlung oder Buchungsablauf</li>
+              </ul>
+            </div>
+          </div>
+
+          <p className="mt-6 text-sm text-muted-foreground">
+            Preise für Online-Werbeplätze <span className="font-semibold text-foreground">auf Anfrage</span>,
+            abhängig von Platzierung und Laufzeit. Wir nennen bewusst keine garantierten Reichweiten,
+            Klick- oder Umsatzzahlen. Auf Anfrage besprechen wir Platzierung, Format, Zeitraum und
+            Preis individuell und schriftlich.
+          </p>
+
+          <div className="mt-6 flex justify-center">
+            <a
+              href="mailto:info@mytransporter.org?subject=Anfrage%20Online-Werbung%20auf%20MyTransporter"
+              className="rounded-full bg-foreground text-background px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              Online-Werbung anfragen
+            </a>
+          </div>
+        </div>
+      </section>
+
       <section id="partner-form" className="px-4 pb-24 scroll-mt-20">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center">
