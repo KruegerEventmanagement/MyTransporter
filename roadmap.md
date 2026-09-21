@@ -9,5 +9,6 @@
 - [ ] Admin-Push VAPID-Konfigurationsfehler (Push-Schlüssel serverseitig) — braucht gültige VAPID-Zugangsdaten
 
 - [x] AdSense-Vorbereitung: zentrale Konfiguration (deaktiviert, keine IDs), Werbespalten-Komponenten fail-closed, Ausblenden in transaktionalen Schritten, Abschnitt Online-Werbung auf /werbung, docs/adsense-activation.md
-- [x] AdSense-Verifizierung: Publisher-ID ca-pub-6974851907377988 eingetragen (enabled=false), Meta-Tag + ads.txt angelegt, Google-Review ausstehend
-- [ ] AdSense-Aktivierung extern blockiert: Google-Site-Freigabe (Review), echte Slot-IDs, zertifizierte CMP, danach enabled=true
+- [x] AdSense-Verifizierung: Publisher-ID ca-pub-6974851907377988 eingetragen (enabled=false), Meta-Tag + ads.txt angelegt; Inhaberschaft von Google bestätigt
+- [x] AdSense-Konto: Review angefragt (Status „Wird vorbereitet“, nicht freigegeben), Zahlungsempfängerdaten übermittelt, EU-Einwilligungsmeldung veröffentlicht (DE+EN, Zustimmen/Ablehnen/Verwalten), echte Slot-IDs railLeft 4238348588 / railRight 6950298526 in der Konfiguration; Anzeigen nicht live
+- [ ] AdSense-Aktivierung extern blockiert: Google-Review-Ergebnis abwarten, danach echte Google-CMP-/Script-Integration im Browser (Deadlock-Reihenfolge beachten), Widerrufslink, Test von Zustimmen/Ablehnen/Widerruf und Anzeigen-Rendering, dann enabled=true
