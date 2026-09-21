@@ -68,6 +68,7 @@ export function validateAdSenseConfig(config: AdSenseConfig = ADSENSE_CONFIG): s
   if (!isValidPublisherId(config.publisherId)) problems.push("Ungültige oder fehlende Publisher-ID.");
   if (!config.siteApproved) problems.push("Website ist bei Google nicht freigegeben.");
   if (!config.certifiedCmpConfigured) problems.push("Keine zertifizierte CMP konfiguriert.");
+  if (!config.liveCmpVerified) problems.push("Einwilligungsmeldung nicht live geprüft.");
   const slotKeys = Object.keys(config.slots) as AdSenseSlotKey[];
   if (slotKeys.length === 0) problems.push("Keine Slot-IDs konfiguriert.");
   for (const key of slotKeys) {

@@ -17,6 +17,7 @@ const validConfig: AdSenseConfig = {
   autoAds: false,
   siteApproved: true,
   certifiedCmpConfigured: true,
+  liveCmpVerified: true,
 };
 
 describe("AdSense-Konfiguration", () => {
@@ -30,6 +31,7 @@ describe("AdSense-Konfiguration", () => {
     expect(ADSENSE_CONFIG.autoAds).toBe(false);
     expect(ADSENSE_CONFIG.siteApproved).toBe(false);
     expect(ADSENSE_CONFIG.certifiedCmpConfigured).toBe(false);
+    expect(ADSENSE_CONFIG.liveCmpVerified).toBe(false);
     expect(isAdSenseConfigured()).toBe(false);
     expect(isSlotReady("railLeft")).toBe(false);
     expect(getSlotId("railLeft")).toBe("4238348588");
@@ -42,6 +44,7 @@ describe("AdSense-Konfiguration", () => {
     expect(problems.some((p) => p.includes("deaktiviert"))).toBe(true);
     expect(problems.some((p) => p.includes("freigegeben"))).toBe(true);
     expect(problems.some((p) => p.includes("CMP"))).toBe(true);
+    expect(problems.some((p) => p.includes("live geprüft"))).toBe(true);
   });
 
   it("validiert Publisher- und Slot-IDs streng", () => {
@@ -62,6 +65,7 @@ describe("AdSense-Konfiguration", () => {
   it("bleibt fail-closed bei fehlender Freigabe oder CMP", () => {
     expect(isAdSenseConfigured({ ...validConfig, siteApproved: false })).toBe(false);
     expect(isAdSenseConfigured({ ...validConfig, certifiedCmpConfigured: false })).toBe(false);
+    expect(isAdSenseConfigured({ ...validConfig, liveCmpVerified: false })).toBe(false);
     expect(isAdSenseConfigured({ ...validConfig, enabled: false })).toBe(false);
     expect(isAdSenseConfigured({ ...validConfig, publisherId: "" })).toBe(false);
     expect(isAdSenseConfigured({ ...validConfig, slots: { railLeft: "abc" } })).toBe(false);
