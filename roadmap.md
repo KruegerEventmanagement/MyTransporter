@@ -9,4 +9,5 @@
 - [ ] Admin-Push VAPID-Konfigurationsfehler (Push-Schlüssel serverseitig) — braucht gültige VAPID-Zugangsdaten
 
 - [x] AdSense-Vorbereitung: zentrale Konfiguration (deaktiviert, keine IDs), Werbespalten-Komponenten fail-closed, Ausblenden in transaktionalen Schritten, Abschnitt Online-Werbung auf /werbung, docs/adsense-activation.md
-- [ ] AdSense-Aktivierung extern blockiert: echte ca-pub-/Slot-IDs, Site-Freigabe, zertifizierte CMP, ads.txt
+- [x] AdSense-Verifizierung: Publisher-ID ca-pub-6974851907377988 eingetragen (enabled=false), Meta-Tag + ads.txt angelegt, Google-Review ausstehend
+- [ ] AdSense-Aktivierung extern blockiert: Google-Site-Freigabe (Review), echte Slot-IDs, zertifizierte CMP, danach enabled=true
