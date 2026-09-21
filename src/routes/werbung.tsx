@@ -269,7 +269,6 @@ function WerbungPage() {
                 <li>Keine Banner innerhalb oder zwischen Inhaltsabschnitten</li>
                 <li>Keine Pop-ups, keine Einblendungen über dem Inhalt, keine mobilen Werbeplätze</li>
               </ul>
-              </ul>
             </div>
           </div>
 
