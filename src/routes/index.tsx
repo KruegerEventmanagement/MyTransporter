@@ -6,6 +6,7 @@ import { Navbar } from "@/components/Navbar";
 
 import { AdBanner } from "@/components/AdBanner";
 import { AdRails } from "@/components/ads/AdRails";
+import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -89,6 +90,7 @@ function Index() {
           <Link to="/impressum" className="hover:text-foreground transition-colors">Impressum</Link>
           <Link to="/agb" className="hover:text-foreground transition-colors">AGB</Link>
           <Link to="/datenschutz" className="hover:text-foreground transition-colors">Datenschutz</Link>
+          <AdConsentRevokeButton />
           <Link to="/kontakt" className="hover:text-foreground transition-colors">Kontakt</Link>
           <Link to="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
           <Link to="/ueber-uns" className="hover:text-foreground transition-colors">Über uns</Link>

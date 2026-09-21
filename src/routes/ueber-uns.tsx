@@ -6,6 +6,7 @@ import { CompareSection } from "@/components/CompareSection";
 import { BookingInfoSection } from "@/components/BookingInfoSection";
 import { AddonPackagesSection } from "@/components/AddonPackagesSection";
 import { AdRails } from "@/components/ads/AdRails";
+import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
 export const Route = createFileRoute("/ueber-uns")({
   head: () => ({
@@ -57,6 +58,7 @@ function UeberUnsPage() {
           <Link to="/impressum" className="hover:text-foreground transition-colors">Impressum</Link>
           <Link to="/agb" className="hover:text-foreground transition-colors">AGB</Link>
           <Link to="/datenschutz" className="hover:text-foreground transition-colors">Datenschutz</Link>
+          <AdConsentRevokeButton />
           <Link to="/kontakt" className="hover:text-foreground transition-colors">Kontakt</Link>
           <Link to="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
           <Link to="/werbung" className="hover:text-foreground transition-colors">Werbung am Transporter</Link>
