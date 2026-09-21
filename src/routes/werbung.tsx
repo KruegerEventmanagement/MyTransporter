@@ -264,11 +264,11 @@ function WerbungPage() {
             <div className="rounded-2xl border border-border bg-secondary/40 p-5">
               <h3 className="text-sm font-bold text-foreground">Mögliche Platzierungen</h3>
               <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                <li>Desktop: Banner in den seitlichen Werbespalten links und rechts</li>
-                <li>Desktop &amp; Mobil: Banner innerhalb von Inhaltsseiten</li>
-                <li>Mobil: Banner zwischen Inhaltsabschnitten, nicht in Formularen</li>
-                <li>Keine Pop-ups, keine Einblendungen über dem Inhalt</li>
-                <li>Feste Plätze im Seitenlayout, sichtbar neben und zwischen den Inhalten</li>
+                <li>Desktop: Banner in den freien seitlichen Werbespalten links und rechts</li>
+                <li>Ausschließlich Desktop ab großer Bildschirmbreite, nicht auf Handy oder Tablet</li>
+                <li>Keine Banner innerhalb oder zwischen Inhaltsabschnitten</li>
+                <li>Keine Pop-ups, keine Einblendungen über dem Inhalt, keine mobilen Werbeplätze</li>
+              </ul>
               </ul>
             </div>
           </div>
