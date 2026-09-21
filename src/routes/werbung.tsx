@@ -267,16 +267,15 @@ function WerbungPage() {
                 <li>Desktop &amp; Mobil: Banner innerhalb von Inhaltsseiten</li>
                 <li>Mobil: Banner zwischen Inhaltsabschnitten, nicht in Formularen</li>
                 <li>Keine Pop-ups, keine Einblendungen über dem Inhalt</li>
-                <li>Keine Werbung in Registrierung, Verifizierung, Zahlung oder Buchungsablauf</li>
+                <li>Feste Plätze im Seitenlayout, sichtbar neben und zwischen den Inhalten</li>
               </ul>
             </div>
           </div>
 
           <p className="mt-6 text-sm text-muted-foreground">
             Preise für Online-Werbeplätze <span className="font-semibold text-foreground">auf Anfrage</span>,
-            abhängig von Platzierung und Laufzeit. Wir nennen bewusst keine garantierten Reichweiten,
-            Klick- oder Umsatzzahlen. Auf Anfrage besprechen wir Platzierung, Format, Zeitraum und
-            Preis individuell und schriftlich.
+            abhängig von Platzierung und Laufzeit. Wir stimmen Format, Zeitraum und Preis individuell
+            mit dir ab.
           </p>
 
           <div className="mt-6 flex justify-center">
