@@ -51,6 +51,7 @@ import {
 } from "@/lib/booking-rules";
 import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot, addonBaseId, resolveAddonSelection } from "@/lib/addons";
 import { AddonPackageCard } from "./AddonPackageCard";
+import { useSuppressAds } from "@/lib/ad-visibility";
 import {
   PENDING_DOC_TYPES,
   listPendingDocumentTypes,
@@ -976,6 +977,10 @@ export function BookingSection() {
     setStep(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holdExpired]);
+
+  // Werbeflächen während Verifizierung, Registrierung, Zahlung, Bestätigung
+  // und aktiver Fahrt vollständig ausblenden (Google-Richtlinien).
+  useSuppressAds(step >= 3 || showCheckout || paid || drivePhase !== null);
 
   const stepTitles = registrationComplete
     ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Verifizierung", "Bezahlen", "Fahrt"]
