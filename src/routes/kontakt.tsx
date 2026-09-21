@@ -27,7 +27,7 @@ function KontaktPage() {
             </div>
             <div>
               <p className="font-medium text-foreground">Adresse</p>
-              <p className="text-sm text-muted-foreground">MyTransporter UG (haftungsbeschränkt)</p>
+              <p className="text-sm text-muted-foreground">MyTransporter</p>
               <p className="text-sm text-muted-foreground">Römerstraße 36</p>
               <p className="text-sm text-muted-foreground">71229 Leonberg</p>
             </div>
@@ -59,7 +59,7 @@ function KontaktPage() {
         </div>
 
         <div className="mt-8 p-6 rounded-2xl border border-border">
-          <p className="font-medium text-foreground mb-1">Geschäftsführer</p>
+          <p className="font-medium text-foreground mb-1">Inhaber</p>
           <p className="text-sm text-muted-foreground">Christian Krüger</p>
           <p className="text-xs text-muted-foreground mt-3">USt-IdNr.: DE328715703</p>
         </div>

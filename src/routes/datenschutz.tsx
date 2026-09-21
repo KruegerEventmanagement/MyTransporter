@@ -5,7 +5,7 @@ export const Route = createFileRoute("/datenschutz")({
   head: () => ({
     meta: [
       { title: "Datenschutz, MyTransporter" },
-      { name: "description", content: "Datenschutzerklärung der MyTransporter UG" },
+      { name: "description", content: "Datenschutzerklärung von MyTransporter, Inhaber: Christian Krüger" },
     ],
   }),
   component: DatenschutzPage,
@@ -21,7 +21,7 @@ function DatenschutzPage() {
         <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">1. Verantwortlicher</h2>
-            <p>MyTransporter UG (haftungsbeschränkt)<br />Römerstraße 36, 71229 Leonberg<br />E-Mail: info@mytransporter.org<br />Telefon: 0152 3623 0118</p>
+            <p>MyTransporter<br />Inhaber: Christian Krüger<br />Römerstraße 36, 71229 Leonberg<br />E-Mail: info@mytransporter.org<br />Telefon: 0152 3623 0118</p>
           </div>
 
           <div>
