@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { isSlotReady } from "@/lib/adsense";
 import { useAdsSuppressed } from "@/lib/ad-visibility";
 import { AdSlot } from "./AdSlot";
+import { useAdCmpBootstrap, useAdConsentGranted } from "./useAdCmp";
 
 interface AdRailsProps {
   children: ReactNode;
