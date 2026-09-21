@@ -16,20 +16,22 @@ import {
   isCmpApiReady,
   lastAdConsentEvaluation,
   pauseAdRequests,
-  removeRenderedAds,
+  teardownAdConsentCmp,
 } from "@/lib/adsense-cmp";
 
 export function useAdCmpBootstrap(suppressed: boolean): void {
   useEffect(() => {
     if (suppressed) {
-      pauseAdRequests();
+      // Unterdrückung: sofort pausieren und Listener/Timer abbauen, damit
+      // veraltete Callbacks nichts mehr freigeben können.
+      teardownAdConsentCmp();
       return;
     }
     bootstrapAdConsentCmp({ pathname: window.location.pathname, suppressed: false });
     return () => {
-      // Route-/Unterdrückungswechsel: Anfragen anhalten und aufräumen.
+      // Route-/Unterdrückungswechsel: Anfragen anhalten und abbauen.
       pauseAdRequests();
-      removeRenderedAds();
+      teardownAdConsentCmp();
     };
   }, [suppressed]);
 }
