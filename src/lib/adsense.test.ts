@@ -32,7 +32,8 @@ describe("AdSense-Konfiguration", () => {
     expect(ADSENSE_CONFIG.certifiedCmpConfigured).toBe(false);
     expect(isAdSenseConfigured()).toBe(false);
     expect(isSlotReady("railLeft")).toBe(false);
-    expect(getSlotId("railLeft")).toBeNull();
+    expect(getSlotId("railLeft")).toBe("4238348588");
+    expect(getSlotId("inlineContent")).toBeNull();
   });
 
   it("meldet alle fehlenden Voraussetzungen", () => {
