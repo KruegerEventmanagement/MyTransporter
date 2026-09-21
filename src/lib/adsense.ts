@@ -26,6 +26,12 @@ export interface AdSenseConfig {
   siteApproved: boolean;
   /** Zertifizierte Google-CMP eingebunden? Ohne true keine Anfragen. */
   certifiedCmpConfigured: boolean;
+  /**
+   * Wurde die echte Einwilligungsmeldung auf der öffentlichen Domain
+   * tatsächlich geprüft (Zustimmen/Ablehnen/Widerruf/Rendering)? Ohne true
+   * keine Anzeigenanfragen.
+   */
+  liveCmpVerified: boolean;
 }
 
 export const ADSENSE_CONFIG: AdSenseConfig = {
@@ -41,6 +47,7 @@ export const ADSENSE_CONFIG: AdSenseConfig = {
   autoAds: false,
   siteApproved: false,
   certifiedCmpConfigured: false,
+  liveCmpVerified: false,
 };
 
 const PUBLISHER_ID_RE = /^ca-pub-\d{16}$/;
@@ -61,6 +68,7 @@ export function validateAdSenseConfig(config: AdSenseConfig = ADSENSE_CONFIG): s
   if (!isValidPublisherId(config.publisherId)) problems.push("Ungültige oder fehlende Publisher-ID.");
   if (!config.siteApproved) problems.push("Website ist bei Google nicht freigegeben.");
   if (!config.certifiedCmpConfigured) problems.push("Keine zertifizierte CMP konfiguriert.");
+  if (!config.liveCmpVerified) problems.push("Einwilligungsmeldung nicht live geprüft.");
   const slotKeys = Object.keys(config.slots) as AdSenseSlotKey[];
   if (slotKeys.length === 0) problems.push("Keine Slot-IDs konfiguriert.");
   for (const key of slotKeys) {

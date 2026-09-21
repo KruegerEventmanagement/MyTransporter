@@ -12,6 +12,7 @@ import {
   KM_TARIFF_MIN_EUR,
 } from "@/lib/booking-rules";
 import { AdRails } from "@/components/ads/AdRails";
+import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
 const ENTRY = ["3h", "6h", "24h_300"].map((id) => PLAN_CATALOG.find((p) => p.id === id)!);
 const LONG = ["24h_500", "24h_800"].map((id) => PLAN_CATALOG.find((p) => p.id === id)!);
@@ -180,6 +181,7 @@ function PreisePage() {
           <Link to="/impressum" className="hover:text-foreground transition-colors">Impressum</Link>
           <Link to="/agb" className="hover:text-foreground transition-colors">AGB</Link>
           <Link to="/datenschutz" className="hover:text-foreground transition-colors">Datenschutz</Link>
+          <AdConsentRevokeButton />
           <Link to="/kontakt" className="hover:text-foreground transition-colors">Kontakt</Link>
           <Link to="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
           <Link to="/ueber-uns" className="hover:text-foreground transition-colors">Über uns</Link>

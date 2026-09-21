@@ -14,6 +14,7 @@ import { PartnerBenefits } from "@/components/partner/PartnerBenefits";
 import { PartnerInquiryForm } from "@/components/partner/PartnerInquiryForm";
 import type { PartnerPackageId } from "@/lib/partner-packages";
 import { AdRails } from "@/components/ads/AdRails";
+import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
 export const Route = createFileRoute("/werbung")({
   head: () => ({
@@ -310,6 +311,7 @@ function WerbungPage() {
           <Link to="/impressum" className="hover:text-foreground transition-colors">Impressum</Link>
           <Link to="/agb" className="hover:text-foreground transition-colors">AGB</Link>
           <Link to="/datenschutz" className="hover:text-foreground transition-colors">Datenschutz</Link>
+          <AdConsentRevokeButton />
           <Link to="/kontakt" className="hover:text-foreground transition-colors">Kontakt</Link>
         </div>
       </footer>
