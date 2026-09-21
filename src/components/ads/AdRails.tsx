@@ -66,10 +66,15 @@ export function buildAdRailsTree({ suppressed, left, right, children }: AdRailsT
  */
 export function AdRails({ children }: AdRailsProps) {
   const suppressed = useAdsSuppressed();
+  // Einwilligungsmeldung starten (nur erlaubte öffentliche Seiten, niemals
+  // während transaktionaler Schritte) und reaktiv auf Consent-Änderungen
+  // reagieren, ohne den Inhalt neu zu mounten.
+  useAdCmpBootstrap(suppressed);
+  const consented = useAdConsentGranted();
   return buildAdRailsTree({
     suppressed,
-    left: isSlotReady("railLeft"),
-    right: isSlotReady("railRight"),
+    left: consented && isSlotReady("railLeft"),
+    right: consented && isSlotReady("railRight"),
     children,
   });
 }
