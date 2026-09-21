@@ -19,14 +19,18 @@ interface AdSlotProps {
  * - Lädt das Script einmalig asynchron und initialisiert den Slot genau einmal.
  * - Lazy: Initialisierung erst, wenn die Fläche in den Viewport kommt und eine
  *   echte Breite > 0 hat (keine Zero-Width-Requests).
- * - Unbefüllte Flächen werden zusammengeklappt.
+ * - Ohne Anzeige (`data-ad-status="unfilled"`) wird die gesamte Fläche inklusive
+ *   Kennzeichnung ausgeblendet – beobachtet am echten Attribut von Google,
+ *   ohne globale CSS-Regeln, die befüllte Anzeigen treffen könnten.
  */
 export function AdSlot({ slot, minHeight = 250, className, label = "Anzeige" }: AdSlotProps) {
   const suppressed = useAdsSuppressed();
   const ready = isSlotReady(slot);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const insRef = useRef<HTMLModElement | null>(null);
   const initialized = useRef(false);
   const [active, setActive] = useState(false);
+  const [unfilled, setUnfilled] = useState(false);
 
   useEffect(() => {
     if (!ready || suppressed) return;
@@ -64,27 +68,41 @@ export function AdSlot({ slot, minHeight = 250, className, label = "Anzeige" }: 
     };
   }, [ready, suppressed]);
 
+  // Echten Füllstatus von Google beobachten und leere Flächen zusammenklappen.
+  useEffect(() => {
+    const ins = insRef.current;
+    if (!active || !ins) return;
+    const read = () => setUnfilled(ins.getAttribute("data-ad-status") === "unfilled");
+    read();
+    const mo = new MutationObserver(read);
+    mo.observe(ins, { attributes: true, attributeFilter: ["data-ad-status"] });
+    return () => mo.disconnect();
+  }, [active]);
+
   if (!ready || suppressed) return null;
 
   const slotId = getSlotId(slot);
   if (!slotId) return null;
 
   return (
-    <div ref={containerRef} className={className}>
-      {active && (
+    <div
+      ref={containerRef}
+      className={className}
+      style={unfilled ? { display: "none" } : undefined}
+    >
+      {active && !unfilled && (
         <span className="mb-1 block text-[10px] uppercase tracking-wider text-muted-foreground">
           {label}
         </span>
       )}
       <ins
+        ref={insRef}
         className="adsbygoogle block w-full"
-        style={{ display: "block", minHeight: active ? minHeight : 0 }}
+        style={{ display: "block", minHeight: active && !unfilled ? minHeight : 0 }}
         data-ad-client={ADSENSE_CONFIG.publisherId}
         data-ad-slot={slotId}
         data-ad-format="auto"
         data-full-width-responsive="true"
-        /* Unbefüllte Flächen zusammenklappen */
-        data-ad-status-collapse="true"
       />
     </div>
   );

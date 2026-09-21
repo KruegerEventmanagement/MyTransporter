@@ -10,6 +10,7 @@ import { requestAdConsent, subscribeAdConsent } from "@/lib/adsense-consent";
 
 let loadPromise: Promise<boolean> | null = null;
 let consentWatcher: (() => void) | null = null;
+let currentToken: object | null = null;
 
 /** Setzt den Ladezustand zurück (z. B. nach Widerruf der Einwilligung). */
 export function resetAdSenseScriptLoad(): void {
@@ -28,11 +29,13 @@ export function ensureAdSenseScript(config: AdSenseConfig = ADSENSE_CONFIG): Pro
   if (!isAdSenseConfigured(config)) return Promise.resolve(false);
   if (loadPromise) return loadPromise;
 
+  const token = {};
+  currentToken = token;
   const pending = (async () => {
     const consented = await requestAdConsent();
     if (!consented) {
       // Kein Script, keine Anfrage. Erneuter Versuch nach Consent-Änderung möglich.
-      if (loadPromise === pending) loadPromise = null;
+      if (currentToken === token) loadPromise = null;
       return false;
     }
     watchConsentRevocation();
@@ -48,7 +51,7 @@ export function ensureAdSenseScript(config: AdSenseConfig = ADSENSE_CONFIG): Pro
       script.crossOrigin = "anonymous";
       script.onload = () => resolve(true);
       script.onerror = () => {
-        if (loadPromise === pending) loadPromise = null;
+        if (currentToken === token) loadPromise = null;
         resolve(false);
       };
       document.head.appendChild(script);
