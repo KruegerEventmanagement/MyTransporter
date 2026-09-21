@@ -13,6 +13,7 @@ import {
 import { PartnerBenefits } from "@/components/partner/PartnerBenefits";
 import { PartnerInquiryForm } from "@/components/partner/PartnerInquiryForm";
 import type { PartnerPackageId } from "@/lib/partner-packages";
+import { AdRails } from "@/components/ads/AdRails";
 
 export const Route = createFileRoute("/werbung")({
   head: () => ({
@@ -52,6 +53,7 @@ function WerbungPage() {
   return (
     <main className="min-h-screen bg-background pt-12">
       <Navbar />
+      <AdRails>
 
       {/* Back link */}
       <div className="max-w-5xl mx-auto px-4 pt-4">
@@ -257,6 +259,7 @@ function WerbungPage() {
           <Link to="/kontakt" className="hover:text-foreground transition-colors">Kontakt</Link>
         </div>
       </footer>
+    </AdRails>
     </main>
   );
 }

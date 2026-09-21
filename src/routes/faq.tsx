@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { AdRails } from "@/components/ads/AdRails";
 
 const FAQS = [
   {
@@ -81,6 +82,7 @@ export const Route = createFileRoute("/faq")({
 function FaqPage() {
   return (
     <main className="min-h-screen bg-background px-4 py-12">
+      <AdRails>
       <div className="max-w-3xl mx-auto">
         <Link
           to="/"
@@ -149,6 +151,7 @@ function FaqPage() {
           </p>
         </section>
       </div>
+    </AdRails>
     </main>
   );
 }

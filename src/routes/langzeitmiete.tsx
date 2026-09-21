@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { RollingNumber } from "@/components/RollingNumber";
 import { VEHICLE_CLASSES, VEHICLE_CLASS_LABEL, type VehicleClass } from "@/lib/booking-rules";
 import {
+import { AdRails } from "@/components/ads/AdRails";
   formatEur,
   LONG_TERM_MIN_DAYS,
   LONG_TERM_WEEK_DISCOUNT_PERCENT,
@@ -51,6 +52,7 @@ function LangzeitmietePage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <AdRails>
       <main className="max-w-5xl mx-auto px-4 pt-20 pb-16">
         <header className="text-center max-w-2xl mx-auto">
           <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
@@ -240,7 +242,8 @@ function LangzeitmietePage() {
             </div>
           ))}
         </section>
-      </main>
+      </AdRails>
+    </main>
     </div>
   );
 }

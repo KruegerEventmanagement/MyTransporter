@@ -3,6 +3,7 @@ import { Navbar } from "@/components/Navbar";
 import { TariffSection } from "@/components/TariffSection";
 import { AddonPackagesSection } from "@/components/AddonPackagesSection";
 import {
+import { AdRails } from "@/components/ads/AdRails";
   PLAN_CATALOG,
   L4H2_SURCHARGE_PER_DAY_EUR,
   L5H2_SURCHARGE_EUR,
@@ -72,6 +73,7 @@ function PreisePage() {
   return (
     <main className="min-h-screen bg-background pt-12">
       <Navbar />
+      <AdRails>
 
       <section className="pt-10 pb-2 px-4">
         <div className="max-w-3xl mx-auto text-center">
@@ -183,6 +185,7 @@ function PreisePage() {
           <Link to="/ueber-uns" className="hover:text-foreground transition-colors">Über uns</Link>
         </div>
       </footer>
+    </AdRails>
     </main>
   );
 }
