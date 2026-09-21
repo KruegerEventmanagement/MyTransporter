@@ -47,6 +47,7 @@ export const ADSENSE_CONFIG: AdSenseConfig = {
   autoAds: false,
   siteApproved: false,
   certifiedCmpConfigured: false,
+  liveCmpVerified: false,
 };
 
 const PUBLISHER_ID_RE = /^ca-pub-\d{16}$/;
