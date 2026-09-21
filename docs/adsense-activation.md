@@ -1,34 +1,54 @@
-# AdSense – Aktivierungsnotizen (Stand: Verifizierungscode vorbereitet; Google-Bestätigung noch ausstehend, Anzeigen AUS)
+# AdSense – Aktivierungsnotizen (Stand: Inhaberschaft bestätigt, Review angefragt, Anzeigen AUS)
 
 Der Code ist vorbereitet und vollständig fail-closed: solange die Konfiguration
 unvollständig ist, wird kein Google-Script geladen und keine Anfrage gesendet.
 AdSense ist **nicht aktiv** (keine Anzeigen, kein Script, keine CMP).
 
-## Aktueller Stand (Verifizierungsstufe)
+## Aktueller Stand
 
 - Publisher-ID: `ca-pub-6974851907377988` — in `src/lib/adsense.ts` eingetragen
   (`ADSENSE_CONFIG.publisherId`). `enabled=false`, `siteApproved=false`,
-  `certifiedCmpConfigured=false`, `slots` leer – es werden KEINE Anzeigen
+  `certifiedCmpConfigured=false`, `autoAds=false` – es werden KEINE Anzeigen
   geladen und KEINE Google-Anfrage gesendet.
 - Website-Verifizierung: `<meta name="google-adsense-account"
   content="ca-pub-6974851907377988">` in `src/routes/__root.tsx` ergänzt
   (neben der bestehenden Search-Console-Verifizierung, nicht ersetzt).
+  **Inhaberschaft von Google bestätigt (verifiziert).**
 - `public/ads.txt`: echte Zeile
   `google.com, pub-6974851907377988, DIRECT, f08c47fec0942fa0` angelegt.
-- Google-Review: **ausstehend** – Site noch nicht durch Google freigegeben.
-  Solange `siteApproved=false` bleibt, ist die Konfiguration absichtlich
-  nicht einsatzbereit (`isAdSenseConfigured` = false).
+- Google-Review: **angefragt**, Site-Status in AdSense „Wird vorbereitet“ –
+  also **noch nicht freigegeben**. Zahlungsempfängerdaten wurden übermittelt.
+- Google EU-Einwilligungsmeldung (CMP-Message) für `mytransporter.org` in
+  AdSense **veröffentlicht**: Standard Deutsch + Englisch, drei Optionen
+  (Zustimmen / Ablehnen / Verwalten). Das ist reine **Kontoeinrichtung** –
+  im Browser ist noch **kein** Adapter implementiert.
+- Anzeigeblöcke (echte responsive Display-Einheiten) im Konto erstellt und in
+  `ADSENSE_CONFIG.slots` eingetragen:
+  - `railLeft` = `4238348588` („MyTransporter – Seitenleiste links“)
+  - `railRight` = `6950298526` („MyTransporter – Seitenleiste rechts“)
+  - `inlineContent`: nicht vorhanden (kein Block erstellt)
+- Anzeigen sind **nicht live**. Die Konfiguration bleibt absichtlich nicht
+  einsatzbereit (`isAdSenseConfigured` = false).
 
 ## Offene Schritte (in dieser Reihenfolge)
 
-1. Google-Review abwarten, danach `siteApproved: true`.
-2. Echte Slot-IDs im AdSense-Konto erzeugen und in `ADSENSE_CONFIG.slots`
-   eintragen (`railLeft`, `railRight`, `inlineContent`).
-3. Zertifizierte Google-CMP samt Consent-Message einbinden (TCF v2 `__tcfapi`),
-   danach `certifiedCmpConfigured: true`. Ohne CMP-Antwort bleibt alles aus.
+1. Google-Review-Ergebnis abwarten, danach `siteApproved: true`.
+2. Echte Google-CMP-/Script-Integration im Browser umsetzen (zertifizierte
+   Google-Einwilligungsmeldung, TCF v2.2 `__tcfapi`), Adapter über
+   `registerAdConsentAdapter()` registrieren, danach `certifiedCmpConfigured: true`.
    Die bestehende Marketing-Einwilligung des Cookie-Banners (Google Ads /
    Meta Conversion-Tracking) gilt ausdrücklich **nicht** als AdSense-/TCF-Consent.
-4. Erst danach `enabled: true` setzen. Auto Ads bleiben aus (`autoAds: false`).
+   **Achtung Deadlock:** laut Google
+   (https://support.google.com/adsense/answer/10924669?hl=en) wird die
+   Einwilligungsmeldung über das AdSense-Tag selbst ausgeliefert. Das Tag darf
+   also nicht erst *nach* vorliegender Einwilligung geladen werden, sonst
+   erscheint die Meldung nie. Die Ladereihenfolge muss beim Umsetzen der
+   Integration bewusst festgelegt werden (Tag für die Message laden, Anzeigen-
+   Requests aber erst nach Einwilligung).
+3. Widerrufs-/Einstellungslink („Einwilligung verwalten“) in der Seite ergänzen.
+4. Manuell prüfen: Zustimmen, Ablehnen, Widerruf, Timeout sowie tatsächliches
+   Rendern bzw. Ausbleiben der Anzeigen.
+5. Erst danach `enabled: true` setzen. Auto Ads bleiben aus (`autoAds: false`).
 
 ## Routen-Ausschlüsse (keine Anzeigen)
 

@@ -20,22 +20,28 @@ const validConfig: AdSenseConfig = {
 };
 
 describe("AdSense-Konfiguration", () => {
-  it("ist standardmäßig deaktiviert, Publisher-ID hinterlegt, Slots leer", () => {
+  it("ist standardmäßig deaktiviert, Publisher- und echte Slot-IDs hinterlegt", () => {
     expect(ADSENSE_CONFIG.enabled).toBe(false);
     expect(ADSENSE_CONFIG.publisherId).toBe("ca-pub-6974851907377988");
     expect(isValidPublisherId(ADSENSE_CONFIG.publisherId)).toBe(true);
-    expect(Object.keys(ADSENSE_CONFIG.slots)).toHaveLength(0);
+    expect(ADSENSE_CONFIG.slots.railLeft).toBe("4238348588");
+    expect(ADSENSE_CONFIG.slots.railRight).toBe("6950298526");
+    expect(ADSENSE_CONFIG.slots.inlineContent).toBeUndefined();
     expect(ADSENSE_CONFIG.autoAds).toBe(false);
     expect(ADSENSE_CONFIG.siteApproved).toBe(false);
     expect(ADSENSE_CONFIG.certifiedCmpConfigured).toBe(false);
     expect(isAdSenseConfigured()).toBe(false);
     expect(isSlotReady("railLeft")).toBe(false);
-    expect(getSlotId("railLeft")).toBeNull();
+    expect(getSlotId("railLeft")).toBe("4238348588");
+    expect(getSlotId("inlineContent")).toBeNull();
   });
 
   it("meldet alle fehlenden Voraussetzungen", () => {
     const problems = validateAdSenseConfig();
-    expect(problems.length).toBeGreaterThanOrEqual(4);
+    expect(problems.length).toBeGreaterThanOrEqual(3);
+    expect(problems.some((p) => p.includes("deaktiviert"))).toBe(true);
+    expect(problems.some((p) => p.includes("freigegeben"))).toBe(true);
+    expect(problems.some((p) => p.includes("CMP"))).toBe(true);
   });
 
   it("validiert Publisher- und Slot-IDs streng", () => {
