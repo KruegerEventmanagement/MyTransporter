@@ -7,3 +7,6 @@
 
 ## Offen (extern blockiert)
 - [ ] Admin-Push VAPID-Konfigurationsfehler (Push-Schlüssel serverseitig) — braucht gültige VAPID-Zugangsdaten
+
+- [x] AdSense-Vorbereitung: zentrale Konfiguration (deaktiviert, keine IDs), Werbespalten-Komponenten fail-closed, Ausblenden in transaktionalen Schritten, Abschnitt Online-Werbung auf /werbung, docs/adsense-activation.md
+- [ ] AdSense-Aktivierung extern blockiert: echte ca-pub-/Slot-IDs, Site-Freigabe, zertifizierte CMP, ads.txt

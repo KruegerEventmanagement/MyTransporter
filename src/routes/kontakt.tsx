@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Mail, Phone, MapPin } from "lucide-react";
+import { AdRails } from "@/components/ads/AdRails";
 
 export const Route = createFileRoute("/kontakt")({
   head: () => ({
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/kontakt")({
 function KontaktPage() {
   return (
     <main className="min-h-screen bg-background px-4 py-12">
+      <AdRails>
       <div className="max-w-2xl mx-auto">
         <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors mb-8 inline-block">← Zurück</Link>
         <h1 className="text-3xl font-bold text-foreground mb-8">Kontakt</h1>
@@ -69,6 +71,7 @@ function KontaktPage() {
           <p className="text-xs text-muted-foreground mt-1">Öffnungszeiten: 08:00, 22:00 Uhr</p>
         </div>
       </div>
+    </AdRails>
     </main>
   );
 }

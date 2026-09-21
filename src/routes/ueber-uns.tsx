@@ -5,6 +5,7 @@ import { AdvantagesSection } from "@/components/AdvantagesSection";
 import { CompareSection } from "@/components/CompareSection";
 import { BookingInfoSection } from "@/components/BookingInfoSection";
 import { AddonPackagesSection } from "@/components/AddonPackagesSection";
+import { AdRails } from "@/components/ads/AdRails";
 
 export const Route = createFileRoute("/ueber-uns")({
   head: () => ({
@@ -41,11 +42,13 @@ function UeberUnsPage() {
           </p>
         </div>
       </section>
-      <TariffSection />
-      <AddonPackagesSection />
-      <AdvantagesSection />
-      <CompareSection />
-      <BookingInfoSection />
+      <AdRails>
+        <TariffSection />
+        <AddonPackagesSection />
+        <AdvantagesSection />
+        <CompareSection />
+        <BookingInfoSection />
+      </AdRails>
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
         <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
         <div className="mt-3 flex flex-wrap justify-center gap-4">

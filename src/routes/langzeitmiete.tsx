@@ -11,6 +11,7 @@ import {
   quoteLongTerm,
   weeklyBasePriceEur,
 } from "@/lib/long-term";
+import { AdRails } from "@/components/ads/AdRails";
 
 export const Route = createFileRoute("/langzeitmiete")({
   head: () => ({
@@ -51,6 +52,7 @@ function LangzeitmietePage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <AdRails>
       <main className="max-w-5xl mx-auto px-4 pt-20 pb-16">
         <header className="text-center max-w-2xl mx-auto">
           <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
@@ -241,6 +243,7 @@ function LangzeitmietePage() {
           ))}
         </section>
       </main>
+      </AdRails>
     </div>
   );
 }

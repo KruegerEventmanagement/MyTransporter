@@ -5,6 +5,7 @@ import { BookingSection } from "@/components/BookingSection";
 import { Navbar } from "@/components/Navbar";
 
 import { AdBanner } from "@/components/AdBanner";
+import { AdRails } from "@/components/ads/AdRails";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -75,10 +76,12 @@ function Index() {
     <main className="min-h-screen bg-background pt-12">
       
       <Navbar />
-      <HeroSection />
-      <AdBanner />
-      <h1 className="sr-only">Transporter mieten in Leonberg &amp; Stuttgart ab 49 € – Umzug, Möbeltransport &amp; Baumarkt</h1>
-      <BookingSection />
+      <AdRails>
+        <HeroSection />
+        <AdBanner />
+        <h1 className="sr-only">Transporter mieten in Leonberg &amp; Stuttgart ab 49 € – Umzug, Möbeltransport &amp; Baumarkt</h1>
+        <BookingSection />
+      </AdRails>
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
         <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
         <div className="mt-3 flex flex-wrap justify-center gap-4">

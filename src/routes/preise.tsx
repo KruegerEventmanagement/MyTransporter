@@ -11,6 +11,7 @@ import {
   KM_TARIFF_CENTS_PER_KM,
   KM_TARIFF_MIN_EUR,
 } from "@/lib/booking-rules";
+import { AdRails } from "@/components/ads/AdRails";
 
 const ENTRY = ["3h", "6h", "24h_300"].map((id) => PLAN_CATALOG.find((p) => p.id === id)!);
 const LONG = ["24h_500", "24h_800"].map((id) => PLAN_CATALOG.find((p) => p.id === id)!);
@@ -72,6 +73,7 @@ function PreisePage() {
   return (
     <main className="min-h-screen bg-background pt-12">
       <Navbar />
+      <AdRails>
 
       <section className="pt-10 pb-2 px-4">
         <div className="max-w-3xl mx-auto text-center">
@@ -183,6 +185,7 @@ function PreisePage() {
           <Link to="/ueber-uns" className="hover:text-foreground transition-colors">Über uns</Link>
         </div>
       </footer>
+    </AdRails>
     </main>
   );
 }
