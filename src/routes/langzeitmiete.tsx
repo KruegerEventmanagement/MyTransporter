@@ -242,8 +242,9 @@ function LangzeitmietePage() {
             </div>
           ))}
         </section>
+        </section>
+      </main>
       </AdRails>
-    </main>
     </div>
   );
 }
