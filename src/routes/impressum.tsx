@@ -4,7 +4,7 @@ export const Route = createFileRoute("/impressum")({
   head: () => ({
     meta: [
       { title: "Impressum, MyTransporter" },
-      { name: "description", content: "Impressum der MyTransporter UG (haftungsbeschränkt)" },
+      { name: "description", content: "Impressum von MyTransporter, Inhaber: Christian Krüger" },
     ],
   }),
   component: ImpressumPage,
@@ -20,14 +20,15 @@ function ImpressumPage() {
         <div className="space-y-6 text-sm text-foreground leading-relaxed">
           <div>
             <h2 className="font-bold text-lg mb-2">Angaben gemäß § 5 TMG</h2>
-            <p>MyTransporter UG (haftungsbeschränkt)</p>
+            <p>MyTransporter</p>
+            <p>Inhaber: Christian Krüger</p>
             <p>Römerstraße 36</p>
             <p>71229 Leonberg</p>
           </div>
 
           <div>
-            <h2 className="font-bold text-lg mb-2">Vertreten durch</h2>
-            <p>Geschäftsführer: Christian Krüger</p>
+            <h2 className="font-bold text-lg mb-2">Inhaber</h2>
+            <p>Christian Krüger</p>
           </div>
 
           <div>

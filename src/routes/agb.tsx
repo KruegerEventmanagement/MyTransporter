@@ -4,7 +4,7 @@ export const Route = createFileRoute("/agb")({
   head: () => ({
     meta: [
       { title: "AGB, MyTransporter" },
-      { name: "description", content: "Allgemeine Geschäftsbedingungen der MyTransporter UG" },
+      { name: "description", content: "Allgemeine Geschäftsbedingungen von MyTransporter, Inhaber: Christian Krüger" },
     ],
   }),
   component: AgbPage,
@@ -20,7 +20,7 @@ function AgbPage() {
         <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">§ 1 Geltungsbereich</h2>
-            <p>Diese Allgemeinen Geschäftsbedingungen gelten für alle Mietverträge zwischen der MyTransporter UG (haftungsbeschränkt), Römerstraße 36, 71229 Leonberg (nachfolgend „Vermieter") und dem Mieter über die Anmietung von Transportfahrzeugen.</p>
+            <p>Diese Allgemeinen Geschäftsbedingungen gelten für alle Mietverträge zwischen MyTransporter, Inhaber: Christian Krüger, Römerstraße 36, 71229 Leonberg (nachfolgend „Vermieter") und dem Mieter über die Anmietung von Transportfahrzeugen.</p>
           </div>
 
           <div>

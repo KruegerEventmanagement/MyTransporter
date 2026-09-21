@@ -17,7 +17,9 @@ AdSense ist **nicht aktiv** (keine Anzeigen, kein Script, keine CMP).
 - `public/ads.txt`: echte Zeile
   `google.com, pub-6974851907377988, DIRECT, f08c47fec0942fa0` angelegt.
 - Google-Review: **angefragt**, Site-Status in AdSense „Wird vorbereitet“ –
-  also **noch nicht freigegeben**. Zahlungsempfängerdaten wurden übermittelt.
+  also **noch nicht freigegeben**. Zahlungsempfänger ist Christian Krüger als
+  Inhaber des Einzelunternehmens MyTransporter; die Zahlungsempfängerdaten
+  wurden übermittelt.
 - Google EU-Einwilligungsmeldung (CMP-Message) für `mytransporter.org` in
   AdSense **veröffentlicht**: Standard Deutsch + Englisch, drei Optionen
   (Zustimmen / Ablehnen / Verwalten). Das ist reine **Kontoeinrichtung** –
