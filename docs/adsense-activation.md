@@ -76,8 +76,26 @@ AdSense ist **nicht aktiv** (keine Anzeigen, kein Script, keine CMP).
 - Getestet mit Mocks (`src/lib/adsense-cmp.test.ts`): unbekannt, Ablehnung,
   Zustimmung, NPA, berechtigtes Interesse, Publisher-Restrictions, Widerruf,
   Timeout, API-Fehler, einmaliger Bootstrap, keine Anfragen im QA-Modus,
-  Ausschlüsse und Unterdrückung. Eine Live-QA auf der öffentlichen Domain steht
-  noch aus (Veröffentlichung nötig).
+   Ausschlüsse und Unterdrückung. Eine Live-QA auf der öffentlichen Domain steht
+   noch aus (Veröffentlichung nötig).
+
+### Erkenntnis aus einer echten Live-Beobachtung (Schwesterprojekt bringcar.de)
+
+- Beim Live-Test erschien die **echte Google-CMP-Meldung nicht**: weder
+  `__tcfapi` noch `showRevocationMessage` waren vorhanden, obwohl die Meldung im
+  AdSense-Konto veröffentlicht ist. Ursache ist mit hoher Wahrscheinlichkeit die
+  noch ausstehende Konto-/Site-Prüfung.
+- Es gab dabei **0 echte Anzeigenanfragen und 0 eigene Slots**.
+- Beobachtet wurde außerdem: das offizielle `adsbygoogle`-Tag **ersetzt das
+  vorinitialisierte Array durch sein eigenes Objekt**, wodurch das vorher
+  gesetzte `pauseAdRequests` verloren geht. Deshalb wird die Pause jetzt
+  zusätzlich im `script.onload` erneut gesetzt – nur für die aktuelle
+  Generation und nur solange Bootstrap/Konfiguration/Route weiter gelten
+  (Regressionstest in `src/lib/adsense-cmp.test.ts`).
+- Daraus folgt: `liveCmpVerified` bleibt **false**, das Review ist weiter
+  ausstehend, und Zustimmen/Ablehnen/Widerruf sind **nicht** live verifiziert.
+
+
 
 ## Offene Schritte (in dieser Reihenfolge)
 

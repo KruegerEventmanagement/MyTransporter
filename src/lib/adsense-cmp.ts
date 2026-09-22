@@ -436,6 +436,16 @@ export function bootstrapAdConsentCmp(
       script.src = src;
       script.async = true;
       script.crossOrigin = "anonymous";
+      // Das offizielle Tag ersetzt das vorinitialisierte Array durch sein
+      // eigenes Objekt, wodurch `pauseAdRequests` verloren gehen kann.
+      // Nach dem Laden daher erneut pausieren - nur für die aktuelle
+      // Generation und nur solange Bootstrap/Konfiguration weiter gelten.
+      script.onload = () => {
+        if (gen !== generation) return;
+        if (bootstrapped !== win) return;
+        if (!mayBootstrapCmp({ ...options, win, config })) return;
+        pauseAdRequests(win);
+      };
       script.onerror = () => {
         if (gen !== generation) return;
         // Script-Fehler = fail-closed: nichts ist bereit, Anfragen pausiert.
