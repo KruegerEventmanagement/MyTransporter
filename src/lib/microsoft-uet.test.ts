@@ -50,7 +50,6 @@ describe("Microsoft UET Loader", () => {
     ensureMicrosoftUet();
     ensureMicrosoftUet();
     ensureMicrosoftUet();
-    const scripts = document.head.querySelectorAll(`script[src="${UET_SCRIPT_SRC}"]`);
     expect(scripts.length).toBe(1);
   });
 
