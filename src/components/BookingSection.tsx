@@ -1383,7 +1383,7 @@ export function BookingSection() {
                 <>
                   <button
                     type="button"
-                    onClick={() => setVehicleIdx((i) => (i - 1 + vehicles.length) % vehicles.length)}
+                    onClick={() => chooseVehicle((vehicleIdx - 1 + vehicles.length) % vehicles.length)}
                     className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/90 border border-border shadow flex items-center justify-center hover:bg-background"
                     aria-label="Vorheriges Fahrzeug"
                   >
