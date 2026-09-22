@@ -172,7 +172,7 @@ export interface CmpWindow {
     callbackQueue?: Array<unknown>;
     showRevocationMessage?: () => void;
   };
-  adsbygoogle?: Array<unknown> & { pauseAdRequests?: number };
+  adsbygoogle?: Array<unknown> & { pauseAdRequests?: number; requestNonPersonalizedAds?: number };
   __tcfapi?: TcfApi;
   location?: { pathname?: string; search?: string };
   document?: {
@@ -307,7 +307,7 @@ export function isCmpBootstrapped(): boolean {
 /** Anzeigenanfragen sofort anhalten (Widerruf, Route-/Suppression-Ende). */
 export function pauseAdRequests(win: CmpWindow | null = defaultWin()): void {
   if (!win) return;
-  const queue = (win.adsbygoogle = win.adsbygoogle || ([] as Array<unknown> & { pauseAdRequests?: number }));
+  const queue = (win.adsbygoogle = win.adsbygoogle || ([] as Array<unknown> & { pauseAdRequests?: number; requestNonPersonalizedAds?: number }));
   queue.pauseAdRequests = 1;
   queue.requestNonPersonalizedAds = 1;
 }
@@ -318,7 +318,7 @@ export function pauseAdRequests(win: CmpWindow | null = defaultWin()): void {
  */
 export function allowAdRequests(win: CmpWindow | null = defaultWin()): void {
   if (!win) return;
-  const queue = (win.adsbygoogle = win.adsbygoogle || ([] as Array<unknown> & { pauseAdRequests?: number }));
+  const queue = (win.adsbygoogle = win.adsbygoogle || ([] as Array<unknown> & { pauseAdRequests?: number; requestNonPersonalizedAds?: number }));
   queue.requestNonPersonalizedAds = lastEvaluation.personalized ? 0 : 1;
   queue.pauseAdRequests = 0;
 }
