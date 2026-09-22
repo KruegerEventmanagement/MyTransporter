@@ -467,14 +467,17 @@ export function BookingSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, selectionWindow, busyMap, vehicles, vehicleIdx, fleetLite, explicitPlate]);
 
-  /** Tarif: sperren, wenn kein Fahrzeug der gewählten Klasse den kompletten Zeitraum frei hat. */
+  /**
+   * Tarif: sperren, wenn KEIN freigegebenes Fahrzeug den kompletten Zeitraum
+   * frei hat. Keine Einschränkung auf eine Fahrzeugklasse.
+   */
   const isPlanUnavailable = (planId: string) => {
-    if (!date || startHour === null || activePlates.length === 0) return false;
+    if (!date || startHour === null) return false;
+    if (availabilityUnknown) return true;
+    if (fleetLite.length === 0) return true;
     const w = windowFor(planId, startHour);
     if (!w) return false;
-    const plates = platesOfClass(vehicleClass);
-    if (plates.length === 0) return false;
-    return !anyPlateFreeForWindows(busyMap, plates, [w]);
+    return !isWindowBookable(busyMap, fleetLite, w);
   };
 
   const registrationComplete = isLoggedIn || profileComplete;
