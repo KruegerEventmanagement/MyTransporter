@@ -52,6 +52,7 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    setHasError(false);
 
     const syncState = () => {
       setPaused(video.paused);
@@ -73,9 +74,12 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
 
     if (enabled && !prefersReducedMotion) {
       safelyPlay(video).then((played) => {
-        if (!played) setPaused(true);
+        setPaused(!played || video.paused);
+        if (video.error) setHasError(true);
       });
     }
+
+    if (video.error) handleError();
 
     return () => {
       video.pause();
