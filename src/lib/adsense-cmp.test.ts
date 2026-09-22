@@ -195,6 +195,32 @@ describe("Bootstrap und Gating", () => {
     expect(areAdRequestsAllowed({ win, config: readyConfig })).toBe(false);
   });
 
+  it("pausiert nach dem Script-Load erneut, wenn das Tag die Queue ersetzt", () => {
+    const win = makeWin("?fc=alwaysshow&fctype=gdpr");
+    expect(bootstrapAdConsentCmp({ win, pathname: "/" })).toBe(true);
+    expect(win.adsbygoogle?.pauseAdRequests).toBe(1);
+
+    // Das offizielle Tag ersetzt das vorinitialisierte Array durch sein
+    // eigenes Objekt - pauseAdRequests ist danach undefined.
+    win.adsbygoogle = [] as unknown as typeof win.adsbygoogle;
+    expect(win.adsbygoogle?.pauseAdRequests).toBeUndefined();
+
+    win.scriptNodes[0]?.onload?.();
+    expect(win.adsbygoogle?.pauseAdRequests).toBe(1);
+    expect(areAdRequestsAllowed({ win, config: readyConfig })).toBe(false);
+  });
+
+  it("pausiert nach Generationswechsel nicht mehr über einen alten Script-Load", () => {
+    const win = makeWin("?fc=alwaysshow&fctype=gdpr");
+    bootstrapAdConsentCmp({ win, pathname: "/" });
+    const node = win.scriptNodes[0];
+    teardownAdConsentCmp(win);
+    win.adsbygoogle = [] as unknown as typeof win.adsbygoogle;
+    node?.onload?.();
+    expect(win.adsbygoogle?.pauseAdRequests).toBeUndefined();
+  });
+
+
   it("startet nie bei Unterdrückung oder auf ausgeschlossenen Seiten", () => {
     const win = makeWin("?fc=alwaysshow&fctype=gdpr");
     expect(mayBootstrapCmp({ win, pathname: "/", suppressed: true })).toBe(false);
