@@ -1259,13 +1259,13 @@ export function BookingSection() {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-foreground whitespace-nowrap">
-                        {availableClasses.length > 1 ? "ab " : ""}{plan.basePrice} €
+                        {planClasses.length > 1 ? "ab " : ""}{planFromPrice} €
                       </p>
-                      {availableClasses.length > 1 && (
+                      {planClasses.length > 1 && (
                         <p className="text-[11px] text-muted-foreground whitespace-nowrap">
-                          {availableClasses.includes("l4h2") && `langer Transporter ${plan.priceL4h2} €`}
-                          {availableClasses.includes("l4h2") && availableClasses.includes("l5h2") && " · "}
-                          {availableClasses.includes("l5h2") && `Crafter ${plan.priceL5h2} €`}
+                          {planClasses.includes("l4h2") && `langer Transporter ${plan.priceL4h2} €`}
+                          {planClasses.includes("l4h2") && planClasses.includes("l5h2") && " · "}
+                          {planClasses.includes("l5h2") && `Crafter ${plan.priceL5h2} €`}
                         </p>
                       )}
 
