@@ -131,7 +131,7 @@ describe("Purchase-Deduplizierung", () => {
 
     const q = ((globalThis as unknown as { uetq?: unknown[] }).uetq ?? []) as unknown[];
     expect(q.slice(0, 3)).toEqual(["consent", "default", { ad_storage: "denied" }]);
-    expect(q).toContain("granted" === "" ? "" : "consent");
+    expect(q).toContain("consent");
     const gi = q.indexOf("update");
     expect(q[gi + 1]).toEqual({ ad_storage: "granted" });
     const ei = q.indexOf("mytransporter_booking");
