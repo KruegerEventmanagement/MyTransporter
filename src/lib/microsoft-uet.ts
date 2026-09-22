@@ -175,6 +175,8 @@ export type UetBookingConversion = {
   transactionId: string;
   /** Tatsächlich verifizierter Umsatz ohne rückzahlbare Kaution. */
   revenueEur?: number;
+  /** Tatsächlich verifizierte Währung (ISO). Fällt auf EUR zurück. */
+  currency?: string;
 };
 
 /**
@@ -191,14 +193,15 @@ export function uetTrackBooking(
   if (sentThisSession.has(conversion.transactionId) || sentIds().includes(conversion.transactionId))
     return false;
 
-  ensureMicrosoftUet();
+  // Reihenfolge default → load → grant sicherstellen (idempotent).
+  ensureMicrosoftUetConsentGranted();
   const payload: Record<string, unknown> = {
     event_category: UET_EVENT_CATEGORY,
     event_label: conversion.transactionId,
   };
   if (typeof conversion.revenueEur === "number" && conversion.revenueEur > 0) {
     payload.revenue_value = conversion.revenueEur;
-    payload.currency = "EUR";
+    payload.currency = (conversion.currency || "EUR").toUpperCase();
   }
   try {
     pushArgs("event", UET_BOOKING_ACTION, payload);
@@ -216,5 +219,7 @@ export function uetTrackBooking(
 export function __resetUetForTests(): void {
   scriptInserted = false;
   initialized = false;
+  defaultSet = false;
+  granted = false;
   sentThisSession.clear();
 }
