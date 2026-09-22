@@ -812,6 +812,15 @@ export function BookingSection() {
     !isPlanUnavailable(selectedPlanId) &&
     selectableVehiclePlate !== null;
 
+  // Schritt 2 → Bezahlen: nur mit sauber geladener Verfügbarkeit und einem
+  // vorhandenen, freigegebenen, im Zeitraum wirklich freien Fahrzeug.
+  const canProceedStep2 =
+    availabilityReady &&
+    Boolean(currentVehicle?.is_active) &&
+    Boolean(currentPlate) &&
+    !currentVehicleUnavailable;
+
+
   // Veraltete Verfügbarkeit / Rücksprung: nicht mehr freien Tarif abwählen.
   // Wichtig: nur abwählen, wenn FRISCHE, fehlerfreie Daten die Auswahl widerlegen –
   // ein laufender oder fehlgeschlagener Refresh darf eine gültige Wahl nicht löschen.
