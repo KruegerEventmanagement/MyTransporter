@@ -1274,12 +1274,26 @@ export function BookingSection() {
 
                   {plan.days > 1 && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      ≈ {(plan.basePrice / plan.days).toFixed(2).replace(".", ",")} € pro Tag
+                      ≈ {(planFromPrice / plan.days).toFixed(2).replace(".", ",")} € pro Tag
                     </p>
                   )}
                 </button>
                 );
               })}
+              {availabilityUnknown && !busyLoading && (
+                <div className="p-6 rounded-2xl border border-border bg-secondary text-center text-sm text-muted-foreground">
+                  <p className="mb-3 text-foreground">
+                    Die Verfügbarkeit konnte gerade nicht geladen werden. Bitte versuche es erneut.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={refreshBusySlots}
+                    className="min-h-[44px] px-5 rounded-full bg-foreground text-background text-sm font-medium"
+                  >
+                    Erneut versuchen
+                  </button>
+                </div>
+              )}
               {availablePlans.length === 0 && (
                 <div className="p-6 rounded-2xl border border-border bg-secondary text-center text-sm text-muted-foreground">
                   Für diese Auswahl bieten wir online keinen Standardtarif an. Bitte kontaktiere uns, wir machen dir ein individuelles Angebot.
