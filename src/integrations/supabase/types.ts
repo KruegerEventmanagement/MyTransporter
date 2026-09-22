@@ -427,7 +427,9 @@ export type Database = {
           event_kind: string
           id: string
           last_error: string | null
+          lease_token: string | null
           lease_until: string | null
+          mail_sent_at: string | null
           next_retry_at: string | null
           payload: Json
           push_sent_at: string | null
@@ -443,7 +445,9 @@ export type Database = {
           event_kind: string
           id?: string
           last_error?: string | null
+          lease_token?: string | null
           lease_until?: string | null
+          mail_sent_at?: string | null
           next_retry_at?: string | null
           payload: Json
           push_sent_at?: string | null
@@ -459,7 +463,9 @@ export type Database = {
           event_kind?: string
           id?: string
           last_error?: string | null
+          lease_token?: string | null
           lease_until?: string | null
+          mail_sent_at?: string | null
           next_retry_at?: string | null
           payload?: Json
           push_sent_at?: string | null
@@ -946,7 +952,9 @@ export type Database = {
           event_kind: string
           id: string
           last_error: string | null
+          lease_token: string | null
           lease_until: string | null
+          mail_sent_at: string | null
           next_retry_at: string | null
           payload: Json
           push_sent_at: string | null
@@ -967,10 +975,12 @@ export type Database = {
         Args: { _action_key: string; _booking_id: string }
         Returns: undefined
       }
-      complete_manual_notification: {
-        Args: { _id: string; _push_sent?: boolean }
-        Returns: undefined
-      }
+      complete_manual_notification:
+        | { Args: { _id: string; _push_sent?: boolean }; Returns: undefined }
+        | {
+            Args: { _id: string; _lease_token?: string; _push_sent?: boolean }
+            Returns: boolean
+          }
       create_booking_hold_atomic: {
         Args: {
           _minutes?: number
@@ -996,10 +1006,20 @@ export type Database = {
         }
         Returns: undefined
       }
-      fail_manual_notification: {
-        Args: { _error: string; _id: string; _retry_in_seconds?: number }
-        Returns: undefined
-      }
+      fail_manual_notification:
+        | {
+            Args: { _error: string; _id: string; _retry_in_seconds?: number }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _error: string
+              _id: string
+              _lease_token?: string
+              _retry_in_seconds?: number
+            }
+            Returns: boolean
+          }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1027,10 +1047,13 @@ export type Database = {
         }
         Returns: Json
       }
-      mark_manual_notification_pushed: {
-        Args: { _id: string }
-        Returns: undefined
+      mark_manual_notification_mailed: {
+        Args: { _id: string; _lease_token?: string }
+        Returns: boolean
       }
+      mark_manual_notification_pushed:
+        | { Args: { _id: string }; Returns: undefined }
+        | { Args: { _id: string; _lease_token?: string }; Returns: boolean }
       normalize_plate: { Args: { _plate: string }; Returns: string }
       plan_end_at: {
         Args: { _plan_id: string; _start: string }
