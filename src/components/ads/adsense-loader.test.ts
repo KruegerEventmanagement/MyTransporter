@@ -151,6 +151,7 @@ describe("adsense-loader Lebenszyklus", () => {
     expect(adRequestsCurrentlyPermitted(readyConfig)).toBe(false);
     // Erneuter Aufruf ist ein frischer Ablauf (kein gecachtes true).
     const second = ensureAdSenseScript(readyConfig);
+    consentResolver(false);
     await expect(second).resolves.toBe(false);
   });
 
