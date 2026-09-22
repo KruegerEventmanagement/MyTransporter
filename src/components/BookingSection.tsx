@@ -782,7 +782,24 @@ export function BookingSection() {
   };
 
   const canProceedStep0 = rangeFrom !== undefined && rangeTo !== undefined;
-  const canProceedStep1 = startHour !== null && selectedPlanId !== null;
+  /** Fahrzeug, das für die aktuelle Auswahl wirklich frei ist (null = keins). */
+  const selectableVehiclePlate = selectionWindow
+    ? pickVehicleForWindow(busyMap, fleetLite, selectionWindow, { preferredPlate: explicitPlate })
+    : null;
+  // Fail closed: ohne geladene Verfügbarkeit und ohne wirklich freies Fahrzeug kein „Weiter“.
+  const canProceedStep1 =
+    startHour !== null &&
+    selectedPlanId !== null &&
+    !availabilityUnknown &&
+    !isPlanUnavailable(selectedPlanId) &&
+    selectableVehiclePlate !== null;
+
+  // Veraltete Verfügbarkeit / Rücksprung: nicht mehr freien Tarif abwählen
+  useEffect(() => {
+    if (step > 1 || !selectedPlanId) return;
+    if (isPlanUnavailable(selectedPlanId)) setSelectedPlanId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, selectedPlanId, busyMap, fleetLite, date, startHour, availabilityUnknown]);
 
   // Tarife passend zur gewählten Nächtezahl + Startstunde + Fahrzeugklasse
   const availablePlans = getAvailablePlans(nights, startHour, vehicleClass);
