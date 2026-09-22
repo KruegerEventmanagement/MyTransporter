@@ -254,6 +254,16 @@ export function trackPurchase(purchase: VerifiedPurchase): void {
     pendingPurchase = purchase;
     return;
   }
+  // Microsoft UET Buchungs-Conversion – eigene, stabile Deduplizierung.
+  uetTrackBooking(
+    {
+      paid: true,
+      transactionId: purchase.transactionId,
+      revenueEur: purchase.conversionValueEur,
+    },
+    true,
+  );
+
   if (sentThisSession.has(purchase.transactionId) || alreadySent(purchase.transactionId)) return;
 
   sentThisSession.add(purchase.transactionId);
