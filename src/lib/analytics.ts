@@ -243,6 +243,15 @@ function markSent(transactionId: string): void {
 const sentThisSession = new Set<string>();
 /** Eigene Google-Deduplizierung: fehlt das Label, gilt Google NICHT als gesendet. */
 const googleSentThisSession = new Set<string>();
+const GOOGLE_SENT_KEY = "mt_google_conversions_sent";
+
+function alreadySentGoogle(transactionId: string): boolean {
+  return sentIds(GOOGLE_SENT_KEY).includes(transactionId);
+}
+
+function markSentGoogle(transactionId: string): void {
+  rememberId(GOOGLE_SENT_KEY, transactionId);
+}
 
 /** Merker für Nachholen, falls Consent erst nach der Zahlung erteilt wird. */
 let pendingPurchase: VerifiedPurchase | null = null;
