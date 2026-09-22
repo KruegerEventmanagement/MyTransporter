@@ -32,6 +32,13 @@ import {
   isDayBookable,
   anyPlateFreeForWindows,
 } from "@/lib/availability-logic";
+import {
+  availableClassesForWindow,
+  isWindowBookable,
+  lowestAvailablePlanPrice,
+  pickVehicleForWindow,
+  type VehicleLite,
+} from "@/lib/plan-availability";
 
 import {
   computePlanReturn,
@@ -173,6 +180,8 @@ export function BookingSection() {
   const [resendError, setResendError] = useState<string | null>(null);
   const [profileComplete, setProfileComplete] = useState(false);
   const [vehicles, setVehicles] = useState<DbVehicle[]>([]);
+  /** Ausdrücklich vom Kunden gewähltes Fahrzeug (Kennzeichen) – hat Vorrang. */
+  const [explicitPlate, setExplicitPlate] = useState<string | null>(null);
   const [vehicleIdx, setVehicleIdx] = useState(0);
   const [busySlots, setBusySlots] = useState<BusySlot[]>([]);
   // Eigene 15-Minuten-Reservierung: darf die eigene Auswahl nicht blockieren.
@@ -201,19 +210,42 @@ export function BookingSection() {
   const addonsTotal = sumAddonsEur(selectedAddonIds);
 
 
+  // Ladefehler müssen sichtbar sein: lieber "nicht prüfbar" als falsche Verfügbarkeit.
+  const [busyError, setBusyError] = useState(false);
+  const [busyLoading, setBusyLoading] = useState(true);
+  const [vehiclesLoaded, setVehiclesLoaded] = useState(false);
+  const [vehiclesError, setVehiclesError] = useState(false);
+
   const refreshBusySlots = () => {
+    setBusyLoading(true);
     getBusySlots()
-      .then(setBusySlots)
-      .catch((e) => console.warn("Belegte Slots konnten nicht geladen werden:", e));
+      .then((slots) => {
+        setBusySlots(slots);
+        setBusyError(false);
+      })
+      .catch((e) => {
+        console.warn("Belegte Slots konnten nicht geladen werden:", e);
+        setBusyError(true);
+      })
+      .finally(() => setBusyLoading(false));
   };
 
   useEffect(() => {
     let alive = true;
+    setBusyLoading(true);
     getBusySlots()
       .then((slots) => {
-        if (alive) setBusySlots(slots);
+        if (!alive) return;
+        setBusySlots(slots);
+        setBusyError(false);
       })
-      .catch((e) => console.warn("Belegte Slots konnten nicht geladen werden:", e));
+      .catch((e) => {
+        console.warn("Belegte Slots konnten nicht geladen werden:", e);
+        if (alive) setBusyError(true);
+      })
+      .finally(() => {
+        if (alive) setBusyLoading(false);
+      });
     return () => {
       alive = false;
     };
@@ -302,13 +334,19 @@ export function BookingSection() {
       .from("vehicles")
       .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address")
       .order("created_at", { ascending: true })
-      .then(({ data }) => {
-        if (!alive || !data) return;
+      .then(({ data, error }) => {
+        if (!alive) return;
+        if (error || !data) {
+          setVehiclesError(true);
+          return;
+        }
         // Freigegebene Fahrzeuge zuerst, gesperrte danach (sichtbar, aber nicht buchbar)
         const list = [...(data as DbVehicle[])].sort(
           (a, b) => Number(b.is_active) - Number(a.is_active),
         );
         setVehicles(list);
+        setVehiclesError(false);
+        setVehiclesLoaded(true);
       });
     return () => {
       alive = false;
@@ -363,11 +401,24 @@ export function BookingSection() {
     () => bookableVehicles.map((v) => v.plate ?? "").filter(Boolean),
     [bookableVehicles],
   );
-  const platesOfClass = (cls: VehicleClass) =>
-    bookableVehicles
-      .filter((v) => classOfVehicle(v) === cls)
-      .map((v) => v.plate ?? "")
-      .filter(Boolean);
+  /**
+   * Flotte für die Verfügbarkeitsprüfung: immer ALLE freigegebenen Fahrzeuge,
+   * unabhängig von einer (noch nicht getroffenen) Klassenwahl.
+   */
+  const fleetLite: VehicleLite[] = useMemo(
+    () =>
+      vehicles
+        .map((v) => ({
+          plate: v.plate ?? "",
+          isActive: v.is_active,
+          vehicleClass: vehicleClassFromName(v.name, v.model, v.plate),
+        }))
+        .filter((v) => v.plate),
+    [vehicles],
+  );
+
+  /** Verfügbarkeit ist nicht prüfbar → fail closed, keine falsche Zusage. */
+  const availabilityUnknown = busyError || vehiclesError || (!vehiclesLoaded && !vehiclesError);
 
   /** Kalendertag: nur sperren, wenn für KEIN Fahrzeug irgendein Fenster frei ist. */
   const isDayUnavailable = (d: Date) => {
@@ -384,21 +435,23 @@ export function BookingSection() {
     return bookingWindowMsForDay(planId, date, hour);
   };
 
-  /** Startstunde: sperren, wenn zu dieser Zeit kein Fahrzeug für irgendeinen passenden Tarif frei ist. */
+  /** Startstunde: sperren, wenn zu dieser Zeit KEIN Fahrzeug einen kompletten Tarif frei hat. */
   const isHourUnavailable = (hour: number) => {
     if (!date || activePlates.length === 0) return false;
-    const classes = availableClasses.length > 0 ? availableClasses : (["l1h1"] as VehicleClass[]);
-    return !classes.some((cls) => {
-      const plates = platesOfClass(cls);
-      if (plates.length === 0) return false;
-      const wins = getAvailablePlans(nights, hour, cls)
-        .map((p) => windowFor(p.id, hour))
-        .filter((w): w is { start: number; end: number } => w !== null);
-      return wins.length > 0 && anyPlateFreeForWindows(busyMap, plates, wins);
-    });
+    const wins = getAvailablePlans(nights, hour)
+      .map((p) => windowFor(p.id, hour))
+      .filter((w): w is { start: number; end: number } => w !== null);
+    if (wins.length === 0) return true;
+    // Jeweils ein einzelnes Fahrzeug muss das GANZE Fenster frei haben.
+    return !wins.some((w) => isWindowBookable(busyMap, fleetLite, w));
   };
 
-  // Nicht verfügbares Fahrzeug: automatisch auf ein freies (möglichst gleiche Klasse) springen
+  /** Fahrzeuge, die im gewählten Tarif-Zeitraum wirklich komplett frei sind. */
+  const classesForWindow = (w: { start: number; end: number } | null) =>
+    w ? availableClassesForWindow(busyMap, fleetLite, w) : [];
+
+  // Fahrzeug passend zum Zeitraum wählen: günstigste verfügbare Klasse,
+  // ausdrückliche gültige Kundenauswahl hat Vorrang.
   useEffect(() => {
     // Nur in der Auswahlphase umschalten – ab der Verifizierung/Bezahlung
     // muss das gewählte Fahrzeug (und dessen Reservierung) stabil bleiben.
@@ -407,24 +460,32 @@ export function BookingSection() {
     const cur = vehicles[vehicleIdx];
     // Noch nicht freigegebene Fahrzeuge darf man ansehen – nicht automatisch wegspringen
     if (cur && !cur.is_active) return;
-    if (cur && isPlateAvailable(cur.plate ?? "")) return;
-    const cls = cur ? classOfVehicle(cur) : null;
-    const sameClass = vehicles.findIndex(
-      (v) => (!cls || classOfVehicle(v) === cls) && isPlateAvailable(v.plate ?? ""),
-    );
-    const next = sameClass >= 0 ? sameClass : vehicles.findIndex((v) => isPlateAvailable(v.plate ?? ""));
+    const plate = pickVehicleForWindow(busyMap, fleetLite, selectionWindow, {
+      preferredPlate: explicitPlate,
+    });
+    if (!plate) return;
+    const next = vehicles.findIndex((v) => (v.plate ?? "") === plate);
     if (next >= 0 && next !== vehicleIdx) setVehicleIdx(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, selectionWindow, busyMap, vehicles, vehicleIdx]);
+  }, [step, selectionWindow, busyMap, vehicles, vehicleIdx, fleetLite, explicitPlate]);
 
-  /** Tarif: sperren, wenn kein Fahrzeug der gewählten Klasse den kompletten Zeitraum frei hat. */
+  /** Ausdrückliche Fahrzeugwahl des Kunden (bleibt erhalten, solange sie gültig ist). */
+  const chooseVehicle = (i: number) => {
+    setVehicleIdx(i);
+    setExplicitPlate(vehicles[i]?.plate ?? null);
+  };
+
+  /**
+   * Tarif: sperren, wenn KEIN freigegebenes Fahrzeug den kompletten Zeitraum
+   * frei hat. Keine Einschränkung auf eine Fahrzeugklasse.
+   */
   const isPlanUnavailable = (planId: string) => {
-    if (!date || startHour === null || activePlates.length === 0) return false;
+    if (!date || startHour === null) return false;
+    if (availabilityUnknown) return true;
+    if (fleetLite.length === 0) return true;
     const w = windowFor(planId, startHour);
     if (!w) return false;
-    const plates = platesOfClass(vehicleClass);
-    if (plates.length === 0) return false;
-    return !anyPlateFreeForWindows(busyMap, plates, [w]);
+    return !isWindowBookable(busyMap, fleetLite, w);
   };
 
   const registrationComplete = isLoggedIn || profileComplete;
@@ -727,7 +788,24 @@ export function BookingSection() {
   };
 
   const canProceedStep0 = rangeFrom !== undefined && rangeTo !== undefined;
-  const canProceedStep1 = startHour !== null && selectedPlanId !== null;
+  /** Fahrzeug, das für die aktuelle Auswahl wirklich frei ist (null = keins). */
+  const selectableVehiclePlate = selectionWindow
+    ? pickVehicleForWindow(busyMap, fleetLite, selectionWindow, { preferredPlate: explicitPlate })
+    : null;
+  // Fail closed: ohne geladene Verfügbarkeit und ohne wirklich freies Fahrzeug kein „Weiter“.
+  const canProceedStep1 =
+    startHour !== null &&
+    selectedPlanId !== null &&
+    !availabilityUnknown &&
+    !isPlanUnavailable(selectedPlanId) &&
+    selectableVehiclePlate !== null;
+
+  // Veraltete Verfügbarkeit / Rücksprung: nicht mehr freien Tarif abwählen
+  useEffect(() => {
+    if (step > 1 || !selectedPlanId) return;
+    if (isPlanUnavailable(selectedPlanId)) setSelectedPlanId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, selectedPlanId, busyMap, fleetLite, date, startHour, availabilityUnknown]);
 
   // Tarife passend zur gewählten Nächtezahl + Startstunde + Fahrzeugklasse
   const availablePlans = getAvailablePlans(nights, startHour, vehicleClass);
@@ -1158,6 +1236,10 @@ export function BookingSection() {
                 <div className="space-y-4">
                   {availablePlans.map((plan) => {
                 const planBlocked = isPlanUnavailable(plan.id);
+                // Nur Klassen, für die in genau diesem Zeitraum ein Fahrzeug frei ist
+                const planClasses =
+                  startHour === null ? [] : classesForWindow(windowFor(plan.id, startHour));
+                const planFromPrice = lowestAvailablePlanPrice(plan, planClasses) ?? plan.basePrice;
                 return (
                 <button
                   key={plan.id}
@@ -1171,7 +1253,15 @@ export function BookingSection() {
                 >
                   {planBlocked && (
                     <p className="mb-2 text-xs font-semibold text-destructive">
-                      Für diesen Zeitraum ist kein Transporter dieser Klasse verfügbar
+                      {availabilityUnknown
+                        ? "Verfügbarkeit konnte nicht geladen werden"
+                        : "Für diesen Zeitraum ist kein Transporter verfügbar"}
+                    </p>
+                  )}
+                  {!planBlocked && planClasses.length > 0 && (
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      Verfügbar:{" "}
+                      {planClasses.map((c) => VEHICLE_CLASS_SHORT_LABEL[c]).join(" · ")}
                     </p>
                   )}
 
@@ -1192,13 +1282,13 @@ export function BookingSection() {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-foreground whitespace-nowrap">
-                        {availableClasses.length > 1 ? "ab " : ""}{plan.basePrice} €
+                        {planClasses.length > 1 ? "ab " : ""}{planFromPrice} €
                       </p>
-                      {availableClasses.length > 1 && (
+                      {planClasses.length > 1 && (
                         <p className="text-[11px] text-muted-foreground whitespace-nowrap">
-                          {availableClasses.includes("l4h2") && `langer Transporter ${plan.priceL4h2} €`}
-                          {availableClasses.includes("l4h2") && availableClasses.includes("l5h2") && " · "}
-                          {availableClasses.includes("l5h2") && `Crafter ${plan.priceL5h2} €`}
+                          {planClasses.includes("l4h2") && `langer Transporter ${plan.priceL4h2} €`}
+                          {planClasses.includes("l4h2") && planClasses.includes("l5h2") && " · "}
+                          {planClasses.includes("l5h2") && `Crafter ${plan.priceL5h2} €`}
                         </p>
                       )}
 
@@ -1207,12 +1297,26 @@ export function BookingSection() {
 
                   {plan.days > 1 && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      ≈ {(plan.basePrice / plan.days).toFixed(2).replace(".", ",")} € pro Tag
+                      ≈ {(planFromPrice / plan.days).toFixed(2).replace(".", ",")} € pro Tag
                     </p>
                   )}
                 </button>
                 );
               })}
+              {availabilityUnknown && !busyLoading && (
+                <div className="p-6 rounded-2xl border border-border bg-secondary text-center text-sm text-muted-foreground">
+                  <p className="mb-3 text-foreground">
+                    Die Verfügbarkeit konnte gerade nicht geladen werden. Bitte versuche es erneut.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={refreshBusySlots}
+                    className="min-h-[44px] px-5 rounded-full bg-foreground text-background text-sm font-medium"
+                  >
+                    Erneut versuchen
+                  </button>
+                </div>
+              )}
               {availablePlans.length === 0 && (
                 <div className="p-6 rounded-2xl border border-border bg-secondary text-center text-sm text-muted-foreground">
                   Für diese Auswahl bieten wir online keinen Standardtarif an. Bitte kontaktiere uns, wir machen dir ein individuelles Angebot.
@@ -1285,7 +1389,7 @@ export function BookingSection() {
                 <>
                   <button
                     type="button"
-                    onClick={() => setVehicleIdx((i) => (i - 1 + vehicles.length) % vehicles.length)}
+                    onClick={() => chooseVehicle((vehicleIdx - 1 + vehicles.length) % vehicles.length)}
                     className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/90 border border-border shadow flex items-center justify-center hover:bg-background"
                     aria-label="Vorheriges Fahrzeug"
                   >
@@ -1293,7 +1397,7 @@ export function BookingSection() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setVehicleIdx((i) => (i + 1) % vehicles.length)}
+                    onClick={() => chooseVehicle((vehicleIdx + 1) % vehicles.length)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/90 border border-border shadow flex items-center justify-center hover:bg-background"
                     aria-label="Nächstes Fahrzeug"
                   >
@@ -1424,7 +1528,7 @@ export function BookingSection() {
                       <button
                         key={i}
                         type="button"
-                        onClick={() => setVehicleIdx(i)}
+                        onClick={() => chooseVehicle(i)}
                         aria-label={`Fahrzeug ${i + 1}`}
                         className={`w-2 h-2 rounded-full transition-all ${
                           i === vehicleIdx ? "bg-foreground w-6" : "bg-border"
@@ -1441,7 +1545,7 @@ export function BookingSection() {
                           key={v.plate ?? i}
                           type="button"
                           disabled={!free && !notReleased}
-                          onClick={() => setVehicleIdx(i)}
+                          onClick={() => chooseVehicle(i)}
                           className={`w-full flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all hover:bg-secondary ${
                             i === vehicleIdx ? "border-foreground" : "border-border"
                           } ${free ? "" : "opacity-50 grayscale"} ${
