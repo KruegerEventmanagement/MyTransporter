@@ -198,7 +198,7 @@ export function VideoBackground({
 
       <div
         className={cn(
-          "relative z-30 mx-auto max-w-5xl px-4 pb-3 xl:fixed xl:right-[max(1rem,calc((100vw-64rem)/2-7rem))] xl:top-20 xl:mx-0 xl:max-w-none xl:p-0",
+          "relative z-30 mx-auto max-w-5xl px-4 pb-3 pt-2 xl:fixed xl:right-[max(1rem,calc((100vw-64rem)/2-7rem))] xl:top-20 xl:mx-0 xl:max-w-none xl:p-0",
           mobileControlsOffset === "navbar" && "pt-14",
         )}
       >
