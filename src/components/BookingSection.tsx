@@ -1056,7 +1056,11 @@ export function BookingSection() {
               )}
             </div>
 
-            <div className="mt-10 flex justify-center">
+            <h2 className="mt-10 text-xl sm:text-2xl md:text-3xl font-bold text-center text-foreground">
+              Buche deinen Transporter
+            </h2>
+
+            <div className="mt-6 flex justify-center">
               <button
                 disabled={!canProceedStep0}
                 onClick={() => setStep(1)}
