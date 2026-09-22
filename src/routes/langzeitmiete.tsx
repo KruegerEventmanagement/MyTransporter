@@ -13,6 +13,9 @@ import {
 } from "@/lib/long-term";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
+import { VideoBackground } from "@/components/VideoBackground";
+import fotorVideo from "@/assets/videos/mytransporter-fotor.mp4.asset.json";
+import fotorPoster from "@/assets/videos/mytransporter-fotor-poster.jpg.asset.json";
 
 export const Route = createFileRoute("/langzeitmiete")({
   head: () => ({
@@ -51,8 +54,15 @@ function LangzeitmietePage() {
   
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative isolate min-h-screen overflow-x-hidden bg-background">
+      <VideoBackground
+        src={fotorVideo.url}
+        poster={fotorPoster.url}
+        title="MyTransporter Langzeitmiete Video"
+        fit="contain"
+      />
       <Navbar />
+      <div className="relative z-10">
       <AdRails>
       <main className="max-w-5xl mx-auto px-4 pt-20 pb-16">
         <header className="text-center max-w-2xl mx-auto">
@@ -248,6 +258,7 @@ function LangzeitmietePage() {
         </div>
       </main>
       </AdRails>
+      </div>
     </div>
   );
 }

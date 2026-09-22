@@ -15,6 +15,9 @@ import { PartnerInquiryForm } from "@/components/partner/PartnerInquiryForm";
 import type { PartnerPackageId } from "@/lib/partner-packages";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
+import { VideoBackground } from "@/components/VideoBackground";
+import egyptVideo from "@/assets/videos/mytransporter-egypt.mp4.asset.json";
+import egyptPoster from "@/assets/videos/mytransporter-egypt-poster.jpg.asset.json";
 
 export const Route = createFileRoute("/werbung")({
   head: () => ({
@@ -52,8 +55,14 @@ function WerbungPage() {
   };
 
   return (
-    <main className="min-h-screen bg-background pt-12">
+    <main className="relative isolate min-h-screen overflow-x-hidden bg-background pt-12">
+      <VideoBackground
+        src={egyptVideo.url}
+        poster={egyptPoster.url}
+        title="MyTransporter Werbefläche Video"
+      />
       <Navbar />
+      <div className="relative z-10">
       <AdRails>
 
       {/* Back link */}
@@ -315,6 +324,7 @@ function WerbungPage() {
         </div>
       </footer>
     </AdRails>
+      </div>
     </main>
   );
 }
