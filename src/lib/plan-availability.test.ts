@@ -5,6 +5,7 @@ import { bookingWindowMs } from "@/lib/booking-window";
 import { getPlanById } from "@/lib/booking-rules";
 import {
   availableClassesForWindow,
+  isSelectedPlanStillValid,
   isWindowBookable,
   lowestAvailablePlanPrice,
   pickVehicleForWindow,
