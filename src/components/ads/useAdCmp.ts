@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from "react";
 import { subscribeAdConsent } from "@/lib/adsense-consent";
+import { resetAdSenseScriptLoad } from "@/components/ads/adsense-loader";
 import {
   areAdRequestsAllowed,
   bootstrapAdConsentCmp,
@@ -25,6 +26,7 @@ export function useAdCmpBootstrap(suppressed: boolean): void {
       // Unterdrückung: sofort pausieren und Listener/Timer abbauen, damit
       // veraltete Callbacks nichts mehr freigeben können.
       teardownAdConsentCmp();
+      resetAdSenseScriptLoad();
       return;
     }
     bootstrapAdConsentCmp({ pathname: window.location.pathname, suppressed: false });
@@ -32,6 +34,7 @@ export function useAdCmpBootstrap(suppressed: boolean): void {
       // Route-/Unterdrückungswechsel: Anfragen anhalten und abbauen.
       pauseAdRequests();
       teardownAdConsentCmp();
+      resetAdSenseScriptLoad();
     };
   }, [suppressed]);
 }
