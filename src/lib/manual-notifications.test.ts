@@ -40,6 +40,7 @@ const RAW = {
 };
 
 const SENSITIVE = [
+  "Abholung an der Werkstatt",
   "1990-05-04",
   "L01X00T47",
   "B072RRE2I55",
@@ -117,6 +118,8 @@ function makeRow(over: Partial<OutboxRow> = {}): OutboxRow {
     payload: RAW,
     attempts: 1,
     push_sent_at: null,
+    mail_sent_at: null,
+    lease_token: "lease-a",
     ...over,
   };
 }
@@ -125,11 +128,12 @@ function makeDeps(rows: OutboxRow[], over: Partial<OutboxDeps> = {}) {
   const claim = vi.fn(async () => rows.splice(0, rows.length));
   return {
     claim,
-    complete: vi.fn(async () => {}),
-    markPushed: vi.fn(async () => {}),
-    fail: vi.fn(async () => {}),
+    complete: vi.fn(async () => true),
+    markMailed: vi.fn(async () => true),
+    markPushed: vi.fn(async () => true),
+    fail: vi.fn(async () => true),
     sendMail: vi.fn(async () => true),
-    push: vi.fn(async () => ({ sent: 1 })),
+    push: vi.fn(async () => ({ sent: 1, skipped: false })),
     ...over,
   } satisfies OutboxDeps;
 }
@@ -146,7 +150,8 @@ describe("Benachrichtigungslauf", () => {
           idempotencyKey: manualNotificationIdempotencyKey(RAW.reservation_id, kind, 3),
         }),
       );
-      expect(deps.complete).toHaveBeenCalledWith("row-1", true);
+      expect(deps.markMailed).toHaveBeenCalledWith("row-1", "lease-a");
+      expect(deps.complete).toHaveBeenCalledWith("row-1", true, "lease-a");
       expect(deps.fail).not.toHaveBeenCalled();
     }
   });
@@ -156,18 +161,39 @@ describe("Benachrichtigungslauf", () => {
     const res = await runManualNotificationOutbox(deps);
     expect(res.failed).toBe(1);
     expect(deps.complete).not.toHaveBeenCalled();
-    expect(deps.fail).toHaveBeenCalledWith("row-1", expect.any(String), 600);
+    expect(deps.fail).toHaveBeenCalledWith("row-1", expect.any(String), 600, "lease-a");
     expect(deps.push).not.toHaveBeenCalled();
+  });
+
+  it("wertet einen Push ohne Empfänger (sent: 0) als Fehler", async () => {
+    const deps = makeDeps([makeRow()], {
+      push: vi.fn(async () => ({ sent: 0, skipped: true })),
+    });
+    const res = await runManualNotificationOutbox(deps);
+    expect(res.pushed).toBe(0);
+    expect(res.failed).toBe(1);
+    expect(deps.markPushed).not.toHaveBeenCalled();
+    expect(deps.complete).not.toHaveBeenCalled();
+    expect(deps.fail).toHaveBeenCalledWith("row-1", expect.any(String), 300, "lease-a");
+  });
+
+  it("wiederholt nach Push-Fehler nur den Push, nicht die Mail", async () => {
+    const deps = makeDeps([makeRow({ mail_sent_at: "2026-06-02T10:00:00Z", attempts: 2 })]);
+    const res = await runManualNotificationOutbox(deps);
+    expect(deps.sendMail).not.toHaveBeenCalled();
+    expect(res.sent).toBe(0);
+    expect(res.pushed).toBe(1);
+    expect(deps.complete).toHaveBeenCalledWith("row-1", true, "lease-a");
   });
 
   it("pusht nur einmal pro Ereignis, auch bei Mail-Wiederholung", async () => {
     const deps = makeDeps([makeRow({ push_sent_at: "2026-06-02T10:00:00Z", attempts: 2 })]);
     await runManualNotificationOutbox(deps);
     expect(deps.push).not.toHaveBeenCalled();
-    expect(deps.complete).toHaveBeenCalledWith("row-1", false);
+    expect(deps.complete).toHaveBeenCalledWith("row-1", true, "lease-a");
   });
 
-  it("lässt einen Push-Fehler die gesendete Mail nicht entwerten", async () => {
+  it("hält einen Push-Fehler retrybar, ohne die Mail zu entwerten", async () => {
     const deps = makeDeps([makeRow()], {
       push: vi.fn(async () => {
         throw new Error("no subscription");
@@ -175,7 +201,23 @@ describe("Benachrichtigungslauf", () => {
     });
     const res = await runManualNotificationOutbox(deps);
     expect(res.sent).toBe(1);
-    expect(deps.complete).toHaveBeenCalledWith("row-1", false);
+    expect(res.failed).toBe(1);
+    expect(deps.markMailed).toHaveBeenCalled();
+    expect(deps.complete).not.toHaveBeenCalled();
+    expect(deps.fail).toHaveBeenCalledWith(
+      "row-1",
+      expect.stringContaining("Push"),
+      300,
+      "lease-a",
+    );
+  });
+
+  it("erkennt eine verlorene Lease und finalisiert nicht mehr", async () => {
+    const deps = makeDeps([makeRow()], { markMailed: vi.fn(async () => false) });
+    const res = await runManualNotificationOutbox(deps);
+    expect(res.lost_lease).toBe(1);
+    expect(deps.complete).not.toHaveBeenCalled();
+    expect(deps.push).not.toHaveBeenCalled();
   });
 
   it("verarbeitet jedes Ereignis nur einmal (paralleler zweiter Lauf leer)", async () => {
@@ -195,5 +237,15 @@ describe("Benachrichtigungslauf", () => {
     expect(res.failed).toBe(1);
     expect(deps.sendMail).not.toHaveBeenCalled();
     expect(deps.fail).toHaveBeenCalled();
+  });
+
+  it("propagiert Datenbankfehler aus fail() nicht als stiller Erfolg", async () => {
+    const deps = makeDeps([makeRow()], {
+      sendMail: vi.fn(async () => false),
+      fail: vi.fn(async () => {
+        throw new Error("rpc down");
+      }),
+    });
+    await expect(runManualNotificationOutbox(deps)).rejects.toThrow("rpc down");
   });
 });
