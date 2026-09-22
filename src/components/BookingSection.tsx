@@ -215,43 +215,68 @@ export function BookingSection() {
   const [busyLoading, setBusyLoading] = useState(true);
   const [vehiclesLoaded, setVehiclesLoaded] = useState(false);
   const [vehiclesError, setVehiclesError] = useState(false);
+  const [vehiclesLoading, setVehiclesLoading] = useState(true);
 
-  const refreshBusySlots = () => {
+  // Request-Reihenfolge: alte Antworten dürfen frische Daten nicht überschreiben.
+  const busySeqRef = useRef(0);
+  const vehiclesSeqRef = useRef(0);
+
+  const refreshBusySlots = useCallback(() => {
+    const seq = ++busySeqRef.current;
     setBusyLoading(true);
     getBusySlots()
       .then((slots) => {
+        if (seq !== busySeqRef.current) return;
         setBusySlots(slots);
         setBusyError(false);
       })
       .catch((e) => {
         console.warn("Belegte Slots konnten nicht geladen werden:", e);
-        setBusyError(true);
-      })
-      .finally(() => setBusyLoading(false));
-  };
-
-  useEffect(() => {
-    let alive = true;
-    setBusyLoading(true);
-    getBusySlots()
-      .then((slots) => {
-        if (!alive) return;
-        setBusySlots(slots);
-        setBusyError(false);
-      })
-      .catch((e) => {
-        console.warn("Belegte Slots konnten nicht geladen werden:", e);
-        if (alive) setBusyError(true);
+        if (seq === busySeqRef.current) setBusyError(true);
       })
       .finally(() => {
-        if (alive) setBusyLoading(false);
+        if (seq === busySeqRef.current) setBusyLoading(false);
       });
-    return () => {
-      alive = false;
-    };
   }, []);
 
-  // Nach jedem Schritt neu laden, damit frische Holds/Buchungen sofort greifen
+  const refreshVehicles = useCallback(() => {
+    const seq = ++vehiclesSeqRef.current;
+    setVehiclesLoading(true);
+    supabase
+      .from("vehicles")
+      .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address")
+      .order("created_at", { ascending: true })
+      .then(({ data, error }) => {
+        if (seq !== vehiclesSeqRef.current) return;
+        if (error || !data) {
+          setVehiclesError(true);
+          return;
+        }
+        // Freigegebene Fahrzeuge zuerst, gesperrte danach (sichtbar, aber nicht buchbar)
+        const list = [...(data as DbVehicle[])].sort(
+          (a, b) => Number(b.is_active) - Number(a.is_active),
+        );
+        setVehicles(list);
+        setVehiclesError(false);
+        setVehiclesLoaded(true);
+      })
+      .catch((e) => {
+        console.warn("Fahrzeuge konnten nicht geladen werden:", e);
+        if (seq === vehiclesSeqRef.current) setVehiclesError(true);
+      })
+      .finally(() => {
+        if (seq === vehiclesSeqRef.current) setVehiclesLoading(false);
+      });
+  }, []);
+
+  /** Verfügbarkeit erneut prüfen: immer BEIDE Quellen. */
+  const retryAvailability = useCallback(() => {
+    refreshBusySlots();
+    refreshVehicles();
+  }, [refreshBusySlots, refreshVehicles]);
+
+  // Beim Einstieg und nach jedem Schritt neu laden, damit frische Holds/Buchungen greifen.
+  // (Kein zusätzlicher Mount-Fetch – dieser Effekt läuft beim ersten Render mit step 0.)
   useEffect(() => {
     if (step <= 2) refreshBusySlots();
     // eslint-disable-next-line react-hooks/exhaustive-deps
