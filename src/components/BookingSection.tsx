@@ -208,19 +208,42 @@ export function BookingSection() {
   const addonsTotal = sumAddonsEur(selectedAddonIds);
 
 
+  // Ladefehler müssen sichtbar sein: lieber "nicht prüfbar" als falsche Verfügbarkeit.
+  const [busyError, setBusyError] = useState(false);
+  const [busyLoading, setBusyLoading] = useState(true);
+  const [vehiclesLoaded, setVehiclesLoaded] = useState(false);
+  const [vehiclesError, setVehiclesError] = useState(false);
+
   const refreshBusySlots = () => {
+    setBusyLoading(true);
     getBusySlots()
-      .then(setBusySlots)
-      .catch((e) => console.warn("Belegte Slots konnten nicht geladen werden:", e));
+      .then((slots) => {
+        setBusySlots(slots);
+        setBusyError(false);
+      })
+      .catch((e) => {
+        console.warn("Belegte Slots konnten nicht geladen werden:", e);
+        setBusyError(true);
+      })
+      .finally(() => setBusyLoading(false));
   };
 
   useEffect(() => {
     let alive = true;
+    setBusyLoading(true);
     getBusySlots()
       .then((slots) => {
-        if (alive) setBusySlots(slots);
+        if (!alive) return;
+        setBusySlots(slots);
+        setBusyError(false);
       })
-      .catch((e) => console.warn("Belegte Slots konnten nicht geladen werden:", e));
+      .catch((e) => {
+        console.warn("Belegte Slots konnten nicht geladen werden:", e);
+        if (alive) setBusyError(true);
+      })
+      .finally(() => {
+        if (alive) setBusyLoading(false);
+      });
     return () => {
       alive = false;
     };
