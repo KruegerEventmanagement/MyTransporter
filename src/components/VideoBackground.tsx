@@ -173,7 +173,7 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
 
   return (
     <>
-      {enabled && !hasError && (
+      {enabled && (
         <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
           <video
             ref={videoRef}
@@ -194,7 +194,7 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
       )}
 
       <div className="fixed right-2 top-16 z-30 flex flex-col overflow-hidden rounded-2xl border border-border bg-background/90 text-foreground shadow-lg backdrop-blur-md sm:right-4 sm:top-20">
-        {enabled && !hasError && (
+        {enabled && (
           <Button
             type="button"
             variant="ghost"
@@ -223,7 +223,7 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
           <Power className="h-4 w-4" />
           <span>{enabled ? "Video aus" : "Video an"}</span>
         </Button>
-        {enabled && !hasError && (
+        {enabled && (
           <Button
             type="button"
             variant="ghost"
@@ -235,7 +235,7 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
             <span>{muted ? "Ton an" : "Ton aus"}</span>
           </Button>
         )}
-        {hasError && (
+        {enabled && hasError && (
           <p className="max-w-36 border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
             Video {statusText}
           </p>
