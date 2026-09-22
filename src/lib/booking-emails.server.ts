@@ -2,6 +2,14 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computePlanReturn } from "@/lib/booking-rules";
 import { pushToAdmins } from "@/lib/push.functions";
 import { renderEmail, noteBlock, listBlock, rawListBlock, esc } from "@/lib/email-template";
+import { bookingWindowMs } from "@/lib/booking-window";
+import {
+  formatBerlin,
+  LABEL_BOOKING_ID,
+  LABEL_EVENT,
+  LABEL_SOURCE_TYPE,
+  ONLINE_SOURCE_TYPE,
+} from "@/lib/manual-notifications";
 
 const DEFAULT_FROM = "MyTransporter <info@mytransporter.org>";
 const DEFAULT_ADMIN_EMAIL = "info@mytransporter.org";
@@ -365,7 +373,7 @@ export async function sendAdminBookingNotificationImpl(data: {
   const { data: booking } = await supabaseAdmin
     .from("bookings")
     .select(
-      "id, user_id, vehicle_name, vehicle_plate, plan_label, plan_price, start_date, start_hour, pickup_code, addons, addons_total_cents",
+      "id, user_id, vehicle_name, vehicle_plate, plan_id, plan_label, plan_price, start_date, start_hour, pickup_code, addons, addons_total_cents",
     )
     .eq("id", data.bookingId)
     .maybeSingle();
@@ -378,6 +386,10 @@ export async function sendAdminBookingNotificationImpl(data: {
     .maybeSingle();
 
   const startStr = fmtDate(booking.start_date, booking.start_hour);
+  // Explizite Start-/Endzeit aus der gemeinsamen Buchungsfenster-Logik (DST-sicher)
+  const windowMs = bookingWindowMs(booking.plan_id, booking.start_date, booking.start_hour);
+  const startIso = new Date(windowMs.start).toISOString();
+  const endIso = new Date(windowMs.end).toISOString();
   const customerName =
     [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Unbekannt";
   const addons = Array.isArray(booking.addons)
@@ -402,6 +414,15 @@ export async function sendAdminBookingNotificationImpl(data: {
           <tr><td style="padding:6px 0;color:#666;">Abholung</td><td><strong>${startStr} Uhr</strong></td></tr>
           <tr><td style="padding:6px 0;color:#666;">Abhol-Code</td><td><code style="background:#f5f5f5;padding:2px 6px;border-radius:4px;">${escapeHtml(booking.pickup_code)}</code></td></tr>
           <tr><td style="padding:6px 0;color:#666;">Zubehör</td><td>${addonsHtml}</td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Beginn (Europe/Berlin)</td><td><strong>${escapeHtml(formatBerlin(startIso))} Uhr</strong></td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Ende (Europe/Berlin)</td><td><strong>${escapeHtml(formatBerlin(endIso))} Uhr</strong></td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Beginn (ISO)</td><td><code>${escapeHtml(startIso)}</code></td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Ende (ISO)</td><td><code>${escapeHtml(endIso)}</code></td></tr>
+        </table>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;color:#666;margin-top:16px;">
+          <tr><td style="padding:4px 0;width:210px;">${escapeHtml(LABEL_SOURCE_TYPE)}</td><td>${escapeHtml(ONLINE_SOURCE_TYPE)}</td></tr>
+          <tr><td style="padding:4px 0;">${escapeHtml(LABEL_BOOKING_ID)}</td><td><code>${escapeHtml(booking.id)}</code></td></tr>
+          <tr><td style="padding:4px 0;">${escapeHtml(LABEL_EVENT)}</td><td>created</td></tr>
         </table>
         <p style="margin:24px 0;">
           <a href="https://www.mytransporter.org/admin" style="background:#000;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:600;display:inline-block;">Im Admin öffnen</a>
