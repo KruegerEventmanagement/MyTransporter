@@ -65,7 +65,7 @@ function LangzeitmietePage() {
       <div className="relative z-10">
       <AdRails>
       <main className="max-w-5xl mx-auto px-4 pt-20 pb-16">
-        <header className="text-center max-w-2xl mx-auto">
+        <header className="text-center max-w-2xl mx-auto rounded-3xl bg-background/90 backdrop-blur-md px-6 py-8 sm:px-10">
           <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
             Langzeitmiete
           </h1>

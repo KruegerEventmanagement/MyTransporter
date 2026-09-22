@@ -79,19 +79,21 @@ function WerbungPage() {
       {/* Hero */}
       <section className="px-4 pt-8 pb-12">
         <div className="max-w-3xl mx-auto text-center">
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-secondary text-foreground border border-border">
-            <Megaphone className="w-3 h-3" />
-            Werbefläche am Transporter mieten
-          </span>
-          <h1 className="mt-4 text-3xl md:text-5xl font-bold text-foreground animate-fade-in-up">
-            Ihre Werbung durch die gesamte Region
-          </h1>
-          <p className="mt-4 text-base md:text-lg text-muted-foreground leading-relaxed animate-fade-in-up animate-delay-200">
-            MyTransporter ist täglich unterwegs: Leonberg, Stuttgart, Böblingen, Sindelfingen,
-            Ludwigsburg – auf Wunsch Baden-Württemberg- und deutschlandweit. Ihre Werbung fährt mit
-            und wird bei Veranstaltungen, am Baumarkt, beim IKEA, vor Cafés und in Wohngebieten
-            gesehen. Schon ab 29 € netto im Monat.
-          </p>
+          <div className="rounded-3xl bg-background/90 backdrop-blur-md px-6 py-8 sm:px-10">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-secondary text-foreground border border-border">
+              <Megaphone className="w-3 h-3" />
+              Werbefläche am Transporter mieten
+            </span>
+            <h1 className="mt-4 text-3xl md:text-5xl font-bold text-foreground animate-fade-in-up">
+              Ihre Werbung durch die gesamte Region
+            </h1>
+            <p className="mt-4 text-base md:text-lg text-muted-foreground leading-relaxed animate-fade-in-up animate-delay-200">
+              MyTransporter ist täglich unterwegs: Leonberg, Stuttgart, Böblingen, Sindelfingen,
+              Ludwigsburg – auf Wunsch Baden-Württemberg- und deutschlandweit. Ihre Werbung fährt mit
+              und wird bei Veranstaltungen, am Baumarkt, beim IKEA, vor Cafés und in Wohngebieten
+              gesehen. Schon ab 29 € netto im Monat.
+            </p>
+          </div>
           <div className="mt-5 grid sm:grid-cols-3 gap-2 text-left">
             {[
               { icon: MapPin, t: "Ganze Region", d: "Leonberg, Stuttgart & Umgebung, auf Wunsch bundesweit" },
@@ -125,15 +127,17 @@ function WerbungPage() {
       {/* Warum Fahrzeugwerbung wirkt */}
       <section className="px-4 pb-16">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center">
-            Warum Werbung am Fahrzeug so gut wirkt
-          </h2>
-          <p className="mt-3 text-center text-muted-foreground max-w-2xl mx-auto">
-            Ein Motiv, das man immer wieder auf einem fahrenden oder parkenden Transporter sieht,
-            bleibt stärker hängen als eine einzelne Anzeige. Dieser Wiederholungseffekt sorgt dafür,
-            dass Ihr Name unterbewusst gelernt und später wiedererkannt wird – genau dann, wenn
-            jemand Ihre Leistung braucht.
-          </p>
+          <div className="rounded-3xl bg-background/90 backdrop-blur-md px-6 py-8 sm:px-10 text-center">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+              Warum Werbung am Fahrzeug so gut wirkt
+            </h2>
+            <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
+              Ein Motiv, das man immer wieder auf einem fahrenden oder parkenden Transporter sieht,
+              bleibt stärker hängen als eine einzelne Anzeige. Dieser Wiederholungseffekt sorgt dafür,
+              dass Ihr Name unterbewusst gelernt und später wiedererkannt wird – genau dann, wenn
+              jemand Ihre Leistung braucht.
+            </p>
+          </div>
           <div className="mt-8 grid sm:grid-cols-3 gap-4">
             {[
               {

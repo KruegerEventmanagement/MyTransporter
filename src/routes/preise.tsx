@@ -87,6 +87,7 @@ function PreisePage() {
 
       <section className="pt-10 pb-2 px-4">
         <div className="max-w-3xl mx-auto text-center">
+            <div className="rounded-3xl bg-background/90 backdrop-blur-md px-6 py-8 sm:px-10">
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground">
             Transporter mieten – Tarife &amp; Preise ab {MIN_PRICE} €
           </h1>
@@ -98,6 +99,7 @@ function PreisePage() {
             rund {L5H2_SURCHARGE_EUR} € mehr.
 
           </p>
+            </div>
           <p className="mt-4 inline-block rounded-xl border-2 border-foreground bg-secondary/40 px-4 py-3 text-sm font-medium text-foreground">
             Viele Freikilometer und maximal 1.000 € Selbstbeteiligung bereits inklusive –
             ohne kostenpflichtiges Schutzpaket.
