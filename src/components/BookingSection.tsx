@@ -332,13 +332,19 @@ export function BookingSection() {
       .from("vehicles")
       .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address")
       .order("created_at", { ascending: true })
-      .then(({ data }) => {
-        if (!alive || !data) return;
+      .then(({ data, error }) => {
+        if (!alive) return;
+        if (error || !data) {
+          setVehiclesError(true);
+          return;
+        }
         // Freigegebene Fahrzeuge zuerst, gesperrte danach (sichtbar, aber nicht buchbar)
         const list = [...(data as DbVehicle[])].sort(
           (a, b) => Number(b.is_active) - Number(a.is_active),
         );
         setVehicles(list);
+        setVehiclesError(false);
+        setVehiclesLoaded(true);
       });
     return () => {
       alive = false;
