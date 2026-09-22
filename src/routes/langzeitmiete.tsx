@@ -60,7 +60,6 @@ function LangzeitmietePage() {
         poster={fotorPoster.url}
         title="MyTransporter Langzeitmiete Video"
         fit="contain"
-        mobileControlsOffset="navbar"
       />
       <Navbar />
       <div className="relative z-10">
