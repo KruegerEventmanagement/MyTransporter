@@ -151,7 +151,7 @@ describe("Microsoft UET Loader", () => {
     grantMicrosoftUetConsent();
     // Noch nicht initialisiert: alles steckt in der flachen Roh-Queue.
     expect(ctorOpts).toBeNull();
-    expect(rawQueue()).toContain("granted" in {} ? "" : "consent");
+    expect(rawQueue()).toContain("consent");
 
     await Promise.resolve();
     expect((ctorOpts as unknown as { q: unknown[] }).q).toEqual([
