@@ -153,3 +153,28 @@ describe("Zeitraum-Navigation (Datum/Uhrzeit/Rückgabe)", () => {
     ]);
   });
 });
+
+describe("isSelectedPlanStillValid (Refresh-/Fehlerpfade)", () => {
+  const fleet: VehicleLite[] = [
+    { plate: "LEO MY 102", isActive: true, vehicleClass: "l1h1" },
+    { plate: "LEO MY 101", isActive: true, vehicleClass: "l4h2" },
+  ];
+  const win = { start: Date.UTC(2026, 8, 25, 8), end: Date.UTC(2026, 8, 25, 11) };
+
+  it("behält die Auswahl, wenn ein Fahrzeug im Fenster frei ist", () => {
+    const map = new Map([["LEO MY 101", [{ start: win.start, end: win.end }]]]);
+    expect(isSelectedPlanStillValid(map, fleet, win)).toBe(true);
+  });
+
+  it("behält die Auswahl ohne prüfbares Fenster (z. B. Rücksprung)", () => {
+    expect(isSelectedPlanStillValid(new Map(), fleet, null)).toBe(true);
+  });
+
+  it("verwirft die Auswahl nur, wenn frische Daten alle Fahrzeuge belegt zeigen", () => {
+    const map = new Map([
+      ["LEO MY 101", [{ start: win.start, end: win.end }]],
+      ["LEO MY 102", [{ start: win.start, end: win.end }]],
+    ]);
+    expect(isSelectedPlanStillValid(map, fleet, win)).toBe(false);
+  });
+});
