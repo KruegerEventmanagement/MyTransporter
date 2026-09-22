@@ -34,6 +34,7 @@ import {
 } from "@/lib/availability-logic";
 import {
   availableClassesForWindow,
+  isSelectedPlanStillValid,
   isWindowBookable,
   lowestAvailablePlanPrice,
   pickVehicleForWindow,
