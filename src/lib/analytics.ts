@@ -9,6 +9,13 @@
  */
 
 import { ensureMetaPixel, metaTrack } from "./meta-pixel";
+import {
+  ensureMicrosoftUet,
+  grantMicrosoftUetConsent,
+  resetMicrosoftUetForWithdrawal,
+  setMicrosoftUetDefaultDenied,
+  uetTrackBooking,
+} from "./microsoft-uet";
 
 export const GOOGLE_ADS_ID = "AW-18092739278";
 
@@ -61,8 +68,13 @@ export function setConsent(choice: ConsentChoice): void {
   if (choice === "marketing") {
     ensureGoogleTag();
     ensureMetaPixel();
+    // Microsoft UET: Default „denied“ vor dem Laden, danach „granted“.
+    setMicrosoftUetDefaultDenied();
+    ensureMicrosoftUet();
+    grantMicrosoftUetConsent();
     applyConsent(true);
   } else {
+    resetMicrosoftUetForWithdrawal();
     applyConsent(false);
   }
   listeners.forEach((fn) => fn(choice));
@@ -242,6 +254,16 @@ export function trackPurchase(purchase: VerifiedPurchase): void {
     pendingPurchase = purchase;
     return;
   }
+  // Microsoft UET Buchungs-Conversion – eigene, stabile Deduplizierung.
+  uetTrackBooking(
+    {
+      paid: true,
+      transactionId: purchase.transactionId,
+      revenueEur: purchase.conversionValueEur,
+    },
+    true,
+  );
+
   if (sentThisSession.has(purchase.transactionId) || alreadySent(purchase.transactionId)) return;
 
   sentThisSession.add(purchase.transactionId);
