@@ -32,6 +32,13 @@ import {
   isDayBookable,
   anyPlateFreeForWindows,
 } from "@/lib/availability-logic";
+import {
+  availableClassesForWindow,
+  isWindowBookable,
+  lowestAvailablePlanPrice,
+  pickVehicleForWindow,
+  type VehicleLite,
+} from "@/lib/plan-availability";
 
 import {
   computePlanReturn,
