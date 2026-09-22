@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AdRails } from "@/components/ads/AdRails";
+import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
 const FAQS = [
   {
@@ -150,6 +151,9 @@ function FaqPage() {
             und gesamtes Baden-Württemberg.
           </p>
         </section>
+        <div className="mt-10 flex justify-center text-sm text-muted-foreground">
+          <AdConsentRevokeButton />
+        </div>
       </div>
     </AdRails>
     </main>

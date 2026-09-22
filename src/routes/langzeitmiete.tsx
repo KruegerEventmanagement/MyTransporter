@@ -12,6 +12,7 @@ import {
   weeklyBasePriceEur,
 } from "@/lib/long-term";
 import { AdRails } from "@/components/ads/AdRails";
+import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
 export const Route = createFileRoute("/langzeitmiete")({
   head: () => ({
@@ -242,6 +243,9 @@ function LangzeitmietePage() {
             </div>
           ))}
         </section>
+        <div className="mt-10 flex justify-center text-sm text-muted-foreground">
+          <AdConsentRevokeButton />
+        </div>
       </main>
       </AdRails>
     </div>
