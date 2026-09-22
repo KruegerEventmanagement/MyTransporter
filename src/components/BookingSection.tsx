@@ -1335,14 +1335,19 @@ export function BookingSection() {
                 </button>
                 );
               })}
-              {availabilityUnknown && !busyLoading && (
+              {availabilityLoading && (
+                <div className="p-6 rounded-2xl border border-border bg-secondary text-center text-sm text-muted-foreground">
+                  Verfügbarkeit wird geprüft…
+                </div>
+              )}
+              {!availabilityLoading && (availabilityError || !vehiclesLoaded) && (
                 <div className="p-6 rounded-2xl border border-border bg-secondary text-center text-sm text-muted-foreground">
                   <p className="mb-3 text-foreground">
                     Die Verfügbarkeit konnte gerade nicht geladen werden. Bitte versuche es erneut.
                   </p>
                   <button
                     type="button"
-                    onClick={refreshBusySlots}
+                    onClick={retryAvailability}
                     className="min-h-[44px] px-5 rounded-full bg-foreground text-background text-sm font-medium"
                   >
                     Erneut versuchen
