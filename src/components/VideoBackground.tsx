@@ -125,7 +125,7 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
 
   const togglePause = async () => {
     const video = videoRef.current;
-    if (!video || !enabled || hasError) return;
+    if (!video || !enabled) return;
 
     if (video.paused) {
       explicitPausedRef.current = false;
@@ -157,7 +157,7 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
 
   const toggleMuted = async () => {
     const video = videoRef.current;
-    if (!video || !enabled || hasError) return;
+    if (!video || !enabled) return;
 
     const nextMuted = !video.muted;
     video.muted = nextMuted;
