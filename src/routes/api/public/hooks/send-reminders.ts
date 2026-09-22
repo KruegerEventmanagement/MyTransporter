@@ -278,6 +278,19 @@ export const Route = createFileRoute("/api/public/hooks/send-reminders")({
           const r30 = await processBatch("30min");
           const m24 = await processManualBatch("24h");
           const m30 = await processManualBatch("30min");
+
+          // Wiederholung offener Owner-Benachrichtigungen zu manuellen Terminen.
+          let outbox: unknown = { skipped: true };
+          try {
+            const { processManualNotificationOutbox } = await import(
+              "@/lib/manual-notifications.server"
+            );
+            outbox = await processManualNotificationOutbox({ limit: 25 });
+          } catch (e) {
+            console.error("manual notification outbox failed", e);
+            outbox = { error: String(e) };
+          }
+
           return new Response(
             JSON.stringify({
               ok: true,
@@ -285,6 +298,7 @@ export const Route = createFileRoute("/api/public/hooks/send-reminders")({
               reminders_30min: r30,
               manual_24h: m24,
               manual_30min: m30,
+              manual_notifications: outbox,
             }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );

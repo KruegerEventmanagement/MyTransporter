@@ -32,6 +32,7 @@ import { Route as ApiPublicResendBookingMailsRouteImport } from './routes/api/pu
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
 import { Route as ApiPublicHooksSendBirthdayEmailsRouteImport } from './routes/api/public/hooks/send-birthday-emails'
+import { Route as ApiPublicHooksProcessManualNotificationsRouteImport } from './routes/api/public/hooks/process-manual-notifications'
 import { Route as ApiPublicHooksNotifyAdminRouteImport } from './routes/api/public/hooks/notify-admin'
 import { Route as ApiPublicHealthAutomationsRouteImport } from './routes/api/public/health/automations'
 
@@ -155,6 +156,12 @@ const ApiPublicHooksSendBirthdayEmailsRoute =
     path: '/api/public/hooks/send-birthday-emails',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksProcessManualNotificationsRoute =
+  ApiPublicHooksProcessManualNotificationsRouteImport.update({
+    id: '/api/public/hooks/process-manual-notifications',
+    path: '/api/public/hooks/process-manual-notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksNotifyAdminRoute =
   ApiPublicHooksNotifyAdminRouteImport.update({
     id: '/api/public/hooks/notify-admin',
@@ -191,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
+  '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -218,6 +226,7 @@ export interface FileRoutesByTo {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
+  '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -246,6 +255,7 @@ export interface FileRoutesById {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
+  '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
+    | '/api/public/hooks/process-manual-notifications'
     | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
     | '/api/public/payments/webhook'
@@ -302,6 +313,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
+    | '/api/public/hooks/process-manual-notifications'
     | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
     | '/api/public/payments/webhook'
@@ -329,6 +341,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
+    | '/api/public/hooks/process-manual-notifications'
     | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
     | '/api/public/payments/webhook'
@@ -357,6 +370,7 @@ export interface RootRouteChildren {
   ApiPublicSendTestInvoiceRoute: typeof ApiPublicSendTestInvoiceRoute
   ApiPublicHealthAutomationsRoute: typeof ApiPublicHealthAutomationsRoute
   ApiPublicHooksNotifyAdminRoute: typeof ApiPublicHooksNotifyAdminRoute
+  ApiPublicHooksProcessManualNotificationsRoute: typeof ApiPublicHooksProcessManualNotificationsRoute
   ApiPublicHooksSendBirthdayEmailsRoute: typeof ApiPublicHooksSendBirthdayEmailsRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -525,6 +539,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSendBirthdayEmailsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-manual-notifications': {
+      id: '/api/public/hooks/process-manual-notifications'
+      path: '/api/public/hooks/process-manual-notifications'
+      fullPath: '/api/public/hooks/process-manual-notifications'
+      preLoaderRoute: typeof ApiPublicHooksProcessManualNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/notify-admin': {
       id: '/api/public/hooks/notify-admin'
       path: '/api/public/hooks/notify-admin'
@@ -565,6 +586,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSendTestInvoiceRoute: ApiPublicSendTestInvoiceRoute,
   ApiPublicHealthAutomationsRoute: ApiPublicHealthAutomationsRoute,
   ApiPublicHooksNotifyAdminRoute: ApiPublicHooksNotifyAdminRoute,
+  ApiPublicHooksProcessManualNotificationsRoute:
+    ApiPublicHooksProcessManualNotificationsRoute,
   ApiPublicHooksSendBirthdayEmailsRoute: ApiPublicHooksSendBirthdayEmailsRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
