@@ -79,9 +79,9 @@ function Index() {
       <Navbar />
       <AdRails>
         <HeroSection />
-        <SocialBanner />
-        <h1 className="sr-only">Transporter mieten in Leonberg &amp; Stuttgart ab 49 € – Umzug, Möbeltransport &amp; Baumarkt</h1>
+        <h1 className="sr-only">Transporter mieten in Leonberg & Stuttgart ab 49 € – Umzug, Möbeltransport & Baumarkt</h1>
         <BookingSection />
+        <SocialBanner />
       </AdRails>
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
         <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>

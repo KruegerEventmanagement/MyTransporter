@@ -36,8 +36,8 @@ const LINKS = [
 
 export function SocialBanner() {
   return (
-    <section className="px-4 pb-6 pt-2" aria-label="Social Media">
-      <div className="mx-auto max-w-3xl rounded-2xl border border-foreground/15 bg-secondary/60 px-5 py-5 sm:px-6">
+    <section className="px-4 py-10" aria-label="Social Media">
+      <div className="mx-auto max-w-3xl">
         <h2 className="text-center text-sm font-bold uppercase tracking-wider text-foreground">
           Besuche uns auf Social Media
         </h2>
