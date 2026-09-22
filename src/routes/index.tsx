@@ -4,7 +4,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { BookingSection } from "@/components/BookingSection";
 import { Navbar } from "@/components/Navbar";
 
-import { AdBanner } from "@/components/AdBanner";
+import { SocialBanner } from "@/components/SocialBanner";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
