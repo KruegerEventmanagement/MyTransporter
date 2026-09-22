@@ -180,6 +180,8 @@ export function BookingSection() {
   const [resendError, setResendError] = useState<string | null>(null);
   const [profileComplete, setProfileComplete] = useState(false);
   const [vehicles, setVehicles] = useState<DbVehicle[]>([]);
+  /** Ausdrücklich vom Kunden gewähltes Fahrzeug (Kennzeichen) – hat Vorrang. */
+  const [explicitPlate, setExplicitPlate] = useState<string | null>(null);
   const [vehicleIdx, setVehicleIdx] = useState(0);
   const [busySlots, setBusySlots] = useState<BusySlot[]>([]);
   // Eigene 15-Minuten-Reservierung: darf die eigene Auswahl nicht blockieren.
