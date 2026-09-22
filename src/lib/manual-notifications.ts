@@ -35,7 +35,6 @@ export const ALLOWED_PAYLOAD_KEYS = [
   "customer_name",
   "customer_phone",
   "customer_email",
-  "note",
   "created_at",
   "updated_at",
 ] as const;
@@ -53,7 +52,6 @@ export type ManualNotificationPayload = {
   customer_name: string;
   customer_phone?: string | null;
   customer_email?: string | null;
-  note?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -168,7 +166,6 @@ export function buildManualNotificationEmail(args: {
       ${row("Ende (Europe/Berlin)", `<strong>${escapeHtml(formatBerlin(payload.end_at))} Uhr</strong>`)}
       ${row("Beginn (ISO)", `<code>${escapeHtml(payload.start_at)}</code>`)}
       ${row("Ende (ISO)", `<code>${escapeHtml(payload.end_at)}</code>`)}
-      ${row("Notiz", escapeHtml(payload.note ?? "-"))}
     </table>
     <table style="width:100%;border-collapse:collapse;font-size:12px;color:#666;margin-top:20px;">
       ${row(LABEL_SOURCE_TYPE, escapeHtml(MANUAL_SOURCE_TYPE))}
