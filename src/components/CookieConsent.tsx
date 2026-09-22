@@ -24,6 +24,7 @@ export function CookieConsent() {
     if (choice === "marketing" && hasMarketingConsent()) {
       ensureGoogleTag();
       ensureMetaPixel();
+      // lädt auch Microsoft UET (Default denied → granted)
       setConsent("marketing");
     }
     const reopen = () => setOpen(true);
