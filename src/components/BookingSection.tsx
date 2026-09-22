@@ -1213,6 +1213,10 @@ export function BookingSection() {
                 <div className="space-y-4">
                   {availablePlans.map((plan) => {
                 const planBlocked = isPlanUnavailable(plan.id);
+                // Nur Klassen, für die in genau diesem Zeitraum ein Fahrzeug frei ist
+                const planClasses =
+                  startHour === null ? [] : classesForWindow(windowFor(plan.id, startHour));
+                const planFromPrice = lowestAvailablePlanPrice(plan, planClasses) ?? plan.basePrice;
                 return (
                 <button
                   key={plan.id}
