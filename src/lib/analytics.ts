@@ -68,8 +68,13 @@ export function setConsent(choice: ConsentChoice): void {
   if (choice === "marketing") {
     ensureGoogleTag();
     ensureMetaPixel();
+    // Microsoft UET: Default „denied“ vor dem Laden, danach „granted“.
+    setMicrosoftUetDefaultDenied();
+    ensureMicrosoftUet();
+    grantMicrosoftUetConsent();
     applyConsent(true);
   } else {
+    resetMicrosoftUetForWithdrawal();
     applyConsent(false);
   }
   listeners.forEach((fn) => fn(choice));
