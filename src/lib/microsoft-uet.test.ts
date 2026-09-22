@@ -1,4 +1,7 @@
-// @vitest-environment jsdom
+/**
+ * Mock-Tests für Microsoft UET – ohne echte Netzwerkaufrufe und ohne
+ * echte Test-Conversion. Minimale DOM-Stubs (kein jsdom nötig).
+ */
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   ensureMicrosoftUet,
@@ -7,20 +10,39 @@ import {
   grantMicrosoftUetConsent,
   resetMicrosoftUetForWithdrawal,
   __resetUetForTests,
-  UET_SCRIPT_SRC,
   UET_BOOKING_ACTION,
 } from "./microsoft-uet";
 
+type FakeScript = { src: string; async: boolean; addEventListener: () => void };
+let scripts: FakeScript[] = [];
+
+function installDom(): void {
+  const store = new Map<string, string>();
+  const g = globalThis as unknown as Record<string, unknown>;
+  g.document = {
+    head: { appendChild: (el: FakeScript) => scripts.push(el) },
+    querySelector: (sel: string) => scripts.find((s) => s.src && sel.includes(s.src)) ?? null,
+    createElement: (): FakeScript => ({ src: "", async: false, addEventListener: () => {} }),
+  };
+  g.window = globalThis;
+  g.localStorage = {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => store.set(k, v),
+    removeItem: (k: string) => store.delete(k),
+    clear: () => store.clear(),
+  };
+}
+
 function pushes(): unknown[][] {
-  return (window.uetq as unknown[][]) ?? [];
+  return ((globalThis as unknown as { uetq?: unknown[][] }).uetq ?? []) as unknown[][];
 }
 
 beforeEach(() => {
   __resetUetForTests();
-  document.head.innerHTML = "";
-  window.localStorage.clear();
-  delete window.uetq;
-  delete window.UET;
+  scripts = [];
+  installDom();
+  delete (globalThis as unknown as { uetq?: unknown }).uetq;
+  delete (globalThis as unknown as { UET?: unknown }).UET;
 });
 
 describe("Microsoft UET Loader", () => {
