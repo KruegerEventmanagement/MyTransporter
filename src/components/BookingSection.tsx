@@ -1522,7 +1522,7 @@ export function BookingSection() {
                       <button
                         key={i}
                         type="button"
-                        onClick={() => setVehicleIdx(i)}
+                        onClick={() => chooseVehicle(i)}
                         aria-label={`Fahrzeug ${i + 1}`}
                         className={`w-2 h-2 rounded-full transition-all ${
                           i === vehicleIdx ? "bg-foreground w-6" : "bg-border"
@@ -1539,7 +1539,7 @@ export function BookingSection() {
                           key={v.plate ?? i}
                           type="button"
                           disabled={!free && !notReleased}
-                          onClick={() => setVehicleIdx(i)}
+                          onClick={() => chooseVehicle(i)}
                           className={`w-full flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all hover:bg-secondary ${
                             i === vehicleIdx ? "border-foreground" : "border-border"
                           } ${free ? "" : "opacity-50 grayscale"} ${
