@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useServerFn } from "@tanstack/react-start";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
@@ -34,6 +34,7 @@ import {
 } from "@/lib/availability-logic";
 import {
   availableClassesForWindow,
+  isSelectedPlanStillValid,
   isWindowBookable,
   lowestAvailablePlanPrice,
   pickVehicleForWindow,
@@ -215,43 +216,68 @@ export function BookingSection() {
   const [busyLoading, setBusyLoading] = useState(true);
   const [vehiclesLoaded, setVehiclesLoaded] = useState(false);
   const [vehiclesError, setVehiclesError] = useState(false);
+  const [vehiclesLoading, setVehiclesLoading] = useState(true);
 
-  const refreshBusySlots = () => {
+  // Request-Reihenfolge: alte Antworten dürfen frische Daten nicht überschreiben.
+  const busySeqRef = useRef(0);
+  const vehiclesSeqRef = useRef(0);
+
+  const refreshBusySlots = useCallback(() => {
+    const seq = ++busySeqRef.current;
     setBusyLoading(true);
     getBusySlots()
       .then((slots) => {
+        if (seq !== busySeqRef.current) return;
         setBusySlots(slots);
         setBusyError(false);
       })
       .catch((e) => {
         console.warn("Belegte Slots konnten nicht geladen werden:", e);
-        setBusyError(true);
-      })
-      .finally(() => setBusyLoading(false));
-  };
-
-  useEffect(() => {
-    let alive = true;
-    setBusyLoading(true);
-    getBusySlots()
-      .then((slots) => {
-        if (!alive) return;
-        setBusySlots(slots);
-        setBusyError(false);
-      })
-      .catch((e) => {
-        console.warn("Belegte Slots konnten nicht geladen werden:", e);
-        if (alive) setBusyError(true);
+        if (seq === busySeqRef.current) setBusyError(true);
       })
       .finally(() => {
-        if (alive) setBusyLoading(false);
+        if (seq === busySeqRef.current) setBusyLoading(false);
       });
-    return () => {
-      alive = false;
-    };
   }, []);
 
-  // Nach jedem Schritt neu laden, damit frische Holds/Buchungen sofort greifen
+  const refreshVehicles = useCallback(() => {
+    const seq = ++vehiclesSeqRef.current;
+    setVehiclesLoading(true);
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("vehicles")
+          .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address")
+          .order("created_at", { ascending: true });
+        if (seq !== vehiclesSeqRef.current) return;
+        if (error || !data) {
+          setVehiclesError(true);
+          return;
+        }
+        // Freigegebene Fahrzeuge zuerst, gesperrte danach (sichtbar, aber nicht buchbar)
+        const list = [...(data as DbVehicle[])].sort(
+          (a, b) => Number(b.is_active) - Number(a.is_active),
+        );
+        setVehicles(list);
+        setVehiclesError(false);
+        setVehiclesLoaded(true);
+      } catch (e) {
+        console.warn("Fahrzeuge konnten nicht geladen werden:", e);
+        if (seq === vehiclesSeqRef.current) setVehiclesError(true);
+      } finally {
+        if (seq === vehiclesSeqRef.current) setVehiclesLoading(false);
+      }
+    })();
+  }, []);
+
+  /** Verfügbarkeit erneut prüfen: immer BEIDE Quellen. */
+  const retryAvailability = useCallback(() => {
+    refreshBusySlots();
+    refreshVehicles();
+  }, [refreshBusySlots, refreshVehicles]);
+
+  // Beim Einstieg und nach jedem Schritt neu laden, damit frische Holds/Buchungen greifen.
+  // (Kein zusätzlicher Mount-Fetch – dieser Effekt läuft beim ersten Render mit step 0.)
   useEffect(() => {
     if (step <= 2) refreshBusySlots();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -329,29 +355,8 @@ export function BookingSection() {
 
 
   useEffect(() => {
-    let alive = true;
-    supabase
-      .from("vehicles")
-      .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address")
-      .order("created_at", { ascending: true })
-      .then(({ data, error }) => {
-        if (!alive) return;
-        if (error || !data) {
-          setVehiclesError(true);
-          return;
-        }
-        // Freigegebene Fahrzeuge zuerst, gesperrte danach (sichtbar, aber nicht buchbar)
-        const list = [...(data as DbVehicle[])].sort(
-          (a, b) => Number(b.is_active) - Number(a.is_active),
-        );
-        setVehicles(list);
-        setVehiclesError(false);
-        setVehiclesLoaded(true);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+    refreshVehicles();
+  }, [refreshVehicles]);
 
   const currentVehicle = vehicles[vehicleIdx];
   const displayVehicle = currentVehicle
@@ -417,8 +422,13 @@ export function BookingSection() {
     [vehicles],
   );
 
+  /** Läuft gerade eine (erneute) Prüfung? */
+  const availabilityLoading = busyLoading || vehiclesLoading;
+  const availabilityError = busyError || vehiclesError;
+  /** Vollständig und fehlerfrei geladen – nur dann sind Aussagen belastbar. */
+  const availabilityReady = !availabilityLoading && !availabilityError && vehiclesLoaded;
   /** Verfügbarkeit ist nicht prüfbar → fail closed, keine falsche Zusage. */
-  const availabilityUnknown = busyError || vehiclesError || (!vehiclesLoaded && !vehiclesError);
+  const availabilityUnknown = !availabilityReady;
 
   /** Kalendertag: nur sperren, wenn für KEIN Fahrzeug irgendein Fenster frei ist. */
   const isDayUnavailable = (d: Date) => {
@@ -456,6 +466,8 @@ export function BookingSection() {
     // Nur in der Auswahlphase umschalten – ab der Verifizierung/Bezahlung
     // muss das gewählte Fahrzeug (und dessen Reservierung) stabil bleiben.
     if (step > 2) return;
+    // Solange die Verfügbarkeit nicht sauber geladen ist: nicht umschalten.
+    if (!availabilityReady) return;
     if (!selectionWindow || vehicles.length === 0) return;
     const cur = vehicles[vehicleIdx];
     // Noch nicht freigegebene Fahrzeuge darf man ansehen – nicht automatisch wegspringen
@@ -467,7 +479,7 @@ export function BookingSection() {
     const next = vehicles.findIndex((v) => (v.plate ?? "") === plate);
     if (next >= 0 && next !== vehicleIdx) setVehicleIdx(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, selectionWindow, busyMap, vehicles, vehicleIdx, fleetLite, explicitPlate]);
+  }, [step, availabilityReady, selectionWindow, busyMap, vehicles, vehicleIdx, fleetLite, explicitPlate]);
 
   /** Ausdrückliche Fahrzeugwahl des Kunden (bleibt erhalten, solange sie gültig ist). */
   const chooseVehicle = (i: number) => {
@@ -800,12 +812,27 @@ export function BookingSection() {
     !isPlanUnavailable(selectedPlanId) &&
     selectableVehiclePlate !== null;
 
-  // Veraltete Verfügbarkeit / Rücksprung: nicht mehr freien Tarif abwählen
+  // Schritt 2 → Bezahlen: nur mit sauber geladener Verfügbarkeit und einem
+  // vorhandenen, freigegebenen, im Zeitraum wirklich freien Fahrzeug.
+  const canProceedStep2 =
+    availabilityReady &&
+    Boolean(currentVehicle?.is_active) &&
+    Boolean(currentPlate) &&
+    !currentVehicleUnavailable;
+
+
+  // Veraltete Verfügbarkeit / Rücksprung: nicht mehr freien Tarif abwählen.
+  // Wichtig: nur abwählen, wenn FRISCHE, fehlerfreie Daten die Auswahl widerlegen –
+  // ein laufender oder fehlgeschlagener Refresh darf eine gültige Wahl nicht löschen.
   useEffect(() => {
     if (step > 1 || !selectedPlanId) return;
-    if (isPlanUnavailable(selectedPlanId)) setSelectedPlanId(null);
+    if (!availabilityReady) return;
+    const w = startHour === null ? null : windowFor(selectedPlanId, startHour);
+    if (!isSelectedPlanStillValid(busyMap, fleetLite, w)) {
+      setSelectedPlanId(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, selectedPlanId, busyMap, fleetLite, date, startHour, availabilityUnknown]);
+  }, [step, selectedPlanId, busyMap, fleetLite, date, startHour, availabilityReady]);
 
   // Tarife passend zur gewählten Nächtezahl + Startstunde + Fahrzeugklasse
   const availablePlans = getAvailablePlans(nights, startHour, vehicleClass);
@@ -1251,9 +1278,14 @@ export function BookingSection() {
                       : "border-border hover:border-accent/50"
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  {planBlocked && (
+                  {planBlocked && availabilityLoading && (
+                    <p className="mb-2 text-xs font-semibold text-muted-foreground">
+                      Verfügbarkeit wird geprüft…
+                    </p>
+                  )}
+                  {planBlocked && !availabilityLoading && (
                     <p className="mb-2 text-xs font-semibold text-destructive">
-                      {availabilityUnknown
+                      {availabilityError || !vehiclesLoaded
                         ? "Verfügbarkeit konnte nicht geladen werden"
                         : "Für diesen Zeitraum ist kein Transporter verfügbar"}
                     </p>
@@ -1303,14 +1335,19 @@ export function BookingSection() {
                 </button>
                 );
               })}
-              {availabilityUnknown && !busyLoading && (
+              {availabilityLoading && (
+                <div className="p-6 rounded-2xl border border-border bg-secondary text-center text-sm text-muted-foreground">
+                  Verfügbarkeit wird geprüft…
+                </div>
+              )}
+              {!availabilityLoading && (availabilityError || !vehiclesLoaded) && (
                 <div className="p-6 rounded-2xl border border-border bg-secondary text-center text-sm text-muted-foreground">
                   <p className="mb-3 text-foreground">
                     Die Verfügbarkeit konnte gerade nicht geladen werden. Bitte versuche es erneut.
                   </p>
                   <button
                     type="button"
-                    onClick={refreshBusySlots}
+                    onClick={retryAvailability}
                     className="min-h-[44px] px-5 rounded-full bg-foreground text-background text-sm font-medium"
                   >
                     Erneut versuchen
@@ -1644,6 +1681,26 @@ export function BookingSection() {
               </div>
             )}
 
+            {availabilityLoading && (
+              <p className="mt-6 text-center text-sm text-muted-foreground">
+                Verfügbarkeit wird geprüft…
+              </p>
+            )}
+            {!availabilityLoading && (availabilityError || !vehiclesLoaded) && (
+              <div className="mt-6 rounded-xl border border-border bg-secondary p-4 text-center text-sm text-muted-foreground">
+                <p className="mb-3 text-foreground">
+                  Die Verfügbarkeit konnte gerade nicht geladen werden. Bitte versuche es erneut.
+                </p>
+                <button
+                  type="button"
+                  onClick={retryAvailability}
+                  className="min-h-[44px] px-5 rounded-full bg-foreground text-background text-sm font-medium"
+                >
+                  Erneut versuchen
+                </button>
+              </div>
+            )}
+
             <div className="mt-10 flex justify-between">
               <button
                 onClick={() => setStep(1)}
@@ -1653,7 +1710,7 @@ export function BookingSection() {
               </button>
               <button
                 onClick={() => setStep(registrationComplete && docsReady ? 5 : 3)}
-                disabled={currentVehicleUnavailable}
+                disabled={!canProceedStep2}
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 Buchen & bezahlen <ChevronRight className="w-5 h-5" />

@@ -93,3 +93,18 @@ export function pickVehicleForWindow(
   }
   return free[0].plate;
 }
+
+/**
+ * Darf ein bereits gewählter Tarif bestehen bleiben?
+ * Nur mit frisch geladener Verfügbarkeit aufrufen – ein laufender oder
+ * fehlgeschlagener Refresh darf eine gültige Auswahl nicht verwerfen.
+ * `window === null` bedeutet: kein prüfbares Zeitfenster → Auswahl behalten.
+ */
+export function isSelectedPlanStillValid(
+  map: BusyMap,
+  vehicles: VehicleLite[],
+  window: SlotRange | null,
+): boolean {
+  if (!window) return true;
+  return isWindowBookable(map, vehicles, window);
+}
