@@ -465,6 +465,8 @@ export function BookingSection() {
     // Nur in der Auswahlphase umschalten – ab der Verifizierung/Bezahlung
     // muss das gewählte Fahrzeug (und dessen Reservierung) stabil bleiben.
     if (step > 2) return;
+    // Solange die Verfügbarkeit nicht sauber geladen ist: nicht umschalten.
+    if (!availabilityReady) return;
     if (!selectionWindow || vehicles.length === 0) return;
     const cur = vehicles[vehicleIdx];
     // Noch nicht freigegebene Fahrzeuge darf man ansehen – nicht automatisch wegspringen
@@ -476,7 +478,7 @@ export function BookingSection() {
     const next = vehicles.findIndex((v) => (v.plate ?? "") === plate);
     if (next >= 0 && next !== vehicleIdx) setVehicleIdx(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, selectionWindow, busyMap, vehicles, vehicleIdx, fleetLite, explicitPlate]);
+  }, [step, availabilityReady, selectionWindow, busyMap, vehicles, vehicleIdx, fleetLite, explicitPlate]);
 
   /** Ausdrückliche Fahrzeugwahl des Kunden (bleibt erhalten, solange sie gültig ist). */
   const chooseVehicle = (i: number) => {
