@@ -173,9 +173,6 @@ export function uetTrackBooking(
   if (sentThisSession.has(conversion.transactionId) || sentIds().includes(conversion.transactionId))
     return false;
 
-  sentThisSession.add(conversion.transactionId);
-  remember(conversion.transactionId);
-
   ensureMicrosoftUet();
   const payload: Record<string, unknown> = {
     event_category: UET_EVENT_CATEGORY,
@@ -185,7 +182,15 @@ export function uetTrackBooking(
     payload.revenue_value = conversion.revenueEur;
     payload.currency = "EUR";
   }
-  pushArgs("event", UET_BOOKING_ACTION, payload);
+  try {
+    pushArgs("event", UET_BOOKING_ACTION, payload);
+  } catch {
+    // Übergabe fehlgeschlagen: NICHT als gesendet markieren, Retry bleibt möglich.
+    return false;
+  }
+  // Erst nach erfolgreicher Übergabe deduplizieren.
+  sentThisSession.add(conversion.transactionId);
+  remember(conversion.transactionId);
   return true;
 }
 
