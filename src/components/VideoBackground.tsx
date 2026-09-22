@@ -9,7 +9,6 @@ type VideoBackgroundProps = {
   poster?: string;
   title: string;
   fit?: "cover" | "contain";
-  mobileControlsOffset?: "page" | "navbar";
 };
 
 function usePrefersReducedMotion() {
@@ -40,7 +39,6 @@ export function VideoBackground({
   poster,
   title,
   fit = "cover",
-  mobileControlsOffset = "page",
 }: VideoBackgroundProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hiddenPausedRef = useRef(false);
