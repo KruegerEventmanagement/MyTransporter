@@ -73,7 +73,7 @@ describe("Buchungs-Conversion", () => {
   it("sendet nichts ohne Einwilligung", () => {
     const sent = uetTrackBooking({ paid: true, transactionId: "pi_1", revenueEur: 100 }, false);
     expect(sent).toBe(false);
-    expect(document.head.innerHTML).toBe("");
+    expect(scripts.length).toBe(0);
   });
 
   it("sendet nichts ohne serverseitig bestätigte Zahlung", () => {
