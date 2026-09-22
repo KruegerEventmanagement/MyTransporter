@@ -12,7 +12,7 @@ type VideoBackgroundProps = {
 };
 
 function usePrefersReducedMotion() {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(true);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
