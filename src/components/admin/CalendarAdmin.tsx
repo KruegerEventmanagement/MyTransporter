@@ -171,7 +171,7 @@ function emptyForm(day: Date): FormState {
  * KEIN Beweis für einen Kalendereintrag – der entsteht erst im Postfach.
  */
 function notifyLabel(state?: ManualNotificationState): string {
-  if (!state) return "Benachrichtigung wird vorbereitet";
+  if (!state) return "Keine automatische Benachrichtigung erfasst";
   if (state.status === "succeeded")
     return "E-Mail an info@mytransporter.org gesendet (Kalender folgt im Postfach)";
   if (state.status === "failed")
