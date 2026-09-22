@@ -1,0 +1,11 @@
+REVOKE ALL ON FUNCTION public.claim_manual_notifications(integer, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.complete_manual_notification(uuid, boolean) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.mark_manual_notification_pushed(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.fail_manual_notification(uuid, text, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.manual_reservations_enqueue_notification() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.manual_reservation_notification_payload(public.manual_reservations) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.manual_reservations_bump_revision() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_manual_notifications(integer, integer) TO service_role;
+GRANT EXECUTE ON FUNCTION public.complete_manual_notification(uuid, boolean) TO service_role;
+GRANT EXECUTE ON FUNCTION public.mark_manual_notification_pushed(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.fail_manual_notification(uuid, text, integer) TO service_role;
