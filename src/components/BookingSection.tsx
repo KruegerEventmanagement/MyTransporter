@@ -811,12 +811,17 @@ export function BookingSection() {
     !isPlanUnavailable(selectedPlanId) &&
     selectableVehiclePlate !== null;
 
-  // Veraltete Verfügbarkeit / Rücksprung: nicht mehr freien Tarif abwählen
+  // Veraltete Verfügbarkeit / Rücksprung: nicht mehr freien Tarif abwählen.
+  // Wichtig: nur abwählen, wenn FRISCHE, fehlerfreie Daten die Auswahl widerlegen –
+  // ein laufender oder fehlgeschlagener Refresh darf eine gültige Wahl nicht löschen.
   useEffect(() => {
     if (step > 1 || !selectedPlanId) return;
-    if (isPlanUnavailable(selectedPlanId)) setSelectedPlanId(null);
+    if (!availabilityReady) return;
+    if (!shouldKeepSelectedPlan(busyMap, fleetLite, selectedPlanId, date, startHour)) {
+      setSelectedPlanId(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, selectedPlanId, busyMap, fleetLite, date, startHour, availabilityUnknown]);
+  }, [step, selectedPlanId, busyMap, fleetLite, date, startHour, availabilityReady]);
 
   // Tarife passend zur gewählten Nächtezahl + Startstunde + Fahrzeugklasse
   const availablePlans = getAvailablePlans(nights, startHour, vehicleClass);
