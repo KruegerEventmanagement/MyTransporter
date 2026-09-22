@@ -421,8 +421,13 @@ export function BookingSection() {
     [vehicles],
   );
 
+  /** Läuft gerade eine (erneute) Prüfung? */
+  const availabilityLoading = busyLoading || vehiclesLoading;
+  const availabilityError = busyError || vehiclesError;
+  /** Vollständig und fehlerfrei geladen – nur dann sind Aussagen belastbar. */
+  const availabilityReady = !availabilityLoading && !availabilityError && vehiclesLoaded;
   /** Verfügbarkeit ist nicht prüfbar → fail closed, keine falsche Zusage. */
-  const availabilityUnknown = busyError || vehiclesError || (!vehiclesLoaded && !vehiclesError);
+  const availabilityUnknown = !availabilityReady;
 
   /** Kalendertag: nur sperren, wenn für KEIN Fahrzeug irgendein Fenster frei ist. */
   const isDayUnavailable = (d: Date) => {
