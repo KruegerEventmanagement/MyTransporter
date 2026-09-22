@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { AdRails } from "@/components/ads/AdRails";
+import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
 export const Route = createFileRoute("/kontakt")({
   head: () => ({
@@ -69,6 +70,9 @@ function KontaktPage() {
             Schlüsselabholung und -rückgabe: <span className="text-foreground font-medium">Römerstraße 36, 71229 Leonberg</span>
           </p>
           <p className="text-xs text-muted-foreground mt-1">Öffnungszeiten: 08:00, 22:00 Uhr</p>
+        </div>
+        <div className="mt-10 flex justify-center text-sm text-muted-foreground">
+          <AdConsentRevokeButton />
         </div>
       </div>
     </AdRails>
