@@ -82,10 +82,16 @@ export function setConsent(choice: ConsentChoice): void {
 
 /* ------------------------------------------------------------------- gtag */
 
-function gtag(...args: unknown[]): void {
+/**
+ * Offizieller gtag-Wrapper: Google erwartet im dataLayer das echte
+ * `arguments`-Objekt, NICHT ein gespreadetes Array (anders als die flache
+ * UET-Queue). Deshalb bewusst eine normale function mit `arguments`.
+ */
+const gtag: GtagFn = function () {
   window.dataLayer = window.dataLayer ?? [];
-  window.dataLayer.push(args);
-}
+  // eslint-disable-next-line prefer-rest-params
+  window.dataLayer.push(arguments);
+} as GtagFn;
 
 function applyConsent(granted: boolean): void {
   if (typeof window === "undefined") return;
