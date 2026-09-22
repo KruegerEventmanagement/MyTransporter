@@ -1230,7 +1230,15 @@ export function BookingSection() {
                 >
                   {planBlocked && (
                     <p className="mb-2 text-xs font-semibold text-destructive">
-                      Für diesen Zeitraum ist kein Transporter dieser Klasse verfügbar
+                      {availabilityUnknown
+                        ? "Verfügbarkeit konnte nicht geladen werden"
+                        : "Für diesen Zeitraum ist kein Transporter verfügbar"}
+                    </p>
+                  )}
+                  {!planBlocked && planClasses.length > 0 && (
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      Verfügbar:{" "}
+                      {planClasses.map((c) => VEHICLE_CLASS_SHORT_LABEL[c]).join(" · ")}
                     </p>
                   )}
 
