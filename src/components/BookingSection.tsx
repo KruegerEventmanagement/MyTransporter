@@ -1278,9 +1278,14 @@ export function BookingSection() {
                       : "border-border hover:border-accent/50"
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  {planBlocked && (
+                  {planBlocked && availabilityLoading && (
+                    <p className="mb-2 text-xs font-semibold text-muted-foreground">
+                      Verfügbarkeit wird geprüft…
+                    </p>
+                  )}
+                  {planBlocked && !availabilityLoading && (
                     <p className="mb-2 text-xs font-semibold text-destructive">
-                      {availabilityUnknown
+                      {availabilityError || !vehiclesLoaded
                         ? "Verfügbarkeit konnte nicht geladen werden"
                         : "Für diesen Zeitraum ist kein Transporter verfügbar"}
                     </p>
