@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ADSENSE_CONFIG, type AdSenseConfig } from "@/lib/adsense";
 
@@ -57,7 +56,7 @@ import {
 type Queue = Array<unknown> & { pauseAdRequests?: number; requestNonPersonalizedAds?: number };
 
 function queue(): Queue {
-  const w = window as unknown as { adsbygoogle?: Queue };
+  const w = globalThis as unknown as { adsbygoogle?: Queue };
   w.adsbygoogle = w.adsbygoogle || ([] as unknown as Queue);
   return w.adsbygoogle;
 }
@@ -77,7 +76,9 @@ beforeEach(() => {
   state.consented = true;
   state.personalized = true;
   consentSubscribers = [];
-  (window as unknown as { adsbygoogle?: Queue }).adsbygoogle = undefined;
+  (globalThis as unknown as { window?: unknown }).window = globalThis;
+  (globalThis as unknown as { document?: unknown }).document = {};
+  (globalThis as unknown as { adsbygoogle?: Queue }).adsbygoogle = undefined;
   resetAdSenseScriptLoad();
 });
 
