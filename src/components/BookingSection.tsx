@@ -469,6 +469,12 @@ export function BookingSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, selectionWindow, busyMap, vehicles, vehicleIdx, fleetLite, explicitPlate]);
 
+  /** Ausdrückliche Fahrzeugwahl des Kunden (bleibt erhalten, solange sie gültig ist). */
+  const chooseVehicle = (i: number) => {
+    setVehicleIdx(i);
+    setExplicitPlate(vehicles[i]?.plate ?? null);
+  };
+
   /**
    * Tarif: sperren, wenn KEIN freigegebenes Fahrzeug den kompletten Zeitraum
    * frei hat. Keine Einschränkung auf eine Fahrzeugklasse.
