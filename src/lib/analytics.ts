@@ -9,6 +9,13 @@
  */
 
 import { ensureMetaPixel, metaTrack } from "./meta-pixel";
+import {
+  ensureMicrosoftUet,
+  grantMicrosoftUetConsent,
+  resetMicrosoftUetForWithdrawal,
+  setMicrosoftUetDefaultDenied,
+  uetTrackBooking,
+} from "./microsoft-uet";
 
 export const GOOGLE_ADS_ID = "AW-18092739278";
 
