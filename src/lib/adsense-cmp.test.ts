@@ -45,6 +45,7 @@ function granted(overrides: Partial<TcData> = {}): TcData {
 
 interface ScriptNode extends Record<string, unknown> {
   onerror?: () => void;
+  onload?: () => void;
 }
 
 interface FakeWin extends CmpWindow {
