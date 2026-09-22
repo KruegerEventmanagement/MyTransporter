@@ -1681,6 +1681,26 @@ export function BookingSection() {
               </div>
             )}
 
+            {availabilityLoading && (
+              <p className="mt-6 text-center text-sm text-muted-foreground">
+                Verfügbarkeit wird geprüft…
+              </p>
+            )}
+            {!availabilityLoading && (availabilityError || !vehiclesLoaded) && (
+              <div className="mt-6 rounded-xl border border-border bg-secondary p-4 text-center text-sm text-muted-foreground">
+                <p className="mb-3 text-foreground">
+                  Die Verfügbarkeit konnte gerade nicht geladen werden. Bitte versuche es erneut.
+                </p>
+                <button
+                  type="button"
+                  onClick={retryAvailability}
+                  className="min-h-[44px] px-5 rounded-full bg-foreground text-background text-sm font-medium"
+                >
+                  Erneut versuchen
+                </button>
+              </div>
+            )}
+
             <div className="mt-10 flex justify-between">
               <button
                 onClick={() => setStep(1)}
