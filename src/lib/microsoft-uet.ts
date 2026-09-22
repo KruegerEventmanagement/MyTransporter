@@ -108,6 +108,7 @@ export function ensureMicrosoftUet(): boolean {
  */
 export function resetMicrosoftUetForWithdrawal(): void {
   if (typeof window === "undefined") return;
+  granted = false;
   // Consent-Signal an Microsoft: Speicherung nicht mehr erlaubt.
   try {
     pushArgs("consent", "update", { ad_storage: "denied" });
@@ -119,13 +120,30 @@ export function resetMicrosoftUetForWithdrawal(): void {
 /** Consent-Signal „granted“ (Default ist „denied“, siehe setDefaultDenied). */
 export function grantMicrosoftUetConsent(): void {
   if (typeof window === "undefined") return;
+  granted = true;
   pushArgs("consent", "update", { ad_storage: "granted" });
 }
 
 /** Default-Denied VOR dem Laden des Tags setzen. */
 export function setMicrosoftUetDefaultDenied(): void {
   if (typeof window === "undefined") return;
+  defaultSet = true;
   pushArgs("consent", "default", { ad_storage: "denied" });
+}
+
+let defaultSet = false;
+let granted = false;
+
+/**
+ * Stellt die korrekte Reihenfolge default → load → grant sicher, auch wenn ein
+ * Event (z. B. eine Conversion) ohne vorherigen setConsent-Pfad eintrifft.
+ * Idempotent: default/grant werden nicht doppelt gesendet.
+ */
+export function ensureMicrosoftUetConsentGranted(): void {
+  if (typeof window === "undefined") return;
+  if (!defaultSet) setMicrosoftUetDefaultDenied();
+  ensureMicrosoftUet();
+  if (!granted) grantMicrosoftUetConsent();
 }
 
 function sentIds(): string[] {
@@ -157,6 +175,8 @@ export type UetBookingConversion = {
   transactionId: string;
   /** Tatsächlich verifizierter Umsatz ohne rückzahlbare Kaution. */
   revenueEur?: number;
+  /** Tatsächlich verifizierte Währung (ISO). Fällt auf EUR zurück. */
+  currency?: string;
 };
 
 /**
@@ -173,14 +193,15 @@ export function uetTrackBooking(
   if (sentThisSession.has(conversion.transactionId) || sentIds().includes(conversion.transactionId))
     return false;
 
-  ensureMicrosoftUet();
+  // Reihenfolge default → load → grant sicherstellen (idempotent).
+  ensureMicrosoftUetConsentGranted();
   const payload: Record<string, unknown> = {
     event_category: UET_EVENT_CATEGORY,
     event_label: conversion.transactionId,
   };
   if (typeof conversion.revenueEur === "number" && conversion.revenueEur > 0) {
     payload.revenue_value = conversion.revenueEur;
-    payload.currency = "EUR";
+    payload.currency = (conversion.currency || "EUR").toUpperCase();
   }
   try {
     pushArgs("event", UET_BOOKING_ACTION, payload);
@@ -198,5 +219,7 @@ export function uetTrackBooking(
 export function __resetUetForTests(): void {
   scriptInserted = false;
   initialized = false;
+  defaultSet = false;
+  granted = false;
   sentThisSession.clear();
 }
