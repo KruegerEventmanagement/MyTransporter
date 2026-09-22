@@ -108,6 +108,7 @@ export function ensureMicrosoftUet(): boolean {
  */
 export function resetMicrosoftUetForWithdrawal(): void {
   if (typeof window === "undefined") return;
+  granted = false;
   // Consent-Signal an Microsoft: Speicherung nicht mehr erlaubt.
   try {
     pushArgs("consent", "update", { ad_storage: "denied" });
