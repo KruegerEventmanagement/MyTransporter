@@ -114,7 +114,6 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
   const playVideo = async () => {
     const video = videoRef.current;
     if (!video) return false;
-    video.muted = muted;
     const played = await safelyPlay(video);
     setPaused(!played);
     return played;
@@ -136,9 +135,9 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
 
   const toggleEnabled = async () => {
     const video = videoRef.current;
-    if (!video) return;
 
     if (enabled) {
+      if (!video) return;
       explicitPausedRef.current = true;
       video.pause();
       setEnabled(false);
@@ -149,13 +148,7 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
     setHasError(false);
     setEnabled(true);
     explicitPausedRef.current = false;
-    requestAnimationFrame(() => {
-      const nextVideo = videoRef.current;
-      if (!nextVideo) return;
-      nextVideo.muted = true;
-      setMuted(true);
-      playVideo();
-    });
+    setMuted(true);
   };
 
   const toggleMuted = async () => {
