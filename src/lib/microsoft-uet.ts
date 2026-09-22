@@ -28,9 +28,20 @@ declare global {
 let scriptInserted = false;
 let initialized = false;
 
-function queue(): { push: (...args: unknown[]) => void } {
+function queue(): unknown[] | UetInstance {
   window.uetq = window.uetq ?? [];
-  return window.uetq as { push: (...args: unknown[]) => void };
+  return window.uetq as unknown[] | UetInstance;
+}
+
+/**
+ * Schreibt in die UET-Queue. Solange das Tag nicht initialisiert ist, ist
+ * window.uetq ein Array – dann wird genau ein Argument-Array abgelegt (bat.js
+ * arbeitet diese Einträge beim Init ab). Danach übernimmt die UET-Instanz.
+ */
+function pushArgs(...args: unknown[]): void {
+  const q = queue();
+  if (Array.isArray(q)) q.push(args);
+  else q.push(...args);
 }
 
 /** Initialisiert das Tag, sobald bat.js geladen ist (offizielles Snippet). */
@@ -89,9 +100,7 @@ export function resetMicrosoftUetForWithdrawal(): void {
   if (typeof window === "undefined") return;
   // Consent-Signal an Microsoft: Speicherung nicht mehr erlaubt.
   try {
-    (window.uetq as { push?: (...a: unknown[]) => void } | undefined)?.push?.("consent", "update", {
-      ad_storage: "denied",
-    });
+    pushArgs("consent", "update", { ad_storage: "denied" });
   } catch {
     /* ignorieren */
   }
@@ -100,13 +109,13 @@ export function resetMicrosoftUetForWithdrawal(): void {
 /** Consent-Signal „granted“ (Default ist „denied“, siehe setDefaultDenied). */
 export function grantMicrosoftUetConsent(): void {
   if (typeof window === "undefined") return;
-  queue().push("consent", "update", { ad_storage: "granted" });
+  pushArgs("consent", "update", { ad_storage: "granted" });
 }
 
 /** Default-Denied VOR dem Laden des Tags setzen. */
 export function setMicrosoftUetDefaultDenied(): void {
   if (typeof window === "undefined") return;
-  queue().push("consent", "default", { ad_storage: "denied" });
+  pushArgs("consent", "default", { ad_storage: "denied" });
 }
 
 function sentIds(): string[] {
@@ -166,11 +175,7 @@ export function uetTrackBooking(
     payload.revenue_value = conversion.revenueEur;
     payload.currency = "EUR";
   }
-  (window.uetq as { push: (...a: unknown[]) => void }).push(
-    "event",
-    UET_BOOKING_ACTION,
-    payload,
-  );
+  pushArgs("event", UET_BOOKING_ACTION, payload);
   return true;
 }
 
