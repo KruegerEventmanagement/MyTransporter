@@ -34,14 +34,14 @@ function queue(): unknown[] | UetInstance {
 }
 
 /**
- * Schreibt in die UET-Queue. Solange das Tag nicht initialisiert ist, ist
- * window.uetq ein Array – dann wird genau ein Argument-Array abgelegt (bat.js
- * arbeitet diese Einträge beim Init ab). Danach übernimmt die UET-Instanz.
+ * Schreibt in die UET-Queue. UET verwendet – anders als Google gtag – eine
+ * FLACHE Queue: vor dem Tag-Init ist window.uetq ein Array, in das die
+ * Argumente einzeln (gespreadet) geschrieben werden. Nach dem Init nimmt die
+ * UET-Instanz dieselben Argumente über ihre push-Methode.
  */
 function pushArgs(...args: unknown[]): void {
   const q = queue();
-  if (Array.isArray(q)) q.push(args);
-  else q.push(...args);
+  q.push(...args);
 }
 
 /** Initialisiert das Tag, sobald bat.js geladen ist (offizielles Snippet). */
@@ -55,6 +55,16 @@ function initTag(): void {
 }
 
 /**
+ * Init wird nie synchron ausgeführt, wenn window.UET bereits vorhanden ist:
+ * so landen im selben Tick gesetzte consent-default/-update-Kommandos noch in
+ * der flachen Roh-Queue und werden beim Init mit übergeben.
+ */
+function scheduleInitTag(): void {
+  if (typeof queueMicrotask === "function") queueMicrotask(initTag);
+  else setTimeout(initTag, 0);
+}
+
+/**
  * Lädt bat.js genau einmal. Nur nach Marketing-Einwilligung aufrufen.
  * Mehrfachaufrufe erzeugen keinen zweiten Loader.
  */
@@ -62,13 +72,13 @@ export function ensureMicrosoftUet(): boolean {
   if (typeof window === "undefined") return false;
   queue();
   if (scriptInserted) {
-    initTag();
+    scheduleInitTag();
     return true;
   }
   scriptInserted = true;
 
   if (window.UET) {
-    initTag();
+    scheduleInitTag();
     return true;
   }
 
@@ -163,9 +173,6 @@ export function uetTrackBooking(
   if (sentThisSession.has(conversion.transactionId) || sentIds().includes(conversion.transactionId))
     return false;
 
-  sentThisSession.add(conversion.transactionId);
-  remember(conversion.transactionId);
-
   ensureMicrosoftUet();
   const payload: Record<string, unknown> = {
     event_category: UET_EVENT_CATEGORY,
@@ -175,7 +182,15 @@ export function uetTrackBooking(
     payload.revenue_value = conversion.revenueEur;
     payload.currency = "EUR";
   }
-  pushArgs("event", UET_BOOKING_ACTION, payload);
+  try {
+    pushArgs("event", UET_BOOKING_ACTION, payload);
+  } catch {
+    // Übergabe fehlgeschlagen: NICHT als gesendet markieren, Retry bleibt möglich.
+    return false;
+  }
+  // Erst nach erfolgreicher Übergabe deduplizieren.
+  sentThisSession.add(conversion.transactionId);
+  remember(conversion.transactionId);
   return true;
 }
 
