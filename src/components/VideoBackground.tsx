@@ -34,7 +34,12 @@ async function safelyPlay(video: HTMLVideoElement) {
   }
 }
 
-export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBackgroundProps) {
+export function VideoBackground({
+  src,
+  poster,
+  title,
+  fit = "cover",
+}: VideoBackgroundProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hiddenPausedRef = useRef(false);
   const explicitPausedRef = useRef(false);
@@ -162,12 +167,10 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
     const nextMuted = !video.muted;
     video.muted = nextMuted;
     setMuted(nextMuted);
-
-    if (!nextMuted && video.paused) {
-      explicitPausedRef.current = false;
-      await playVideo();
-    }
   };
+
+  const controlButtonClass =
+    "h-11 min-w-0 flex-1 justify-center gap-1.5 rounded-none border-l border-border px-2 text-[11px] font-medium first:border-l-0 xl:w-full xl:flex-none xl:justify-start xl:border-l-0 xl:border-t xl:first:border-t-0";
 
   return (
     <>
@@ -191,20 +194,23 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
         </div>
       )}
 
-      <div className="fixed right-2 top-16 z-30 flex flex-col overflow-hidden rounded-2xl border border-border bg-background/90 text-foreground shadow-lg backdrop-blur-md sm:right-4 sm:top-20">
+      <div
+        className="relative z-30 mx-auto max-w-5xl px-4 pb-3 pt-28 xl:fixed xl:right-[max(1rem,calc((100vw-64rem)/2-7rem))] xl:top-20 xl:mx-0 xl:max-w-none xl:p-0"
+      >
+        <div className="mx-auto flex w-full max-w-sm items-stretch justify-center overflow-hidden rounded-2xl border border-border bg-background/90 text-foreground shadow-lg backdrop-blur-md sm:w-auto xl:w-[6.5rem] xl:flex-col">
         {enabled && (
           <Button
             type="button"
             variant="ghost"
             onClick={togglePause}
             aria-label={paused ? "Video abspielen" : "Video pausieren"}
-            className="h-11 justify-start rounded-none px-3 text-[11px] font-medium"
+            className={controlButtonClass}
           >
-            {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-            <span>{paused ? "Video abspielen" : "Video pausieren"}</span>
+            {paused ? <Play className="h-4 w-4 shrink-0" /> : <Pause className="h-4 w-4 shrink-0" />}
+            <span className="truncate">{paused ? "Abspielen" : "Pause"}</span>
             <span
               className={cn(
-                "ml-auto h-1.5 w-1.5 rounded-full bg-foreground/70",
+                "ml-auto hidden h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/70 xl:block",
                 !paused && "motion-safe:animate-pulse",
               )}
               aria-hidden="true"
@@ -216,10 +222,10 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
           variant="ghost"
           onClick={toggleEnabled}
           aria-label={enabled ? "Video aus" : "Video an"}
-          className="h-11 justify-start rounded-none border-t border-border px-3 text-[11px] font-medium first:border-t-0"
+          className={controlButtonClass}
         >
-          <Power className="h-4 w-4" />
-          <span>{enabled ? "Video aus" : "Video an"}</span>
+          <Power className="h-4 w-4 shrink-0" />
+          <span className="truncate">{enabled ? "Video aus" : "Video an"}</span>
         </Button>
         {enabled && (
           <Button
@@ -227,12 +233,13 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
             variant="ghost"
             onClick={toggleMuted}
             aria-label={muted ? "Ton an" : "Ton aus"}
-            className="h-11 justify-start rounded-none border-t border-border px-3 text-[11px] font-medium"
+            className={controlButtonClass}
           >
-            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-            <span>{muted ? "Ton an" : "Ton aus"}</span>
+            {muted ? <VolumeX className="h-4 w-4 shrink-0" /> : <Volume2 className="h-4 w-4 shrink-0" />}
+            <span className="truncate">{muted ? "Ton an" : "Ton aus"}</span>
           </Button>
         )}
+        </div>
       </div>
     </>
   );
