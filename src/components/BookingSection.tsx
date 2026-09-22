@@ -399,11 +399,24 @@ export function BookingSection() {
     () => bookableVehicles.map((v) => v.plate ?? "").filter(Boolean),
     [bookableVehicles],
   );
-  const platesOfClass = (cls: VehicleClass) =>
-    bookableVehicles
-      .filter((v) => classOfVehicle(v) === cls)
-      .map((v) => v.plate ?? "")
-      .filter(Boolean);
+  /**
+   * Flotte für die Verfügbarkeitsprüfung: immer ALLE freigegebenen Fahrzeuge,
+   * unabhängig von einer (noch nicht getroffenen) Klassenwahl.
+   */
+  const fleetLite: VehicleLite[] = useMemo(
+    () =>
+      vehicles
+        .map((v) => ({
+          plate: v.plate ?? "",
+          isActive: v.is_active,
+          vehicleClass: vehicleClassFromName(v.name, v.model, v.plate),
+        }))
+        .filter((v) => v.plate),
+    [vehicles],
+  );
+
+  /** Verfügbarkeit ist nicht prüfbar → fail closed, keine falsche Zusage. */
+  const availabilityUnknown = busyError || vehiclesError || (!vehiclesLoaded && !vehiclesError);
 
   /** Kalendertag: nur sperren, wenn für KEIN Fahrzeug irgendein Fenster frei ist. */
   const isDayUnavailable = (d: Date) => {
@@ -420,21 +433,23 @@ export function BookingSection() {
     return bookingWindowMsForDay(planId, date, hour);
   };
 
-  /** Startstunde: sperren, wenn zu dieser Zeit kein Fahrzeug für irgendeinen passenden Tarif frei ist. */
+  /** Startstunde: sperren, wenn zu dieser Zeit KEIN Fahrzeug einen kompletten Tarif frei hat. */
   const isHourUnavailable = (hour: number) => {
     if (!date || activePlates.length === 0) return false;
-    const classes = availableClasses.length > 0 ? availableClasses : (["l1h1"] as VehicleClass[]);
-    return !classes.some((cls) => {
-      const plates = platesOfClass(cls);
-      if (plates.length === 0) return false;
-      const wins = getAvailablePlans(nights, hour, cls)
-        .map((p) => windowFor(p.id, hour))
-        .filter((w): w is { start: number; end: number } => w !== null);
-      return wins.length > 0 && anyPlateFreeForWindows(busyMap, plates, wins);
-    });
+    const wins = getAvailablePlans(nights, hour)
+      .map((p) => windowFor(p.id, hour))
+      .filter((w): w is { start: number; end: number } => w !== null);
+    if (wins.length === 0) return true;
+    // Jeweils ein einzelnes Fahrzeug muss das GANZE Fenster frei haben.
+    return !wins.some((w) => isWindowBookable(busyMap, fleetLite, w));
   };
 
-  // Nicht verfügbares Fahrzeug: automatisch auf ein freies (möglichst gleiche Klasse) springen
+  /** Fahrzeuge, die im gewählten Tarif-Zeitraum wirklich komplett frei sind. */
+  const classesForWindow = (w: { start: number; end: number } | null) =>
+    w ? availableClassesForWindow(busyMap, fleetLite, w) : [];
+
+  // Fahrzeug passend zum Zeitraum wählen: günstigste verfügbare Klasse,
+  // ausdrückliche gültige Kundenauswahl hat Vorrang.
   useEffect(() => {
     // Nur in der Auswahlphase umschalten – ab der Verifizierung/Bezahlung
     // muss das gewählte Fahrzeug (und dessen Reservierung) stabil bleiben.
@@ -443,15 +458,14 @@ export function BookingSection() {
     const cur = vehicles[vehicleIdx];
     // Noch nicht freigegebene Fahrzeuge darf man ansehen – nicht automatisch wegspringen
     if (cur && !cur.is_active) return;
-    if (cur && isPlateAvailable(cur.plate ?? "")) return;
-    const cls = cur ? classOfVehicle(cur) : null;
-    const sameClass = vehicles.findIndex(
-      (v) => (!cls || classOfVehicle(v) === cls) && isPlateAvailable(v.plate ?? ""),
-    );
-    const next = sameClass >= 0 ? sameClass : vehicles.findIndex((v) => isPlateAvailable(v.plate ?? ""));
+    const plate = pickVehicleForWindow(busyMap, fleetLite, selectionWindow, {
+      preferredPlate: explicitPlate,
+    });
+    if (!plate) return;
+    const next = vehicles.findIndex((v) => (v.plate ?? "") === plate);
     if (next >= 0 && next !== vehicleIdx) setVehicleIdx(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, selectionWindow, busyMap, vehicles, vehicleIdx]);
+  }, [step, selectionWindow, busyMap, vehicles, vehicleIdx, fleetLite, explicitPlate]);
 
   /** Tarif: sperren, wenn kein Fahrzeug der gewählten Klasse den kompletten Zeitraum frei hat. */
   const isPlanUnavailable = (planId: string) => {
