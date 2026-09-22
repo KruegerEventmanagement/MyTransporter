@@ -818,7 +818,8 @@ export function BookingSection() {
   useEffect(() => {
     if (step > 1 || !selectedPlanId) return;
     if (!availabilityReady) return;
-    if (!shouldKeepSelectedPlan(busyMap, fleetLite, selectedPlanId, date, startHour)) {
+    const w = startHour === null ? null : windowFor(selectedPlanId, startHour);
+    if (!isSelectedPlanStillValid(busyMap, fleetLite, w)) {
       setSelectedPlanId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
