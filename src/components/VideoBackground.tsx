@@ -197,10 +197,7 @@ export function VideoBackground({
       )}
 
       <div
-        className={cn(
-          "relative z-30 mx-auto max-w-5xl px-4 pb-3 xl:fixed xl:right-[max(1rem,calc((100vw-64rem)/2-7rem))] xl:top-20 xl:mx-0 xl:max-w-none xl:p-0",
-          mobileControlsOffset === "navbar" ? "pt-28" : "pt-28",
-        )}
+        className="relative z-30 mx-auto max-w-5xl px-4 pb-3 pt-28 xl:fixed xl:right-[max(1rem,calc((100vw-64rem)/2-7rem))] xl:top-20 xl:mx-0 xl:max-w-none xl:p-0"
       >
         <div className="mx-auto flex w-full max-w-sm items-stretch justify-center overflow-hidden rounded-2xl border border-border bg-background/90 text-foreground shadow-lg backdrop-blur-md sm:w-auto xl:w-[6.5rem] xl:flex-col">
         {enabled && (
