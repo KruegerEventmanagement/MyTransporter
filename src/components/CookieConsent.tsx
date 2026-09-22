@@ -48,7 +48,8 @@ export function CookieConsent() {
       <h2 className="text-base font-bold text-foreground">Cookies & Einwilligung</h2>
       <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
         Technisch notwendige Cookies benötigen wir für Login, Buchung und Zahlung – sie sind immer
-        aktiv. Zusätzlich möchten wir Conversion-Tracking von Google Ads und Meta einsetzen, um zu
+        aktiv. Zusätzlich möchten wir Conversion-Tracking von Google Ads, Meta und Microsoft
+        Advertising einsetzen, um zu
         messen, welche Anzeigen zu Buchungen führen. Das geschieht nur mit deiner Einwilligung und
         ist jederzeit widerrufbar.
       </p>
