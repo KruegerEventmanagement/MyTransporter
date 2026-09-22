@@ -119,13 +119,30 @@ export function resetMicrosoftUetForWithdrawal(): void {
 /** Consent-Signal „granted“ (Default ist „denied“, siehe setDefaultDenied). */
 export function grantMicrosoftUetConsent(): void {
   if (typeof window === "undefined") return;
+  granted = true;
   pushArgs("consent", "update", { ad_storage: "granted" });
 }
 
 /** Default-Denied VOR dem Laden des Tags setzen. */
 export function setMicrosoftUetDefaultDenied(): void {
   if (typeof window === "undefined") return;
+  defaultSet = true;
   pushArgs("consent", "default", { ad_storage: "denied" });
+}
+
+let defaultSet = false;
+let granted = false;
+
+/**
+ * Stellt die korrekte Reihenfolge default → load → grant sicher, auch wenn ein
+ * Event (z. B. eine Conversion) ohne vorherigen setConsent-Pfad eintrifft.
+ * Idempotent: default/grant werden nicht doppelt gesendet.
+ */
+export function ensureMicrosoftUetConsentGranted(): void {
+  if (typeof window === "undefined") return;
+  if (!defaultSet) setMicrosoftUetDefaultDenied();
+  ensureMicrosoftUet();
+  if (!granted) grantMicrosoftUetConsent();
 }
 
 function sentIds(): string[] {
