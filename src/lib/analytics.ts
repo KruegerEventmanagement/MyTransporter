@@ -241,9 +241,16 @@ function markSent(transactionId: string): void {
 }
 
 const sentThisSession = new Set<string>();
+/** Eigene Google-Deduplizierung: fehlt das Label, gilt Google NICHT als gesendet. */
+const googleSentThisSession = new Set<string>();
 
 /** Merker für Nachholen, falls Consent erst nach der Zahlung erteilt wird. */
 let pendingPurchase: VerifiedPurchase | null = null;
+
+/** Verifizierte Währung der Zahlung; Fallback EUR. */
+function verifiedCurrency(purchase: VerifiedPurchase): string {
+  return (purchase.currency || "EUR").trim().toUpperCase() || "EUR";
+}
 
 /**
  * Sendet die Google-Ads-Purchase-Conversion genau einmal pro transaction_id.
@@ -260,40 +267,48 @@ export function trackPurchase(purchase: VerifiedPurchase): void {
     pendingPurchase = purchase;
     return;
   }
+  const currency = verifiedCurrency(purchase);
+
   // Microsoft UET Buchungs-Conversion – eigene, stabile Deduplizierung.
   uetTrackBooking(
     {
       paid: true,
       transactionId: purchase.transactionId,
       revenueEur: purchase.conversionValueEur,
+      currency,
     },
     true,
   );
 
-  if (sentThisSession.has(purchase.transactionId) || alreadySent(purchase.transactionId)) return;
-
-  sentThisSession.add(purchase.transactionId);
-  markSent(purchase.transactionId);
-
-  // Meta Purchase – nur Wert, Währung und stabile Zahlungs-ID (keine PII).
-  metaTrack(
-    "Purchase",
-    { currency: "EUR", value: purchase.conversionValueEur },
-    purchase.transactionId,
-  );
+  // Meta Purchase – eigene Deduplizierung (gemeinsamer Bestandsschlüssel).
+  if (!sentThisSession.has(purchase.transactionId) && !alreadySent(purchase.transactionId)) {
+    sentThisSession.add(purchase.transactionId);
+    markSent(purchase.transactionId);
+    // Nur Wert, Währung und stabile Zahlungs-ID (keine PII).
+    metaTrack(
+      "Purchase",
+      { currency, value: purchase.conversionValueEur },
+      purchase.transactionId,
+    );
+  }
 
   if (!PURCHASE_LABEL) {
-    // Google-Ads-Label nicht gesetzt: bewusst kein Google-Event, kein Fehler.
+    // Google-Ads-Label nicht gesetzt: bewusst kein Google-Event – und auch
+    // KEINE dauerhafte "gesendet"-Markierung für Google.
     return;
   }
+  if (googleSentThisSession.has(purchase.transactionId)) return;
+  if (alreadySentGoogle(purchase.transactionId)) return;
 
   ensureGoogleTag();
   window.gtag?.("event", "conversion", {
     send_to: `${GOOGLE_ADS_ID}/${PURCHASE_LABEL}`,
     value: purchase.conversionValueEur,
-    currency: "EUR",
+    currency,
     transaction_id: purchase.transactionId,
   });
+  googleSentThisSession.add(purchase.transactionId);
+  markSentGoogle(purchase.transactionId);
 }
 
 // Nachholen, sobald Marketing-Einwilligung erteilt wird.
