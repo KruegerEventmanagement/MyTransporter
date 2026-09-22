@@ -294,11 +294,33 @@ export function lastAdConsentEvaluation(): TcfEvaluation {
   return lastEvaluation;
 }
 
+/** Aktuelle Generation; ungültig gewordene Abläufe dürfen nichts freigeben. */
+export function cmpGeneration(): number {
+  return generation;
+}
+
+/** Ist der CMP-Bootstrap aktuell aktiv (nicht abgebaut)? */
+export function isCmpBootstrapped(): boolean {
+  return bootstrapped !== null;
+}
+
 /** Anzeigenanfragen sofort anhalten (Widerruf, Route-/Suppression-Ende). */
 export function pauseAdRequests(win: CmpWindow | null = defaultWin()): void {
   if (!win) return;
   const queue = (win.adsbygoogle = win.adsbygoogle || ([] as Array<unknown> & { pauseAdRequests?: number }));
   queue.pauseAdRequests = 1;
+  queue.requestNonPersonalizedAds = 1;
+}
+
+/**
+ * Anfragen freigeben. Der NPA-Wert wird immer explizit aus der letzten
+ * Auswertung gesetzt (0 = personalisiert erlaubt, 1 = nur nicht personalisiert).
+ */
+export function allowAdRequests(win: CmpWindow | null = defaultWin()): void {
+  if (!win) return;
+  const queue = (win.adsbygoogle = win.adsbygoogle || ([] as Array<unknown> & { pauseAdRequests?: number }));
+  queue.requestNonPersonalizedAds = lastEvaluation.personalized ? 0 : 1;
+  queue.pauseAdRequests = 0;
 }
 
 /**
