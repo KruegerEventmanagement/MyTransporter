@@ -136,3 +136,20 @@ Konfigurationsflags allein aktivieren NICHTS. Vor Aktivierung nötig:
 Leere Flächen werden am echten Attribut `data-ad-status="unfilled"` erkannt und
 komplett inklusive Kennzeichnung ausgeblendet (kein erfundenes Attribut, keine
 globalen CSS-Regeln).
+
+## Lebenszyklus-Härtung (Loader/Slots)
+
+- `ensureAdSenseScript` prüft nach `await requestAdConsent()` erneut Token,
+  CMP-Generation, Bootstrap-Zustand, Konfiguration und aktuellen Consent,
+  bevor `pauseAdRequests = 0` gesetzt oder gecacht wird.
+- `resetAdSenseScriptLoad` macht das laufende Token, den Cache und den
+  Consent-Watcher ungültig; Teardown/Unterdrückung/Routenwechsel rufen es auf.
+- Der NPA-Wert wird immer explizit gesetzt: `requestNonPersonalizedAds = 0`
+  bei erlaubter Personalisierung, sonst `1` (auch beim Pausieren).
+- Eine einmal erfolgreiche Freigabe umgeht keine spätere Pause: jeder Aufruf
+  revalidiert, und `adRequestsCurrentlyPermitted()` wird vor jedem `push`
+  geprüft.
+- `AdSlot` fragt pro tatsächlich neuem `<ins>` genau einmal an; das Aufräumen
+  einer einzelnen Fläche pausiert nicht global andere berechtigte Flächen.
+- Seitenspalten laufen nur auf breiten Desktop-Fenstern (min-width 1280px);
+  in Mobil-/Tablet-Ansicht entsteht keine Anzeigenanfrage.

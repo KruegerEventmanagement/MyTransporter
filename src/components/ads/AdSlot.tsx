@@ -1,8 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { ADSENSE_CONFIG, getSlotId, isSlotReady, type AdSenseSlotKey } from "@/lib/adsense";
 import { useAdsSuppressed } from "@/lib/ad-visibility";
-import { areAdRequestsAllowed, pauseAdRequests } from "@/lib/adsense-cmp";
-import { ensureAdSenseScript } from "./adsense-loader";
+import { areAdRequestsAllowed } from "@/lib/adsense-cmp";
+import { adRequestsCurrentlyPermitted, ensureAdSenseScript } from "./adsense-loader";
+
+/** Seitenspalten erscheinen ausschließlich auf breiten Desktop-Fenstern. */
+const WIDE_DESKTOP_QUERY = "(min-width: 1280px)";
+
+function isWideDesktop(): boolean {
+  if (typeof window === "undefined") return false;
+  if (typeof window.matchMedia !== "function") return true;
+  return window.matchMedia(WIDE_DESKTOP_QUERY).matches;
+}
 
 interface AdSlotProps {
   slot: AdSenseSlotKey;
@@ -17,36 +26,48 @@ interface AdSlotProps {
  *
  * - Rendert NICHTS (kein Platzhalter, kein leeres Rechteck), solange AdSense
  *   nicht vollständig konfiguriert, freigegeben und einwilligungsbereit ist.
- * - Lädt das Script einmalig asynchron und initialisiert den Slot genau einmal.
- * - Lazy: Initialisierung erst, wenn die Fläche in den Viewport kommt und eine
- *   echte Breite > 0 hat (keine Zero-Width-Requests).
+ * - Lädt das Script einmalig asynchron und initialisiert JEDES echte
+ *   `<ins>`-Element genau einmal (kein doppeltes `push`).
+ * - Lazy: Initialisierung erst, wenn die Fläche in den Viewport kommt, eine
+ *   echte Breite > 0 hat und das Fenster ein breiter Desktop ist – auf
+ *   Mobil/Tablet entsteht damit keine einzige Anfrage.
  * - Ohne Anzeige (`data-ad-status="unfilled"`) wird die gesamte Fläche inklusive
  *   Kennzeichnung ausgeblendet – beobachtet am echten Attribut von Google,
  *   ohne globale CSS-Regeln, die befüllte Anzeigen treffen könnten.
+ * - Das Aufräumen einer einzelnen Fläche pausiert NICHT global die Anfragen
+ *   anderer, weiterhin berechtigter Flächen; das Pausieren übernimmt der
+ *   CMP-/Suppression-Lebenszyklus (useAdCmp).
  */
 export function AdSlot({ slot, minHeight = 250, className, label = "Anzeige" }: AdSlotProps) {
   const suppressed = useAdsSuppressed();
   const ready = isSlotReady(slot);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const insRef = useRef<HTMLModElement | null>(null);
-  const initialized = useRef(false);
+  /** Merkt sich das konkrete `<ins>`, für das bereits angefragt wurde. */
+  const initializedIns = useRef<HTMLModElement | null>(null);
   const [active, setActive] = useState(false);
   const [unfilled, setUnfilled] = useState(false);
 
   useEffect(() => {
     if (!ready || suppressed) return;
     const el = containerRef.current;
-    if (!el || initialized.current) return;
+    if (!el) return;
 
     let cancelled = false;
     const tryInit = async () => {
-      if (cancelled || initialized.current) return;
+      if (cancelled) return;
+      const ins = insRef.current;
+      if (!ins || initializedIns.current === ins) return; // pro echtem <ins> nur einmal
+      if (!isWideDesktop()) return; // keine Anfragen für ausgeblendete Mobilansicht
       const width = el.getBoundingClientRect().width;
       if (width <= 0) return; // niemals mit Breite 0 anfragen
       if (!areAdRequestsAllowed()) return; // QA-Modus/unfertige Konfiguration: nie anfragen
-      const loaded = await ensureAdSenseScript();
-      if (cancelled || !loaded || initialized.current) return;
-      initialized.current = true;
+      const loaded = await ensureAdSenseScript(ADSENSE_CONFIG, { suppressed: false });
+      if (cancelled || !loaded) return;
+      // Nach dem await: aktuelle Berechtigung und identisches <ins> erneut prüfen.
+      if (insRef.current !== ins || initializedIns.current === ins) return;
+      if (!adRequestsCurrentlyPermitted()) return;
+      initializedIns.current = ins;
       setActive(true);
       try {
         const w = window as unknown as { adsbygoogle?: unknown[] };
@@ -67,8 +88,7 @@ export function AdSlot({ slot, minHeight = 250, className, label = "Anzeige" }: 
     return () => {
       cancelled = true;
       observer.disconnect();
-      // Verlassen der Fläche/Route: Anfragen sofort anhalten.
-      pauseAdRequests();
+      // Kein globales Pausieren hier: andere berechtigte Flächen bleiben aktiv.
     };
   }, [ready, suppressed]);
 
