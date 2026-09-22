@@ -169,8 +169,6 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
     }
   };
 
-  const statusText = hasError ? "nicht geladen" : !enabled ? "aus" : paused ? "pausiert" : "läuft";
-
   return (
     <>
       {enabled && (
@@ -234,11 +232,6 @@ export function VideoBackground({ src, poster, title, fit = "cover" }: VideoBack
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
             <span>{muted ? "Ton an" : "Ton aus"}</span>
           </Button>
-        )}
-        {enabled && hasError && (
-          <p className="max-w-36 border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
-            Video {statusText}
-          </p>
         )}
       </div>
     </>
