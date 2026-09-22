@@ -35,10 +35,11 @@ export const getBusySlots = createServerFn({ method: "GET" })
       }));
 
     // Aktive, nicht abgelaufene Reservierungen blockieren das Zeitfenster ebenfalls
-    const { data: holds } = await supabaseAdmin
+    const { data: holds, error: holdsError } = await supabaseAdmin
       .from("booking_holds")
       .select("vehicle_plate, plan_id, start_date, start_hour, expires_at")
       .gt("expires_at", new Date().toISOString());
+    if (holdsError) throw new Error(holdsError.message);
 
     const holdSlots = (holds ?? [])
       .filter((h) => h.start_date && h.start_hour !== null)
@@ -48,9 +49,10 @@ export const getBusySlots = createServerFn({ method: "GET" })
       }));
 
     // Manuelle Fahrzeug-Sperren (Wartung, Offline-Vermietung, Verfügbarkeitsstart)
-    const { data: blocks } = await supabaseAdmin
+    const { data: blocks, error: blocksError } = await supabaseAdmin
       .from("vehicle_blocks")
       .select("vehicle_plate, start_at, end_at");
+    if (blocksError) throw new Error(blocksError.message);
 
     const blockSlots = (blocks ?? []).map((b) => ({
       vehiclePlate: b.vehicle_plate ?? "",
@@ -59,9 +61,10 @@ export const getBusySlots = createServerFn({ method: "GET" })
     }));
 
     // Manuell im Adminkalender eingetragene Termine (Offline-Vermietung, Reservierung)
-    const { data: manual } = await supabaseAdmin
+    const { data: manual, error: manualError } = await supabaseAdmin
       .from("manual_reservations")
       .select("vehicle_plate, start_at, end_at");
+    if (manualError) throw new Error(manualError.message);
 
     const manualSlots = (manual ?? []).map((m) => ({
       vehiclePlate: m.vehicle_plate ?? "",
