@@ -4,7 +4,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { BookingSection } from "@/components/BookingSection";
 import { Navbar } from "@/components/Navbar";
 
-import { AdBanner } from "@/components/AdBanner";
+import { SocialBanner } from "@/components/SocialBanner";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
@@ -79,7 +79,7 @@ function Index() {
       <Navbar />
       <AdRails>
         <HeroSection />
-        <AdBanner />
+        <SocialBanner />
         <h1 className="sr-only">Transporter mieten in Leonberg &amp; Stuttgart ab 49 € – Umzug, Möbeltransport &amp; Baumarkt</h1>
         <BookingSection />
       </AdRails>

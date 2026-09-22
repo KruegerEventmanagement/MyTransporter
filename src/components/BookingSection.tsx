@@ -994,9 +994,11 @@ export function BookingSection() {
     <section id="booking" className="py-6 px-3 sm:px-4 overflow-x-hidden">
       {step === 5 && <PaymentTestModeBanner />}
       <div className="max-w-4xl mx-auto w-full">
-        <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center text-foreground animate-fade-in-up">
-          Buche deinen Transporter
-        </h1>
+        {step !== 0 && (
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center text-foreground animate-fade-in-up">
+            Buche deinen Transporter
+          </h2>
+        )}
 
         {/* Step indicator */}
         <div className={`mt-8 grid w-full max-w-lg mx-auto ${registrationComplete ? "grid-cols-5" : "grid-cols-6"}`}>
@@ -1054,7 +1056,11 @@ export function BookingSection() {
               )}
             </div>
 
-            <div className="mt-10 flex justify-center">
+            <h2 className="mt-10 text-xl sm:text-2xl md:text-3xl font-bold text-center text-foreground">
+              Buche deinen Transporter
+            </h2>
+
+            <div className="mt-6 flex justify-center">
               <button
                 disabled={!canProceedStep0}
                 onClick={() => setStep(1)}
