@@ -420,6 +420,57 @@ export type Database = {
           },
         ]
       }
+      manual_reservation_notifications: {
+        Row: {
+          attempts: number
+          created_at: string
+          event_kind: string
+          id: string
+          last_error: string | null
+          lease_until: string | null
+          next_retry_at: string | null
+          payload: Json
+          push_sent_at: string | null
+          reservation_id: string
+          revision: number
+          status: string
+          succeeded_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          event_kind: string
+          id?: string
+          last_error?: string | null
+          lease_until?: string | null
+          next_retry_at?: string | null
+          payload: Json
+          push_sent_at?: string | null
+          reservation_id: string
+          revision: number
+          status?: string
+          succeeded_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          event_kind?: string
+          id?: string
+          last_error?: string | null
+          lease_until?: string | null
+          next_retry_at?: string | null
+          payload?: Json
+          push_sent_at?: string | null
+          reservation_id?: string
+          revision?: number
+          status?: string
+          succeeded_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       manual_reservations: {
         Row: {
           created_at: string
@@ -439,6 +490,7 @@ export type Database = {
           reminder_24h_sent_at: string | null
           reminder_30min_sent_at: string | null
           reminder_enabled: boolean
+          revision: number
           start_at: string
           updated_at: string
           vehicle_id: string | null
@@ -463,6 +515,7 @@ export type Database = {
           reminder_24h_sent_at?: string | null
           reminder_30min_sent_at?: string | null
           reminder_enabled?: boolean
+          revision?: number
           start_at: string
           updated_at?: string
           vehicle_id?: string | null
@@ -487,6 +540,7 @@ export type Database = {
           reminder_24h_sent_at?: string | null
           reminder_30min_sent_at?: string | null
           reminder_enabled?: boolean
+          revision?: number
           start_at?: string
           updated_at?: string
           vehicle_id?: string | null
@@ -884,8 +938,37 @@ export type Database = {
         }
         Returns: boolean
       }
+      claim_manual_notifications: {
+        Args: { _lease_seconds?: number; _limit?: number }
+        Returns: {
+          attempts: number
+          created_at: string
+          event_kind: string
+          id: string
+          last_error: string | null
+          lease_until: string | null
+          next_retry_at: string | null
+          payload: Json
+          push_sent_at: string | null
+          reservation_id: string
+          revision: number
+          status: string
+          succeeded_at: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "manual_reservation_notifications"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       complete_booking_action: {
         Args: { _action_key: string; _booking_id: string }
+        Returns: undefined
+      }
+      complete_manual_notification: {
+        Args: { _id: string; _push_sent?: boolean }
         Returns: undefined
       }
       create_booking_hold_atomic: {
@@ -913,6 +996,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      fail_manual_notification: {
+        Args: { _error: string; _id: string; _retry_in_seconds?: number }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -933,6 +1020,16 @@ export type Database = {
       local_start_at: {
         Args: { _start_date: string; _start_hour: number }
         Returns: string
+      }
+      manual_reservation_notification_payload: {
+        Args: {
+          _row: Database["public"]["Tables"]["manual_reservations"]["Row"]
+        }
+        Returns: Json
+      }
+      mark_manual_notification_pushed: {
+        Args: { _id: string }
+        Returns: undefined
       }
       normalize_plate: { Args: { _plate: string }; Returns: string }
       plan_end_at: {

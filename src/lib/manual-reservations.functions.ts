@@ -80,6 +80,20 @@ const DOC_TYPES = [
   "other",
 ] as const;
 
+/**
+ * Stößt den Versand der Owner-Benachrichtigung sofort an. Die Einreihung selbst
+ * passiert atomar per Datenbank-Trigger, daher darf ein Fehler hier die
+ * gespeicherte Reservierung nie zurückrollen – es wird planmäßig wiederholt.
+ */
+async function kickOutbox(): Promise<void> {
+  try {
+    const { kickManualNotificationOutbox } = await import("@/lib/manual-notifications.server");
+    await kickManualNotificationOutbox();
+  } catch (e) {
+    console.warn("Benachrichtigungslauf nicht gestartet:", e);
+  }
+}
+
 async function assertAdmin(context: { supabase: any; userId: string }) {
   const { data, error } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
@@ -146,6 +160,7 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
         .select(SELECT_COLUMNS)
         .single();
       if (error) throw new Error(error.message);
+      await kickOutbox();
       return row as ManualReservation;
     }
 
@@ -155,6 +170,7 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
       .select(SELECT_COLUMNS)
       .single();
     if (error) throw new Error(error.message);
+    await kickOutbox();
     return row as ManualReservation;
   });
 
@@ -180,6 +196,7 @@ export const deleteManualReservation = createServerFn({ method: "POST" })
       .delete()
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+    await kickOutbox();
     return { ok: true as const };
   });
 
@@ -267,4 +284,31 @@ export const deleteManualReservationDocument = createServerFn({ method: "POST" }
       await supabaseAdmin.storage.from("user-documents").remove([row.file_path]);
     }
     return { ok: true as const };
+  });
+
+export type ManualNotificationState = {
+  reservation_id: string;
+  event_kind: string;
+  status: string;
+  attempts: number;
+  last_error: string | null;
+  created_at: string;
+};
+
+/** Zustand der Owner-Benachrichtigungen (ausstehend / gesendet / Fehler). */
+export const listManualNotificationStates = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ reservationIds: z.array(z.string().uuid()).max(300) }).parse(input),
+  )
+  .handler(async ({ data, context }): Promise<ManualNotificationState[]> => {
+    await assertAdmin(context);
+    if (data.reservationIds.length === 0) return [];
+    const { data: rows, error } = await context.supabase
+      .from("manual_reservation_notifications")
+      .select("reservation_id, event_kind, status, attempts, last_error, created_at")
+      .in("reservation_id", data.reservationIds)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as ManualNotificationState[];
   });

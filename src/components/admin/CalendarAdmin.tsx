@@ -21,7 +21,9 @@ import {
   listManualReservationDocuments,
   addManualReservationDocument,
   deleteManualReservationDocument,
+  listManualNotificationStates,
   type ManualReservation,
+  type ManualNotificationState,
 } from "@/lib/manual-reservations.functions";
 import { bookingWindowMs } from "@/lib/booking-window";
 import { ageOnIsoDate, isValidIsoDate, todayIsoBerlin } from "@/lib/age";
@@ -164,6 +166,19 @@ function emptyForm(day: Date): FormState {
   };
 }
 
+/**
+ * Zustand der Owner-Benachrichtigung in Klartext. Eine gesendete E-Mail ist
+ * KEIN Beweis für einen Kalendereintrag – der entsteht erst im Postfach.
+ */
+function notifyLabel(state?: ManualNotificationState): string {
+  if (!state) return "Benachrichtigung wird vorbereitet";
+  if (state.status === "succeeded")
+    return "E-Mail an info@mytransporter.org gesendet (Kalender folgt im Postfach)";
+  if (state.status === "failed")
+    return `Benachrichtigung fehlgeschlagen – Wiederholung geplant (Versuch ${state.attempts})`;
+  return "Benachrichtigung ausstehend";
+}
+
 export function CalendarAdmin() {
   const [month, setMonth] = useState(() => {
     const now = new Date();
@@ -173,6 +188,7 @@ export function CalendarAdmin() {
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [bookingSlots, setBookingSlots] = useState<BookingSlot[]>([]);
   const [manuals, setManuals] = useState<ManualReservation[]>([]);
+  const [notifyStates, setNotifyStates] = useState<Record<string, ManualNotificationState>>({});
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -182,6 +198,7 @@ export function CalendarAdmin() {
   const [nextDocKind, setNextDocKind] = useState<DocKind>("id_front");
 
   const fetchManual = useServerFn(listManualReservations);
+  const fetchNotifyStates = useServerFn(listManualNotificationStates);
   const saveManual = useServerFn(upsertManualReservation);
   const removeManual = useServerFn(deleteManualReservation);
   const fetchDocs = useServerFn(listManualReservationDocuments);
@@ -265,6 +282,20 @@ export function CalendarAdmin() {
 
       setVehicles((vehicleRows ?? []) as VehicleOption[]);
       setManuals(manualRows);
+
+      // Zustand der Owner-Benachrichtigung (ausstehend / gesendet / Fehler)
+      try {
+        const ids = manualRows.map((m) => m.id);
+        const states =
+          ids.length > 0 ? await fetchNotifyStates({ data: { reservationIds: ids } }) : [];
+        const latest: Record<string, ManualNotificationState> = {};
+        for (const st of states) {
+          if (!latest[st.reservation_id]) latest[st.reservation_id] = st;
+        }
+        setNotifyStates(latest);
+      } catch {
+        setNotifyStates({});
+      }
 
       const slots: BookingSlot[] = (bookingRows ?? [])
         .filter((b) => b.start_date && b.start_hour !== null)
@@ -650,6 +681,9 @@ export function CalendarAdmin() {
                     {e.manual.note && (
                       <p className="text-xs text-muted-foreground mt-1">{e.manual.note}</p>
                     )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {notifyLabel(notifyStates[e.manual.id])}
+                    </p>
                   </>
                 )}
               </div>
