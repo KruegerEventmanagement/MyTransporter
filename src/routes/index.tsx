@@ -79,7 +79,7 @@ function Index() {
       <Navbar />
       <AdRails>
         <HeroSection />
-        <AdBanner />
+        <SocialBanner />
         <h1 className="sr-only">Transporter mieten in Leonberg &amp; Stuttgart ab 49 € – Umzug, Möbeltransport &amp; Baumarkt</h1>
         <BookingSection />
       </AdRails>
