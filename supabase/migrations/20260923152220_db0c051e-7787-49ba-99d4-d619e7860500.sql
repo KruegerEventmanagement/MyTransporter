@@ -1,0 +1,10 @@
+REVOKE ALL ON FUNCTION public.enqueue_calendar_sync(text, uuid, text, jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.claim_calendar_sync_jobs(integer, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.complete_calendar_sync_job(uuid, text, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.fail_calendar_sync_job(uuid, text, integer, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bookings_enqueue_calendar_sync() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.manual_reservations_enqueue_calendar_sync() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_calendar_sync_jobs(integer, integer) TO service_role;
+GRANT EXECUTE ON FUNCTION public.complete_calendar_sync_job(uuid, text, uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.fail_calendar_sync_job(uuid, text, integer, uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.enqueue_calendar_sync(text, uuid, text, jsonb) TO service_role;
