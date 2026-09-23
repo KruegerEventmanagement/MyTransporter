@@ -521,5 +521,14 @@ export const cancelBookingWithRefund = createServerFn({ method: "POST" })
       })
       .eq("id", booking.id);
 
+    // Storno im Kalender: Zustand wurde per Trigger markiert; Sofortversuch nur
+    // für diese Buchung, Fehler bleiben retrybar und beeinflussen den Storno nie.
+    try {
+      const { kickCalendarSync } = await import("@/lib/calendar-sync.server");
+      await kickCalendarSync("booking", booking.id as string);
+    } catch (e) {
+      console.warn("[storno] Kalenderübertragung nicht gestartet", e);
+    }
+
     return { refundCents, feeCents, hours, refundId };
   });

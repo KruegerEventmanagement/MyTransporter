@@ -347,7 +347,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
   // übrigen Folgeaktionen niemals beeinflussen – er bleibt retrybar.
   try {
     const { kickCalendarSync } = await import("@/lib/calendar-sync.server");
-    await kickCalendarSync();
+    await kickCalendarSync("booking", bookingId);
   } catch (e) {
     console.warn("[webhook] Kalenderübertragung nicht gestartet", e);
   }
