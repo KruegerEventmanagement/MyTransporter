@@ -212,3 +212,25 @@ export async function kickCalendarSync(): Promise<void> {
     console.warn("[calendar-sync] Sofortübertragung fehlgeschlagen:", e);
   }
 }
+
+/**
+ * Sucht einen bestehenden (z. B. manuell nachgetragenen) Termin, dessen
+ * Beschreibung die stabile MyTransporter-ID enthält, und übernimmt ihn statt
+ * eine Dublette anzulegen.
+ */
+async function findAdoptableEventId(sourceId: string, ownId: string): Promise<string | null> {
+  const q = new URLSearchParams({ q: sourceId, showDeleted: "false", maxResults: "10" });
+  const res = await gateway("GET", `/calendars/${cal}/events?${q.toString()}`);
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`Kalender-Suche fehlgeschlagen [${res.status}]: ${res.text}`);
+  }
+  const items = (JSON.parse(res.text)?.items ?? []) as Array<{
+    id?: string;
+    status?: string;
+    description?: string;
+  }>;
+  const hit = items.find(
+    (i) => i.id && i.id !== ownId && i.status !== "cancelled" && (i.description ?? "").includes(sourceId),
+  );
+  return hit?.id ?? null;
+}
