@@ -350,6 +350,63 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_sync_jobs: {
+        Row: {
+          attempts: number
+          content_hash: string
+          created_at: string
+          event_kind: string
+          google_event_id: string | null
+          id: string
+          last_error: string | null
+          lease_token: string | null
+          lease_until: string | null
+          next_retry_at: string | null
+          payload: Json
+          source_id: string
+          source_type: string
+          status: string
+          succeeded_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          content_hash: string
+          created_at?: string
+          event_kind: string
+          google_event_id?: string | null
+          id?: string
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          next_retry_at?: string | null
+          payload: Json
+          source_id: string
+          source_type: string
+          status?: string
+          succeeded_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          content_hash?: string
+          created_at?: string
+          event_kind?: string
+          google_event_id?: string | null
+          id?: string
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          next_retry_at?: string | null
+          payload?: Json
+          source_id?: string
+          source_type?: string
+          status?: string
+          succeeded_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gps_tracks: {
         Row: {
           booking_id: string
@@ -912,6 +969,10 @@ export type Database = {
     }
     Functions: {
       blocking_booking_statuses: { Args: never; Returns: string[] }
+      booking_calendar_payload: {
+        Args: { _row: Database["public"]["Tables"]["bookings"]["Row"] }
+        Returns: Json
+      }
       bookings_locked_fields_unchanged: {
         Args: {
           _addons: Json
@@ -944,6 +1005,33 @@ export type Database = {
         }
         Returns: boolean
       }
+      claim_calendar_sync_jobs: {
+        Args: { _lease_seconds?: number; _limit?: number }
+        Returns: {
+          attempts: number
+          content_hash: string
+          created_at: string
+          event_kind: string
+          google_event_id: string | null
+          id: string
+          last_error: string | null
+          lease_token: string | null
+          lease_until: string | null
+          next_retry_at: string | null
+          payload: Json
+          source_id: string
+          source_type: string
+          status: string
+          succeeded_at: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "calendar_sync_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       claim_manual_notifications: {
         Args: { _lease_seconds?: number; _limit?: number }
         Returns: {
@@ -975,6 +1063,10 @@ export type Database = {
         Args: { _action_key: string; _booking_id: string }
         Returns: undefined
       }
+      complete_calendar_sync_job: {
+        Args: { _google_event_id?: string; _id: string; _lease_token?: string }
+        Returns: boolean
+      }
       complete_manual_notification:
         | { Args: { _id: string; _push_sent?: boolean }; Returns: undefined }
         | {
@@ -997,6 +1089,15 @@ export type Database = {
         }[]
       }
       delete_expired_booking_holds: { Args: never; Returns: undefined }
+      enqueue_calendar_sync: {
+        Args: {
+          _event_kind: string
+          _payload: Json
+          _source_id: string
+          _source_type: string
+        }
+        Returns: undefined
+      }
       fail_booking_action: {
         Args: {
           _action_key: string
@@ -1005,6 +1106,15 @@ export type Database = {
           _retry_in_seconds?: number
         }
         Returns: undefined
+      }
+      fail_calendar_sync_job: {
+        Args: {
+          _error: string
+          _id: string
+          _lease_token?: string
+          _retry_in_seconds?: number
+        }
+        Returns: boolean
       }
       fail_manual_notification:
         | {

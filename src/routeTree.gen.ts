@@ -33,6 +33,7 @@ import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/publi
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
 import { Route as ApiPublicHooksSendBirthdayEmailsRouteImport } from './routes/api/public/hooks/send-birthday-emails'
 import { Route as ApiPublicHooksProcessManualNotificationsRouteImport } from './routes/api/public/hooks/process-manual-notifications'
+import { Route as ApiPublicHooksProcessCalendarSyncRouteImport } from './routes/api/public/hooks/process-calendar-sync'
 import { Route as ApiPublicHooksNotifyAdminRouteImport } from './routes/api/public/hooks/notify-admin'
 import { Route as ApiPublicHealthAutomationsRouteImport } from './routes/api/public/health/automations'
 
@@ -162,6 +163,12 @@ const ApiPublicHooksProcessManualNotificationsRoute =
     path: '/api/public/hooks/process-manual-notifications',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksProcessCalendarSyncRoute =
+  ApiPublicHooksProcessCalendarSyncRouteImport.update({
+    id: '/api/public/hooks/process-calendar-sync',
+    path: '/api/public/hooks/process-calendar-sync',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksNotifyAdminRoute =
   ApiPublicHooksNotifyAdminRouteImport.update({
     id: '/api/public/hooks/notify-admin',
@@ -198,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
+  '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
@@ -226,6 +234,7 @@ export interface FileRoutesByTo {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
+  '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
@@ -255,6 +264,7 @@ export interface FileRoutesById {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
+  '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
@@ -285,6 +295,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
+    | '/api/public/hooks/process-calendar-sync'
     | '/api/public/hooks/process-manual-notifications'
     | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
@@ -313,6 +324,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
+    | '/api/public/hooks/process-calendar-sync'
     | '/api/public/hooks/process-manual-notifications'
     | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
@@ -341,6 +353,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
+    | '/api/public/hooks/process-calendar-sync'
     | '/api/public/hooks/process-manual-notifications'
     | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
@@ -370,6 +383,7 @@ export interface RootRouteChildren {
   ApiPublicSendTestInvoiceRoute: typeof ApiPublicSendTestInvoiceRoute
   ApiPublicHealthAutomationsRoute: typeof ApiPublicHealthAutomationsRoute
   ApiPublicHooksNotifyAdminRoute: typeof ApiPublicHooksNotifyAdminRoute
+  ApiPublicHooksProcessCalendarSyncRoute: typeof ApiPublicHooksProcessCalendarSyncRoute
   ApiPublicHooksProcessManualNotificationsRoute: typeof ApiPublicHooksProcessManualNotificationsRoute
   ApiPublicHooksSendBirthdayEmailsRoute: typeof ApiPublicHooksSendBirthdayEmailsRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
@@ -546,6 +560,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProcessManualNotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-calendar-sync': {
+      id: '/api/public/hooks/process-calendar-sync'
+      path: '/api/public/hooks/process-calendar-sync'
+      fullPath: '/api/public/hooks/process-calendar-sync'
+      preLoaderRoute: typeof ApiPublicHooksProcessCalendarSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/notify-admin': {
       id: '/api/public/hooks/notify-admin'
       path: '/api/public/hooks/notify-admin'
@@ -586,6 +607,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSendTestInvoiceRoute: ApiPublicSendTestInvoiceRoute,
   ApiPublicHealthAutomationsRoute: ApiPublicHealthAutomationsRoute,
   ApiPublicHooksNotifyAdminRoute: ApiPublicHooksNotifyAdminRoute,
+  ApiPublicHooksProcessCalendarSyncRoute:
+    ApiPublicHooksProcessCalendarSyncRoute,
   ApiPublicHooksProcessManualNotificationsRoute:
     ApiPublicHooksProcessManualNotificationsRoute,
   ApiPublicHooksSendBirthdayEmailsRoute: ApiPublicHooksSendBirthdayEmailsRoute,

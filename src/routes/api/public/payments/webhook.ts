@@ -341,6 +341,16 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
   // pro Buchung, unabhängig voneinander, nach Fehlern retrybar.
   const res = await reconcileBookingPostActions(bookingId);
   console.log("[webhook] Folgeaktionen", bookingId, res.results);
+
+  // Kalenderübertragung: Einreihung passiert atomar per DB-Trigger, hier nur
+  // der sofortige Versuch. Ein Kalenderfehler darf die bezahlte Buchung und die
+  // übrigen Folgeaktionen niemals beeinflussen – er bleibt retrybar.
+  try {
+    const { kickCalendarSync } = await import("@/lib/calendar-sync.server");
+    await kickCalendarSync();
+  } catch (e) {
+    console.warn("[webhook] Kalenderübertragung nicht gestartet", e);
+  }
   if (res.hasFailures) {
     try {
       await supabaseAdmin.from("admin_notifications").insert({

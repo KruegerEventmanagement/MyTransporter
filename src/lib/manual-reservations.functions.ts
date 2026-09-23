@@ -92,6 +92,14 @@ async function kickOutbox(): Promise<void> {
   } catch (e) {
     console.warn("Benachrichtigungslauf nicht gestartet:", e);
   }
+  // Kalenderübertragung ist unabhängig: ein Fehler hier darf die Mail-/Push-
+  // Benachrichtigung und die gespeicherte Reservierung nie beeinflussen.
+  try {
+    const { kickCalendarSync } = await import("@/lib/calendar-sync.server");
+    await kickCalendarSync();
+  } catch (e) {
+    console.warn("Kalenderübertragung nicht gestartet:", e);
+  }
 }
 
 async function assertAdmin(context: { supabase: any; userId: string }) {
