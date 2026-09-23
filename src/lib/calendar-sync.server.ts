@@ -155,6 +155,17 @@ export async function createCalendarDeps(): Promise<CalendarDeps> {
       }),
     upsertEvent: async (sourceType, sourceId, payload) => {
       const event = buildCalendarEvent(sourceType, sourceId, payload);
+      // Bereits manuell/extern angelegten Termin mit derselben stabilen ID übernehmen.
+      const adopted = await findAdoptableEventId(sourceId, event.id);
+      if (adopted) {
+        const { id: _omit, ...body } = event;
+        const res = await gateway("PUT", `/calendars/${cal}/events/${encodeURIComponent(adopted)}`, {
+          ...body,
+          status: "confirmed",
+        });
+        if (res.status >= 200 && res.status < 300) return adopted;
+        throw new Error(`Kalender-Übernahme fehlgeschlagen [${res.status}]: ${res.text}`);
+      }
       // Anlegen mit fester Kennung; existiert der Termin schon (409), aktualisieren.
       const created = await gateway("POST", `/calendars/${cal}/events`, event);
       if (created.status === 200 || created.status === 201) return event.id;
@@ -169,13 +180,17 @@ export async function createCalendarDeps(): Promise<CalendarDeps> {
       throw new Error(`Kalendereintrag fehlgeschlagen [${created.status}]: ${created.text}`);
     },
     deleteEvent: async (sourceType, sourceId) => {
-      const id = calendarEventId(sourceType, sourceId);
-      const res = await gateway("DELETE", `/calendars/${cal}/events/${id}`);
-      // Nicht vorhanden / bereits gelöscht ⇒ Ziel erreicht.
-      if ((res.status >= 200 && res.status < 300) || res.status === 404 || res.status === 410) {
-        return;
+      const ids = new Set([calendarEventId(sourceType, sourceId)]);
+      const adopted = await findAdoptableEventId(sourceId, "");
+      if (adopted) ids.add(adopted);
+      for (const id of ids) {
+        const res = await gateway("DELETE", `/calendars/${cal}/events/${encodeURIComponent(id)}`);
+        // Nicht vorhanden / bereits gelöscht ⇒ Ziel erreicht.
+        if ((res.status >= 200 && res.status < 300) || res.status === 404 || res.status === 410) {
+          continue;
+        }
+        throw new Error(`Kalender-Löschung fehlgeschlagen [${res.status}]: ${res.text}`);
       }
-      throw new Error(`Kalender-Löschung fehlgeschlagen [${res.status}]: ${res.text}`);
     },
   };
 }
@@ -196,4 +211,26 @@ export async function kickCalendarSync(): Promise<void> {
   } catch (e) {
     console.warn("[calendar-sync] Sofortübertragung fehlgeschlagen:", e);
   }
+}
+
+/**
+ * Sucht einen bestehenden (z. B. manuell nachgetragenen) Termin, dessen
+ * Beschreibung die stabile MyTransporter-ID enthält, und übernimmt ihn statt
+ * eine Dublette anzulegen.
+ */
+async function findAdoptableEventId(sourceId: string, ownId: string): Promise<string | null> {
+  const q = new URLSearchParams({ q: sourceId, showDeleted: "false", maxResults: "10" });
+  const res = await gateway("GET", `/calendars/${cal}/events?${q.toString()}`);
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`Kalender-Suche fehlgeschlagen [${res.status}]: ${res.text}`);
+  }
+  const items = (JSON.parse(res.text)?.items ?? []) as Array<{
+    id?: string;
+    status?: string;
+    description?: string;
+  }>;
+  const hit = items.find(
+    (i) => i.id && i.id !== ownId && i.status !== "cancelled" && (i.description ?? "").includes(sourceId),
+  );
+  return hit?.id ?? null;
 }
