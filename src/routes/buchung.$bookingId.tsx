@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { privateHead } from "@/lib/seo";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, Calendar, Car, Hash, Key, Wallet, Route as RouteIcon, Image as ImageIcon, X } from "lucide-react";
@@ -9,7 +10,7 @@ import { computePlanReturn } from "@/lib/booking-rules";
 import { requireLogin } from "@/lib/login-redirect";
 
 export const Route = createFileRoute("/buchung/$bookingId")({
-  head: () => ({ meta: [{ title: "MyTransporter · Buchungsdetails" }] }),
+  head: () => privateHead("MyTransporter · Buchungsdetails"),
   component: BookingDetailPage,
 });
 

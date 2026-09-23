@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { privateHead } from "@/lib/seo";
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,12 +8,7 @@ const PROFILE_URL = "/profil";
 const FALLBACK_URL = "/?email_confirmed=1#booking";
 
 export const Route = createFileRoute("/auth/confirm")({
-  head: () => ({
-    meta: [
-      { title: "E-Mail bestätigt, MyTransporter" },
-      { name: "description", content: "Deine E-Mail-Adresse wurde bestätigt. Du wirst automatisch zu MyTransporter weitergeleitet." },
-    ],
-  }),
+  head: () => privateHead("E-Mail bestätigt, MyTransporter"),
   component: AuthConfirmPage,
 });
 

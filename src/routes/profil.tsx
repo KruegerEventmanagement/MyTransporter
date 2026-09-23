@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { privateHead } from "@/lib/seo";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, Car, Wallet, Route as RouteIcon, Calendar, Hash, MapPin, X, Shield, Trash2, FileText } from "lucide-react";
@@ -12,7 +13,7 @@ import { DocumentScanner, SCAN_DOC_LABELS, type ScanDocType } from "@/components
 import { ageOn, MIN_DRIVER_AGE } from "@/lib/birthday";
 
 export const Route = createFileRoute("/profil")({
-  head: () => ({ meta: [{ title: "MyTransporter · Profil" }] }),
+  head: () => privateHead("MyTransporter · Profil"),
   component: ProfilePage,
 });
 

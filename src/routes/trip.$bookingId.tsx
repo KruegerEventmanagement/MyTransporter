@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { privateHead } from "@/lib/seo";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PreDriveFlow } from "@/components/PreDriveFlow";
@@ -10,6 +11,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { requireLogin } from "@/lib/login-redirect";
 
 export const Route = createFileRoute("/trip/$bookingId")({
+  head: () => privateHead("MyTransporter · Fahrt"),
   component: TripPage,
 });
 
