@@ -242,7 +242,11 @@ export async function processCalendarSync(opts?: { limit?: number }): Promise<Ca
  * Ohne Verbindung wird nichts versucht – der Zustand bleibt offen/retrybar.
  */
 export async function kickCalendarSync(sourceType: CalendarSourceType, sourceId: string): Promise<void> {
-  if (!calendarCredentialsPresent()) return;
+  if (!calendarCredentialsPresent()) {
+    // Nicht mehr lautlos: Quelle bleibt offen/retrybar, Admin-Status zeigt "Nicht verbunden".
+    console.warn(`[calendar-sync] Google-Kalender nicht verbunden – ${sourceType} bleibt ausstehend`);
+    return;
+  }
   try {
     await runCalendarSync(await createCalendarDeps(), { limit: 1, sourceType, sourceId });
   } catch (e) {
