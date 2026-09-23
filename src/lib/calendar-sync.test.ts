@@ -1,168 +1,292 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
 import {
   buildCalendarEvent,
   calendarBackoffSeconds,
   calendarEventId,
+  decideCalendarAction,
+  descriptionMatchesSource,
   CALENDAR_TIME_ZONE,
+  REMINDER_MINUTES,
+  type CalendarSourceState,
+  type CalendarSourceType,
 } from "@/lib/calendar-sync";
-import { runCalendarSync, type CalendarDeps } from "@/lib/calendar-sync.server";
+import { runCalendarSync, type CalendarDeps, type GoogleEventRef } from "@/lib/calendar-sync.server";
 
-const BOOKING_ID = "8f14e45f-ceea-467a-9c38-1bd4e0f2a1b7";
+const BOOKING_ID = "9145b6dc-251d-4e28-99d3-173167f9c3ed";
+const MANUAL_ID = "8f14e45f-ceea-467a-9c38-1bd4e0f2a1b7";
 
-const bookingPayload = {
+const paid = (over: Record<string, unknown> = {}) => ({
   booking_id: BOOKING_ID,
-  source_type: "booking",
   status: "paid",
   vehicle_name: "Citroën Jumper L1H1",
   vehicle_plate: "LEO MY 102",
   plan_label: "24 Stunden",
-  pickup_code: "ABC123",
-  start_at: "2026-09-25T08:00:00Z",
-  end_at: "2026-09-26T08:00:00Z",
-};
-
-describe("calendarEventId", () => {
-  it("ist deterministisch und quellgetrennt", () => {
-    expect(calendarEventId("booking", BOOKING_ID)).toBe(calendarEventId("booking", BOOKING_ID));
-    expect(calendarEventId("booking", BOOKING_ID)).not.toBe(
-      calendarEventId("manual_reservation", BOOKING_ID),
-    );
-  });
-
-  it("nutzt nur von Google erlaubte Zeichen", () => {
-    expect(calendarEventId("booking", BOOKING_ID)).toMatch(/^[0-9a-v]{5,}$/);
-  });
-});
-
-describe("buildCalendarEvent", () => {
-  it("überträgt Mietzeitraum in Europe/Berlin mit Erinnerungen", () => {
-    const ev = buildCalendarEvent("booking", BOOKING_ID, bookingPayload);
-    expect(ev.start).toEqual({ dateTime: "2026-09-25T08:00:00Z", timeZone: CALENDAR_TIME_ZONE });
-    expect(ev.end.dateTime).toBe("2026-09-26T08:00:00Z");
-    expect(ev.reminders.overrides.map((o) => o.minutes)).toEqual([10080, 4320, 360, 180, 60]);
-    expect(ev.visibility).toBe("private");
-    expect(ev.summary).toContain("LEO MY 102");
-  });
-
-  it("überträgt keine Abholcodes oder Notizen", () => {
-    const ev = buildCalendarEvent("booking", BOOKING_ID, { ...bookingPayload, note: "Türcode 4711" });
-    const dump = JSON.stringify(ev);
-    expect(dump).not.toContain("ABC123");
-    expect(dump).not.toContain("4711");
-  });
-
-  it("verweigert unbrauchbare Zeiträume", () => {
-    expect(() => buildCalendarEvent("booking", BOOKING_ID, { start_at: "x", end_at: "y" })).toThrow();
-    expect(() =>
-      buildCalendarEvent("booking", BOOKING_ID, {
-        start_at: "2026-09-25T08:00:00Z",
-        end_at: "2026-09-25T08:00:00Z",
-      }),
-    ).toThrow();
-  });
-
-  it("nennt bei manuellen Terminen den Kunden, ohne sensible Felder", () => {
-    const ev = buildCalendarEvent("manual_reservation", BOOKING_ID, {
-      reservation_id: BOOKING_ID,
-      customer_name: "Claudia S.",
-      customer_birth_date: "1980-01-01",
-      vehicle_plate: "LEO MY 101",
-      start_at: "2026-09-25T08:00:00Z",
-      end_at: "2026-09-25T20:00:00Z",
-    });
-    expect(ev.description).toContain("Claudia S.");
-    expect(JSON.stringify(ev)).not.toContain("1980-01-01");
-  });
-});
-
-function deps(overrides: Partial<CalendarDeps> & { jobs: Parameters<never> | unknown }) {
-  const calls: string[] = [];
-  const base: CalendarDeps = {
-    claim: async () => (overrides.jobs as never) ?? [],
-    complete: async (id) => {
-      calls.push(`complete:${id}`);
-      return true;
-    },
-    fail: async (id, error) => {
-      calls.push(`fail:${id}:${error}`);
-      return true;
-    },
-    upsertEvent: async (t, id) => {
-      calls.push(`upsert:${id}`);
-      return calendarEventId(t, id);
-    },
-    deleteEvent: async (_t, id) => {
-      calls.push(`delete:${id}`);
-    },
-    ...overrides,
-  };
-  return { deps: base, calls };
-}
-
-const job = (over: Partial<Record<string, unknown>> = {}) => ({
-  id: "job-1",
-  source_type: "booking",
-  source_id: BOOKING_ID,
-  event_kind: "upsert",
-  payload: bookingPayload,
-  attempts: 1,
-  lease_token: "lease-1",
+  customer_name: "Marcel Zipperle",
+  start_at: "2026-09-26T06:00:00Z",
+  end_at: "2026-09-27T06:00:00Z",
   ...over,
 });
 
-describe("runCalendarSync", () => {
-  it("überträgt einen Auftrag und schließt ihn ab", async () => {
-    const { deps: d, calls } = deps({ jobs: [job()] });
-    const res = await runCalendarSync(d);
-    expect(res).toMatchObject({ claimed: 1, synced: 1, failed: 0, lost_lease: 0 });
-    expect(calls).toEqual([`upsert:${BOOKING_ID}`, "complete:job-1"]);
+/** In-Memory-Nachbildung von calendar_sync_state + Google-Kalender. */
+function world() {
+  type Row = CalendarSourceState & { lease_version: number | null; lease_valid: boolean; last_action?: string };
+  const rows = new Map<string, Row>();
+  const sources = new Map<string, Record<string, unknown> | null>();
+  const google = new Map<string, { description: string; body: Record<string, unknown> }>();
+  const writes: string[] = [];
+  const key = (t: string, id: string) => `${t}:${id}`;
+  let lease = 0;
+
+  const dirty = (t: CalendarSourceType, id: string, snap: Record<string, unknown> | null) => {
+    sources.set(key(t, id), snap);
+    const r = rows.get(key(t, id));
+    if (r) r.version++;
+    else rows.set(key(t, id), { source_type: t, source_id: id, version: 1, synced_version: 0, google_event_id: null, attempts: 0, lease_token: null, lease_version: null, lease_valid: false });
+  };
+
+  const deps: CalendarDeps = {
+    claim: async ({ limit, sourceType, sourceId }) => {
+      const out: CalendarSourceState[] = [];
+      for (const r of rows.values()) {
+        if (out.length >= limit) break;
+        if (r.synced_version >= r.version || r.lease_valid) continue;
+        if (sourceType && r.source_type !== sourceType) continue;
+        if (sourceId && r.source_id !== sourceId) continue;
+        r.lease_token = `l${++lease}`;
+        r.lease_version = r.version;
+        r.lease_valid = true;
+        r.attempts++;
+        out.push({ ...r });
+      }
+      return out;
+    },
+    snapshot: async (t, id) => sources.get(key(t, id)) ?? null,
+    setEvent: async (s, id) => {
+      const r = rows.get(key(s.source_type, s.source_id))!;
+      if (!r.lease_valid || r.lease_token !== s.lease_token) return false;
+      r.google_event_id = id;
+      return true;
+    },
+    complete: async (s, x) => {
+      const r = rows.get(key(s.source_type, s.source_id))!;
+      if (!r.lease_valid || r.lease_token !== s.lease_token) return false;
+      r.synced_version = Math.max(r.synced_version, r.lease_version!);
+      r.google_event_id = x.clear ? null : (x.eventId ?? r.google_event_id);
+      r.last_action = x.action;
+      r.lease_valid = false;
+      r.lease_token = null;
+      return true;
+    },
+    fail: async (s) => {
+      const r = rows.get(key(s.source_type, s.source_id))!;
+      if (r.lease_token !== s.lease_token) return false;
+      r.lease_valid = false;
+      r.lease_token = null;
+      return true;
+    },
+    searchEvents: async (q) =>
+      [...google.entries()]
+        .filter(([, v]) => v.description.includes(q))
+        .map(([id, v]) => ({ id, description: v.description }) as GoogleEventRef),
+    updateEvent: async (id, body) => {
+      if (!google.has(id)) return false;
+      writes.push(`update:${id}`);
+      google.set(id, { description: String(body.description), body });
+      return true;
+    },
+    insertEvent: async (body) => {
+      if (google.has(body.id)) return false;
+      writes.push(`insert:${body.id}`);
+      google.set(body.id, { description: String(body.description), body });
+      return true;
+    },
+    deleteEvent: async (id) => {
+      writes.push(`delete:${id}`);
+      google.delete(id);
+    },
+  };
+  return { rows, sources, google, writes, deps, dirty, key };
+}
+
+describe("Termin-Inhalt", () => {
+  it("Titel MyTransporter · Kennzeichen · Kunde, privat, keine Teilnehmer, 5 Erinnerungen", () => {
+    const ev = buildCalendarEvent("booking", BOOKING_ID, paid());
+    expect(ev.summary).toBe("MyTransporter · LEO MY 102 · Marcel Zipperle");
+    expect(ev.visibility).toBe("private");
+    expect(ev.attendees).toEqual([]);
+    expect(ev.reminders.overrides.map((o) => o.minutes)).toEqual([...REMINDER_MINUTES]);
+    expect(ev.start.timeZone).toBe(CALENDAR_TIME_ZONE);
+    expect(ev.description).toContain(`MyTransporter-Booking-ID: ${BOOKING_ID}`);
   });
 
-  it("löscht den Termin bei Storno", async () => {
-    const { deps: d, calls } = deps({ jobs: [job({ event_kind: "delete" })] });
-    const res = await runCalendarSync(d);
-    expect(res.removed).toBe(1);
-    expect(calls[0]).toBe(`delete:${BOOKING_ID}`);
-  });
-
-  it("hält Fehler retrybar fest, statt sie zu verschlucken", async () => {
-    const { deps: d, calls } = deps({
-      jobs: [job()],
-      upsertEvent: async () => {
-        throw new Error("Kalendereintrag fehlgeschlagen [503]");
-      },
+  it("überträgt keine Codes, Notizen, Geburtsdaten oder Kontaktdaten", () => {
+    const ev = buildCalendarEvent("manual_reservation", MANUAL_ID, {
+      ...paid(), pickup_code: "ABC123", note: "Tür 4711", customer_birth_date: "1990-01-01",
+      customer_phone: "+49 111", customer_email: "x@y.de", customer_id_number: "L01X",
     });
-    const res = await runCalendarSync(d);
-    expect(res).toMatchObject({ failed: 1, synced: 0 });
-    expect(calls.some((c) => c.startsWith("fail:job-1"))).toBe(true);
+    const all = JSON.stringify(ev);
+    for (const bad of ["ABC123", "4711", "1990-01-01", "+49 111", "x@y.de", "L01X"]) expect(all).not.toContain(bad);
   });
 
-  it("erkennt verlorene Lease (anderer Läufer war schneller)", async () => {
-    const { deps: d } = deps({ jobs: [job()], complete: async () => false });
-    const res = await runCalendarSync(d);
-    expect(res.lost_lease).toBe(1);
-  });
-
-  it("ein zweiter Lauf desselben Auftrags nutzt dieselbe Termin-Kennung", async () => {
-    const ids: string[] = [];
-    for (let i = 0; i < 2; i++) {
-      const { deps: d } = deps({
-        jobs: [job()],
-        upsertEvent: async (t, id) => {
-          const eid = calendarEventId(t, id);
-          ids.push(eid);
-          return eid;
-        },
-      });
-      await runCalendarSync(d);
+  it("Datenbank-Snapshots enthalten keine Codes/sensiblen Felder (neueste Migration)", () => {
+    const dir = "supabase/migrations";
+    const file = readdirSync(dir).filter((f) => readFileSync(`${dir}/${f}`, "utf8").includes("manual_reservation_calendar_payload")).sort().pop()!;
+    const sql = readFileSync(`${dir}/${file}`, "utf8");
+    const fn = (name: string) => sql.slice(sql.indexOf(`FUNCTION public.${name}`), sql.indexOf("$$;", sql.indexOf(`FUNCTION public.${name}`)));
+    for (const body of [fn("booking_calendar_payload"), fn("manual_reservation_calendar_payload")]) {
+      for (const bad of ["pickup_code", "return_code", "note", "birth_date", "id_number", "license", "customer_phone", "customer_email", "street"]) {
+        expect(body).not.toContain(bad);
+      }
     }
-    expect(ids[0]).toBe(ids[1]);
+  });
+
+  it("deterministische, von Google erlaubte IDs", () => {
+    expect(calendarEventId("booking", BOOKING_ID)).toMatch(/^[0-9a-v]{5,}$/);
+    expect(calendarEventId("booking", BOOKING_ID)).not.toBe(calendarEventId("manual_reservation", BOOKING_ID));
+    expect(calendarBackoffSeconds(99)).toBe(3600);
   });
 });
 
-describe("calendarBackoffSeconds", () => {
-  it("wächst und bleibt begrenzt", () => {
-    expect(calendarBackoffSeconds(1)).toBe(300);
-    expect(calendarBackoffSeconds(99)).toBe(3600);
+describe("Statushistorie", () => {
+  it.each([
+    ["paid", "upsert"], ["confirmed", "upsert"], ["picked_up", "upsert"],
+    ["cancelled", "delete"], ["canceled", "delete"],
+    ["completed", "noop"], ["refunded", "noop"], ["pending", "noop"], ["failed", "noop"], ["expired", "noop"],
+  ])("Buchung %s → %s", (status, action) => {
+    expect(decideCalendarAction("booking", { status })).toBe(action);
+  });
+  it("gelöschte Buchungszeile löscht nichts; gelöschter manueller Termin wird entfernt", () => {
+    expect(decideCalendarAction("booking", null)).toBe("noop");
+    expect(decideCalendarAction("manual_reservation", null)).toBe("delete");
+  });
+  it("abgeschlossene Miete bleibt als Historie im Kalender", async () => {
+    const w = world();
+    w.dirty("booking", BOOKING_ID, paid());
+    await runCalendarSync(w.deps);
+    w.dirty("booking", BOOKING_ID, paid({ status: "completed" }));
+    const r = await runCalendarSync(w.deps);
+    expect(r.skipped).toBe(1);
+    expect(w.google.size).toBe(1);
+  });
+  it("unbezahlter Checkout erzeugt keinen Termin", async () => {
+    const w = world();
+    w.dirty("booking", BOOKING_ID, paid({ status: "pending" }));
+    await runCalendarSync(w.deps);
+    expect(w.writes).toEqual([]);
+  });
+});
+
+describe("Reihenfolge & Versionen", () => {
+  it("out-of-order: Storno während laufendem Upsert wird nicht überholt", async () => {
+    const w = world();
+    w.dirty("booking", BOOKING_ID, paid());
+    const origInsert = w.deps.insertEvent;
+    w.deps.insertEvent = async (b) => {
+      // Während des Google-Schreibens wird storniert
+      w.dirty("booking", BOOKING_ID, paid({ status: "cancelled" }));
+      return origInsert(b);
+    };
+    await runCalendarSync(w.deps);
+    const row = w.rows.get(w.key("booking", BOOKING_ID))!;
+    expect(row.synced_version).toBeLessThan(row.version); // bleibt offen
+    w.deps.insertEvent = origInsert;
+    await runCalendarSync(w.deps);
+    expect(w.google.size).toBe(0);
+    expect(row.synced_version).toBe(row.version);
+  });
+
+  it("A → B → A wird jeweils übertragen (keine Hash-Unterdrückung)", async () => {
+    const w = world();
+    const A = paid(), B = paid({ start_at: "2026-09-26T08:00:00Z", end_at: "2026-09-27T08:00:00Z" });
+    for (const s of [A, B, A]) {
+      w.dirty("booking", BOOKING_ID, s);
+      await runCalendarSync(w.deps);
+    }
+    const ev = [...w.google.values()][0].body as { start: { dateTime: string } };
+    expect(ev.start.dateTime).toBe(A.start_at);
+    expect(w.writes.length).toBe(3);
+  });
+
+  it("Storno → Reaktivierung legt den Termin wieder an", async () => {
+    const w = world();
+    for (const st of ["paid", "cancelled", "paid"]) {
+      w.dirty("booking", BOOKING_ID, paid({ status: st }));
+      await runCalendarSync(w.deps);
+    }
+    expect(w.google.size).toBe(1);
+  });
+
+  it("Quellen-Lease: parallele Läufe schreiben dieselbe Quelle nur einmal", async () => {
+    const w = world();
+    w.dirty("booking", BOOKING_ID, paid());
+    const [a, b] = await Promise.all([runCalendarSync(w.deps), runCalendarSync(w.deps)]);
+    expect(a.claimed + b.claimed).toBe(1);
+    expect(w.writes).toHaveLength(1);
+  });
+
+  it("verlorene Lease schließt nicht ab", async () => {
+    const w = world();
+    w.dirty("booking", BOOKING_ID, paid());
+    w.deps.complete = async () => false;
+    const r = await runCalendarSync(w.deps);
+    expect(r.lost_lease).toBe(1);
+  });
+
+  it("Sofortversuch ist quellen-spezifisch", async () => {
+    const w = world();
+    w.dirty("booking", BOOKING_ID, paid());
+    w.dirty("manual_reservation", MANUAL_ID, paid({ customer_name: "Alt" }));
+    const r = await runCalendarSync(w.deps, { limit: 1, sourceType: "manual_reservation", sourceId: MANUAL_ID });
+    expect(r.claimed).toBe(1);
+    expect(w.writes).toEqual([`insert:${calendarEventId("manual_reservation", MANUAL_ID)}`]);
+  });
+
+  it("Google-Fehler bleibt retrybar und zählt als failed", async () => {
+    const w = world();
+    w.dirty("booking", BOOKING_ID, paid());
+    w.deps.insertEvent = async () => { throw new Error("[503] down"); };
+    const r = await runCalendarSync(w.deps);
+    expect(r.failed).toBe(1);
+    expect(w.rows.get(w.key("booking", BOOKING_ID))!.synced_version).toBe(0);
+  });
+});
+
+describe("Übernahme bestehender Termine", () => {
+  it("exakte ID-Prüfung", () => {
+    const d = `Text\nMyTransporter-Booking-ID: ${BOOKING_ID}\n`;
+    expect(descriptionMatchesSource(d, "booking", BOOKING_ID)).toBe(true);
+    expect(descriptionMatchesSource(d, "manual_reservation", BOOKING_ID)).toBe(false);
+    expect(descriptionMatchesSource(`MyTransporter-Booking-ID: ${BOOKING_ID}0`, "booking", BOOKING_ID)).toBe(false);
+    expect(descriptionMatchesSource(`erwähnt ${BOOKING_ID}`, "booking", BOOKING_ID)).toBe(false);
+  });
+
+  it("zugeordneter Termin 7u46… wird aktualisiert, nicht neu angelegt", async () => {
+    const w = world();
+    w.google.set("7u46jn3lsk3efopalca3r7591c", { description: `MyTransporter-Booking-ID: ${BOOKING_ID}`, body: {} });
+    w.dirty("booking", BOOKING_ID, paid());
+    w.rows.get(w.key("booking", BOOKING_ID))!.google_event_id = "7u46jn3lsk3efopalca3r7591c";
+    await runCalendarSync(w.deps);
+    expect(w.writes).toEqual(["update:7u46jn3lsk3efopalca3r7591c"]);
+    expect(w.google.size).toBe(1);
+  });
+
+  it("Legacy-Termin ohne Zuordnung wird per Beschreibung adoptiert", async () => {
+    const w = world();
+    w.google.set("legacyevent1", { description: `MyTransporter-Reservation-ID: ${MANUAL_ID}`, body: {} });
+    w.google.set("fremd", { description: `MyTransporter-Reservation-ID: ${MANUAL_ID}x`, body: {} });
+    w.dirty("manual_reservation", MANUAL_ID, paid({ customer_name: "Kunde" }));
+    const r = await runCalendarSync(w.deps);
+    expect(r.adopted).toBe(1);
+    expect(w.writes).toEqual(["update:legacyevent1"]);
+    expect(w.rows.get(w.key("manual_reservation", MANUAL_ID))!.google_event_id).toBe("legacyevent1");
+  });
+
+  it("Löschung eines manuellen Termins entfernt den adoptierten Termin", async () => {
+    const w = world();
+    w.google.set("legacyevent1", { description: `MyTransporter-Reservation-ID: ${MANUAL_ID}`, body: {} });
+    w.dirty("manual_reservation", MANUAL_ID, null);
+    await runCalendarSync(w.deps);
+    expect(w.google.has("legacyevent1")).toBe(false);
   });
 });

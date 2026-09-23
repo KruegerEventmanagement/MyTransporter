@@ -407,6 +407,66 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_sync_state: {
+        Row: {
+          adopted: boolean
+          attempts: number
+          created_at: string
+          google_event_id: string | null
+          last_action: string | null
+          last_error: string | null
+          lease_token: string | null
+          lease_until: string | null
+          lease_version: number | null
+          next_retry_at: string | null
+          source_id: string
+          source_type: string
+          status: string
+          synced_at: string | null
+          synced_version: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          adopted?: boolean
+          attempts?: number
+          created_at?: string
+          google_event_id?: string | null
+          last_action?: string | null
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          lease_version?: number | null
+          next_retry_at?: string | null
+          source_id: string
+          source_type: string
+          status?: string
+          synced_at?: string | null
+          synced_version?: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          adopted?: boolean
+          attempts?: number
+          created_at?: string
+          google_event_id?: string | null
+          last_action?: string | null
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          lease_version?: number | null
+          next_retry_at?: string | null
+          source_id?: string
+          source_type?: string
+          status?: string
+          synced_at?: string | null
+          synced_version?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       gps_tracks: {
         Row: {
           booking_id: string
@@ -997,6 +1057,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      calendar_source_snapshot: {
+        Args: { _source_id: string; _source_type: string }
+        Returns: Json
+      }
       claim_booking_action: {
         Args: {
           _action_key: string
@@ -1004,6 +1068,39 @@ export type Database = {
           _lock_timeout_seconds?: number
         }
         Returns: boolean
+      }
+      claim_calendar_sources: {
+        Args: {
+          _lease_seconds?: number
+          _limit?: number
+          _source_id?: string
+          _source_type?: string
+        }
+        Returns: {
+          adopted: boolean
+          attempts: number
+          created_at: string
+          google_event_id: string | null
+          last_action: string | null
+          last_error: string | null
+          lease_token: string | null
+          lease_until: string | null
+          lease_version: number | null
+          next_retry_at: string | null
+          source_id: string
+          source_type: string
+          status: string
+          synced_at: string | null
+          synced_version: number
+          updated_at: string
+          version: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "calendar_sync_state"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       claim_calendar_sync_jobs: {
         Args: { _lease_seconds?: number; _limit?: number }
@@ -1063,6 +1160,18 @@ export type Database = {
         Args: { _action_key: string; _booking_id: string }
         Returns: undefined
       }
+      complete_calendar_source: {
+        Args: {
+          _action?: string
+          _adopted?: boolean
+          _clear_event?: boolean
+          _google_event_id: string
+          _lease_token: string
+          _source_id: string
+          _source_type: string
+        }
+        Returns: boolean
+      }
       complete_calendar_sync_job: {
         Args: { _google_event_id?: string; _id: string; _lease_token?: string }
         Returns: boolean
@@ -1106,6 +1215,16 @@ export type Database = {
           _retry_in_seconds?: number
         }
         Returns: undefined
+      }
+      fail_calendar_source: {
+        Args: {
+          _error: string
+          _lease_token: string
+          _retry_in_seconds?: number
+          _source_id: string
+          _source_type: string
+        }
+        Returns: boolean
       }
       fail_calendar_sync_job: {
         Args: {
@@ -1151,11 +1270,21 @@ export type Database = {
         Args: { _start_date: string; _start_hour: number }
         Returns: string
       }
+      manual_reservation_calendar_payload: {
+        Args: {
+          _row: Database["public"]["Tables"]["manual_reservations"]["Row"]
+        }
+        Returns: Json
+      }
       manual_reservation_notification_payload: {
         Args: {
           _row: Database["public"]["Tables"]["manual_reservations"]["Row"]
         }
         Returns: Json
+      }
+      mark_calendar_source_dirty: {
+        Args: { _source_id: string; _source_type: string }
+        Returns: undefined
       }
       mark_manual_notification_mailed: {
         Args: { _id: string; _lease_token?: string }
@@ -1168,6 +1297,16 @@ export type Database = {
       plan_end_at: {
         Args: { _plan_id: string; _start: string }
         Returns: string
+      }
+      set_calendar_source_event: {
+        Args: {
+          _adopted: boolean
+          _google_event_id: string
+          _lease_token: string
+          _source_id: string
+          _source_type: string
+        }
+        Returns: boolean
       }
       vehicle_conflicts: {
         Args: {

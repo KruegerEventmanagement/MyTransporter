@@ -85,7 +85,7 @@ const DOC_TYPES = [
  * passiert atomar per Datenbank-Trigger, daher darf ein Fehler hier die
  * gespeicherte Reservierung nie zurückrollen – es wird planmäßig wiederholt.
  */
-async function kickOutbox(): Promise<void> {
+async function kickOutbox(reservationId: string): Promise<void> {
   try {
     const { kickManualNotificationOutbox } = await import("@/lib/manual-notifications.server");
     await kickManualNotificationOutbox();
@@ -96,7 +96,7 @@ async function kickOutbox(): Promise<void> {
   // Benachrichtigung und die gespeicherte Reservierung nie beeinflussen.
   try {
     const { kickCalendarSync } = await import("@/lib/calendar-sync.server");
-    await kickCalendarSync();
+    await kickCalendarSync("manual_reservation", reservationId);
   } catch (e) {
     console.warn("Kalenderübertragung nicht gestartet:", e);
   }
@@ -168,7 +168,7 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
         .select(SELECT_COLUMNS)
         .single();
       if (error) throw new Error(error.message);
-      await kickOutbox();
+      await kickOutbox(data.id);
       return row as ManualReservation;
     }
 
@@ -178,7 +178,7 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
       .select(SELECT_COLUMNS)
       .single();
     if (error) throw new Error(error.message);
-    await kickOutbox();
+    await kickOutbox((row as { id: string }).id);
     return row as ManualReservation;
   });
 
@@ -204,7 +204,7 @@ export const deleteManualReservation = createServerFn({ method: "POST" })
       .delete()
       .eq("id", data.id);
     if (error) throw new Error(error.message);
-    await kickOutbox();
+    await kickOutbox(data.id);
     return { ok: true as const };
   });
 
