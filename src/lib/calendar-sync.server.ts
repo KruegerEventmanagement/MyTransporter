@@ -1,14 +1,14 @@
 /**
- * Serverseitige Google-Kalender-Synchronisierung.
+ * Serverseitige Google-Kalender-Synchronisierung (Zustand je Quelle).
  *
- * Läuft über die Kalender-Warteschlange `calendar_sync_jobs`:
- * - Einreihung erfolgt atomar per Datenbank-Trigger (Buchung bezahlt/geändert/
- *   storniert, manueller Termin angelegt/geändert/gelöscht).
- * - Dieser Läufer holt offene Aufträge parallel-sicher (Lease + SKIP LOCKED)
- *   und schreibt sie über die verbundene Google-Calendar-Verbindung.
- * - Termin-Kennungen sind deterministisch ⇒ Wiederholungen erzeugen nie Dubletten.
- * - Fehler werden im Auftrag protokolliert und planmäßig wiederholt; ein
- *   Kalenderausfall verändert Buchung, Zahlung oder Verfügbarkeit nie.
+ * - DB-Trigger erhöhen nur die Version der Quelle in `calendar_sync_state`.
+ * - Der Worker beansprucht eine Quelle per Lease, liest den AKTUELLEN Stand
+ *   und schreibt genau diesen Stand. Wurde die Quelle während des Laufs erneut
+ *   geändert, bleibt sie offen und wird mit dem neuesten Stand wiederholt.
+ * - Bestehende, extern angelegte Termine werden über die exakte
+ *   MyTransporter-ID in der Beschreibung übernommen (Zuordnung gespeichert).
+ * - Fehler werden protokolliert und planmäßig wiederholt; ein Kalenderausfall
+ *   verändert Buchung, Zahlung oder Verfügbarkeit nie.
  */
 
 import {
@@ -16,26 +16,39 @@ import {
   buildCalendarEvent,
   calendarBackoffSeconds,
   calendarEventId,
-  type CalendarJob,
+  decideCalendarAction,
+  descriptionMatchesSource,
+  type CalendarSourceState,
   type CalendarSourceType,
 } from "@/lib/calendar-sync";
 
+/** Gateway laut Connector-Dokumentation (google_calendar, Calendar API v3). */
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_calendar/calendar/v3";
-const REQUEST_TIMEOUT_MS = 20_000;
+const REQUEST_TIMEOUT_MS = 15_000;
+
+export type GoogleEventRef = { id: string; description?: string | null; status?: string };
 
 export type CalendarDeps = {
-  claim: (limit: number) => Promise<CalendarJob[]>;
-  complete: (id: string, googleEventId: string | null, lease: string | null) => Promise<boolean>;
-  fail: (id: string, error: string, retryIn: number, lease: string | null) => Promise<boolean>;
-  /** Legt an oder aktualisiert und liefert die Google-Termin-Kennung. */
-  upsertEvent: (sourceType: CalendarSourceType, sourceId: string, payload: unknown) => Promise<string>;
-  deleteEvent: (sourceType: CalendarSourceType, sourceId: string) => Promise<void>;
+  claim: (opts: { limit: number; sourceType?: CalendarSourceType; sourceId?: string }) => Promise<CalendarSourceState[]>;
+  snapshot: (sourceType: CalendarSourceType, sourceId: string) => Promise<Record<string, unknown> | null>;
+  setEvent: (s: CalendarSourceState, eventId: string, adopted: boolean) => Promise<boolean>;
+  complete: (s: CalendarSourceState, r: { eventId: string | null; clear: boolean; adopted: boolean; action: string }) => Promise<boolean>;
+  fail: (s: CalendarSourceState, error: string, retryIn: number) => Promise<boolean>;
+  /** Kandidaten mit Freitextsuche; Treffer werden exakt geprüft. */
+  searchEvents: (query: string) => Promise<GoogleEventRef[]>;
+  /** Aktualisiert Termin `eventId`; `false` wenn nicht (mehr) vorhanden. */
+  updateEvent: (eventId: string, body: Record<string, unknown>) => Promise<boolean>;
+  /** Legt Termin mit fester ID an; `false` bei Konflikt (existiert schon). */
+  insertEvent: (body: Record<string, unknown> & { id: string }) => Promise<boolean>;
+  deleteEvent: (eventId: string) => Promise<void>;
 };
 
 export type CalendarRunResult = {
   claimed: number;
   synced: number;
   removed: number;
+  skipped: number;
+  adopted: number;
   failed: number;
   lost_lease: number;
 };
@@ -44,61 +57,100 @@ function isSourceType(v: string): v is CalendarSourceType {
   return v === "booking" || v === "manual_reservation";
 }
 
-export async function runCalendarSync(
-  deps: CalendarDeps,
-  opts?: { limit?: number },
-): Promise<CalendarRunResult> {
-  const jobs = await deps.claim(Math.max(opts?.limit ?? 10, 1));
-  let synced = 0;
-  let removed = 0;
-  let failed = 0;
-  let lostLease = 0;
-
-  for (const job of jobs) {
-    const lease = job.lease_token ?? null;
-    try {
-      if (!isSourceType(job.source_type)) throw new Error(`Unbekannte Quelle ${job.source_type}`);
-      let eventId: string | null = null;
-      if (job.event_kind === "delete") {
-        await deps.deleteEvent(job.source_type, job.source_id);
-        removed++;
-      } else {
-        eventId = await deps.upsertEvent(job.source_type, job.source_id, job.payload);
-        synced++;
-      }
-      const owned = await deps.complete(job.id, eventId, lease);
-      if (!owned) lostLease++;
-    } catch (e) {
-      failed++;
-      const owned = await deps.fail(
-        job.id,
-        String((e as Error)?.message ?? e).slice(0, 500),
-        calendarBackoffSeconds(job.attempts),
-        lease,
-      );
-      if (!owned) lostLease++;
-    }
-  }
-
-  return { claimed: jobs.length, synced, removed, failed, lost_lease: lostLease };
+async function findAdoptable(deps: CalendarDeps, t: CalendarSourceType, id: string): Promise<string | null> {
+  const own = calendarEventId(t, id);
+  const hits = await deps.searchEvents(id);
+  const match = hits.find(
+    (e) => e.id && e.id !== own && e.status !== "cancelled" && descriptionMatchesSource(e.description, t, id),
+  );
+  return match?.id ?? null;
 }
 
-/** Ist eine Google-Calendar-Verbindung im Projekt hinterlegt? */
+export async function runCalendarSync(
+  deps: CalendarDeps,
+  opts?: { limit?: number; sourceType?: CalendarSourceType; sourceId?: string },
+): Promise<CalendarRunResult> {
+  const states = await deps.claim({
+    limit: Math.max(opts?.limit ?? 10, 1),
+    sourceType: opts?.sourceType,
+    sourceId: opts?.sourceId,
+  });
+  const r: CalendarRunResult = { claimed: states.length, synced: 0, removed: 0, skipped: 0, adopted: 0, failed: 0, lost_lease: 0 };
+
+  for (const s of states) {
+    try {
+      if (!isSourceType(s.source_type)) throw new Error(`Unbekannte Quelle ${s.source_type}`);
+      const t = s.source_type;
+      const snap = await deps.snapshot(t, s.source_id);
+      const action = decideCalendarAction(t, snap);
+      let eventId = s.google_event_id;
+      let adopted = false;
+      let owned = true;
+
+      if (action === "noop") {
+        r.skipped++;
+        owned = await deps.complete(s, { eventId: null, clear: false, adopted: false, action: "noop" });
+      } else if (action === "upsert") {
+        const event = buildCalendarEvent(t, s.source_id, snap);
+        if (!eventId) {
+          eventId = await findAdoptable(deps, t, s.source_id);
+          if (eventId) {
+            adopted = true;
+            r.adopted++;
+            if (!(await deps.setEvent(s, eventId, true))) throw new LeaseLost();
+          }
+        }
+        const { id: ownId, ...body } = event;
+        let done = false;
+        if (eventId) done = await deps.updateEvent(eventId, { ...body, status: "confirmed" });
+        if (!done) {
+          // Kein bekannter Termin (oder extern gelöscht): mit fester ID anlegen.
+          eventId = ownId;
+          if (!(await deps.insertEvent(event))) {
+            if (!(await deps.updateEvent(ownId, { ...body, status: "confirmed" }))) {
+              throw new Error("Kalendertermin weder anlegbar noch aktualisierbar");
+            }
+          }
+        }
+        r.synced++;
+        owned = await deps.complete(s, { eventId, clear: false, adopted, action: "upsert" });
+      } else {
+        const ids = new Set<string>([calendarEventId(t, s.source_id)]);
+        if (eventId) ids.add(eventId);
+        else {
+          const found = await findAdoptable(deps, t, s.source_id);
+          if (found) ids.add(found);
+        }
+        for (const id of ids) await deps.deleteEvent(id);
+        r.removed++;
+        owned = await deps.complete(s, { eventId: null, clear: true, adopted: false, action: "delete" });
+      }
+      if (!owned) r.lost_lease++;
+    } catch (e) {
+      if (e instanceof LeaseLost) {
+        r.lost_lease++;
+        continue;
+      }
+      r.failed++;
+      const ok = await deps.fail(s, String((e as Error)?.message ?? e).slice(0, 500), calendarBackoffSeconds(s.attempts));
+      if (!ok) r.lost_lease++;
+    }
+  }
+  return r;
+}
+
+class LeaseLost extends Error {}
+
+/** Env-Namen gemäß Connector: LOVABLE_API_KEY + GOOGLE_CALENDAR_API_KEY. */
 export function calendarCredentialsPresent(): boolean {
   return Boolean(process.env.LOVABLE_API_KEY && process.env.GOOGLE_CALENDAR_API_KEY);
 }
 
-async function gateway(
-  method: string,
-  path: string,
-  body?: unknown,
-): Promise<{ status: number; text: string }> {
+async function gateway(method: string, path: string, body?: unknown): Promise<{ status: number; text: string }> {
   const lovableKey = process.env.LOVABLE_API_KEY;
   const connectionKey = process.env.GOOGLE_CALENDAR_API_KEY;
   if (!lovableKey || !connectionKey) {
-    throw new Error(
-      "Google-Kalender ist nicht verbunden (Verbindung fehlt) – Kalenderübertragung nicht möglich",
-    );
+    throw new Error("Google-Kalender ist nicht verbunden (GOOGLE_CALENDAR_API_KEY fehlt)");
   }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -120,117 +172,80 @@ async function gateway(
 }
 
 const cal = encodeURIComponent(CALENDAR_ID);
+const ok = (s: number) => s >= 200 && s < 300;
 
-/** Echte Abhängigkeiten (Datenbank + Google Calendar über die Verbindung). */
 export async function createCalendarDeps(): Promise<CalendarDeps> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-  const rpcBool = async (fn: string, args: Record<string, unknown>): Promise<boolean> => {
+  const rpc = async (fn: string, args: Record<string, unknown>) => {
     const { data, error } = await supabaseAdmin.rpc(fn as never, args as never);
     if (error) throw new Error(`${fn}: ${error.message}`);
-    return data === true;
+    return data as unknown;
   };
 
   return {
-    claim: async (limit) => {
-      const { data, error } = await supabaseAdmin.rpc("claim_calendar_sync_jobs" as never, {
+    claim: async ({ limit, sourceType, sourceId }) =>
+      ((await rpc("claim_calendar_sources", {
         _limit: limit,
         _lease_seconds: 120,
-      } as never);
-      if (error) throw new Error(error.message);
-      return (data ?? []) as unknown as CalendarJob[];
+        _source_type: sourceType ?? null,
+        _source_id: sourceId ?? null,
+      })) ?? []) as CalendarSourceState[],
+    snapshot: async (t, id) =>
+      ((await rpc("calendar_source_snapshot", { _source_type: t, _source_id: id })) ?? null) as Record<string, unknown> | null,
+    setEvent: async (s, eventId, adopted) =>
+      (await rpc("set_calendar_source_event", {
+        _source_type: s.source_type, _source_id: s.source_id, _lease_token: s.lease_token,
+        _google_event_id: eventId, _adopted: adopted,
+      })) === true,
+    complete: async (s, x) =>
+      (await rpc("complete_calendar_source", {
+        _source_type: s.source_type, _source_id: s.source_id, _lease_token: s.lease_token,
+        _google_event_id: x.eventId, _clear_event: x.clear, _adopted: x.adopted, _action: x.action,
+      })) === true,
+    fail: async (s, error, retryIn) =>
+      (await rpc("fail_calendar_source", {
+        _source_type: s.source_type, _source_id: s.source_id, _lease_token: s.lease_token,
+        _error: error, _retry_in_seconds: retryIn,
+      })) === true,
+    searchEvents: async (query) => {
+      const q = new URLSearchParams({ q: query, showDeleted: "false", maxResults: "20", singleEvents: "true" });
+      const res = await gateway("GET", `/calendars/${cal}/events?${q}`);
+      if (!ok(res.status)) throw new Error(`Kalender-Suche fehlgeschlagen [${res.status}]: ${res.text}`);
+      return (JSON.parse(res.text)?.items ?? []) as GoogleEventRef[];
     },
-    complete: (id, googleEventId, lease) =>
-      rpcBool("complete_calendar_sync_job", {
-        _id: id,
-        _google_event_id: googleEventId,
-        _lease_token: lease,
-      }),
-    fail: (id, error, retryIn, lease) =>
-      rpcBool("fail_calendar_sync_job", {
-        _id: id,
-        _error: error,
-        _retry_in_seconds: retryIn,
-        _lease_token: lease,
-      }),
-    upsertEvent: async (sourceType, sourceId, payload) => {
-      const event = buildCalendarEvent(sourceType, sourceId, payload);
-      // Bereits manuell/extern angelegten Termin mit derselben stabilen ID übernehmen.
-      const adopted = await findAdoptableEventId(sourceId, event.id);
-      if (adopted) {
-        const { id: _omit, ...body } = event;
-        const res = await gateway("PUT", `/calendars/${cal}/events/${encodeURIComponent(adopted)}`, {
-          ...body,
-          status: "confirmed",
-        });
-        if (res.status >= 200 && res.status < 300) return adopted;
-        throw new Error(`Kalender-Übernahme fehlgeschlagen [${res.status}]: ${res.text}`);
-      }
-      // Anlegen mit fester Kennung; existiert der Termin schon (409), aktualisieren.
-      const created = await gateway("POST", `/calendars/${cal}/events`, event);
-      if (created.status === 200 || created.status === 201) return event.id;
-      if (created.status === 409) {
-        const patched = await gateway("PUT", `/calendars/${cal}/events/${event.id}`, {
-          ...event,
-          status: "confirmed",
-        });
-        if (patched.status >= 200 && patched.status < 300) return event.id;
-        throw new Error(`Kalender-Update fehlgeschlagen [${patched.status}]: ${patched.text}`);
-      }
-      throw new Error(`Kalendereintrag fehlgeschlagen [${created.status}]: ${created.text}`);
+    updateEvent: async (eventId, body) => {
+      const res = await gateway("PUT", `/calendars/${cal}/events/${encodeURIComponent(eventId)}`, body);
+      if (ok(res.status)) return true;
+      if (res.status === 404 || res.status === 410) return false;
+      throw new Error(`Kalender-Update fehlgeschlagen [${res.status}]: ${res.text}`);
     },
-    deleteEvent: async (sourceType, sourceId) => {
-      const ids = new Set([calendarEventId(sourceType, sourceId)]);
-      const adopted = await findAdoptableEventId(sourceId, "");
-      if (adopted) ids.add(adopted);
-      for (const id of ids) {
-        const res = await gateway("DELETE", `/calendars/${cal}/events/${encodeURIComponent(id)}`);
-        // Nicht vorhanden / bereits gelöscht ⇒ Ziel erreicht.
-        if ((res.status >= 200 && res.status < 300) || res.status === 404 || res.status === 410) {
-          continue;
-        }
-        throw new Error(`Kalender-Löschung fehlgeschlagen [${res.status}]: ${res.text}`);
-      }
+    insertEvent: async (body) => {
+      const res = await gateway("POST", `/calendars/${cal}/events`, body);
+      if (ok(res.status)) return true;
+      if (res.status === 409) return false;
+      throw new Error(`Kalendereintrag fehlgeschlagen [${res.status}]: ${res.text}`);
+    },
+    deleteEvent: async (eventId) => {
+      const res = await gateway("DELETE", `/calendars/${cal}/events/${encodeURIComponent(eventId)}`);
+      if (ok(res.status) || res.status === 404 || res.status === 410) return;
+      throw new Error(`Kalender-Löschung fehlgeschlagen [${res.status}]: ${res.text}`);
     },
   };
 }
 
 export async function processCalendarSync(opts?: { limit?: number }): Promise<CalendarRunResult> {
-  const deps = await createCalendarDeps();
-  return runCalendarSync(deps, opts);
+  return runCalendarSync(await createCalendarDeps(), opts);
 }
 
 /**
- * Sofortige Übertragung nach einer Buchung/Änderung – bewusst „best effort".
- * Schlägt sie fehl, bleibt der Auftrag in der Warteschlange und wird
- * planmäßig wiederholt. Die bezahlte Buchung bleibt davon unberührt.
+ * Sofortversuch NUR für die betroffene Quelle (kein Batch alter Aufträge).
+ * Ohne Verbindung wird nichts versucht – der Zustand bleibt offen/retrybar.
  */
-export async function kickCalendarSync(): Promise<void> {
+export async function kickCalendarSync(sourceType: CalendarSourceType, sourceId: string): Promise<void> {
+  if (!calendarCredentialsPresent()) return;
   try {
-    await processCalendarSync({ limit: 5 });
+    await runCalendarSync(await createCalendarDeps(), { limit: 1, sourceType, sourceId });
   } catch (e) {
     console.warn("[calendar-sync] Sofortübertragung fehlgeschlagen:", e);
   }
-}
-
-/**
- * Sucht einen bestehenden (z. B. manuell nachgetragenen) Termin, dessen
- * Beschreibung die stabile MyTransporter-ID enthält, und übernimmt ihn statt
- * eine Dublette anzulegen.
- */
-async function findAdoptableEventId(sourceId: string, ownId: string): Promise<string | null> {
-  const q = new URLSearchParams({ q: sourceId, showDeleted: "false", maxResults: "10" });
-  const res = await gateway("GET", `/calendars/${cal}/events?${q.toString()}`);
-  if (res.status < 200 || res.status >= 300) {
-    throw new Error(`Kalender-Suche fehlgeschlagen [${res.status}]: ${res.text}`);
-  }
-  const items = (JSON.parse(res.text)?.items ?? []) as Array<{
-    id?: string;
-    status?: string;
-    description?: string;
-  }>;
-  const hit = items.find(
-    (i) => i.id && i.id !== ownId && i.status !== "cancelled" && (i.description ?? "").includes(sourceId),
-  );
-  return hit?.id ?? null;
 }
