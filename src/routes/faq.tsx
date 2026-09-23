@@ -55,17 +55,13 @@ export const Route = createFileRoute("/faq")({
       description: "Antworten zu Buchung, Führerschein, Kaution, Tankregel, Umzug und kurzfristiger Transporter-Miete bei MyTransporter in Leonberg.",
       webPageType: "FAQPage",
       breadcrumbs: [{ name: "Start", path: "/" }, { name: "FAQ", path: "/faq" }],
-      schema: [
-        {
-          "@type": "ItemList",
-          "@id": "https://mytransporter.org/faq#fragen",
-          itemListElement: FAQS.map((f, i) => ({
-            "@type": "ListItem",
-            position: i + 1,
-            item: { "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } },
-          })),
-        },
-      ],
+      webPageExtra: {
+        mainEntity: FAQS.map((f) => ({
+          "@type": "Question",
+          name: f.q,
+          acceptedAnswer: { "@type": "Answer", text: f.a },
+        })),
+      },
     }),
   component: FaqPage,
 });

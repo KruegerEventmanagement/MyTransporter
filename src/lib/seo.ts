@@ -99,6 +99,8 @@ export type PageHeadInput = {
   /** Zusätzliche schema.org-Knoten (ohne @context), werden in einen @graph gelegt. */
   schema?: Record<string, unknown>[];
   webPageType?: string;
+  /** Zusätzliche Felder direkt am WebPage-Knoten (z. B. mainEntity bei FAQPage). */
+  webPageExtra?: Record<string, unknown>;
 };
 
 export function pageHead(input: PageHeadInput) {
@@ -112,6 +114,7 @@ export function pageHead(input: PageHeadInput) {
     inLanguage: "de-DE",
     isPartOf: { "@id": WEBSITE_ID },
     about: { "@id": ORG_ID },
+    ...(input.webPageExtra ?? {}),
   };
   const graph: Record<string, unknown>[] = [webPage];
   if (input.breadcrumbs && input.breadcrumbs.length > 1) {
