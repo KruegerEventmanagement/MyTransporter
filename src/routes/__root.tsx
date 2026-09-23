@@ -13,22 +13,23 @@ import { InstallBanner } from "@/components/InstallBanner";
 import { HelpBubble } from "@/components/HelpBubble";
 import { CookieConsent } from "@/components/CookieConsent";
 import { Toaster } from "@/components/ui/sonner";
+import { safeJsonLd, siteJsonLd } from "@/lib/seo";
 
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">Seite nicht gefunden</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          Diese Seite gibt es nicht oder sie wurde verschoben.
         </p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Go home
+            Zur Startseite
           </Link>
         </div>
       </div>
@@ -77,18 +78,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       // viewport-fit=cover: iOS-Safari Safe-Areas (Notch/Home-Indicator) korrekt nutzen
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "MyTransporter, Transporter mieten" },
-      { name: "description", content: "My Transporter Hub is a modern web application for booking rental vans with an integrated verification and payment system." },
-      { name: "author", content: "MyTransporter" },
-      { property: "og:title", content: "MyTransporter, Transporter mieten" },
-      { property: "og:description", content: "My Transporter Hub is a modern web application for booking rental vans with an integrated verification and payment system." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@MyTransporter" },
-      { name: "twitter:title", content: "MyTransporter, Transporter mieten" },
-      { name: "twitter:description", content: "My Transporter Hub is a modern web application for booking rental vans with an integrated verification and payment system." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d631d996-6468-48e5-bea0-7028d007ecdc/id-preview-1de3f862--fa378654-91c3-451b-94cc-9ffff72f236f.lovable.app-1778102015145.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d631d996-6468-48e5-bea0-7028d007ecdc/id-preview-1de3f862--fa378654-91c3-451b-94cc-9ffff72f236f.lovable.app-1778102015145.png" },
+      { title: "MyTransporter – Transporter mieten in Leonberg" },
+      { property: "og:site_name", content: "MyTransporter" },
+      { property: "og:locale", content: "de_DE" },
       { name: "google-site-verification", content: "RtHXueJEpVbh7zZoqhrwrpD2ZqqYZIRRNVdVimE-48I" },
       { name: "google-adsense-account", content: "ca-pub-6974851907377988" },
       { name: "verification", content: "b7cde8d0588c5c053a4219e04e38801f" },
@@ -110,6 +102,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
     ],
   }),
+  scripts: [{ type: "application/ld+json", children: safeJsonLd(siteJsonLd()) }],
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
@@ -118,7 +111,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="de">
       <head>
         <HeadContent />
       </head>
