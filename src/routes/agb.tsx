@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/agb")({
-  head: () => ({
-    meta: [
-      { title: "AGB, MyTransporter" },
-      { name: "description", content: "Allgemeine Geschäftsbedingungen von MyTransporter, Inhaber: Christian Krüger" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      path: "/agb",
+      title: "AGB – Mietbedingungen | MyTransporter",
+      description: "Allgemeine Geschäftsbedingungen für die Transporter-Miete bei MyTransporter, Inhaber: Christian Krüger.",
+      breadcrumbs: [{ name: "Start", path: "/" }, { name: "AGB", path: "/agb" }],
+    }),
   component: AgbPage,
 });
 

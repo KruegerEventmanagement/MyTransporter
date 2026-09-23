@@ -1,13 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { pageHead } from "@/lib/seo";
 import { openConsentSettings } from "@/components/CookieConsent";
 
 export const Route = createFileRoute("/datenschutz")({
-  head: () => ({
-    meta: [
-      { title: "Datenschutz, MyTransporter" },
-      { name: "description", content: "Datenschutzerklärung von MyTransporter, Inhaber: Christian Krüger" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      path: "/datenschutz",
+      title: "Datenschutzerklärung | MyTransporter",
+      description: "Datenschutzerklärung von MyTransporter: welche Daten bei Buchung, Verifizierung und Zahlung verarbeitet werden.",
+      breadcrumbs: [{ name: "Start", path: "/" }, { name: "Datenschutz", path: "/datenschutz" }],
+    }),
   component: DatenschutzPage,
 });
 

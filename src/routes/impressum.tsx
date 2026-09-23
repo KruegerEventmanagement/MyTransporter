@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/impressum")({
-  head: () => ({
-    meta: [
-      { title: "Impressum, MyTransporter" },
-      { name: "description", content: "Impressum von MyTransporter, Inhaber: Christian Krüger" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      path: "/impressum",
+      title: "Impressum | MyTransporter",
+      description: "Impressum von MyTransporter, Inhaber: Christian Krüger, Römerstraße 36, 71229 Leonberg.",
+      breadcrumbs: [{ name: "Start", path: "/" }, { name: "Impressum", path: "/impressum" }],
+    }),
   component: ImpressumPage,
 });
 

@@ -1,15 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { pageHead } from "@/lib/seo";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
 export const Route = createFileRoute("/kontakt")({
-  head: () => ({
-    meta: [
-      { title: "Kontakt, MyTransporter" },
-      { name: "description", content: "Kontaktiere MyTransporter, Transporter mieten in Leonberg" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      path: "/kontakt",
+      title: "Kontakt & Abholung in Leonberg | MyTransporter",
+      description: "So erreichst du MyTransporter: Telefon 0152 3623 0118, E-Mail info@mytransporter.org. Schlüsselübergabe in der Römerstraße 36, 71229 Leonberg.",
+      webPageType: "ContactPage",
+      breadcrumbs: [{ name: "Start", path: "/" }, { name: "Kontakt", path: "/kontakt" }],
+    }),
   component: KontaktPage,
 });
 

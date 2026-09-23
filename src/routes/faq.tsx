@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { pageHead } from "@/lib/seo";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
@@ -46,37 +47,25 @@ const FAQS = [
 ];
 
 export const Route = createFileRoute("/faq")({
-  head: () => ({
-    meta: [
-      { title: "FAQ, Transporter mieten in Leonberg & Stuttgart | MyTransporter" },
-      {
-        name: "description",
-        content:
-          "Häufige Fragen zur Transporter-Vermietung in Leonberg, Stuttgart, Böblingen, Sindelfingen und Ludwigsburg: Buchung, Preise, Kaution, Umzug, kurzfristige Miete.",
-      },
-      { property: "og:title", content: "FAQ, Transporter mieten in Leonberg & Stuttgart" },
-      {
-        property: "og:description",
-        content:
-          "Antworten auf alle Fragen rund um Buchung, Preis, Kaution, Umzug und kurzfristige Anmietung deines Transporters bei MyTransporter.",
-      },
-      { name: "robots", content: "index,follow" },
-    ],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: FAQS.map((f) => ({
-            "@type": "Question",
-            name: f.q,
-            acceptedAnswer: { "@type": "Answer", text: f.a },
+  head: () =>
+    pageHead({
+      path: "/faq",
+      title: "FAQ: Transporter mieten in Leonberg – Buchung, Kaution, Preise | MyTransporter",
+      description: "Antworten zu Buchung, Führerschein, Kaution, Tankregel, Umzug und kurzfristiger Transporter-Miete bei MyTransporter in Leonberg.",
+      webPageType: "FAQPage",
+      breadcrumbs: [{ name: "Start", path: "/" }, { name: "FAQ", path: "/faq" }],
+      schema: [
+        {
+          "@type": "ItemList",
+          "@id": "https://mytransporter.org/faq#fragen",
+          itemListElement: FAQS.map((f, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            item: { "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } },
           })),
-        }),
-      },
-    ],
-  }),
+        },
+      ],
+    }),
   component: FaqPage,
 });
 

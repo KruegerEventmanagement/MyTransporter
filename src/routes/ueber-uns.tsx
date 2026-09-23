@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { pageHead } from "@/lib/seo";
 import { Navbar } from "@/components/Navbar";
 import { TariffSection } from "@/components/TariffSection";
 import { AdvantagesSection } from "@/components/AdvantagesSection";
@@ -9,23 +10,14 @@ import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
 export const Route = createFileRoute("/ueber-uns")({
-  head: () => ({
-    meta: [
-      { title: "Über MyTransporter | Transporter mieten in Leonberg & Stuttgart" },
-      {
-        name: "description",
-        content:
-          "Zwei Transporter-Klassen (L1H1 kurz, L4H2 lang) mit fairen Kilometern, sauber aufbereitet und technisch gepflegt. Tarife, Vorteile und gute Hinweise rund um die Miete.",
-      },
-      { property: "og:title", content: "Über MyTransporter" },
-      {
-        property: "og:description",
-        content:
-          "Transporter L1H1 und L4H2 zum fairen Festpreis, faire Kilometer, ehrlich kommuniziert. Mehr Platz für Umzug, Renovierung und Projekte.",
-      },
-    ],
-    links: [{ rel: "canonical", href: "https://www.mytransporter.org/ueber-uns" }],
-  }),
+  head: () =>
+    pageHead({
+      path: "/ueber-uns",
+      title: "Über MyTransporter – lokale Transporter-Vermietung aus Leonberg",
+      description: "Wer hinter MyTransporter steht: Transporter-Vermietung mit kurzen und langen Fahrzeugen, fairen Kilometern und ehrlicher Beschreibung des Fahrzeugzustands.",
+      webPageType: "AboutPage",
+      breadcrumbs: [{ name: "Start", path: "/" }, { name: "Über uns", path: "/ueber-uns" }],
+    }),
   component: UeberUnsPage,
 });
 

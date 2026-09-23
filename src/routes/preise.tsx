@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { pageHead, SITE_URL, ORG_ID } from "@/lib/seo";
 import { Navbar } from "@/components/Navbar";
 import { TariffSection } from "@/components/TariffSection";
 import { AddonPackagesSection } from "@/components/AddonPackagesSection";
@@ -22,54 +23,27 @@ const LONG = ["24h_500", "24h_800"].map((id) => PLAN_CATALOG.find((p) => p.id ==
 const MIN_PRICE = Math.min(...PLAN_CATALOG.map((p) => p.price));
 
 export const Route = createFileRoute("/preise")({
-  head: () => ({
-    meta: [
-      { title: `Transporter mieten Preise ab ${MIN_PRICE} € | Leonberg & Stuttgart` },
-      {
-        name: "description",
-        content: `Alle Tarife der Transporter-Vermietung MyTransporter: 3 Stunden 49 €, 6 Stunden 69 €, 24 Stunden 99 €, Langstrecke 189 € (500 km) und 299 € (800 km). Kaution ${DEPOSIT_EUR} €, Rückgabe vollgetankt (Voll/Voll), online buchbar in Leonberg und Stuttgart.`,
-      },
-      { name: "robots", content: "index,follow" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { property: "og:title", content: `Tarife & Preise – Transporter mieten ab ${MIN_PRICE} €` },
-      {
-        property: "og:description",
-        content:
-          "Transparente Festpreise für Transporter-Miete in Leonberg, Stuttgart, Böblingen und Sindelfingen: Kurzzeit-, Langstrecken- und Mehrtagestarife im Überblick.",
-      },
-    ],
-    links: [{ rel: "canonical", href: "https://www.mytransporter.org/preise" }],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "AutoRental",
-          name: "MyTransporter",
-          url: "https://www.mytransporter.org/preise",
-          telephone: "+4915236230118",
-          priceRange: "€€",
-          address: {
-            "@type": "PostalAddress",
-            streetAddress: "Römerstraße 36",
-            postalCode: "71229",
-            addressLocality: "Leonberg",
-            addressRegion: "BW",
-            addressCountry: "DE",
-          },
-          areaServed: ["Leonberg", "Stuttgart", "Böblingen", "Sindelfingen", "Ludwigsburg"],
-          makesOffer: PLAN_CATALOG.map((p) => ({
+  head: () =>
+    pageHead({
+      path: "/preise",
+      title: `Preise: Transporter mieten ab ${MIN_PRICE} € in Leonberg | MyTransporter`,
+      description: `Alle Tarife im Überblick: ${PLAN_CATALOG.slice(0, 3).map((p) => `${p.shortLabel} ${p.price} €`).join(", ")}, Mehrtages- und Wochentarife. Kaution ${DEPOSIT_EUR} €, Rückgabe vollgetankt.`,
+      breadcrumbs: [{ name: "Start", path: "/" }, { name: "Preise", path: "/preise" }],
+      schema: [
+        {
+          "@type": "OfferCatalog",
+          "@id": `${SITE_URL}/preise#tarife`,
+          name: "Tarife Transporter L1H1",
+          provider: { "@id": ORG_ID },
+          itemListElement: PLAN_CATALOG.map((p) => ({
             "@type": "Offer",
             name: `${p.label} (L1H1)`,
             price: p.price,
             priceCurrency: "EUR",
-            availability: "https://schema.org/InStock",
           })),
-        }),
-      },
-    ],
-  }),
+        },
+      ],
+    }),
   component: PreisePage,
 });
 
