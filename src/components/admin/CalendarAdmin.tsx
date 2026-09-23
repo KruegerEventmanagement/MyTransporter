@@ -27,6 +27,47 @@ import {
 } from "@/lib/manual-reservations.functions";
 import { bookingWindowMs } from "@/lib/booking-window";
 import { ageOnIsoDate, isValidIsoDate, todayIsoBerlin } from "@/lib/age";
+import { getCalendarSyncStatus, type CalendarSyncStatus } from "@/lib/calendar-status.functions";
+
+function CalendarSyncBanner() {
+  const fetchStatus = useServerFn(getCalendarSyncStatus);
+  const [s, setS] = useState<CalendarSyncStatus | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    fetchStatus()
+      .then(setS)
+      .catch((e) => setErr(String(e?.message ?? e)));
+  }, [fetchStatus]);
+  const fmt = (v: string | null) =>
+    v ? new Date(v).toLocaleString("de-DE", { timeZone: "Europe/Berlin" }) : "noch nie";
+  if (err) {
+    return (
+      <div role="alert" className="rounded-2xl border border-foreground p-3 text-sm">
+        Google-Kalender-Status konnte nicht geladen werden: {err}
+      </div>
+    );
+  }
+  if (!s) return <div className="rounded-2xl bg-secondary p-3 text-sm">Google-Kalender-Status wird geprüft …</div>;
+  return (
+    <div
+      role={s.connected && s.failed === 0 ? "status" : "alert"}
+      className={`rounded-2xl p-3 text-sm ${s.connected && s.failed === 0 ? "bg-secondary" : "border-2 border-foreground"}`}
+    >
+      <p className="font-semibold">
+        Google-Kalender info@mytransporter.org: {s.connected ? "Verbunden" : "Nicht verbunden"} · {s.pending} ausstehend
+        {s.failed > 0 ? ` · ${s.failed} mit Fehler` : ""} · zuletzt erfolgreich: {fmt(s.lastSuccessAt)}
+      </p>
+      {!s.connected && (
+        <p className="mt-1">
+          Termine werden gespeichert, aber noch nicht in den Google-Kalender übertragen. Verbindung im Lovable-Bereich
+          „Connectors → Google Calendar“ mit dem Konto info@mytransporter.org herstellen.
+        </p>
+      )}
+      {s.lastError && <p className="mt-1">Letzter Fehler: {s.lastError}</p>}
+    </div>
+  );
+}
+
 
 const DOC_KINDS = [
   { value: "id_front", label: "Personalausweis · Vorderseite" },
@@ -532,6 +573,7 @@ export function CalendarAdmin() {
 
   return (
     <div className="space-y-6">
+      <CalendarSyncBanner />
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <button
