@@ -100,7 +100,7 @@ describe("sitemap", () => {
     expect(locs).toContain("https://mytransporter.org/umzugstransporter-mieten");
   });
   it("has no private URLs or lastmod", () => {
-    expect(xml).not.toMatch(/admin|profil|buchung\/|trip\/|checkout|auth|www\.|lastmod/);
+    expect(xml).not.toMatch(/\/admin|\/profil|\/buchung\/|\/trip\/|checkout|\/auth|www\.mytransporter|lastmod|changefreq/);
   });
   it("robots.txt references the sitemap and allows crawling", () => {
     const r = read("public/robots.txt");
