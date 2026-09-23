@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RelatedLinks } from "@/components/seo/RelatedLinks";
 import { pageHead, SITE_URL, ORG_ID } from "@/lib/seo";
 import { Navbar } from "@/components/Navbar";
 import { TariffSection } from "@/components/TariffSection";
@@ -156,6 +157,7 @@ function PreisePage() {
           >
             Verfügbarkeit prüfen &amp; buchen
           </Link>
+          <div className="text-left"><RelatedLinks exclude="/preise" /></div>
         </div>
       </section>
 

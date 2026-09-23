@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { RelatedLinks } from "@/components/seo/RelatedLinks";
 import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarDays, Truck, Sparkles, ArrowRight } from "lucide-react";
@@ -242,6 +243,7 @@ function LangzeitmietePage() {
             </div>
           ))}
         </section>
+        <RelatedLinks exclude="/langzeitmiete" />
         <div className="mt-10 flex justify-center text-sm text-muted-foreground">
           <AdConsentRevokeButton />
         </div>
