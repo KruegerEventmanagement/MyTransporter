@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RelatedLinks } from "@/components/seo/RelatedLinks";
 import { pageHead } from "@/lib/seo";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
@@ -140,6 +141,7 @@ function FaqPage() {
             und gesamtes Baden-Württemberg.
           </p>
         </section>
+        <RelatedLinks exclude="/faq" />
         <div className="mt-10 flex justify-center text-sm text-muted-foreground">
           <AdConsentRevokeButton />
         </div>

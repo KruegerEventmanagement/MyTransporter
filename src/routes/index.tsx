@@ -9,6 +9,7 @@ import { BookingSection } from "@/components/BookingSection";
 import { Navbar } from "@/components/Navbar";
 
 import { SocialBanner } from "@/components/SocialBanner";
+import { HomeIntroSection } from "@/components/HomeIntroSection";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
@@ -29,9 +30,9 @@ function Index() {
       <Navbar />
       <AdRails>
         <HeroSection />
-        <h1 className="sr-only">Transporter mieten in Leonberg & Stuttgart ab 49 € – Umzug, Möbeltransport & Baumarkt</h1>
         <BookingSection />
         <SocialBanner />
+        <HomeIntroSection />
       </AdRails>
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
         <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
@@ -45,6 +46,9 @@ function Index() {
           <Link to="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
           <Link to="/ueber-uns" className="hover:text-foreground transition-colors">Über uns</Link>
           <Link to="/werbung" className="hover:text-foreground transition-colors">Werbung am Transporter</Link>
+          <Link to="/langzeitmiete" className="hover:text-foreground transition-colors">Langzeitmiete</Link>
+          <Link to="/umzugstransporter-mieten" className="hover:text-foreground transition-colors">Umzugstransporter</Link>
+          <Link to="/transporter-mieten-pforzheim-calw" className="hover:text-foreground transition-colors">Pforzheim & Calw</Link>
         </div>
       </footer>
     </main>

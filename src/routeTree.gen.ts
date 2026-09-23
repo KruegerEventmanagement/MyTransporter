@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WerbungRouteImport } from './routes/werbung'
+import { Route as UmzugstransporterMietenRouteImport } from './routes/umzugstransporter-mieten'
 import { Route as UeberUnsRouteImport } from './routes/ueber-uns'
+import { Route as TransporterMietenPforzheimCalwRouteImport } from './routes/transporter-mieten-pforzheim-calw'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ProfilRouteImport } from './routes/profil'
 import { Route as PreiseRouteImport } from './routes/preise'
@@ -42,11 +44,22 @@ const WerbungRoute = WerbungRouteImport.update({
   path: '/werbung',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UmzugstransporterMietenRoute = UmzugstransporterMietenRouteImport.update({
+  id: '/umzugstransporter-mieten',
+  path: '/umzugstransporter-mieten',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UeberUnsRoute = UeberUnsRouteImport.update({
   id: '/ueber-uns',
   path: '/ueber-uns',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TransporterMietenPforzheimCalwRoute =
+  TransporterMietenPforzheimCalwRouteImport.update({
+    id: '/transporter-mieten-pforzheim-calw',
+    path: '/transporter-mieten-pforzheim-calw',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -195,7 +208,9 @@ export interface FileRoutesByFullPath {
   '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
+  '/umzugstransporter-mieten': typeof UmzugstransporterMietenRoute
   '/werbung': typeof WerbungRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
@@ -224,7 +239,9 @@ export interface FileRoutesByTo {
   '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
+  '/umzugstransporter-mieten': typeof UmzugstransporterMietenRoute
   '/werbung': typeof WerbungRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
@@ -254,7 +271,9 @@ export interface FileRoutesById {
   '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
+  '/umzugstransporter-mieten': typeof UmzugstransporterMietenRoute
   '/werbung': typeof WerbungRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
@@ -285,7 +304,9 @@ export interface FileRouteTypes {
     | '/preise'
     | '/profil'
     | '/sitemap.xml'
+    | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
+    | '/umzugstransporter-mieten'
     | '/werbung'
     | '/auth/confirm'
     | '/buchung/$bookingId'
@@ -314,7 +335,9 @@ export interface FileRouteTypes {
     | '/preise'
     | '/profil'
     | '/sitemap.xml'
+    | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
+    | '/umzugstransporter-mieten'
     | '/werbung'
     | '/auth/confirm'
     | '/buchung/$bookingId'
@@ -343,7 +366,9 @@ export interface FileRouteTypes {
     | '/preise'
     | '/profil'
     | '/sitemap.xml'
+    | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
+    | '/umzugstransporter-mieten'
     | '/werbung'
     | '/auth/confirm'
     | '/buchung/$bookingId'
@@ -373,7 +398,9 @@ export interface RootRouteChildren {
   PreiseRoute: typeof PreiseRoute
   ProfilRoute: typeof ProfilRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TransporterMietenPforzheimCalwRoute: typeof TransporterMietenPforzheimCalwRoute
   UeberUnsRoute: typeof UeberUnsRoute
+  UmzugstransporterMietenRoute: typeof UmzugstransporterMietenRoute
   WerbungRoute: typeof WerbungRoute
   AuthConfirmRoute: typeof AuthConfirmRoute
   BuchungBookingIdRoute: typeof BuchungBookingIdRoute
@@ -399,11 +426,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WerbungRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/umzugstransporter-mieten': {
+      id: '/umzugstransporter-mieten'
+      path: '/umzugstransporter-mieten'
+      fullPath: '/umzugstransporter-mieten'
+      preLoaderRoute: typeof UmzugstransporterMietenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ueber-uns': {
       id: '/ueber-uns'
       path: '/ueber-uns'
       fullPath: '/ueber-uns'
       preLoaderRoute: typeof UeberUnsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/transporter-mieten-pforzheim-calw': {
+      id: '/transporter-mieten-pforzheim-calw'
+      path: '/transporter-mieten-pforzheim-calw'
+      fullPath: '/transporter-mieten-pforzheim-calw'
+      preLoaderRoute: typeof TransporterMietenPforzheimCalwRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -597,7 +638,9 @@ const rootRouteChildren: RootRouteChildren = {
   PreiseRoute: PreiseRoute,
   ProfilRoute: ProfilRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TransporterMietenPforzheimCalwRoute: TransporterMietenPforzheimCalwRoute,
   UeberUnsRoute: UeberUnsRoute,
+  UmzugstransporterMietenRoute: UmzugstransporterMietenRoute,
   WerbungRoute: WerbungRoute,
   AuthConfirmRoute: AuthConfirmRoute,
   BuchungBookingIdRoute: BuchungBookingIdRoute,
