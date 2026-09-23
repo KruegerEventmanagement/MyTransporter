@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { RelatedLinks } from "@/components/seo/RelatedLinks";
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarDays, Truck, Sparkles, ArrowRight } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
@@ -18,25 +20,13 @@ import fotorVideo from "@/assets/videos/mytransporter-fotor.mp4.asset.json";
 import fotorPoster from "@/assets/videos/mytransporter-fotor-poster.jpg.asset.json";
 
 export const Route = createFileRoute("/langzeitmiete")({
-  head: () => ({
-    meta: [
-      { title: "Langzeitmiete Transporter ab 7 Tagen | MyTransporter" },
-      {
-        name: "description",
-        content:
-          "Transporter langfristig mieten in Leonberg & Stuttgart: ab 7 Tagen automatisch 10 % Langzeit-Rabatt. Preis sofort berechnen – Kaution 200 € separat.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { property: "og:title", content: "Langzeitmiete – Transporter ab 7 Tagen mit 10 % Rabatt" },
-      {
-        property: "og:description",
-        content:
-          "Je länger du mietest, desto günstiger: tagesgenauer Langzeitpreis mit 10 % Rabatt ab 7 Miettagen.",
-      },
-    ],
-    links: [{ rel: "canonical", href: "https://www.mytransporter.org/langzeitmiete" }],
-  }),
+  head: () =>
+    pageHead({
+      path: "/langzeitmiete",
+      title: "Transporter Langzeitmiete ab 7 Tagen in Leonberg | MyTransporter",
+      description: "Transporter langfristig mieten in Leonberg: ab 7 Tagen tagesgenau berechnet mit Langzeitvorteil. Preis sofort im Rechner sehen, Kaution separat.",
+      breadcrumbs: [{ name: "Start", path: "/" }, { name: "Langzeitmiete", path: "/langzeitmiete" }],
+    }),
   component: LangzeitmietePage,
 });
 
@@ -253,6 +243,7 @@ function LangzeitmietePage() {
             </div>
           ))}
         </section>
+        <RelatedLinks exclude="/langzeitmiete" />
         <div className="mt-10 flex justify-center text-sm text-muted-foreground">
           <AdConsentRevokeButton />
         </div>

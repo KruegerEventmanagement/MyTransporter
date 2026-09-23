@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { privateHead } from "@/lib/seo";
 import { useEffect, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { getBookingBySessionId } from "@/lib/payments.functions";
@@ -6,6 +7,7 @@ import { getStripeEnvironment } from "@/lib/stripe";
 import { trackPurchase } from "@/lib/analytics";
 
 export const Route = createFileRoute("/checkout/return")({
+  head: () => privateHead("Zahlung wird bestätigt, MyTransporter"),
   validateSearch: (search: Record<string, unknown>): { session_id?: string } => ({
     session_id: typeof search.session_id === "string" ? search.session_id : undefined,
   }),

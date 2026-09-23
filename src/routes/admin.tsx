@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { privateHead } from "@/lib/seo";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -45,9 +46,7 @@ import { toast } from "sonner";
 import { resolveTripPhotoUrl } from "@/lib/trip-photos";
 
 export const Route = createFileRoute("/admin")({
-  head: () => ({
-    meta: [{ title: "MyTransporter · Admin" }],
-  }),
+  head: () => privateHead("MyTransporter · Admin"),
   component: AdminDashboard,
 });
 

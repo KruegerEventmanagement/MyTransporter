@@ -1,15 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RelatedLinks } from "@/components/seo/RelatedLinks";
+import { pageHead } from "@/lib/seo";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
 export const Route = createFileRoute("/kontakt")({
-  head: () => ({
-    meta: [
-      { title: "Kontakt, MyTransporter" },
-      { name: "description", content: "Kontaktiere MyTransporter, Transporter mieten in Leonberg" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      path: "/kontakt",
+      title: "Kontakt & Abholung in Leonberg | MyTransporter",
+      description: "So erreichst du MyTransporter: Telefon 0152 3623 0118, E-Mail info@mytransporter.org. Schlüsselübergabe in der Römerstraße 36, 71229 Leonberg.",
+      webPageType: "ContactPage",
+      breadcrumbs: [{ name: "Start", path: "/" }, { name: "Kontakt", path: "/kontakt" }],
+    }),
   component: KontaktPage,
 });
 
@@ -71,6 +75,13 @@ function KontaktPage() {
           </p>
           <p className="text-xs text-muted-foreground mt-1">Öffnungszeiten: 08:00, 22:00 Uhr</p>
         </div>
+        <div className="mt-4 p-4 rounded-xl bg-secondary">
+          <p className="text-sm text-muted-foreground">
+            Zweiter Abholort (nur VW Crafter, persönliche Übergabe):{" "}
+            <Link to="/transporter-mieten-pforzheim-calw" className="text-foreground font-medium underline">Calwer Straße 29, 75331 Engelsbrand-Grunbach</Link>
+          </p>
+        </div>
+        <RelatedLinks exclude="/kontakt" />
         <div className="mt-10 flex justify-center text-sm text-muted-foreground">
           <AdConsentRevokeButton />
         </div>

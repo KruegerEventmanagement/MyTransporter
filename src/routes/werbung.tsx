@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronDown, Megaphone, Repeat, Eye, MapPin } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
@@ -20,25 +21,13 @@ import egyptVideo from "@/assets/videos/mytransporter-egypt.mp4.asset.json";
 import egyptPoster from "@/assets/videos/mytransporter-egypt-poster.jpg.asset.json";
 
 export const Route = createFileRoute("/werbung")({
-  head: () => ({
-    meta: [
-      { title: "Werbefläche am Transporter mieten in Leonberg & Stuttgart | MyTransporter" },
-      {
-        name: "description",
-        content:
-          "Ihre Werbung durch die gesamte Region: Werbefläche am MyTransporter mieten, ab 29 € netto / Monat. Täglich sichtbar in Leonberg, Stuttgart und ganz Baden-Württemberg.",
-      },
-      { property: "og:title", content: "Ihre Werbung durch die gesamte Region | MyTransporter" },
-      {
-        property: "og:description",
-        content:
-          "Über 25 Magnetfolien-Werbeflächen am Transporter ab 29 € netto / Monat (zzgl. 19% MwSt., B2B).",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-    links: [{ rel: "canonical", href: "https://mytransporter.org/werbung" }],
-  }),
+  head: () =>
+    pageHead({
+      path: "/werbung",
+      title: "Werbefläche am Transporter mieten in Leonberg & Stuttgart | MyTransporter",
+      description: "Ihre Werbung durch die gesamte Region: Werbefläche am MyTransporter mieten, ab 29 € netto / Monat. Täglich sichtbar in Leonberg, Stuttgart und Baden-Württemberg.",
+      breadcrumbs: [{ name: "Start", path: "/" }, { name: "Werbung am Transporter", path: "/werbung" }],
+    }),
   component: WerbungPage,
 });
 

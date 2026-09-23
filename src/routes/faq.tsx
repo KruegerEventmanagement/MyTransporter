@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RelatedLinks } from "@/components/seo/RelatedLinks";
+import { pageHead } from "@/lib/seo";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
@@ -46,37 +48,21 @@ const FAQS = [
 ];
 
 export const Route = createFileRoute("/faq")({
-  head: () => ({
-    meta: [
-      { title: "FAQ, Transporter mieten in Leonberg & Stuttgart | MyTransporter" },
-      {
-        name: "description",
-        content:
-          "Häufige Fragen zur Transporter-Vermietung in Leonberg, Stuttgart, Böblingen, Sindelfingen und Ludwigsburg: Buchung, Preise, Kaution, Umzug, kurzfristige Miete.",
+  head: () =>
+    pageHead({
+      path: "/faq",
+      title: "FAQ: Transporter mieten in Leonberg – Buchung, Kaution, Preise | MyTransporter",
+      description: "Antworten zu Buchung, Führerschein, Kaution, Tankregel, Umzug und kurzfristiger Transporter-Miete bei MyTransporter in Leonberg.",
+      webPageType: "FAQPage",
+      breadcrumbs: [{ name: "Start", path: "/" }, { name: "FAQ", path: "/faq" }],
+      webPageExtra: {
+        mainEntity: FAQS.map((f) => ({
+          "@type": "Question",
+          name: f.q,
+          acceptedAnswer: { "@type": "Answer", text: f.a },
+        })),
       },
-      { property: "og:title", content: "FAQ, Transporter mieten in Leonberg & Stuttgart" },
-      {
-        property: "og:description",
-        content:
-          "Antworten auf alle Fragen rund um Buchung, Preis, Kaution, Umzug und kurzfristige Anmietung deines Transporters bei MyTransporter.",
-      },
-      { name: "robots", content: "index,follow" },
-    ],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: FAQS.map((f) => ({
-            "@type": "Question",
-            name: f.q,
-            acceptedAnswer: { "@type": "Answer", text: f.a },
-          })),
-        }),
-      },
-    ],
-  }),
+    }),
   component: FaqPage,
 });
 
@@ -151,6 +137,7 @@ function FaqPage() {
             und gesamtes Baden-Württemberg.
           </p>
         </section>
+        <RelatedLinks exclude="/faq" />
         <div className="mt-10 flex justify-center text-sm text-muted-foreground">
           <AdConsentRevokeButton />
         </div>
@@ -163,7 +150,7 @@ function FaqPage() {
 const SEO_BLOCKS = [
   {
     h: "Transporter mieten in Leonberg",
-    p: "MyTransporter ist deine lokale Transporter-Vermietung in Leonberg. Direkt in der Römerstraße 36 holst du deinen Transporter ab – kurzer L1H1 oder langer L4H2, ideal für Umzüge, Möbeltransporte oder spontane Fahrten in der Region. Buchung online in unter 2 Minuten, transparente Preise ab 49 € inklusive 100 Freikilometern.",
+    p: "MyTransporter ist deine lokale Transporter-Vermietung in Leonberg. Direkt in der Römerstraße 36 holst du deinen Transporter ab – kurzer L1H1 oder langer L4H2, ideal für Umzüge, Möbeltransporte oder spontane Fahrten in der Region. Buchung online, transparente Festpreise – Details auf der Preisseite.",
   },
   {
     h: "Transporter mieten in Stuttgart & Umgebung",
