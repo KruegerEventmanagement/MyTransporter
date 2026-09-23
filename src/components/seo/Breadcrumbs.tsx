@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import type { Crumb } from "@/lib/seo";
 
 /** Sichtbare Brotkrumen – identisch zur BreadcrumbList im Seitenkopf. */
@@ -14,9 +13,9 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
                 <span aria-current="page" className="text-foreground">{c.name}</span>
               ) : (
                 <>
-                  <Link to={c.path} className="hover:text-foreground underline-offset-2 hover:underline">
+                  <a href={c.path} className="hover:text-foreground underline-offset-2 hover:underline">
                     {c.name}
-                  </Link>
+                  </a>
                   <span aria-hidden="true">/</span>
                 </>
               )}
