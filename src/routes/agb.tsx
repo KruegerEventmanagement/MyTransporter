@@ -112,11 +112,20 @@ function AgbPage() {
           </div>
 
           <div>
-            <h2 className="font-bold text-lg text-foreground mb-2">§ 10 Schlussbestimmungen</h2>
+            <h2 className="font-bold text-lg text-foreground mb-2">§ 10 Stornierung und vorzeitige Beendigung</h2>
+            <p className="mb-2"><strong>Stornierung vor Mietbeginn:</strong> Der Mieter kann den Mietvertrag jederzeit vor dem vereinbarten Mietbeginn stornieren. Bei einer Stornierung innerhalb von 24 Stunden vor dem vereinbarten Mietbeginn wird eine pauschale Stornierungsgebühr in Höhe von 100,00&nbsp;€ erhoben. Bei einer Stornierung mehr als 24 Stunden vor dem vereinbarten Mietbeginn wird keine Stornierungsgebühr erhoben.</p>
+            <p className="mb-2"><strong>Vorzeitige Beendigung einer begonnenen Miete:</strong> Wird eine bereits angetretene Miete während des vereinbarten Mietzeitraums vorzeitig beendet oder storniert, beträgt die pauschale Stornierungsgebühr 150,00&nbsp;€.</p>
+            <p className="mb-2"><strong>Verrechnung bereits gezahlter Mietentgelte:</strong> Bereits gezahlte Mietentgelte werden auf die gegebenenfalls anfallende Stornierungsgebühr angerechnet, um eine unzulässige Doppelbelastung des Mieters auszuschließen. Übersteigt der bereits gezahlte Betrag die Stornierungsgebühr, wird der überschießende Teilbetrag erstattet. Liegt der bereits gezahlte Betrag unter der Stornierungsgebühr oder wurde noch nicht gezahlt, kann die Differenz bis zur Höhe der Stornierungsgebühr nachgefordert werden. Die Kaution bleibt hiervon unberührt; sie wird nach Abzug gegebenenfalls berechtigter Beträge entsprechend § 3 erstattet.</p>
+            <p className="mb-2"><strong>Nachweismöglichkeit:</strong> Dem Mieter bleibt ausdrücklich der Nachweis gestattet, dass MyTransporter kein Schaden oder ein wesentlich geringerer Schaden als die jeweilige pauschale Stornierungsgebühr entstanden ist; in diesem Fall schuldet der Mieter entsprechend weniger oder nichts. MyTransporter bleibt der Nachweis eines höheren tatsächlichen Schadens vorbehalten, soweit dies gesetzlich zulässig ist.</p>
+            <p className="mb-2"><strong>Rechtsnatur:</strong> Die pauschalen Stornierungsgebühren dienen der Abgeltung des typischerweise entstehenden Aufwands und des entgangenen Gewinns und stellen keine Strafe im Rechtssinne dar. Etwaige gesetzliche, nicht abbedingbare Widerrufs- oder Rücktrittsrechte von Verbrauchern bleiben von dieser Regelung unberührt.</p>
+          </div>
+
+          <div>
+            <h2 className="font-bold text-lg text-foreground mb-2">§ 11 Schlussbestimmungen</h2>
             <p>Es gilt das Recht der Bundesrepublik Deutschland. Gerichtsstand ist Leonberg. Sollten einzelne Bestimmungen unwirksam sein, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.</p>
           </div>
 
-          <p className="text-xs text-muted-foreground mt-8">Stand: Juni 2026</p>
+          <p className="text-xs text-muted-foreground mt-8">Stand: September 2026</p>
         </div>
       </div>
     </main>
