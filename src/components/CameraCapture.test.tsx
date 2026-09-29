@@ -42,7 +42,7 @@ describe("CameraCapture", () => {
     media.videoWidth = 1280;
     media.videoHeight = 720;
     let release: () => void = () => {};
-    const onCapture = vi.fn(() => new Promise<void>((r) => (release = r)));
+    const onCapture = vi.fn((_f: File) => new Promise<void>((r) => (release = r)));
     renderCam(onCapture);
     const shutter = await screen.findByLabelText("Foto aufnehmen");
     fireEvent.click(shutter);

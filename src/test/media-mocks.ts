@@ -30,7 +30,7 @@ export function fakeStream() {
 export const media = {
   videoWidth: 0,
   videoHeight: 0,
-  play: vi.fn(async () => undefined) as ReturnType<typeof vi.fn>,
+  play: vi.fn(async (): Promise<void> => undefined) as () => Promise<void>,
   toBlob: "ok" as "ok" | "null" | "throw" | "never",
   toDataURL: "data:image/jpeg;base64,/9j/AA==" as string,
   imageSize: { w: 800, h: 600 },
@@ -41,7 +41,7 @@ export const media = {
 export function installMediaMocks() {
   media.videoWidth = 0;
   media.videoHeight = 0;
-  media.play = vi.fn(async () => undefined);
+  media.play = vi.fn(async (): Promise<void> => undefined);
   media.toBlob = "ok";
   media.toDataURL = "data:image/jpeg;base64,/9j/AA==";
   media.imageSize = { w: 800, h: 600 };
