@@ -365,10 +365,22 @@ export function DocumentScanner({
     });
   }, [phase]);
 
+  const fileInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept="image/*"
+      capture="environment"
+      className="hidden"
+      onChange={handleFilePicked}
+    />
+  );
+
   // Single field: tap to capture, tap again to replace
   if (phase === "idle") {
     return (
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        {fileInput}
         <button
           type="button"
           onClick={() => startCamera()}
@@ -395,15 +407,24 @@ export function DocumentScanner({
             </span>
           )}
         </button>
-        {isComplete && (
+        <div className="flex border-t border-border">
+          {isComplete && (
+            <button
+              type="button"
+              onClick={() => startCamera()}
+              className="flex-1 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 py-2 border-r border-border"
+            >
+              Neu aufnehmen
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => startCamera()}
-            className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 py-2 border-t border-border"
+            onClick={openFilePicker}
+            className="flex-1 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 py-2"
           >
-            Neu aufnehmen
+            Mit Handy-Kamera / Foto hochladen
           </button>
-        )}
+        </div>
       </div>
     );
   }
@@ -561,26 +582,42 @@ export function DocumentScanner({
           <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center mb-6">
             <AlertTriangle className="w-10 h-10 text-destructive" />
           </div>
-          <h3 className="text-white text-xl font-bold mb-2">Kamera nicht verfügbar</h3>
-          <p className="text-white/60 text-center text-sm mb-8">
-            Bitte erlaube den Kamerazugriff oder verwende ein Gerät mit Kamera.
+          <h3 className="text-white text-xl font-bold mb-2 text-center">
+            {cameraError === "denied"
+              ? "Kamerazugriff nicht erlaubt"
+              : cameraError === "busy"
+                ? "Kamera wird gerade verwendet"
+                : "Live-Kamera nicht verfügbar"}
+          </h3>
+          <p className="text-white/60 text-center text-sm mb-8 max-w-sm">
+            {cameraError === "denied"
+              ? "Erlaube den Kamerazugriff (iPhone: „aA“ in der Adressleiste → Website-Einstellungen → Kamera → Erlauben) und tippe auf „Erneut versuchen“ – oder nimm das Foto direkt mit der iPhone-Kamera auf."
+              : cameraError === "busy"
+                ? "Schließe andere Apps, die die Kamera nutzen, und versuche es erneut – oder nimm das Foto direkt auf."
+                : "Nimm das Foto einfach direkt mit der Kamera deines Geräts auf oder wähle ein vorhandenes Foto."}
           </p>
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 w-full max-w-xs">
             <button
-              onClick={handleClose}
-              className="px-6 py-3 rounded-full bg-white/10 text-white font-medium"
+              onClick={openFilePicker}
+              className="px-6 py-3 rounded-full bg-accent text-accent-foreground font-medium flex items-center justify-center gap-2"
             >
-              Abbrechen
+              <Camera className="w-4 h-4" /> Foto aufnehmen / auswählen
             </button>
-            <button
-              onClick={() => void startCamera()}
-              className="px-6 py-3 rounded-full bg-accent text-accent-foreground font-medium flex items-center gap-2"
-            >
-              <RotateCcw className="w-4 h-4" /> Erneut versuchen
+            {cameraError !== "unsupported" && (
+              <button
+                onClick={() => void startCamera()}
+                className="px-6 py-3 rounded-full bg-white/15 text-white font-medium flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4" /> Erneut versuchen
+              </button>
+            )}
+            <button onClick={handleClose} className="px-6 py-3 rounded-full bg-white/10 text-white font-medium">
+              Abbrechen
             </button>
           </div>
         </div>
       )}
+      {fileInput}
     </div>
   );
 
