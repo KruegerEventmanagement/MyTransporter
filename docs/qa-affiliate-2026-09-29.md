@@ -29,7 +29,6 @@
 
 ## Grenzen
 - Kein echter Klick und keine Prüfung der Provisionszuordnung bei Awin.
-- Die Einblendung „App installieren“ überdeckt auf Desktop kurz den Kopf der linken Karte (bestehendes, schließbares Element).
 - Kein Test auf echtem iPhone.
 
 ## Ergänzung: Login/Registrieren in der Navigation
@@ -38,3 +37,10 @@
 - Neuer Test `src/lib/ad-visibility.test.tsx` (2 Tests: Überlappung, Unmount/manueller Schalter).
 - Erneut: `bun run test` Exit 0 – 23 Dateien, 274 Tests bestanden; `bun run typecheck` Exit 0; `bun run build` Exit 0.
 - Browser (ohne Formular abzusenden): sichtbare Partnerlinks Desktop vorher 4, bei offenem Registrieren 0, bei offenem Login 0; Mobil 390 px vorher 2, danach jeweils 0.
+
+## Finale Prüfung (Layout-Korrektur + Datenschutz-Stand)
+- `src/components/ads/AffiliateOffers.tsx`: Partnerkarte in der Seitenleiste mit `xl:pt-16` (nur CSS, keine Vorfahren/Keys geändert, Buchungsinhalt unverändert). Karte beginnt bei 144 px, App-Hinweis endet bei 104 px – keine Überdeckung, auch nach Scrollen (sticky).
+- `src/routes/datenschutz.tsx`: „Stand: 29. September 2026“.
+- Weiterhin genau 2 Partnerlinks; AdSense-Flags unverändert false; nicht deployt.
+- `bun run test` Exit 0 – 23 Dateien, 274 Tests bestanden; `bun run typecheck` Exit 0; `bun run build` Exit 0.
+- Browser: Desktop 1440 px und Mobil 390 px ohne horizontale Überbreite, 0 Anfragen an Awin/Händler/Google-Anzeigen; Navbar Registrieren/Login offen → 0 sichtbare Partnerlinks (Desktop vorher 4, Mobil vorher 2). Kein Klick auf Partnerlinks, nichts abgesendet.
