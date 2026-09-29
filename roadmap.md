@@ -13,3 +13,7 @@
 - [x] AdSense-Konto: Review angefragt (Status „Wird vorbereitet“, nicht freigegeben), Zahlungsempfängerdaten übermittelt, EU-Einwilligungsmeldung veröffentlicht (DE+EN, Zustimmen/Ablehnen/Verwalten), echte Slot-IDs railLeft 4238348588 / railRight 6950298526 in der Konfiguration; Anzeigen nicht live
 - [x] AdSense-Browser-Adapter umgesetzt: echte Google-Einwilligungsmeldung (Funding Choices/TCF v2.2), getrennter CMP-Bootstrap mit pauseAdRequests=1, Vendor 755 + Zwecke, NPA-Fall, reaktive Rails, Widerrufs-Button „Datenschutz für Werbung“, CMP-only-QA-Modus, mit Mocks getestet; im Normalbetrieb weiterhin keine Google-Anfrage
 - [ ] AdSense-Aktivierung extern blockiert: Google-Review-Ergebnis abwarten, danach echte Google-CMP-/Script-Integration im Browser (Deadlock-Reihenfolge beachten), Live-QA auf der öffentlichen Domain (Zustimmen/Ablehnen/Widerruf/Timeout, Anzeigen-Rendering), dann liveCmpVerified=true und enabled=true
+
+## QA 29.09. (nur lesend)
+- [ ] Google-EU-Einwilligungsmeldung live mit ?fc=alwaysshow&fctype=gdpr prüfen (frischer Kontext, ohne Klick auf Werbung)
+- [ ] Live-Bundles auf die vier false-Flags prüfen
