@@ -12,6 +12,7 @@ import { SocialBanner } from "@/components/SocialBanner";
 import { HomeIntroSection } from "@/components/HomeIntroSection";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
+import { AffiliateOffersSection } from "@/components/ads/AffiliateOffers";
 
 export const Route = createFileRoute("/")({
   head: () =>
@@ -33,6 +34,7 @@ function Index() {
         <BookingSection />
         <SocialBanner />
         <HomeIntroSection />
+        <AffiliateOffersSection />
       </AdRails>
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
         <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
