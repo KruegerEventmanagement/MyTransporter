@@ -44,7 +44,7 @@ export function AffiliateRailCard({ index }: { index: number }) {
   const offer = activeAffiliateOffers()[index];
   if (!offer) return null;
   return (
-    <div data-testid="affiliate-rail">
+    <div data-testid="affiliate-rail" className="xl:pt-16">
       <OfferCard offer={offer} compact />
       <p className="mt-2 text-[10px] leading-snug text-muted-foreground">{AFFILIATE_DISCLOSURE}</p>
     </div>
