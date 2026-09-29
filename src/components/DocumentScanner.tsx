@@ -81,6 +81,8 @@ export function DocumentScanner({
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { focusPoint, handleTap } = useTapFocus(videoRef, streamRef);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cameraError, setCameraError] = useState<"denied" | "notfound" | "busy" | "unsupported">("unsupported");
 
   const label = SCAN_DOC_LABELS[docType];
 
@@ -94,25 +96,38 @@ export function DocumentScanner({
   }, []);
 
   const startCamera = useCallback(async () => {
-    setPhase("camera");
     setRejectMsg("");
+    stopCamera();
+    const md = typeof navigator !== "undefined" ? navigator.mediaDevices : undefined;
+    if (!md?.getUserMedia || (typeof window !== "undefined" && !window.isSecureContext)) {
+      // e.g. iOS home-screen app / in-app browser without live camera API
+      setCameraError("unsupported");
+      setPhase("error");
+      return;
+    }
+    setPhase("camera");
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          frameRate: { ideal: 30 },
-        },
-      });
+      try {
+        stream = await md.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
+      } catch (first) {
+        const name = (first as DOMException)?.name;
+        if (name === "NotAllowedError" || name === "SecurityError") throw first;
+        // Overconstrained / NotReadable on some iPhones: retry with minimal constraints.
+        stream = await md.getUserMedia({ video: true, audio: false });
+      }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        // iOS may reject play() without breaking the stream – never treat as "no camera".
+        await videoRef.current.play().catch(() => undefined);
       }
       const track = stream.getVideoTracks()[0];
       try {
-        const caps = (track.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { focusMode?: string[]; torch?: boolean };
+        const caps = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { focusMode?: string[]; torch?: boolean };
         const advanced: MediaTrackConstraintSet[] = [];
         if (caps.focusMode?.includes("continuous")) advanced.push({ focusMode: "continuous" } as MediaTrackConstraintSet);
         if (advanced.length) await track.applyConstraints({ advanced });
@@ -120,10 +135,67 @@ export function DocumentScanner({
       } catch {
         /* ignore */
       }
-    } catch {
+    } catch (err) {
+      stream?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      const name = (err as DOMException)?.name;
+      console.warn("Camera error:", name);
+      setCameraError(
+        name === "NotAllowedError" || name === "SecurityError"
+          ? "denied"
+          : name === "NotFoundError" || name === "OverconstrainedError"
+            ? "notfound"
+            : name === "NotReadableError" || name === "AbortError"
+              ? "busy"
+              : "unsupported",
+      );
       setPhase("error");
     }
-  }, []);
+  }, [stopCamera]);
+
+  const handleFilePicked = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        setRejectMsg("Bitte ein Foto (Bild-Datei) auswählen.");
+        setPhase("rejected");
+        return;
+      }
+      stopCamera();
+      try {
+        // Normalize to JPEG (also converts HEIC on iOS, which decodes it natively).
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        await new Promise<void>((res, rej) => {
+          img.onload = () => res();
+          img.onerror = () => rej(new Error("Foto konnte nicht gelesen werden"));
+          img.src = url;
+        });
+        const max = 2000;
+        const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.naturalWidth * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        const blob = await canvasToJpegBlob(canvas);
+        pendingBlobRef.current = blob;
+        setShotUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(blob);
+        });
+        setPhase("preview");
+      } catch (err) {
+        setRejectMsg(err instanceof Error ? err.message : "Foto konnte nicht gelesen werden.");
+        setPhase("rejected");
+      }
+    },
+    [stopCamera],
+  );
+
+  const openFilePicker = () => fileInputRef.current?.click();
 
   const toggleTorch = useCallback(async () => {
     const track = streamRef.current?.getVideoTracks()[0];
