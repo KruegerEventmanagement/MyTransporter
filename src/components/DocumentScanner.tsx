@@ -81,6 +81,8 @@ export function DocumentScanner({
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { focusPoint, handleTap } = useTapFocus(videoRef, streamRef);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cameraError, setCameraError] = useState<"denied" | "notfound" | "busy" | "unsupported">("unsupported");
 
   const label = SCAN_DOC_LABELS[docType];
 
@@ -94,25 +96,38 @@ export function DocumentScanner({
   }, []);
 
   const startCamera = useCallback(async () => {
-    setPhase("camera");
     setRejectMsg("");
+    stopCamera();
+    const md = typeof navigator !== "undefined" ? navigator.mediaDevices : undefined;
+    if (!md?.getUserMedia || (typeof window !== "undefined" && !window.isSecureContext)) {
+      // e.g. iOS home-screen app / in-app browser without live camera API
+      setCameraError("unsupported");
+      setPhase("error");
+      return;
+    }
+    setPhase("camera");
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          frameRate: { ideal: 30 },
-        },
-      });
+      try {
+        stream = await md.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
+      } catch (first) {
+        const name = (first as DOMException)?.name;
+        if (name === "NotAllowedError" || name === "SecurityError") throw first;
+        // Overconstrained / NotReadable on some iPhones: retry with minimal constraints.
+        stream = await md.getUserMedia({ video: true, audio: false });
+      }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        // iOS may reject play() without breaking the stream – never treat as "no camera".
+        await videoRef.current.play().catch(() => undefined);
       }
       const track = stream.getVideoTracks()[0];
       try {
-        const caps = (track.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { focusMode?: string[]; torch?: boolean };
+        const caps = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { focusMode?: string[]; torch?: boolean };
         const advanced: MediaTrackConstraintSet[] = [];
         if (caps.focusMode?.includes("continuous")) advanced.push({ focusMode: "continuous" } as MediaTrackConstraintSet);
         if (advanced.length) await track.applyConstraints({ advanced });
@@ -120,10 +135,67 @@ export function DocumentScanner({
       } catch {
         /* ignore */
       }
-    } catch {
+    } catch (err) {
+      stream?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      const name = (err as DOMException)?.name;
+      console.warn("Camera error:", name);
+      setCameraError(
+        name === "NotAllowedError" || name === "SecurityError"
+          ? "denied"
+          : name === "NotFoundError" || name === "OverconstrainedError"
+            ? "notfound"
+            : name === "NotReadableError" || name === "AbortError"
+              ? "busy"
+              : "unsupported",
+      );
       setPhase("error");
     }
-  }, []);
+  }, [stopCamera]);
+
+  const handleFilePicked = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        setRejectMsg("Bitte ein Foto (Bild-Datei) auswählen.");
+        setPhase("rejected");
+        return;
+      }
+      stopCamera();
+      try {
+        // Normalize to JPEG (also converts HEIC on iOS, which decodes it natively).
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        await new Promise<void>((res, rej) => {
+          img.onload = () => res();
+          img.onerror = () => rej(new Error("Foto konnte nicht gelesen werden"));
+          img.src = url;
+        });
+        const max = 2000;
+        const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.naturalWidth * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        const blob = await canvasToJpegBlob(canvas);
+        pendingBlobRef.current = blob;
+        setShotUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(blob);
+        });
+        setPhase("preview");
+      } catch (err) {
+        setRejectMsg(err instanceof Error ? err.message : "Foto konnte nicht gelesen werden.");
+        setPhase("rejected");
+      }
+    },
+    [stopCamera],
+  );
+
+  const openFilePicker = () => fileInputRef.current?.click();
 
   const toggleTorch = useCallback(async () => {
     const track = streamRef.current?.getVideoTracks()[0];
@@ -293,10 +365,22 @@ export function DocumentScanner({
     });
   }, [phase]);
 
+  const fileInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept="image/*"
+      capture="environment"
+      className="hidden"
+      onChange={handleFilePicked}
+    />
+  );
+
   // Single field: tap to capture, tap again to replace
   if (phase === "idle") {
     return (
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        {fileInput}
         <button
           type="button"
           onClick={() => startCamera()}
@@ -323,15 +407,24 @@ export function DocumentScanner({
             </span>
           )}
         </button>
-        {isComplete && (
+        <div className="flex border-t border-border">
+          {isComplete && (
+            <button
+              type="button"
+              onClick={() => startCamera()}
+              className="flex-1 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 py-2 border-r border-border"
+            >
+              Neu aufnehmen
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => startCamera()}
-            className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 py-2 border-t border-border"
+            onClick={openFilePicker}
+            className="flex-1 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 py-2"
           >
-            Neu aufnehmen
+            Mit Handy-Kamera / Foto hochladen
           </button>
-        )}
+        </div>
       </div>
     );
   }
@@ -489,26 +582,42 @@ export function DocumentScanner({
           <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center mb-6">
             <AlertTriangle className="w-10 h-10 text-destructive" />
           </div>
-          <h3 className="text-white text-xl font-bold mb-2">Kamera nicht verfügbar</h3>
-          <p className="text-white/60 text-center text-sm mb-8">
-            Bitte erlaube den Kamerazugriff oder verwende ein Gerät mit Kamera.
+          <h3 className="text-white text-xl font-bold mb-2 text-center">
+            {cameraError === "denied"
+              ? "Kamerazugriff nicht erlaubt"
+              : cameraError === "busy"
+                ? "Kamera wird gerade verwendet"
+                : "Live-Kamera nicht verfügbar"}
+          </h3>
+          <p className="text-white/60 text-center text-sm mb-8 max-w-sm">
+            {cameraError === "denied"
+              ? "Erlaube den Kamerazugriff (iPhone: „aA“ in der Adressleiste → Website-Einstellungen → Kamera → Erlauben) und tippe auf „Erneut versuchen“ – oder nimm das Foto direkt mit der iPhone-Kamera auf."
+              : cameraError === "busy"
+                ? "Schließe andere Apps, die die Kamera nutzen, und versuche es erneut – oder nimm das Foto direkt auf."
+                : "Nimm das Foto einfach direkt mit der Kamera deines Geräts auf oder wähle ein vorhandenes Foto."}
           </p>
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 w-full max-w-xs">
             <button
-              onClick={handleClose}
-              className="px-6 py-3 rounded-full bg-white/10 text-white font-medium"
+              onClick={openFilePicker}
+              className="px-6 py-3 rounded-full bg-accent text-accent-foreground font-medium flex items-center justify-center gap-2"
             >
-              Abbrechen
+              <Camera className="w-4 h-4" /> Foto aufnehmen / auswählen
             </button>
-            <button
-              onClick={() => void startCamera()}
-              className="px-6 py-3 rounded-full bg-accent text-accent-foreground font-medium flex items-center gap-2"
-            >
-              <RotateCcw className="w-4 h-4" /> Erneut versuchen
+            {cameraError !== "unsupported" && (
+              <button
+                onClick={() => void startCamera()}
+                className="px-6 py-3 rounded-full bg-white/15 text-white font-medium flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4" /> Erneut versuchen
+              </button>
+            )}
+            <button onClick={handleClose} className="px-6 py-3 rounded-full bg-white/10 text-white font-medium">
+              Abbrechen
             </button>
           </div>
         </div>
       )}
+      {fileInput}
     </div>
   );
 
