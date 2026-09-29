@@ -1,5 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
 /**
  * Fahrtfotos (Abholung/Rückgabe): Erfolg erst nach bestätigtem Storage-Upload
  * UND geprüftem Datenbankeintrag. Vorschaubilder immer über signierte URLs,
@@ -29,7 +27,12 @@ export class TripPhotoError extends Error {
 }
 
 // Bewusst locker typisiert: nur die genutzten Methoden, damit Tests vollständig mocken können.
-type Client = Pick<SupabaseClient, "from" | "storage">;
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export interface TripPhotoClient {
+  from: (table: any) => any;
+  storage: { from: (bucket: string) => any };
+}
+type Client = TripPhotoClient;
 
 export async function signTripPhoto(client: Client, path: string): Promise<string | null> {
   if (/^(https?:|data:)/.test(path)) return path;
@@ -118,7 +121,7 @@ export async function updateBookingChecked(
 ): Promise<void> {
   let ok = false;
   try {
-    const { data, error } = await client.from("bookings").update(values as never).eq("id", bookingId).select("id");
+    const { data, error } = await client.from("bookings").update(values).eq("id", bookingId).select("id");
     ok = !error && Array.isArray(data) && data.length > 0;
   } catch {
     ok = false;
