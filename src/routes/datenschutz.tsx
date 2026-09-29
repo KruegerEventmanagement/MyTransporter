@@ -78,7 +78,7 @@ function DatenschutzPage() {
 
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">8. Partnerlinks (Awin)</h2>
-            <p>Auf einigen Seiten zeigen wir als „Anzeige · Partnerlink“ gekennzeichnete Links zu ausgewählten Händlern, die über das Partnernetzwerk Awin (AWIN AG) vermittelt werden. Beim Seitenaufruf werden dafür keine Skripte, Pixel oder Bilder von Awin oder den Händlern geladen. Erst wenn Sie einen Partnerlink bewusst anklicken, werden Sie über einen Server von Awin zum Händler weitergeleitet; dabei verarbeiten Awin und der Händler nach ihren eigenen Datenschutzhinweisen Daten wie IP-Adresse und Klickzeitpunkt und können Cookies setzen, um einen Kauf zuzuordnen. Bei einem Kauf über diese Links können wir eine Provision erhalten; </p>
+            <p>Auf einigen Seiten zeigen wir als „Anzeige · Partnerlink“ gekennzeichnete Links zu ausgewählten Händlern, die über das Partnernetzwerk Awin (AWIN AG) vermittelt werden. Beim Seitenaufruf werden dafür keine Skripte, Pixel oder Bilder von Awin oder den Händlern geladen. Erst wenn Sie einen Partnerlink bewusst anklicken, werden Sie über einen Server von Awin zum Händler weitergeleitet; dabei verarbeiten Awin und der Händler nach ihren eigenen Datenschutzhinweisen Daten wie IP-Adresse und Klickzeitpunkt und können Cookies setzen, um einen Kauf zuzuordnen. Bei einem Kauf über diese Links können wir eine Provision erhalten.</p>
           </div>
 
           <p className="text-xs text-muted-foreground mt-8">Stand: August 2026</p>
