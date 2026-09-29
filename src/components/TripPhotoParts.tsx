@@ -1,5 +1,5 @@
 import { AlertTriangle, Check, ImageOff, RotateCcw } from "lucide-react";
-import type { StoredTripPhoto } from "@/lib/trip-photos";
+import type { StoredTripPhoto } from "@/lib/trip-photo-store";
 
 /** Vorschau eines gespeicherten Fahrtfotos; ohne signierte URL ein neutraler Platzhalter. */
 export function TripPhotoThumb({ photo, alt, className }: { photo: StoredTripPhoto; alt: string; className: string }) {

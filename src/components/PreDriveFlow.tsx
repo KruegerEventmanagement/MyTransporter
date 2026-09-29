@@ -10,7 +10,7 @@ import {
   TripPhotoError,
   updateBookingChecked,
   type StoredTripPhoto,
-} from "@/lib/trip-photos";
+} from "@/lib/trip-photo-store";
 import { notifyAdmin } from "@/lib/admin-notify";
 import { useServerFn } from "@tanstack/react-start";
 import { recognizeOdometer } from "@/lib/odometer-ai.functions";
