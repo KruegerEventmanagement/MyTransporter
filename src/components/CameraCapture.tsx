@@ -75,9 +75,11 @@ function getOverlay(variant: SilhouetteVariant): { src: string; flip: boolean } 
 const CAMERA_ERROR_TEXT: Record<CameraErrorKind, string> = {
   denied:
     "Kamerazugriff nicht erlaubt. Erlaube die Kamera in den Browser-Einstellungen oder nimm das Foto mit der Geräte-Kamera auf.",
-  notfound: "Keine Kamera gefunden. Nimm das Foto mit der Geräte-Kamera auf oder wähle ein vorhandenes Foto.",
+  notfound:
+    "Keine Kamera gefunden. Nimm das Foto mit der Geräte-Kamera auf oder wähle ein vorhandenes Foto.",
   busy: "Die Kamera wird gerade von einer anderen App verwendet. Schließe sie und versuche es erneut – oder nimm das Foto direkt auf.",
-  timeout: "Die Live-Kamera startet nicht. Versuche es erneut oder nimm das Foto mit der Geräte-Kamera auf.",
+  timeout:
+    "Die Live-Kamera startet nicht. Versuche es erneut oder nimm das Foto mit der Geräte-Kamera auf.",
   unsupported: "Live-Kamera nicht verfügbar. Bitte nimm das Foto mit der Geräte-Kamera auf.",
 };
 
@@ -131,7 +133,10 @@ export function CameraCapture({
 
     (async () => {
       const md = typeof navigator !== "undefined" ? navigator.mediaDevices : undefined;
-      if (!md?.getUserMedia || (typeof window !== "undefined" && window.isSecureContext === false)) {
+      if (
+        !md?.getUserMedia ||
+        (typeof window !== "undefined" && window.isSecureContext === false)
+      ) {
         fail("unsupported");
         return;
       }
@@ -140,7 +145,11 @@ export function CameraCapture({
         stream = await getUserMediaWithTimeout(
           md,
           {
-            video: { facingMode: { ideal: facingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            video: {
+              facingMode: { ideal: facingMode },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+            },
             audio: false,
           },
           cameraTimeoutMs,
@@ -203,7 +212,9 @@ export function CameraCapture({
     if (busyRef.current) return;
     const video = videoRef.current;
     if (status !== "live" || !video || !video.videoWidth || !video.videoHeight) {
-      setShotError("Die Kamera ist noch nicht bereit. Bitte kurz warten oder Foto mit der Geräte-Kamera aufnehmen.");
+      setShotError(
+        "Die Kamera ist noch nicht bereit. Bitte kurz warten oder Foto mit der Geräte-Kamera aufnehmen.",
+      );
       return;
     }
     busyRef.current = true;
@@ -239,7 +250,11 @@ export function CameraCapture({
       await deliver(blobToJpegFile(blob, "capture"));
     } catch (err) {
       if (mountedRef.current) {
-        setShotError(err instanceof Error ? err.message : "Foto konnte nicht erstellt werden. Bitte erneut versuchen.");
+        setShotError(
+          err instanceof Error
+            ? err.message
+            : "Foto konnte nicht erstellt werden. Bitte erneut versuchen.",
+        );
       }
     } finally {
       busyRef.current = false;
@@ -329,7 +344,11 @@ export function CameraCapture({
         {status === "live" && focusPoint && (
           <div
             className="absolute pointer-events-none w-16 h-16 -ml-8 -mt-8 border-2 border-white rounded-md transition-opacity duration-200"
-            style={{ left: `${focusPoint.x}%`, top: `${focusPoint.y}%`, boxShadow: "0 0 0 9999px rgba(0,0,0,0.25)" }}
+            style={{
+              left: `${focusPoint.x}%`,
+              top: `${focusPoint.y}%`,
+              boxShadow: "0 0 0 9999px rgba(0,0,0,0.25)",
+            }}
           />
         )}
 

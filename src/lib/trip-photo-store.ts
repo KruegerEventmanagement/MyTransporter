@@ -37,7 +37,9 @@ type Client = TripPhotoClient;
 export async function signTripPhoto(client: Client, path: string): Promise<string | null> {
   if (/^(https?:|data:)/.test(path)) return path;
   try {
-    const { data, error } = await client.storage.from(TRIP_PHOTO_BUCKET).createSignedUrl(path, SIGNED_URL_TTL);
+    const { data, error } = await client.storage
+      .from(TRIP_PHOTO_BUCKET)
+      .createSignedUrl(path, SIGNED_URL_TTL);
     if (error || !data?.signedUrl) return null;
     return data.signedUrl;
   } catch {
@@ -109,8 +111,12 @@ export async function loadTripPhotos(
     .eq("booking_id", bookingId)
     .order("created_at", { ascending: true });
   if (error) throw new Error("Gespeicherte Fotos konnten nicht geladen werden.");
-  const rows = ((data ?? []) as TripPhotoRow[]).filter((r) => prefixes.some((p) => r.photo_type.startsWith(p)));
-  return Promise.all(rows.map(async (r) => ({ ...r, url: await signTripPhoto(client, r.photo_url) })));
+  const rows = ((data ?? []) as TripPhotoRow[]).filter((r) =>
+    prefixes.some((p) => r.photo_type.startsWith(p)),
+  );
+  return Promise.all(
+    rows.map(async (r) => ({ ...r, url: await signTripPhoto(client, r.photo_url) })),
+  );
 }
 
 /** Prüft, dass ein Buchungs-Update tatsächlich eine Zeile getroffen hat. */
@@ -121,10 +127,17 @@ export async function updateBookingChecked(
 ): Promise<void> {
   let ok = false;
   try {
-    const { data, error } = await client.from("bookings").update(values).eq("id", bookingId).select("id");
+    const { data, error } = await client
+      .from("bookings")
+      .update(values)
+      .eq("id", bookingId)
+      .select("id");
     ok = !error && Array.isArray(data) && data.length > 0;
   } catch {
     ok = false;
   }
-  if (!ok) throw new Error("Speichern fehlgeschlagen. Bitte Internetverbindung prüfen und erneut versuchen.");
+  if (!ok)
+    throw new Error(
+      "Speichern fehlgeschlagen. Bitte Internetverbindung prüfen und erneut versuchen.",
+    );
 }

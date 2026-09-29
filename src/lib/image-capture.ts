@@ -28,13 +28,19 @@ export function dataUrlToBlob(dataUrl: string): Blob {
   const [header, encoded] = dataUrl.split(",");
   const mime = header?.match(/^data:(.*?);base64$/)?.[1];
   if (!mime || !mime.startsWith("image/") || !encoded) {
-    throw new CaptureError("Bild konnte nicht erstellt werden. Bitte erneut versuchen.", "encode_failed");
+    throw new CaptureError(
+      "Bild konnte nicht erstellt werden. Bitte erneut versuchen.",
+      "encode_failed",
+    );
   }
   const binary = atob(encoded);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
   if (bytes.length === 0) {
-    throw new CaptureError("Bild konnte nicht erstellt werden. Bitte erneut versuchen.", "encode_failed");
+    throw new CaptureError(
+      "Bild konnte nicht erstellt werden. Bitte erneut versuchen.",
+      "encode_failed",
+    );
   }
   return new Blob([bytes], { type: mime });
 }
@@ -75,11 +81,17 @@ export async function canvasToJpegBlob(
   try {
     dataUrl = canvas.toDataURL("image/jpeg", quality);
   } catch {
-    throw new CaptureError("Bild konnte nicht erstellt werden. Bitte erneut versuchen.", "encode_failed");
+    throw new CaptureError(
+      "Bild konnte nicht erstellt werden. Bitte erneut versuchen.",
+      "encode_failed",
+    );
   }
   // Browser ohne JPEG-Encoder liefern PNG oder "data:," – kein falscher .jpg-Inhalt.
   if (!dataUrl.startsWith("data:image/jpeg")) {
-    throw new CaptureError("Bild konnte nicht erstellt werden. Bitte erneut versuchen.", "encode_failed");
+    throw new CaptureError(
+      "Bild konnte nicht erstellt werden. Bitte erneut versuchen.",
+      "encode_failed",
+    );
   }
   return dataUrlToBlob(dataUrl);
 }
@@ -183,7 +195,10 @@ export function isLikelyImageFile(file: File): boolean {
  */
 export async function normalizeImageFile(
   file: File,
-  { maxDimension = 2000, decodeTimeoutMs = 15000 }: { maxDimension?: number; decodeTimeoutMs?: number } = {},
+  {
+    maxDimension = 2000,
+    decodeTimeoutMs = 15000,
+  }: { maxDimension?: number; decodeTimeoutMs?: number } = {},
 ): Promise<Blob> {
   if (!isLikelyImageFile(file)) {
     throw new CaptureError("Bitte ein Foto (Bild-Datei) auswählen.", "not_image");

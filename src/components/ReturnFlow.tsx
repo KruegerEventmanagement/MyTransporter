@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { Camera, Check, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine } from "lucide-react";
+import { Camera, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
 import { TripErrorBanner, TripPhotoThumb } from "./TripPhotoParts";

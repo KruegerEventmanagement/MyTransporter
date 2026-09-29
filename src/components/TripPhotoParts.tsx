@@ -2,7 +2,15 @@ import { AlertTriangle, Check, ImageOff, RotateCcw } from "lucide-react";
 import type { StoredTripPhoto } from "@/lib/trip-photo-store";
 
 /** Vorschau eines gespeicherten Fahrtfotos; ohne signierte URL ein neutraler Platzhalter. */
-export function TripPhotoThumb({ photo, alt, className }: { photo: StoredTripPhoto; alt: string; className: string }) {
+export function TripPhotoThumb({
+  photo,
+  alt,
+  className,
+}: {
+  photo: StoredTripPhoto;
+  alt: string;
+  className: string;
+}) {
   return (
     <div className="relative">
       {photo.url ? (
@@ -39,7 +47,10 @@ export function TripErrorBanner({
   busy?: boolean;
 }) {
   return (
-    <div role="alert" className="mb-4 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
+    <div
+      role="alert"
+      className="mb-4 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm"
+    >
       <p className="flex items-start gap-2 text-foreground">
         <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-destructive" />
         <span>{message}</span>
