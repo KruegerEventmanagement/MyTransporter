@@ -4,6 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { trackCompleteRegistration } from "@/lib/analytics";
 import { consumeLoginRequest, takeLoginRedirect } from "@/lib/login-redirect";
+import { useSuppressAds } from "@/lib/ad-visibility";
 import {
   ageOnIsoDate,
   isValidIsoDate,
@@ -17,6 +18,7 @@ const AUTH_CONFIRM_URL = `${typeof window !== "undefined" ? window.location.orig
 export function Navbar() {
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState<"login" | "register" | null>(null);
+  useSuppressAds(showModal !== null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
