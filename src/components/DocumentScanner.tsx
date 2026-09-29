@@ -142,7 +142,15 @@ export function DocumentScanner({
         return;
       }
       streamRef.current = stream;
-      const video = videoRef.current;
+      let video = videoRef.current;
+      for (let i = 0; !video && i < 60 && !stale(); i += 1) {
+        await new Promise((r) => setTimeout(r, 16));
+        video = videoRef.current;
+      }
+      if (stale()) {
+        stopStream(stream);
+        return;
+      }
       if (!video) throw new DOMException("Kein Videoelement", "AbortError");
       video.srcObject = stream;
       // iOS may reject play() without breaking the stream – entscheidend ist ein echtes Bild.
@@ -470,7 +478,7 @@ export function DocumentScanner({
     <div className="fixed inset-x-0 top-0 z-50 h-[100dvh] max-h-[100dvh] overflow-hidden bg-black flex flex-col">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/70 to-transparent">
-        <button onClick={handleClose} className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
+        <button onClick={handleClose} aria-label="Schließen" className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
           <X className="w-5 h-5 text-white" />
         </button>
         <div className="text-center">
@@ -536,6 +544,7 @@ export function DocumentScanner({
               <div className="flex flex-col items-center gap-3">
                 <button
                   onClick={runCapture}
+                  aria-label="Foto aufnehmen"
                   className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-95 transition-transform"
                 >
                   <div className="w-14 h-14 rounded-full border-4 border-black/10" />

@@ -156,7 +156,15 @@ export function CameraCapture({
         return;
       }
       streamRef.current = stream;
-      const video = videoRef.current;
+      let video = videoRef.current;
+      for (let i = 0; !video && i < 60 && !cancelled; i += 1) {
+        await new Promise((r) => setTimeout(r, 16));
+        video = videoRef.current;
+      }
+      if (cancelled) {
+        stopStream(stream);
+        return;
+      }
       if (!video) {
         fail("unsupported");
         return;
