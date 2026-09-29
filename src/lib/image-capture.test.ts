@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   CaptureError,
   canvasToJpegBlob,
@@ -132,6 +132,4 @@ describe("normalizeImageFile", () => {
     await expect(normalizeImageFile(imageFile())).rejects.toMatchObject({ code: "decode_failed" });
     expect(URL.revokeObjectURL).toHaveBeenCalled();
   });
-
-  it("vi ist verfügbar", () => expect(vi).toBeTruthy());
 });
