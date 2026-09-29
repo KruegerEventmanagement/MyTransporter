@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { createFakeSupabase } from "@/test/fake-supabase";
 import { domError, fakeStream, imageFile, installMediaMocks, media, setMediaDevices } from "@/test/media-mocks";
 
-const fake = createFakeSupabase();
+const fake = await vi.hoisted(async () => (await import("@/test/fake-supabase")).createFakeSupabase());
 vi.mock("@/integrations/supabase/client", () => ({ supabase: fake.client }));
 
 import { DocumentScanner } from "./DocumentScanner";
