@@ -75,12 +75,14 @@ export function DocumentScanner({
   const [torchAvailable, setTorchAvailable] = useState(false);
   const [shotUrl, setShotUrl] = useState<string | null>(null);
   const pendingBlobRef = useRef<Blob | null>(null);
+  /** Speicherpfad, falls die aktuelle Aufnahme bereits hochgeladen wurde (Retry ohne Doppel-Upload). */
+  const uploadedPathRef = useRef<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { focusPoint, handleTap } = useTapFocus(videoRef, streamRef);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [cameraError, setCameraError] = useState<CameraErrorKind>("unsupported");
+  const [cameraError, setCameraError] = useState<CameraErrorKind | "native">("unsupported");
   /** Herkunft der aktuellen Vorschau: native Dateiauswahl oder Live-Kamera. */
   const sourceRef = useRef<"file" | "live" | null>(null);
   /** Erhöht sich bei jedem Start/Schließen – verspätete Ergebnisse werden verworfen. */
@@ -154,7 +156,12 @@ export function DocumentScanner({
       if (!video) throw new DOMException("Kein Videoelement", "AbortError");
       video.srcObject = stream;
       // iOS may reject play() without breaking the stream – entscheidend ist ein echtes Bild.
-      await video.play().catch(() => undefined);
+      // play() nicht abwarten (kann nie auflösen); Bildbereitschaft hat eigene Deadline.
+      try {
+        void Promise.resolve(video.play()).catch(() => undefined);
+      } catch {
+        /* ignore */
+      }
       await waitForVideoFrame(video, frameTimeoutMs);
       if (stale()) return;
       const track = stream.getVideoTracks()[0];
@@ -193,6 +200,7 @@ export function DocumentScanner({
         const blob = await normalizeImageFile(file);
         if (gen !== genRef.current || !mountedRef.current) return;
         pendingBlobRef.current = blob;
+        uploadedPathRef.current = null;
         sourceRef.current = "file";
         replaceShotUrl(URL.createObjectURL(blob));
         setRejectMsg("");
@@ -206,7 +214,20 @@ export function DocumentScanner({
     [stopCamera, replaceShotUrl],
   );
 
-  const openFilePicker = () => fileInputRef.current?.click();
+  /**
+   * Bewusster Wechsel zur nativen Kamera/Galerie: laufende oder noch startende
+   * Live-Kamera beenden (sonst kann sie die Gerätekamera blockieren), dann
+   * synchron im Nutzerklick öffnen. Eine vorhandene Vorschau bleibt erhalten.
+   */
+  const openFilePicker = () => {
+    genRef.current += 1;
+    stopCamera();
+    if (phase === "camera" || phase === "error") {
+      setCameraError("native");
+      setPhase("error");
+    }
+    fileInputRef.current?.click();
+  };
 
   const toggleTorch = useCallback(async () => {
     const track = streamRef.current?.getVideoTracks()[0];
@@ -234,6 +255,7 @@ export function DocumentScanner({
   const runCapture = useCallback(async () => {
     if (busyRef.current) return;
     busyRef.current = true;
+    const gen = genRef.current;
     setPhase("capturing");
     try {
       const video = videoRef.current;
@@ -263,13 +285,14 @@ export function DocumentScanner({
       if (!ctx) throw new Error("Canvas-Kontext fehlt");
       ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
       const blob = await canvasToJpegBlob(canvas);
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || gen !== genRef.current) return;
       pendingBlobRef.current = blob;
+        uploadedPathRef.current = null;
       sourceRef.current = "live";
       replaceShotUrl(URL.createObjectURL(blob));
       setPhase("preview");
     } catch (err) {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || gen !== genRef.current) return;
       console.error("Document capture error:", err);
       setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");
       setPhase("rejected");
@@ -283,6 +306,8 @@ export function DocumentScanner({
     const blob = pendingBlobRef.current;
     if (!blob || busyRef.current) return;
     busyRef.current = true;
+    const gen = genRef.current;
+    const stale = () => !mountedRef.current || gen !== genRef.current;
     setPhase("capturing");
     try {
       if (mode === "pending") {
@@ -296,23 +321,41 @@ export function DocumentScanner({
       } else {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Nicht angemeldet");
-        const path = `${user.id}/${docType}_${Date.now()}.jpg`;
-        const { error: upErr } = await supabase.storage
-          .from("user-documents")
-          .upload(path, blob, { contentType: "image/jpeg", upsert: false });
-        if (upErr) throw upErr;
-        const { data: inserted, error: insErr } = await supabase
+        let path = uploadedPathRef.current;
+        if (!path) {
+          const candidate = `${user.id}/${docType}_${Date.now()}.jpg`;
+          const { error: upErr } = await supabase.storage
+            .from("user-documents")
+            .upload(candidate, blob, { contentType: "image/jpeg", upsert: false });
+          if (upErr) throw upErr;
+          path = candidate;
+          uploadedPathRef.current = candidate;
+        }
+        // Retry nach verlorener Antwort: vorhandenen Eintrag genau dieses Pfads wiederverwenden.
+        let inserted: { id: string } | null = null;
+        const { data: existing } = await supabase
           .from("user_documents")
-          .insert({
-            user_id: user.id,
-            doc_type: docType,
-            photo_url: path,
-            ai_verified: true,
-            verified_at: new Date().toISOString(),
-          })
           .select("id")
-          .single();
-        if (insErr) throw insErr;
+          .eq("user_id", user.id)
+          .eq("photo_url", path)
+          .maybeSingle();
+        if (existing?.id) {
+          inserted = existing;
+        } else {
+          const { data, error: insErr } = await supabase
+            .from("user_documents")
+            .insert({
+              user_id: user.id,
+              doc_type: docType,
+              photo_url: path,
+              ai_verified: true,
+              verified_at: new Date().toISOString(),
+            })
+            .select("id")
+            .single();
+          if (insErr || !data) throw insErr ?? new Error("Eintrag nicht bestätigt");
+          inserted = data;
+        }
         // Erst wenn das neue Foto sicher gespeichert ist, ältere Aufnahmen
         // derselben Seite zurückziehen – so geht bei Uploadfehlern nichts verloren.
         if (isComplete && inserted?.id) {
@@ -328,7 +371,16 @@ export function DocumentScanner({
       }
 
       if (!mountedRef.current) return;
+      if (stale()) {
+        // Während des Speicherns geschlossen: Overlay nicht wieder öffnen,
+        // gespeichertes Foto aber in der Übersicht aktualisieren.
+        pendingBlobRef.current = null;
+        uploadedPathRef.current = null;
+        void Promise.resolve(onComplete()).catch(() => undefined);
+        return;
+      }
       pendingBlobRef.current = null;
+      uploadedPathRef.current = null;
       sourceRef.current = null;
       replaceShotUrl(null);
       genRef.current += 1;
@@ -340,7 +392,7 @@ export function DocumentScanner({
         console.warn("Document refresh error:", error);
       });
     } catch (err) {
-      if (!mountedRef.current) return;
+      if (stale()) return;
       console.error("Document upload error:", err);
       setRejectMsg(
         err instanceof Error && err.message

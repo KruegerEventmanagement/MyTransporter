@@ -74,6 +74,20 @@ export async function saveTripPhoto(
   }
 
   let recordOk = false;
+  // Retry nach verlorener Antwort: gibt es den Eintrag für genau diesen Pfad schon?
+  if (args.uploadedPath) {
+    try {
+      const { data: existing, error } = await client
+        .from("trip_photos")
+        .select("id")
+        .eq("booking_id", args.bookingId)
+        .eq("photo_url", path)
+        .maybeSingle();
+      if (!error && existing) return { path, url: await signTripPhoto(client, path) };
+    } catch {
+      /* dann regulär eintragen */
+    }
+  }
   try {
     const { data, error } = await client
       .from("trip_photos")

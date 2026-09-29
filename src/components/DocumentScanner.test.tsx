@@ -205,7 +205,81 @@ describe("DocumentScanner – Upload", () => {
     fireEvent.click(screen.getByText("Erneut versuchen"));
     fireEvent.click(await screen.findByText("Übernehmen"));
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
-    const ops = fake.calls.filter((c) => c.table === "user_documents").map((c) => c.op);
+    const ops = fake.calls.filter((c) => c.table === "user_documents" && c.op !== "select").map((c) => c.op);
     expect(ops).toEqual(["insert", "update"]);
+  });
+
+  it("DB-Eintrag des Ersatzes scheitert: altes Dokument unberührt; Retry ohne erneuten Upload", async () => {
+    fake.on("user_documents", "insert", { data: null, error: { message: "rls" } }, { data: { id: "neu" }, error: null });
+    const { onComplete } = renderScanner({ mode: "upload", isComplete: true, onCapture: undefined });
+    await pick(imageFile());
+    fireEvent.click(await screen.findByText("Übernehmen"));
+    expect(await screen.findByText(/Speichern fehlgeschlagen/)).toBeTruthy();
+    expect(fake.calls.some((c) => c.table === "user_documents" && c.op === "update")).toBe(false);
+    expect(onComplete).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("Erneut versuchen"));
+    fireEvent.click(await screen.findByText("Übernehmen"));
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+    expect(fake.storageCalls.filter((c) => c.op === "upload")).toHaveLength(1);
+  });
+
+  it("verlorene Insert-Antwort: Retry findet vorhandenen Eintrag und trägt nicht doppelt ein", async () => {
+    fake.on("user_documents", "insert", { data: null, error: { message: "timeout" } });
+    fake.on("user_documents", "select", { data: null, error: null }, { data: { id: "schon-da" }, error: null });
+    const { onComplete } = renderScanner({ mode: "upload", isComplete: false, onCapture: undefined });
+    await pick(imageFile());
+    fireEvent.click(await screen.findByText("Übernehmen"));
+    await screen.findByText(/Speichern fehlgeschlagen/);
+    fireEvent.click(screen.getByText("Erneut versuchen"));
+    fireEvent.click(await screen.findByText("Übernehmen"));
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+    expect(fake.calls.filter((c) => c.table === "user_documents" && c.op === "insert")).toHaveLength(1);
+  });
+});
+
+describe("DocumentScanner – Abbruch-Rennen", () => {
+  it("nativer Wechsel während startender Kamera stoppt den späten Stream", async () => {
+    const { stream, track } = fakeStream();
+    let late: (s: MediaStream) => void = () => {};
+    setMediaDevices(() => new Promise((r) => (late = r)));
+    renderScanner({ cameraTimeoutMs: 5000 });
+    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
+    const clickSpy = vi.spyOn(fileInput(), "click");
+    fireEvent.click(screen.getByText("Stattdessen Foto mit Geräte-Kamera / aus Galerie"));
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      late(stream);
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    expect(track.stop).toHaveBeenCalled();
+    // Abbruch des Pickers: nutzbarer Bildschirm mit Foto-Weg, kein Livebild
+    expect(screen.getByText("Foto aufnehmen / auswählen")).toBeTruthy();
+    expect(screen.queryByLabelText("Foto aufnehmen")).toBeNull();
+  });
+
+  it("nie auflösendes play() mit 0 Dimensionen endet in bedienbarem Fehler", async () => {
+    setMediaDevices(async () => fakeStream().stream);
+    media.play = vi.fn(() => new Promise<void>(() => {}));
+    renderScanner();
+    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
+    expect(await screen.findByText("Live-Kamera startet nicht")).toBeTruthy();
+    expect(screen.getByText("Foto aufnehmen / auswählen")).toBeTruthy();
+  });
+
+  it("Schließen während langsamer Kodierung öffnet das Overlay nicht wieder", async () => {
+    setMediaDevices(async () => fakeStream().stream);
+    media.videoWidth = 640;
+    media.videoHeight = 480;
+    media.toBlob = "never";
+    const { onCapture } = renderScanner();
+    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
+    fireEvent.click(await screen.findByLabelText("Foto aufnehmen"));
+    fireEvent.click(screen.getByLabelText("Schließen"));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 1700));
+    });
+    expect(previewImg()).toBeNull();
+    expect(screen.getByText("Mit Handy-Kamera / Foto hochladen")).toBeTruthy();
+    expect(onCapture).not.toHaveBeenCalled();
   });
 });

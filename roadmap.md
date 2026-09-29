@@ -17,3 +17,7 @@
 ## QA 29.09. (nur lesend)
 - [x] Google-EU-Meldung im QA-Modus geprüft: Script 200, aber keine Meldung, __tcfapi undefined
 - [x] Live-Bundles: alle vier Werbe-Schalter false, live bestätigt
+
+## Foto-Reparatur 29.09. (genehmigt, nicht veröffentlichen)
+- [x] Review-Punkte 1–5: nativer Wechsel stoppt Streams, play()-Zeitlimit, Generation-Token, reproduzierbarer Typecheck, weitere Tests + Doppel-Eintrag-Schutz
+- [x] Gesamttests, Typprüfung, Build, Browsercheck, docs/qa-camera-2026-09-29.md

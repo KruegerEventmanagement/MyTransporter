@@ -83,7 +83,7 @@ const CAMERA_ERROR_TEXT: Record<CameraErrorKind, string> = {
   unsupported: "Live-Kamera nicht verfügbar. Bitte nimm das Foto mit der Geräte-Kamera auf.",
 };
 
-type Status = "starting" | "live" | "error";
+type Status = "starting" | "live" | "error" | "native";
 
 export function CameraCapture({
   open,
@@ -101,6 +101,8 @@ export function CameraCapture({
   const streamRef = useRef<MediaStream | null>(null);
   const busyRef = useRef(false);
   const mountedRef = useRef(true);
+  /** Jeder Start, Schließen oder nativer Wechsel erhöht die Generation; ältere Ergebnisse verfallen. */
+  const genRef = useRef(0);
   const [status, setStatus] = useState<Status>("starting");
   const [cameraError, setCameraError] = useState<CameraErrorKind | null>(null);
   const [shotError, setShotError] = useState<string | null>(null);
@@ -118,13 +120,15 @@ export function CameraCapture({
 
   useEffect(() => {
     if (!open) return;
-    let cancelled = false;
+    const gen = ++genRef.current;
+    let cancelledFlag = false;
+    const isCancelled = () => cancelledFlag || gen !== genRef.current;
     setStatus("starting");
     setCameraError(null);
     setShotError(null);
 
     const fail = (kind: CameraErrorKind) => {
-      if (cancelled) return;
+      if (isCancelled()) return;
       stopStream(streamRef.current);
       streamRef.current = null;
       setCameraError(kind);
@@ -153,24 +157,24 @@ export function CameraCapture({
             audio: false,
           },
           cameraTimeoutMs,
-          () => cancelled,
+          isCancelled,
         );
       } catch (err) {
-        if (!cancelled) console.warn("Camera error:", (err as { name?: string })?.name);
+        if (!isCancelled()) console.warn("Camera error:", (err as { name?: string })?.name);
         fail(classifyCameraError(err));
         return;
       }
-      if (cancelled) {
+      if (isCancelled()) {
         stopStream(stream);
         return;
       }
       streamRef.current = stream;
       let video = videoRef.current;
-      for (let i = 0; !video && i < 60 && !cancelled; i += 1) {
+      for (let i = 0; !video && i < 60 && !isCancelled(); i += 1) {
         await new Promise((r) => setTimeout(r, 16));
         video = videoRef.current;
       }
-      if (cancelled) {
+      if (isCancelled()) {
         stopStream(stream);
         return;
       }
@@ -179,10 +183,11 @@ export function CameraCapture({
         return;
       }
       video.srcObject = stream;
+      // play() nicht abwarten: kann auf iOS nie auflösen. Bildbereitschaft hat eigene Deadline.
       try {
-        await video.play();
+        void Promise.resolve(video.play()).catch(() => undefined);
       } catch {
-        // iOS kann play() ablehnen; entscheidend ist, ob danach ein Bild kommt.
+        /* ignore */
       }
       try {
         await waitForVideoFrame(video, frameTimeoutMs);
@@ -190,11 +195,12 @@ export function CameraCapture({
         fail("timeout");
         return;
       }
-      if (!cancelled) setStatus("live");
+      if (!isCancelled()) setStatus("live");
     })();
 
     return () => {
-      cancelled = true;
+      cancelledFlag = true;
+      genRef.current += 1;
       stopStream(streamRef.current);
       streamRef.current = null;
       if (videoRef.current) videoRef.current.srcObject = null;
@@ -210,6 +216,7 @@ export function CameraCapture({
 
   const handleShoot = async () => {
     if (busyRef.current) return;
+    const gen = genRef.current;
     const video = videoRef.current;
     if (status !== "live" || !video || !video.videoWidth || !video.videoHeight) {
       setShotError(
@@ -247,6 +254,8 @@ export function CameraCapture({
         ctx.drawImage(video, 0, 0, w, h);
       }
       const blob = await canvasToJpegBlob(canvas, { quality: 0.92 });
+      // Geschlossen oder gewechselt während der Kodierung: kein veralteter Callback.
+      if (gen !== genRef.current || !mountedRef.current) return;
       await deliver(blobToJpegFile(blob, "capture"));
     } catch (err) {
       if (mountedRef.current) {
@@ -266,11 +275,13 @@ export function CameraCapture({
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || busyRef.current) return;
+    const gen = genRef.current;
     busyRef.current = true;
     setBusy(true);
     setShotError(null);
     try {
       const blob = await normalizeImageFile(file);
+      if (gen !== genRef.current || !mountedRef.current) return;
       await deliver(blobToJpegFile(blob, "photo"));
     } catch (err) {
       if (mountedRef.current) {
@@ -282,7 +293,16 @@ export function CameraCapture({
     }
   };
 
-  const openFilePicker = () => fileInputRef.current?.click();
+  /** Bewusster Wechsel zur nativen Kamera: Live-Stream und laufende Starts beenden, dann synchron öffnen. */
+  const openFilePicker = () => {
+    genRef.current += 1;
+    stopStream(streamRef.current);
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setStatus("native");
+    setShotError(null);
+    fileInputRef.current?.click();
+  };
 
   if (!open || typeof document === "undefined") return null;
 
@@ -375,6 +395,19 @@ export function CameraCapture({
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white p-6 text-center">
             <Loader2 className="w-8 h-8 animate-spin opacity-80" />
             <p className="text-sm opacity-80">Kamera wird gestartet …</p>
+          </div>
+        )}
+
+        {status === "native" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 p-6 text-white text-center">
+            <CameraIcon className="w-14 h-14 opacity-70" />
+            <p className="text-sm opacity-90 max-w-sm">Nimm das Foto mit der Geräte-Kamera auf oder wähle ein Foto aus.</p>
+            <button
+              onClick={() => setAttempt((a) => a + 1)}
+              className="rounded-full bg-white/15 px-6 py-3 text-sm font-medium flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" /> Live-Kamera verwenden
+            </button>
           </div>
         )}
 
