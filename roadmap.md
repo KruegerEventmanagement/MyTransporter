@@ -15,5 +15,5 @@
 - [ ] AdSense-Aktivierung extern blockiert: Google-Review-Ergebnis abwarten, danach echte Google-CMP-/Script-Integration im Browser (Deadlock-Reihenfolge beachten), Live-QA auf der öffentlichen Domain (Zustimmen/Ablehnen/Widerruf/Timeout, Anzeigen-Rendering), dann liveCmpVerified=true und enabled=true
 
 ## QA 29.09. (nur lesend)
-- [ ] Google-EU-Einwilligungsmeldung live mit ?fc=alwaysshow&fctype=gdpr prüfen (frischer Kontext, ohne Klick auf Werbung)
-- [ ] Live-Bundles auf die vier false-Flags prüfen
+- [x] Google-EU (Ergebnis: keine Meldung, __tcfapi undefined, Script 200)-Einwilligungsmeldung live mit ?fc=alwaysshow&fctype=gdpr prüfen (frischer Kontext, ohne Klick auf Werbung)
+- [x] Live-Bundles (alle vier Flags false, live bestätigt) auf die vier false-Flags prüfen
