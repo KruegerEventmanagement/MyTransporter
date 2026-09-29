@@ -3,6 +3,15 @@ import { createPortal } from "react-dom";
 import { Camera, X, RotateCcw, CheckCircle, AlertTriangle, Zap, ZapOff, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTapFocus } from "@/hooks/useTapFocus";
+import {
+  canvasToJpegBlob,
+  classifyCameraError,
+  getUserMediaWithTimeout,
+  normalizeImageFile,
+  stopStream,
+  waitForVideoFrame,
+  type CameraErrorKind,
+} from "@/lib/image-capture";
 
 type ScanPhase = "idle" | "camera" | "capturing" | "preview" | "error" | "rejected";
 
@@ -15,35 +24,19 @@ export const SCAN_DOC_LABELS: Record<ScanDocType, { title: string; hint: string 
   license_back: { title: "Führerschein · Rückseite", hint: "Seite mit Klassen" },
 };
 
-const dataUrlToBlob = (dataUrl: string): Blob => {
-  const [header, encoded] = dataUrl.split(",");
-  if (!header || !encoded) throw new Error("Bild konnte nicht erstellt werden");
-  const mime = header.match(/^data:(.*?);base64$/)?.[1] ?? "image/jpeg";
-  const binary = window.atob(encoded);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return new Blob([bytes], { type: mime });
-};
-
-const canvasToJpegBlob = async (canvas: HTMLCanvasElement): Promise<Blob> => {
-  // Some iOS/WebKit versions never invoke canvas.toBlob's callback for a
-  // camera frame. Never leave the user on an endless saving screen.
-  if (typeof canvas.toBlob === "function") {
-    const blob = await Promise.race<Blob | null>([
-      new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9)),
-      new Promise((resolve) => window.setTimeout(() => resolve(null), 1200)),
+const withTimeout = async <T,>(promise: Promise<T>, milliseconds: number, message: string): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), milliseconds);
+      }),
     ]);
-    if (blob) return blob;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
-
-  return dataUrlToBlob(canvas.toDataURL("image/jpeg", 0.9));
 };
-
-const withTimeout = async <T,>(promise: Promise<T>, milliseconds: number, message: string): Promise<T> =>
-  Promise.race([
-    promise,
-    new Promise<T>((_, reject) => window.setTimeout(() => reject(new Error(message)), milliseconds)),
-  ]);
 
 interface DocumentScannerProps {
   /** Exactly one side per field. */
@@ -61,6 +54,9 @@ interface DocumentScannerProps {
    */
   mode?: "upload" | "pending";
   onCapture?: (docType: ScanDocType, blob: Blob) => void | Promise<void>;
+  /** Zeitlimits (nur für Tests überschreibbar). */
+  cameraTimeoutMs?: number;
+  frameTimeoutMs?: number;
 }
 
 export function DocumentScanner({
@@ -70,6 +66,8 @@ export function DocumentScanner({
   previewUrl: storedPreviewUrl = null,
   mode = "upload",
   onCapture,
+  cameraTimeoutMs = 12000,
+  frameTimeoutMs = 6000,
 }: DocumentScannerProps) {
   const [phase, setPhase] = useState<ScanPhase>("idle");
   const [rejectMsg, setRejectMsg] = useState<string>("");
@@ -82,24 +80,39 @@ export function DocumentScanner({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { focusPoint, handleTap } = useTapFocus(videoRef, streamRef);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [cameraError, setCameraError] = useState<"denied" | "notfound" | "busy" | "unsupported">("unsupported");
+  const [cameraError, setCameraError] = useState<CameraErrorKind>("unsupported");
+  /** Herkunft der aktuellen Vorschau: native Dateiauswahl oder Live-Kamera. */
+  const sourceRef = useRef<"file" | "live" | null>(null);
+  /** Erhöht sich bei jedem Start/Schließen – verspätete Ergebnisse werden verworfen. */
+  const genRef = useRef(0);
+  const mountedRef = useRef(true);
+  const shotUrlRef = useRef<string | null>(null);
+  const busyRef = useRef(false);
+
+  const replaceShotUrl = useCallback((next: string | null) => {
+    if (shotUrlRef.current) URL.revokeObjectURL(shotUrlRef.current);
+    shotUrlRef.current = next;
+    setShotUrl(next);
+  }, []);
 
   const label = SCAN_DOC_LABELS[docType];
 
   const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
+    stopStream(streamRef.current);
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    if (!mountedRef.current) return;
     setTorchOn(false);
     setTorchAvailable(false);
   }, []);
 
   const startCamera = useCallback(async () => {
+    const gen = ++genRef.current;
+    const stale = () => gen !== genRef.current || !mountedRef.current;
     setRejectMsg("");
     stopCamera();
     const md = typeof navigator !== "undefined" ? navigator.mediaDevices : undefined;
-    if (!md?.getUserMedia || (typeof window !== "undefined" && !window.isSecureContext)) {
+    if (!md?.getUserMedia || (typeof window !== "undefined" && window.isSecureContext === false)) {
       // e.g. iOS home-screen app / in-app browser without live camera API
       setCameraError("unsupported");
       setPhase("error");
@@ -109,90 +122,88 @@ export function DocumentScanner({
     let stream: MediaStream | null = null;
     try {
       try {
-        stream = await md.getUserMedia({
-          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: false,
-        });
+        stream = await getUserMediaWithTimeout(
+          md,
+          {
+            video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            audio: false,
+          },
+          cameraTimeoutMs,
+          stale,
+        );
       } catch (first) {
-        const name = (first as DOMException)?.name;
-        if (name === "NotAllowedError" || name === "SecurityError") throw first;
+        const kind = classifyCameraError(first);
+        if (stale() || kind === "denied" || kind === "timeout") throw first;
         // Overconstrained / NotReadable on some iPhones: retry with minimal constraints.
-        stream = await md.getUserMedia({ video: true, audio: false });
+        stream = await getUserMediaWithTimeout(md, { video: true, audio: false }, cameraTimeoutMs, stale);
+      }
+      if (stale()) {
+        stopStream(stream);
+        return;
       }
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        // iOS may reject play() without breaking the stream – never treat as "no camera".
-        await videoRef.current.play().catch(() => undefined);
+      let video = videoRef.current;
+      for (let i = 0; !video && i < 60 && !stale(); i += 1) {
+        await new Promise((r) => setTimeout(r, 16));
+        video = videoRef.current;
       }
+      if (stale()) {
+        stopStream(stream);
+        return;
+      }
+      if (!video) throw new DOMException("Kein Videoelement", "AbortError");
+      video.srcObject = stream;
+      // iOS may reject play() without breaking the stream – entscheidend ist ein echtes Bild.
+      await video.play().catch(() => undefined);
+      await waitForVideoFrame(video, frameTimeoutMs);
+      if (stale()) return;
       const track = stream.getVideoTracks()[0];
       try {
         const caps = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { focusMode?: string[]; torch?: boolean };
         const advanced: MediaTrackConstraintSet[] = [];
         if (caps.focusMode?.includes("continuous")) advanced.push({ focusMode: "continuous" } as MediaTrackConstraintSet);
         if (advanced.length) await track.applyConstraints({ advanced });
-        if (caps.torch) setTorchAvailable(true);
+        if (caps.torch && !stale()) setTorchAvailable(true);
       } catch {
         /* ignore */
       }
     } catch (err) {
-      stream?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-      const name = (err as DOMException)?.name;
-      console.warn("Camera error:", name);
-      setCameraError(
-        name === "NotAllowedError" || name === "SecurityError"
-          ? "denied"
-          : name === "NotFoundError" || name === "OverconstrainedError"
-            ? "notfound"
-            : name === "NotReadableError" || name === "AbortError"
-              ? "busy"
-              : "unsupported",
-      );
+      if (stale()) {
+        stopStream(stream);
+        return;
+      }
+      stopStream(stream);
+      if (streamRef.current === stream) streamRef.current = null;
+      console.warn("Camera error:", (err as { name?: string })?.name);
+      setCameraError(classifyCameraError(err));
       setPhase("error");
     }
-  }, [stopCamera]);
+  }, [stopCamera, cameraTimeoutMs, frameTimeoutMs]);
 
   const handleFilePicked = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       e.target.value = "";
+      // Abbruch der Auswahl: bisherige Vorschau/Phase bleibt unverändert.
       if (!file) return;
-      if (!file.type.startsWith("image/")) {
-        setRejectMsg("Bitte ein Foto (Bild-Datei) auswählen.");
-        setPhase("rejected");
-        return;
-      }
+      const gen = ++genRef.current;
       stopCamera();
       try {
         // Normalize to JPEG (also converts HEIC on iOS, which decodes it natively).
-        const url = URL.createObjectURL(file);
-        const img = new Image();
-        await new Promise<void>((res, rej) => {
-          img.onload = () => res();
-          img.onerror = () => rej(new Error("Foto konnte nicht gelesen werden"));
-          img.src = url;
-        });
-        const max = 2000;
-        const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(img.naturalWidth * scale);
-        canvas.height = Math.round(img.naturalHeight * scale);
-        canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
-        URL.revokeObjectURL(url);
-        const blob = await canvasToJpegBlob(canvas);
+        const blob = await normalizeImageFile(file);
+        if (gen !== genRef.current || !mountedRef.current) return;
         pendingBlobRef.current = blob;
-        setShotUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return URL.createObjectURL(blob);
-        });
+        sourceRef.current = "file";
+        replaceShotUrl(URL.createObjectURL(blob));
+        setRejectMsg("");
         setPhase("preview");
       } catch (err) {
+        if (gen !== genRef.current || !mountedRef.current) return;
         setRejectMsg(err instanceof Error ? err.message : "Foto konnte nicht gelesen werden.");
         setPhase("rejected");
       }
     },
-    [stopCamera],
+    [stopCamera, replaceShotUrl],
   );
 
   const openFilePicker = () => fileInputRef.current?.click();
@@ -210,10 +221,19 @@ export function DocumentScanner({
   }, [torchOn]);
 
   useEffect(() => {
-    return () => stopCamera();
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      genRef.current += 1;
+      stopCamera();
+      if (shotUrlRef.current) URL.revokeObjectURL(shotUrlRef.current);
+      shotUrlRef.current = null;
+    };
   }, [stopCamera]);
 
   const runCapture = useCallback(async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setPhase("capturing");
     try {
       const video = videoRef.current;
@@ -243,21 +263,26 @@ export function DocumentScanner({
       if (!ctx) throw new Error("Canvas-Kontext fehlt");
       ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
       const blob = await canvasToJpegBlob(canvas);
+      if (!mountedRef.current) return;
       pendingBlobRef.current = blob;
-      if (shotUrl) URL.revokeObjectURL(shotUrl);
-      setShotUrl(URL.createObjectURL(blob));
+      sourceRef.current = "live";
+      replaceShotUrl(URL.createObjectURL(blob));
       setPhase("preview");
     } catch (err) {
+      if (!mountedRef.current) return;
       console.error("Document capture error:", err);
       setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");
       setPhase("rejected");
+    } finally {
+      busyRef.current = false;
     }
-  }, [shotUrl]);
+  }, [replaceShotUrl]);
 
 
   const confirmUpload = useCallback(async () => {
     const blob = pendingBlobRef.current;
-    if (!blob) return;
+    if (!blob || busyRef.current) return;
+    busyRef.current = true;
     setPhase("capturing");
     try {
       if (mode === "pending") {
@@ -302,11 +327,11 @@ export function DocumentScanner({
         }
       }
 
+      if (!mountedRef.current) return;
       pendingBlobRef.current = null;
-      if (shotUrl) {
-        URL.revokeObjectURL(shotUrl);
-        setShotUrl(null);
-      }
+      sourceRef.current = null;
+      replaceShotUrl(null);
+      genRef.current += 1;
       stopCamera();
       setPhase("idle");
       // Refreshing thumbnails must never keep the scanner overlay open. The
@@ -315,39 +340,57 @@ export function DocumentScanner({
         console.warn("Document refresh error:", error);
       });
     } catch (err) {
+      if (!mountedRef.current) return;
       console.error("Document upload error:", err);
-      setRejectMsg(err instanceof Error ? err.message : "Unbekannter Fehler.");
+      setRejectMsg(
+        err instanceof Error && err.message
+          ? `Speichern fehlgeschlagen: ${err.message}`
+          : "Speichern fehlgeschlagen. Bitte erneut versuchen.",
+      );
       setPhase("rejected");
+    } finally {
+      busyRef.current = false;
     }
-  }, [docType, isComplete, onComplete, stopCamera, shotUrl, mode, onCapture]);
+  }, [docType, isComplete, onComplete, stopCamera, replaceShotUrl, mode, onCapture]);
 
   const retakeFromPreview = useCallback(() => {
-    pendingBlobRef.current = null;
-    if (shotUrl) {
-      URL.revokeObjectURL(shotUrl);
-      setShotUrl(null);
+    if (sourceRef.current === "file") {
+      // Datei-Vorschau: im selben Klick erneut die native Auswahl öffnen.
+      // Bei Abbruch bleibt die bisherige Vorschau bestehen – kein Livekamerastart.
+      openFilePicker();
+      return;
     }
-    setPhase("camera");
-  }, [shotUrl]);
+    pendingBlobRef.current = null;
+    sourceRef.current = null;
+    replaceShotUrl(null);
+    const hasLiveStream = !!streamRef.current?.getVideoTracks().some((track) => track.readyState === "live");
+    if (hasLiveStream) setPhase("camera");
+    else void startCamera();
+  }, [replaceShotUrl, startCamera]);
 
   const handleClose = () => {
+    genRef.current += 1;
     stopCamera();
     pendingBlobRef.current = null;
-    if (shotUrl) {
-      URL.revokeObjectURL(shotUrl);
-      setShotUrl(null);
-    }
+    sourceRef.current = null;
+    replaceShotUrl(null);
     setPhase("idle");
     setRejectMsg("");
   };
 
   const retryFromRejected = () => {
     setRejectMsg("");
+    if (pendingBlobRef.current && shotUrlRef.current) {
+      // Speichern fehlgeschlagen: dieselbe Aufnahme erneut anbieten.
+      setPhase("preview");
+      return;
+    }
     const hasLiveStream = !!streamRef.current?.getVideoTracks().some((track) => track.readyState === "live");
     if (hasLiveStream) {
       setPhase("camera");
+    } else if (sourceRef.current === "file") {
+      openFilePicker();
     } else {
-      stopCamera();
       void startCamera();
     }
   };
@@ -435,7 +478,7 @@ export function DocumentScanner({
     <div className="fixed inset-x-0 top-0 z-50 h-[100dvh] max-h-[100dvh] overflow-hidden bg-black flex flex-col">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/70 to-transparent">
-        <button onClick={handleClose} className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
+        <button onClick={handleClose} aria-label="Schließen" className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
           <X className="w-5 h-5 text-white" />
         </button>
         <div className="text-center">
@@ -498,12 +541,20 @@ export function DocumentScanner({
             </p>
 
             {phase === "camera" && (
-              <div className="flex justify-center">
+              <div className="flex flex-col items-center gap-3">
                 <button
                   onClick={runCapture}
+                  aria-label="Foto aufnehmen"
                   className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-95 transition-transform"
                 >
                   <div className="w-14 h-14 rounded-full border-4 border-black/10" />
+                </button>
+                <button
+                  type="button"
+                  onClick={openFilePicker}
+                  className="text-xs text-white/80 underline underline-offset-2"
+                >
+                  Stattdessen Foto mit Geräte-Kamera / aus Galerie
                 </button>
               </div>
             )}
@@ -587,14 +638,18 @@ export function DocumentScanner({
               ? "Kamerazugriff nicht erlaubt"
               : cameraError === "busy"
                 ? "Kamera wird gerade verwendet"
-                : "Live-Kamera nicht verfügbar"}
+                : cameraError === "timeout"
+                  ? "Live-Kamera startet nicht"
+                  : "Live-Kamera nicht verfügbar"}
           </h3>
           <p className="text-white/60 text-center text-sm mb-8 max-w-sm">
             {cameraError === "denied"
               ? "Erlaube den Kamerazugriff (iPhone: „aA“ in der Adressleiste → Website-Einstellungen → Kamera → Erlauben) und tippe auf „Erneut versuchen“ – oder nimm das Foto direkt mit der iPhone-Kamera auf."
               : cameraError === "busy"
                 ? "Schließe andere Apps, die die Kamera nutzen, und versuche es erneut – oder nimm das Foto direkt auf."
-                : "Nimm das Foto einfach direkt mit der Kamera deines Geräts auf oder wähle ein vorhandenes Foto."}
+                : cameraError === "timeout"
+                  ? "Die Kamera liefert kein Bild. Versuche es erneut – oder nimm das Foto direkt mit der Kamera deines Geräts auf."
+                  : "Nimm das Foto einfach direkt mit der Kamera deines Geräts auf oder wähle ein vorhandenes Foto."}
           </p>
           <div className="flex flex-col gap-3 w-full max-w-xs">
             <button

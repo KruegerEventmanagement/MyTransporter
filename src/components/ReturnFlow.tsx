@@ -1,7 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
-import { Camera, Check, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine } from "lucide-react";
+import { Camera, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
+import { TripErrorBanner, TripPhotoThumb } from "./TripPhotoParts";
+import {
+  loadTripPhotos,
+  saveTripPhoto,
+  TripPhotoError,
+  updateBookingChecked,
+  type StoredTripPhoto,
+} from "@/lib/trip-photo-store";
 import { useServerFn } from "@tanstack/react-start";
 import { recognizeOdometer } from "@/lib/odometer-ai.functions";
 import { notifyAdmin } from "@/lib/admin-notify";
@@ -33,16 +41,33 @@ interface ReturnFlowProps {
   onComplete: (returnCode: string) => void;
 }
 
+type CaptureTarget =
+  | { kind: "side"; id: string }
+  | { kind: "interior" }
+  | { kind: "damage" }
+  | { kind: "odometer" }
+  | { kind: "receipt" };
+
 type ReturnStep = "photos" | "km" | "receipt" | "code" | "done";
 
 export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, addons, onComplete }: ReturnFlowProps) {
   const [returnStep, setReturnStep] = useState<ReturnStep>("photos");
-  const [photos, setPhotos] = useState<Record<string, string>>({});
-  const [interiorPhoto, setInteriorPhoto] = useState<string | null>(null);
-  const [damagePhotos, setDamagePhotos] = useState<string[]>([]);
-  const [odometerPhoto, setOdometerPhoto] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<Record<string, StoredTripPhoto>>({});
+  const [interiorPhoto, setInteriorPhoto] = useState<StoredTripPhoto | null>(null);
+  const [damagePhotos, setDamagePhotos] = useState<StoredTripPhoto[]>([]);
+  const [odometerPhoto, setOdometerPhoto] = useState<StoredTripPhoto | null>(null);
   const [endKm, setEndKm] = useState("");
-  const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
+  const [receiptPhoto, setReceiptPhoto] = useState<StoredTripPhoto | null>(null);
+  const [photoError, setPhotoError] = useState<{
+    message: string;
+    target: CaptureTarget;
+    file: File;
+    uploadedPath: string | null;
+  } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [returnCode, setReturnCode] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [awaitingAdmin, setAwaitingAdmin] = useState(false);
@@ -59,14 +84,40 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
     chargeCents: number;
     pricePerKmCents: number;
   } | null>(null);
-  const [currentTarget, setCurrentTarget] = useState<
-    | { kind: "side"; id: string }
-    | { kind: "interior" }
-    | { kind: "damage" }
-    | { kind: "odometer" }
-    | { kind: "receipt" }
-    | null
-  >(null);
+  const [currentTarget, setCurrentTarget] = useState<CaptureTarget | null>(null);
+
+  // Bereits gespeicherte Rückgabe-Fotos (inkl. Tacho und Tankbeleg) wiederherstellen
+  useEffect(() => {
+    let mounted = true;
+    setLoadError(null);
+    (async () => {
+      try {
+        const rows = await loadTripPhotos(supabase, bookingId, ["post_", "tank_receipt"]);
+        if (!mounted) return;
+        const sides: Record<string, StoredTripPhoto> = {};
+        const damages: StoredTripPhoto[] = [];
+        let interior: StoredTripPhoto | null = null;
+        let odometer: StoredTripPhoto | null = null;
+        let receipt: StoredTripPhoto | null = null;
+        for (const row of rows) {
+          const photo = { path: row.photo_url, url: row.url };
+          if (row.photo_type === POST_INTERIOR_ID) interior = photo;
+          else if (row.photo_type === POST_ODOMETER_ID) odometer = photo;
+          else if (row.photo_type === "tank_receipt") receipt = photo;
+          else if (row.photo_type === "post_damage") damages.push(photo);
+          else sides[row.photo_type] = photo;
+        }
+        if (Object.keys(sides).length) setPhotos((prev) => ({ ...sides, ...prev }));
+        if (interior) setInteriorPhoto((prev) => prev ?? interior);
+        if (odometer) setOdometerPhoto((prev) => prev ?? odometer);
+        if (receipt) setReceiptPhoto((prev) => prev ?? receipt);
+        if (damages.length) setDamagePhotos((prev) => (prev.length ? prev : damages.slice(-4)));
+      } catch (err) {
+        if (mounted) setLoadError(err instanceof Error ? err.message : "Gespeicherte Fotos konnten nicht geladen werden.");
+      }
+    })();
+    return () => { mounted = false; };
+  }, [bookingId, loadAttempt]);
 
   useEffect(() => {
     let mounted = true;
@@ -134,10 +185,11 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
       encodeURIComponent(
         `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='#e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#333'>TEST</text></svg>`
       );
-    const next: Record<string, string> = {};
-    PHOTO_SIDES.forEach((s) => (next[s.id] = placeholder));
+    const test = { path: "admin-test", url: placeholder };
+    const next: Record<string, StoredTripPhoto> = {};
+    PHOTO_SIDES.forEach((s) => (next[s.id] = test));
     setPhotos(next);
-    setInteriorPhoto(placeholder);
+    setInteriorPhoto(test);
   };
 
   const fillTestKm = () => {
@@ -146,49 +198,40 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
       encodeURIComponent(
         `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='#e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#333'>TEST</text></svg>`
       );
-    setOdometerPhoto(placeholder);
+    setOdometerPhoto({ path: "admin-test", url: placeholder });
     if (!endKm) setEndKm("42920");
   };
 
-  const handleCapture = useCallback(
-    async (file: File) => {
-      if (!file || !currentTarget) return;
+  const savePhoto = useCallback(
+    async (file: File, target: CaptureTarget, uploadedPath: string | null = null) => {
       setUploading(true);
+      setPhotoError(null);
+      const tag =
+        target.kind === "side"
+          ? target.id
+          : target.kind === "interior"
+          ? POST_INTERIOR_ID
+          : target.kind === "damage"
+          ? "post_damage"
+          : target.kind === "odometer"
+          ? POST_ODOMETER_ID
+          : "tank_receipt";
       try {
-        const tag =
-          currentTarget.kind === "side"
-            ? currentTarget.id
-            : currentTarget.kind === "interior"
-            ? POST_INTERIOR_ID
-            : currentTarget.kind === "damage"
-            ? "post_damage"
-            : currentTarget.kind === "odometer"
-            ? POST_ODOMETER_ID
-            : "tank_receipt";
-        const path = `${bookingId}/${tag}_${Date.now()}.jpg`;
-        const { error } = await supabase.storage.from("trip-photos").upload(path, file);
-        if (error) throw error;
-        const { data: signed } = await supabase.storage
-          .from("trip-photos")
-          .createSignedUrl(path, 60 * 60);
-        const viewUrl = signed?.signedUrl ?? "";
-        await supabase.from("trip_photos").insert({
-          booking_id: bookingId,
-          photo_url: path,
-          photo_type: tag,
-        });
-        if (currentTarget.kind === "side") {
-          setPhotos((prev) => ({ ...prev, [currentTarget.id]: viewUrl }));
-        } else if (currentTarget.kind === "interior") {
-          setInteriorPhoto(viewUrl);
-        } else if (currentTarget.kind === "damage") {
-          setDamagePhotos((prev) => [...prev, viewUrl]);
-        } else if (currentTarget.kind === "odometer") {
-          setOdometerPhoto(viewUrl);
+        // Erfolg erst nach Storage-Upload UND bestätigtem Datenbankeintrag.
+        const saved = await saveTripPhoto(supabase, { bookingId, tag, file, uploadedPath });
+        setCurrentTarget(null);
+        if (target.kind === "side") {
+          setPhotos((prev) => ({ ...prev, [target.id]: saved }));
+        } else if (target.kind === "interior") {
+          setInteriorPhoto(saved);
+        } else if (target.kind === "damage") {
+          setDamagePhotos((prev) => [...prev, saved]);
+        } else if (target.kind === "odometer") {
+          setOdometerPhoto(saved);
           setAiBusy(true);
           setAiRecognition(null);
           try {
-            const result = await recognize({ data: { photoPath: path, bookingId, phase: "end" } });
+            const result = await recognize({ data: { photoPath: saved.path, bookingId, phase: "end" } });
             setAiRecognition({ km: result.km, fuelPercent: result.fuelPercent, confidence: result.confidence });
             if (result.km !== null && result.confidence !== "low") {
               setEndKm(String(result.km));
@@ -202,16 +245,51 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
             setAiBusy(false);
           }
         } else {
-          setReceiptUrl(viewUrl);
+          setReceiptPhoto(saved);
         }
       } catch (err) {
         console.error("Upload error:", err);
+        setCurrentTarget(null);
+        setPhotoError({
+          message: err instanceof Error ? err.message : "Das Foto konnte nicht gespeichert werden.",
+          target,
+          file,
+          uploadedPath: err instanceof TripPhotoError ? err.uploadedPath : uploadedPath,
+        });
       } finally {
         setUploading(false);
-        setCurrentTarget(null);
       }
     },
-    [bookingId, currentTarget]
+    [bookingId, recognize]
+  );
+
+  const handleCapture = useCallback(
+    async (file: File) => {
+      if (!file || !currentTarget) return;
+      await savePhoto(file, currentTarget);
+    },
+    [currentTarget, savePhoto]
+  );
+
+  const openCamera = (target: CaptureTarget) => {
+    setPhotoError(null);
+    setCurrentTarget(target);
+  };
+
+  const photoBanners = (
+    <>
+      {loadError && (
+        <TripErrorBanner message={loadError} onRetry={() => setLoadAttempt((n) => n + 1)} retryLabel="Neu laden" />
+      )}
+      {photoError && (
+        <TripErrorBanner
+          message={photoError.message}
+          busy={uploading}
+          onRetry={() => void savePhoto(photoError.file, photoError.target, photoError.uploadedPath)}
+          onDismiss={() => setPhotoError(null)}
+        />
+      )}
+    </>
   );
 
   const cameraOpen = currentTarget !== null;
@@ -239,7 +317,12 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
       : "Richte das Fahrzeug an der Vorlage aus";
 
   const handleSubmitKm = async () => {
+    if (saving) return;
     const end = parseInt(endKm);
+    if (!Number.isFinite(end) || end < 0) {
+      setActionError("Bitte einen gültigen Kilometerstand eintragen.");
+      return;
+    }
     const start = typeof startKm === "number" ? startKm : 0;
     const plan = planId && planId !== "km" ? getPlanById(planId) : null;
     const free = typeof freeKm === "number" ? freeKm : (plan?.freeKm ?? 0);
@@ -254,15 +337,21 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
     const billable = planId === "km" ? driven : Math.max(0, driven - free);
     const chargeCents = billable * pricePerKmCents;
 
-    await supabase
-      .from("bookings")
-      .update({
+    setSaving(true);
+    setActionError(null);
+    try {
+      await updateBookingChecked(supabase, bookingId, {
         end_km: end,
         extra_km: planId === "km" ? driven : Math.max(0, driven - free),
         extra_km_charge_cents: chargeCents,
         ...(endFuelPercent !== "" ? { ai_end_fuel_percent: parseInt(endFuelPercent) } : {}),
-      })
-      .eq("id", bookingId);
+      });
+    } catch (err) {
+      setActionError(err instanceof Error ? `Kilometerstand nicht gespeichert. ${err.message}` : "Kilometerstand nicht gespeichert.");
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
 
     setKmSummary({
       pricePerKmCents,
@@ -275,11 +364,18 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
   };
 
   const handleFinish = async () => {
+    if (saving) return;
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    await supabase
-      .from("bookings")
-      .update({ return_code: code, status: "returning" })
-      .eq("id", bookingId);
+    setSaving(true);
+    setActionError(null);
+    try {
+      await updateBookingChecked(supabase, bookingId, { return_code: code, status: "returning" });
+    } catch (err) {
+      setActionError(err instanceof Error ? `Rückgabe nicht gespeichert. ${err.message}` : "Rückgabe nicht gespeichert.");
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
     // Admin informieren, damit Rückgabe zeitnah bestätigt werden kann
     notifyAdmin({
       type: "trip_returning",
@@ -319,22 +415,21 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           </button>
         )}
 
+        {photoBanners}
+
         <div className="grid grid-cols-2 gap-3 mb-6">
           {PHOTO_SIDES.map((side) => (
             <button
               key={side.id}
-              onClick={() => setCurrentTarget({ kind: "side", id: side.id })}
+              onClick={() => openCamera({ kind: "side", id: side.id })}
               disabled={!!photos[side.id] || uploading}
               className={`p-4 rounded-2xl border-2 text-center transition-all ${
                 photos[side.id] ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
               }`}
             >
               {photos[side.id] ? (
-                <div className="relative">
-                  <img src={photos[side.id]} alt={side.label} className="w-full h-20 object-cover rounded-lg mb-2" />
-                  <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-foreground flex items-center justify-center">
-                    <Check className="w-3 h-3 text-background" />
-                  </div>
+                <div className="mb-2">
+                  <TripPhotoThumb photo={photos[side.id]} alt={side.label} className="w-full h-20" />
                 </div>
               ) : (
                 <div className="h-20 flex items-center justify-center mb-2">
@@ -350,18 +445,15 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
         <div className="mb-6">
           <p className="text-sm font-medium text-foreground mb-2">Innenraum & Sauberkeit</p>
           <button
-            onClick={() => setCurrentTarget({ kind: "interior" })}
+            onClick={() => openCamera({ kind: "interior" })}
             disabled={uploading}
             className={`w-full p-4 rounded-2xl border-2 text-center transition-all ${
               interiorPhoto ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
             }`}
           >
             {interiorPhoto ? (
-              <div className="relative">
-                <img src={interiorPhoto} alt="Innenraum" className="w-full h-32 object-cover rounded-lg mb-2" />
-                <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-foreground flex items-center justify-center">
-                  <Check className="w-3 h-3 text-background" />
-                </div>
+              <div className="mb-2">
+                <TripPhotoThumb photo={interiorPhoto} alt="Innenraum" className="w-full h-32" />
               </div>
             ) : (
               <div className="h-24 flex flex-col items-center justify-center gap-1">
@@ -380,11 +472,11 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           <p className="text-xs text-muted-foreground mb-3">Optional, bis zu 4 Fotos von neuen Schäden</p>
           <div className="grid grid-cols-4 gap-2">
             {Array.from({ length: 4 }).map((_, idx) => {
-              const url = damagePhotos[idx];
-              if (url) {
+              const photo = damagePhotos[idx];
+              if (photo) {
                 return (
                   <div key={idx} className="relative">
-                    <img src={url} alt={`Schaden ${idx + 1}`} className="w-full h-20 object-cover rounded-lg border border-border" />
+                    <TripPhotoThumb photo={photo} alt={`Schaden ${idx + 1}`} className="w-full h-20 border border-border" />
                     <button
                       onClick={() => setDamagePhotos((prev) => prev.filter((_, i) => i !== idx))}
                       className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center"
@@ -398,7 +490,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
               return (
                 <button
                   key={idx}
-                  onClick={() => setCurrentTarget({ kind: "damage" })}
+                  onClick={() => openCamera({ kind: "damage" })}
                   disabled={uploading || idx > damagePhotos.length}
                   className="h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center text-muted-foreground hover:border-accent/50 transition-all disabled:opacity-40"
                 >
@@ -439,6 +531,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
         />
         <h3 className="text-xl font-bold text-foreground mb-2">Kilometerstand (Ende)</h3>
         <p className="text-sm text-muted-foreground mb-6">Trage den aktuellen Kilometerstand ein.</p>
+        {photoBanners}
         {isAdmin && (
           <button
             onClick={fillTestKm}
@@ -459,19 +552,14 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           Pflicht: Foto vom Tacho mit aktuellem Kilometerstand.
         </p>
         <button
-          onClick={() => setCurrentTarget({ kind: "odometer" })}
+          onClick={() => openCamera({ kind: "odometer" })}
           disabled={uploading}
           className={`w-full mb-6 p-4 rounded-2xl border-2 text-center transition-all ${
             odometerPhoto ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
           }`}
         >
           {odometerPhoto ? (
-            <div className="relative">
-              <img src={odometerPhoto} alt="Tacho" className="w-full h-32 object-cover rounded-lg" />
-              <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-foreground flex items-center justify-center">
-                <Check className="w-3 h-3 text-background" />
-              </div>
-            </div>
+            <TripPhotoThumb photo={odometerPhoto} alt="Tacho" className="w-full h-32" />
           ) : (
             <div className="h-20 flex flex-col items-center justify-center gap-1">
               <Camera className="w-7 h-7 text-muted-foreground" />
@@ -503,8 +591,9 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           className="mt-1 mb-6 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
         />
 
+        {actionError && <TripErrorBanner message={actionError} onRetry={() => void handleSubmitKm()} busy={saving} />}
         <button
-          disabled={!endKm || !odometerPhoto}
+          disabled={!endKm || !odometerPhoto || saving || uploading}
           onClick={handleSubmitKm}
           className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -561,7 +650,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
                 encodeURIComponent(
                   `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 280'><rect width='200' height='280' fill='%23ffffff'/><text x='50%' y='40%' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='14' fill='%23000'>TEST-TANKBELEG</text><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='12' fill='%23000'>Admin-Modus</text></svg>`
                 );
-              setReceiptUrl(placeholder);
+              setReceiptPhoto({ path: "admin-test", url: placeholder });
             }}
             className="w-full mb-4 rounded-full border border-dashed border-foreground py-2 text-xs font-medium text-foreground hover:bg-secondary"
           >
@@ -569,16 +658,21 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           </button>
         )}
 
-        {receiptUrl ? (
+        {photoBanners}
+        {receiptPhoto ? (
           <div className="mb-6">
             <div className="relative">
-              <img src={receiptUrl} alt="Tankbeleg" className="w-full max-h-[60vh] object-contain rounded-2xl border border-border bg-secondary" />
+              {receiptPhoto.url ? (
+                <img src={receiptPhoto.url} alt="Tankbeleg" className="w-full max-h-[60vh] object-contain rounded-2xl border border-border bg-secondary" />
+              ) : (
+                <TripPhotoThumb photo={receiptPhoto} alt="Tankbeleg" className="w-full h-40" />
+              )}
               <div className="absolute top-2 right-2 px-2 py-1 rounded-full bg-foreground text-background text-[10px] font-semibold flex items-center gap-1">
                 <ScanLine className="w-3 h-3" /> Gescannt
               </div>
             </div>
             <button
-              onClick={() => { setReceiptUrl(null); setCurrentTarget({ kind: "receipt" }); }}
+              onClick={() => openCamera({ kind: "receipt" })}
               className="mt-3 w-full rounded-full border border-foreground py-2.5 text-sm font-medium hover:bg-secondary"
             >
               Erneut scannen
@@ -586,7 +680,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           </div>
         ) : (
           <button
-            onClick={() => setCurrentTarget({ kind: "receipt" })}
+            onClick={() => openCamera({ kind: "receipt" })}
             disabled={uploading}
             className="w-full p-8 rounded-2xl border-2 border-dashed border-border hover:border-accent/50 text-center mb-6 transition-all"
           >
@@ -616,8 +710,9 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           </div>
         )}
 
+        {actionError && <TripErrorBanner message={actionError} onRetry={() => void handleFinish()} busy={saving} />}
         <button
-          disabled={!receiptUrl || (!!addons && addons.length > 0 && !addonsReturned)}
+          disabled={saving || uploading || !receiptPhoto || (!!addons && addons.length > 0 && !addonsReturned)}
           onClick={handleFinish}
           className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
         >
