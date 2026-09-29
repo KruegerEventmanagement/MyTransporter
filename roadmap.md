@@ -19,5 +19,5 @@
 - [x] Live-Bundles: alle vier Werbe-Schalter false, live bestätigt
 
 ## Foto-Reparatur 29.09. (genehmigt, nicht veröffentlichen)
-- [ ] Review-Punkte 1–5: nativer Wechsel stoppt Streams, play()-Zeitlimit, Generation-Token, reproduzierbarer Typecheck, weitere Tests + Doppel-Eintrag-Schutz
-- [ ] Gesamttests, Typprüfung, Build, Browsercheck, docs/qa-camera-2026-09-29.md
+- [x] Review-Punkte 1–5: nativer Wechsel stoppt Streams, play()-Zeitlimit, Generation-Token, reproduzierbarer Typecheck, weitere Tests + Doppel-Eintrag-Schutz
+- [x] Gesamttests, Typprüfung, Build, Browsercheck, docs/qa-camera-2026-09-29.md
