@@ -3,6 +3,14 @@ import { Camera, Check, ChevronRight, MessageSquare, Key, Plus, X, AlertTriangle
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
+import { TripErrorBanner, TripPhotoThumb } from "./TripPhotoParts";
+import {
+  loadTripPhotos,
+  saveTripPhoto,
+  TripPhotoError,
+  updateBookingChecked,
+  type StoredTripPhoto,
+} from "@/lib/trip-photos";
 import { notifyAdmin } from "@/lib/admin-notify";
 import { useServerFn } from "@tanstack/react-start";
 import { recognizeOdometer } from "@/lib/odometer-ai.functions";
@@ -23,6 +31,12 @@ const PHOTO_SIDES = [
 const INTERIOR_ID = "pre_interior";
 const ODOMETER_ID = "pre_odometer";
 
+type CaptureTarget =
+  | { kind: "side"; id: string }
+  | { kind: "interior" }
+  | { kind: "damage" }
+  | { kind: "odometer" };
+
 interface PreDriveFlowProps {
   bookingId: string;
   pickupCode: string;
@@ -30,10 +44,20 @@ interface PreDriveFlowProps {
 }
 
 export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlowProps) {
-  const [photos, setPhotos] = useState<Record<string, string>>({});
-  const [interiorPhoto, setInteriorPhoto] = useState<string | null>(null);
-  const [damagePhotos, setDamagePhotos] = useState<string[]>([]);
-  const [odometerPhoto, setOdometerPhoto] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<Record<string, StoredTripPhoto>>({});
+  const [interiorPhoto, setInteriorPhoto] = useState<StoredTripPhoto | null>(null);
+  const [damagePhotos, setDamagePhotos] = useState<StoredTripPhoto[]>([]);
+  const [odometerPhoto, setOdometerPhoto] = useState<StoredTripPhoto | null>(null);
+  const [photoError, setPhotoError] = useState<{
+    message: string;
+    target: CaptureTarget;
+    file: File;
+    uploadedPath: string | null;
+  } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
   const [remarks, setRemarks] = useState("");
   const [startKm, setStartKm] = useState("");
   const [codeShown, setCodeShown] = useState(false);
@@ -42,13 +66,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
   const [aiRecognition, setAiRecognition] = useState<{ km: number | null; fuelPercent: number | null; confidence: string } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const recognize = useServerFn(recognizeOdometer);
-  const [currentTarget, setCurrentTarget] = useState<
-    | { kind: "side"; id: string }
-    | { kind: "interior" }
-    | { kind: "damage" }
-    | { kind: "odometer" }
-    | null
-  >(null);
+  const [currentTarget, setCurrentTarget] = useState<CaptureTarget | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -64,31 +82,35 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
     };
   }, []);
 
-  // Bereits hochgeladene Fotos für diese Buchung laden
+  // Bereits gespeicherte Fotos für diese Buchung laden (Vorschau per signierter URL)
   useEffect(() => {
     let mounted = true;
+    setLoadError(null);
     (async () => {
-      const { data } = await supabase
-        .from("trip_photos")
-        .select("photo_type, photo_url, created_at")
-        .eq("booking_id", bookingId)
-        .order("created_at", { ascending: true });
-      if (!mounted || !data) return;
-      const sides: Record<string, string> = {};
-      const damages: string[] = [];
-      let interior: string | null = null;
-      for (const row of data as { photo_type: string; photo_url: string }[]) {
-        if (row.photo_type === INTERIOR_ID) interior = row.photo_url;
-        else if (row.photo_type === ODOMETER_ID) setOdometerPhoto((prev) => prev ?? row.photo_url);
-        else if (row.photo_type === "pre_damage") damages.push(row.photo_url);
-        else if (row.photo_type.startsWith("pre_")) sides[row.photo_type] = row.photo_url;
+      try {
+        const rows = await loadTripPhotos(supabase, bookingId, ["pre_"]);
+        if (!mounted) return;
+        const sides: Record<string, StoredTripPhoto> = {};
+        const damages: StoredTripPhoto[] = [];
+        let interior: StoredTripPhoto | null = null;
+        let odometer: StoredTripPhoto | null = null;
+        for (const row of rows) {
+          const photo = { path: row.photo_url, url: row.url };
+          if (row.photo_type === INTERIOR_ID) interior = photo;
+          else if (row.photo_type === ODOMETER_ID) odometer = photo;
+          else if (row.photo_type === "pre_damage") damages.push(photo);
+          else sides[row.photo_type] = photo;
+        }
+        if (Object.keys(sides).length) setPhotos((prev) => ({ ...sides, ...prev }));
+        if (interior) setInteriorPhoto((prev) => prev ?? interior);
+        if (odometer) setOdometerPhoto((prev) => prev ?? odometer);
+        if (damages.length) setDamagePhotos((prev) => (prev.length ? prev : damages.slice(-4)));
+      } catch (err) {
+        if (mounted) setLoadError(err instanceof Error ? err.message : "Gespeicherte Fotos konnten nicht geladen werden.");
       }
-      if (Object.keys(sides).length) setPhotos((prev) => ({ ...sides, ...prev }));
-      if (interior) setInteriorPhoto((prev) => prev ?? interior);
-      if (damages.length) setDamagePhotos((prev) => (prev.length ? prev : damages));
     })();
     return () => { mounted = false; };
-  }, [bookingId]);
+  }, [bookingId, loadAttempt]);
 
   const allSidesTaken = PHOTO_SIDES.every((s) => photos[s.id]);
   const interiorTaken = !!interiorPhoto;
@@ -100,55 +122,42 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
       encodeURIComponent(
         `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='#e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#333'>TEST</text></svg>`
       );
-    const next: Record<string, string> = {};
-    PHOTO_SIDES.forEach((s) => (next[s.id] = placeholder));
+    const test = { path: "admin-test", url: placeholder };
+    const next: Record<string, StoredTripPhoto> = {};
+    PHOTO_SIDES.forEach((s) => (next[s.id] = test));
     setPhotos(next);
-    setInteriorPhoto(placeholder);
-    setOdometerPhoto(placeholder);
+    setInteriorPhoto(test);
+    setOdometerPhoto(test);
     // kein Auto-Prefill mehr – der Nutzer muss echten Tachostand eintragen
   };
 
-  const handleCapture = useCallback(
-    async (file: File) => {
-      if (!file || !currentTarget) return;
-
+  const savePhoto = useCallback(
+    async (file: File, target: CaptureTarget, uploadedPath: string | null = null) => {
       setUploading(true);
+      setPhotoError(null);
+      const tag =
+        target.kind === "side"
+          ? target.id
+          : target.kind === "interior"
+          ? INTERIOR_ID
+          : target.kind === "odometer"
+          ? ODOMETER_ID
+          : "pre_damage";
       try {
-        const tag =
-          currentTarget.kind === "side"
-            ? currentTarget.id
-            : currentTarget.kind === "interior"
-            ? INTERIOR_ID
-            : currentTarget.kind === "odometer"
-            ? ODOMETER_ID
-            : "pre_damage";
-        const path = `${bookingId}/${tag}_${Date.now()}.jpg`;
-        const { error } = await supabase.storage.from("trip-photos").upload(path, file);
-        if (error) throw error;
-
-        const { data: signed } = await supabase.storage
-          .from("trip-photos")
-          .createSignedUrl(path, 60 * 60);
-        const viewUrl = signed?.signedUrl ?? "";
-
-        // Save the storage path (not a transient signed URL) for future lookups.
-        await supabase.from("trip_photos").insert({
-          booking_id: bookingId,
-          photo_url: path,
-          photo_type: tag,
-        });
-
-        if (currentTarget.kind === "side") {
-          setPhotos((prev) => ({ ...prev, [currentTarget.id]: viewUrl }));
-        } else if (currentTarget.kind === "interior") {
-          setInteriorPhoto(viewUrl);
-        } else if (currentTarget.kind === "odometer") {
-          setOdometerPhoto(viewUrl);
+        // Erfolg erst nach Storage-Upload UND bestätigtem Datenbankeintrag.
+        const saved = await saveTripPhoto(supabase, { bookingId, tag, file, uploadedPath });
+        setCurrentTarget(null);
+        if (target.kind === "side") {
+          setPhotos((prev) => ({ ...prev, [target.id]: saved }));
+        } else if (target.kind === "interior") {
+          setInteriorPhoto(saved);
+        } else if (target.kind === "odometer") {
+          setOdometerPhoto(saved);
           // KI-Erkennung im Hintergrund starten
           setAiBusy(true);
           setAiRecognition(null);
           try {
-            const result = await recognize({ data: { photoPath: path, bookingId, phase: "start" } });
+            const result = await recognize({ data: { photoPath: saved.path, bookingId, phase: "start" } });
             setAiRecognition({ km: result.km, fuelPercent: result.fuelPercent, confidence: result.confidence });
             if (result.km !== null && result.confidence !== "low") {
               setStartKm(String(result.km));
@@ -159,19 +168,34 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
             setAiBusy(false);
           }
         } else {
-          setDamagePhotos((prev) => [...prev, viewUrl]);
+          setDamagePhotos((prev) => [...prev, saved]);
         }
       } catch (err) {
         console.error("Upload error:", err);
+        setCurrentTarget(null);
+        setPhotoError({
+          message: err instanceof Error ? err.message : "Das Foto konnte nicht gespeichert werden.",
+          target,
+          file,
+          uploadedPath: err instanceof TripPhotoError ? err.uploadedPath : uploadedPath,
+        });
       } finally {
         setUploading(false);
-        setCurrentTarget(null);
       }
     },
-    [bookingId, currentTarget]
+    [bookingId, recognize]
   );
 
-  const openCamera = (target: NonNullable<typeof currentTarget>) => {
+  const handleCapture = useCallback(
+    async (file: File) => {
+      if (!file || !currentTarget) return;
+      await savePhoto(file, currentTarget);
+    },
+    [currentTarget, savePhoto]
+  );
+
+  const openCamera = (target: CaptureTarget) => {
+    setPhotoError(null);
     setCurrentTarget(target);
   };
 
@@ -194,22 +218,34 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
   })();
 
   const handleStartDrive = async () => {
-    if (!startKm) return;
+    if (!startKm || starting) return;
     const kmNum = parseInt(startKm);
-    await supabase
-      .from("bookings")
-      .update({
+    if (!Number.isFinite(kmNum) || kmNum < 0) {
+      setStartError("Bitte einen gültigen Kilometerstand eintragen.");
+      return;
+    }
+    setStarting(true);
+    setStartError(null);
+    try {
+      await updateBookingChecked(supabase, bookingId, {
         start_km: kmNum,
         remarks: remarks || null,
         status: "active",
-      })
-      .eq("id", bookingId);
+      });
+    } catch (err) {
+      setStartError(
+        err instanceof Error ? `Fahrt konnte nicht gestartet werden. ${err.message}` : "Fahrt konnte nicht gestartet werden.",
+      );
+      setStarting(false);
+      return;
+    }
     notifyAdmin({
       type: "trip_started",
       title: "Fahrt gestartet",
       body: `Buchung ${bookingId.slice(0, 8)} · Start-KM ${startKm}`,
       bookingId,
     });
+    setStarting(false);
     onComplete(kmNum);
   };
 
@@ -277,6 +313,18 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
             </button>
           )}
 
+          {loadError && (
+            <TripErrorBanner message={loadError} onRetry={() => setLoadAttempt((n) => n + 1)} retryLabel="Neu laden" />
+          )}
+          {photoError && (
+            <TripErrorBanner
+              message={photoError.message}
+              busy={uploading}
+              onRetry={() => void savePhoto(photoError.file, photoError.target, photoError.uploadedPath)}
+              onDismiss={() => setPhotoError(null)}
+            />
+          )}
+
           <div className="grid grid-cols-2 gap-3 mb-6">
             {PHOTO_SIDES.map((side) => (
               <button
@@ -290,11 +338,8 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
                 }`}
               >
                 {photos[side.id] ? (
-                  <div className="relative">
-                    <img src={photos[side.id]} alt={side.label} className="w-full h-20 object-cover rounded-lg mb-2" />
-                    <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-foreground flex items-center justify-center">
-                      <Check className="w-3 h-3 text-background" />
-                    </div>
+                  <div className="mb-2">
+                    <TripPhotoThumb photo={photos[side.id]} alt={side.label} className="w-full h-20" />
                   </div>
                 ) : (
                   <div className="h-20 flex items-center justify-center mb-2">
@@ -317,11 +362,8 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
               }`}
             >
               {interiorPhoto ? (
-                <div className="relative">
-                  <img src={interiorPhoto} alt="Innenraum" className="w-full h-32 object-cover rounded-lg mb-2" />
-                  <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-foreground flex items-center justify-center">
-                    <Check className="w-3 h-3 text-background" />
-                  </div>
+                <div className="mb-2">
+                  <TripPhotoThumb photo={interiorPhoto} alt="Innenraum" className="w-full h-32" />
                 </div>
               ) : (
                 <div className="h-24 flex flex-col items-center justify-center gap-1">
@@ -340,11 +382,11 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
             <p className="text-xs text-muted-foreground mb-3">Optional, bis zu 4 Fotos</p>
             <div className="grid grid-cols-4 gap-2">
               {Array.from({ length: 4 }).map((_, idx) => {
-                const url = damagePhotos[idx];
-                if (url) {
+                const photo = damagePhotos[idx];
+                if (photo) {
                   return (
                     <div key={idx} className="relative">
-                      <img src={url} alt={`Schaden ${idx + 1}`} className="w-full h-20 object-cover rounded-lg border border-border" />
+                      <TripPhotoThumb photo={photo} alt={`Schaden ${idx + 1}`} className="w-full h-20 border border-border" />
                       <button
                         onClick={() => setDamagePhotos((prev) => prev.filter((_, i) => i !== idx))}
                         className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center"
@@ -390,12 +432,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
               }`}
             >
               {odometerPhoto ? (
-                <div className="relative">
-                  <img src={odometerPhoto} alt="Tacho" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-foreground flex items-center justify-center">
-                    <Check className="w-3 h-3 text-background" />
-                  </div>
-                </div>
+                <TripPhotoThumb photo={odometerPhoto} alt="Tacho" className="w-full h-32" />
               ) : (
                 <div className="h-20 flex flex-col items-center justify-center gap-1">
                   <Camera className="w-7 h-7 text-muted-foreground" />
@@ -430,8 +467,10 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
             />
           </div>
 
+          {startError && <TripErrorBanner message={startError} onRetry={() => void handleStartDrive()} busy={starting} />}
+
           <button
-            disabled={!readyToStart || !startKm}
+            disabled={!readyToStart || !startKm || starting || uploading}
             onClick={handleStartDrive}
             className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
           >
