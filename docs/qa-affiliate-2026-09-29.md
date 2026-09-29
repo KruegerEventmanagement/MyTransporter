@@ -31,3 +31,10 @@
 - Kein echter Klick und keine Prüfung der Provisionszuordnung bei Awin.
 - Die Einblendung „App installieren“ überdeckt auf Desktop kurz den Kopf der linken Karte (bestehendes, schließbares Element).
 - Kein Test auf echtem iPhone.
+
+## Ergänzung: Login/Registrieren in der Navigation
+- `src/lib/ad-visibility.ts`: Werbeunterdrückung jetzt quellenbasiert (jede `useSuppressAds`-Instanz eigene Quelle); `setAdsSuppressed` bleibt als manueller Schalter erhalten. Eine inaktive Quelle gibt eine aktive (z. B. Buchung) nicht mehr frei.
+- `src/components/Navbar.tsx`: nur `useSuppressAds(showModal !== null)`; Auth-Logik unverändert.
+- Neuer Test `src/lib/ad-visibility.test.tsx` (2 Tests: Überlappung, Unmount/manueller Schalter).
+- Erneut: `bun run test` Exit 0 – 23 Dateien, 274 Tests bestanden; `bun run typecheck` Exit 0; `bun run build` Exit 0.
+- Browser (ohne Formular abzusenden): sichtbare Partnerlinks Desktop vorher 4, bei offenem Registrieren 0, bei offenem Login 0; Mobil 390 px vorher 2, danach jeweils 0.
