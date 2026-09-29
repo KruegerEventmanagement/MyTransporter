@@ -1,19 +1,127 @@
-import { supabase } from "@/integrations/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Resolve a stored trip-photo reference into a viewable URL.
- * - Legacy rows stored the full public URL → returned as-is.
- * - New rows store the storage path → converted to a short-lived signed URL.
+ * Fahrtfotos (Abholung/Rückgabe): Erfolg erst nach bestätigtem Storage-Upload
+ * UND geprüftem Datenbankeintrag. Vorschaubilder immer über signierte URLs,
+ * nie über rohe private Storage-Pfade.
  */
-export async function resolveTripPhotoUrl(stored: string): Promise<string> {
-  if (!stored) return stored;
-  if (/^https?:\/\//.test(stored)) return stored;
-  const { data } = await supabase.storage
-    .from("trip-photos")
-    .createSignedUrl(stored, 60 * 60);
-  return data?.signedUrl ?? "";
+
+export const TRIP_PHOTO_BUCKET = "trip-photos";
+const SIGNED_URL_TTL = 60 * 60;
+
+export interface StoredTripPhoto {
+  /** Storage-Pfad im privaten Bucket. */
+  path: string;
+  /** Signierte Vorschau-URL; null, wenn die Vorschau gerade nicht ladbar ist. */
+  url: string | null;
 }
 
-export async function resolveTripPhotoUrls(stored: string[]): Promise<string[]> {
-  return Promise.all(stored.map(resolveTripPhotoUrl));
+export class TripPhotoError extends Error {
+  constructor(
+    message: string,
+    public readonly stage: "upload" | "record",
+    /** Bereits hochgeladener Pfad – Retry trägt dann nur noch den DB-Eintrag nach. */
+    public readonly uploadedPath: string | null,
+  ) {
+    super(message);
+    this.name = "TripPhotoError";
+  }
+}
+
+// Bewusst locker typisiert: nur die genutzten Methoden, damit Tests vollständig mocken können.
+type Client = Pick<SupabaseClient, "from" | "storage">;
+
+export async function signTripPhoto(client: Client, path: string): Promise<string | null> {
+  if (/^(https?:|data:)/.test(path)) return path;
+  try {
+    const { data, error } = await client.storage.from(TRIP_PHOTO_BUCKET).createSignedUrl(path, SIGNED_URL_TTL);
+    if (error || !data?.signedUrl) return null;
+    return data.signedUrl;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveTripPhoto(
+  client: Client,
+  args: { bookingId: string; tag: string; file: Blob; uploadedPath?: string | null },
+): Promise<StoredTripPhoto> {
+  let path = args.uploadedPath ?? null;
+  if (!path) {
+    const candidate = `${args.bookingId}/${args.tag}_${Date.now()}.jpg`;
+    let upErr: unknown = null;
+    try {
+      const res = await client.storage
+        .from(TRIP_PHOTO_BUCKET)
+        .upload(candidate, args.file, { contentType: "image/jpeg", upsert: false });
+      upErr = res.error;
+    } catch (e) {
+      upErr = e;
+    }
+    if (upErr) {
+      throw new TripPhotoError(
+        "Das Foto konnte nicht hochgeladen werden. Bitte Internetverbindung prüfen und erneut versuchen.",
+        "upload",
+        null,
+      );
+    }
+    path = candidate;
+  }
+
+  let recordOk = false;
+  try {
+    const { data, error } = await client
+      .from("trip_photos")
+      .insert({ booking_id: args.bookingId, photo_url: path, photo_type: args.tag })
+      .select("id")
+      .single();
+    recordOk = !error && !!data;
+  } catch {
+    recordOk = false;
+  }
+  if (!recordOk) {
+    throw new TripPhotoError(
+      "Das Foto wurde hochgeladen, aber nicht gespeichert. Bitte erneut versuchen.",
+      "record",
+      path,
+    );
+  }
+
+  return { path, url: await signTripPhoto(client, path) };
+}
+
+export interface TripPhotoRow {
+  photo_type: string;
+  photo_url: string;
+}
+
+export async function loadTripPhotos(
+  client: Client,
+  bookingId: string,
+  prefixes: string[],
+): Promise<Array<TripPhotoRow & { url: string | null }>> {
+  const { data, error } = await client
+    .from("trip_photos")
+    .select("photo_type, photo_url, created_at")
+    .eq("booking_id", bookingId)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error("Gespeicherte Fotos konnten nicht geladen werden.");
+  const rows = ((data ?? []) as TripPhotoRow[]).filter((r) => prefixes.some((p) => r.photo_type.startsWith(p)));
+  return Promise.all(rows.map(async (r) => ({ ...r, url: await signTripPhoto(client, r.photo_url) })));
+}
+
+/** Prüft, dass ein Buchungs-Update tatsächlich eine Zeile getroffen hat. */
+export async function updateBookingChecked(
+  client: Client,
+  bookingId: string,
+  values: Record<string, unknown>,
+): Promise<void> {
+  let ok = false;
+  try {
+    const { data, error } = await client.from("bookings").update(values as never).eq("id", bookingId).select("id");
+    ok = !error && Array.isArray(data) && data.length > 0;
+  } catch {
+    ok = false;
+  }
+  if (!ok) throw new Error("Speichern fehlgeschlagen. Bitte Internetverbindung prüfen und erneut versuchen.");
 }
