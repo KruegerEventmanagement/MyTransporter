@@ -139,6 +139,38 @@ describe("ReturnFlow (Rückgabe)", () => {
     expect((screen.getByAltText("Tacho") as HTMLImageElement).src).toMatch(/signed\.example\/b1\/post_odometer/);
   });
 
+  it("Storage-Fehler: kein Haken, Weiter gesperrt; Retry lädt hoch und speichert", async () => {
+    fake.storage.upload = [{ error: "throw" }, { error: null }];
+    fake.on("trip_photos", "insert", { data: { id: "p" }, error: null });
+    renderReturn();
+    fireEvent.click(screen.getByText(/Vorne$/));
+    fireEvent.click(await screen.findByText("stub-capture"));
+    expect(await screen.findByText(/nicht hochgeladen/)).toBeTruthy();
+    expect(savedChecks()).toHaveLength(0);
+    expect(inserts()).toHaveLength(0);
+    expect(screen.getByText(/^Weiter/).closest("button")!.disabled).toBe(true);
+    fireEvent.click(screen.getByText("Erneut versuchen"));
+    await waitFor(() => expect(savedChecks()).toHaveLength(1));
+    expect(uploads()).toHaveLength(2);
+    expect(inserts()).toHaveLength(1);
+  });
+
+  it("verlorene Insert-Antwort: Retry erkennt vorhandenen Eintrag, kein Doppel-Eintrag", async () => {
+    fake.on("trip_photos", "insert", { data: null, error: { message: "timeout" } });
+    renderReturn();
+    await waitFor(() => expect(fake.calls.some((c) => c.table === "trip_photos" && c.op === "select")).toBe(true));
+    fake.on("trip_photos", "select", (st) =>
+      st.single ? { data: { id: "schon-da" }, error: null } : { data: [], error: null },
+    );
+    fireEvent.click(screen.getByText(/Vorne$/));
+    fireEvent.click(await screen.findByText("stub-capture"));
+    await screen.findByText(/hochgeladen, aber nicht gespeichert/);
+    fireEvent.click(screen.getByText("Erneut versuchen"));
+    await waitFor(() => expect(savedChecks()).toHaveLength(1));
+    expect(inserts()).toHaveLength(1);
+    expect(uploads()).toHaveLength(1);
+  });
+
   it("DB-Fehler beim Foto: kein Haken, Weiter gesperrt; Retry ohne erneuten Upload", async () => {
     fake.on("trip_photos", "insert", { data: null, error: { message: "x" } }, { data: { id: "p" }, error: null });
     renderReturn();

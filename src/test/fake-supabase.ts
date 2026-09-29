@@ -12,6 +12,7 @@ export interface QueryState {
   op: "select" | "insert" | "update";
   values?: unknown;
   filters: Array<[string, unknown]>;
+  single?: boolean;
 }
 
 export function createFakeSupabase() {
@@ -29,7 +30,7 @@ export function createFakeSupabase() {
     const key = `${state.table}.${state.op}`;
     const queue = responses[key];
     const r = queue && queue.length > 1 ? queue.shift()! : queue?.[0];
-    if (!r) return { data: state.op === "select" ? [] : null, error: null };
+    if (!r) return { data: state.op === "select" && !state.single ? [] : null, error: null };
     return typeof r === "function" ? r(state) : r;
   };
 
@@ -54,8 +55,14 @@ export function createFakeSupabase() {
       is: () => q,
       neq: () => q,
       order: () => q,
-      single: () => q,
-      maybeSingle: () => q,
+      single: () => {
+        state.single = true;
+        return q;
+      },
+      maybeSingle: () => {
+        state.single = true;
+        return q;
+      },
       then: (res: (v: Result) => unknown, rej: (e: unknown) => unknown) => {
         calls.push(state);
         return respond(state).then(res, rej);

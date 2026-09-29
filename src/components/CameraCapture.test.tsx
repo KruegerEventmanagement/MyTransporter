@@ -137,4 +137,43 @@ describe("CameraCapture", () => {
     unmount();
     expect(track.stop).toHaveBeenCalled();
   });
+
+  it("nativer Wechsel während startender Kamera stoppt den späten Stream; Abbruch lässt Foto-Weg", async () => {
+    const { stream, track } = fakeStream();
+    let late: (s: MediaStream) => void = () => {};
+    setMediaDevices(() => new Promise((r) => (late = r)));
+    renderCam();
+    const clickSpy = vi.spyOn(fileInput(), "click");
+    fireEvent.click(screen.getByText("Foto mit Geräte-Kamera / aus Galerie"));
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      late(stream);
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    expect(track.stop).toHaveBeenCalled();
+    expect(screen.getByText("Live-Kamera verwenden")).toBeTruthy();
+    expect(screen.queryByLabelText("Foto aufnehmen")).toBeNull();
+  });
+
+  it("nie auflösendes play() mit 0 Dimensionen: Fehler + Dateiweg statt Hängen", async () => {
+    setMediaDevices(async () => fakeStream().stream);
+    media.play = vi.fn(() => new Promise<void>(() => {}));
+    renderCam();
+    expect(await screen.findByText(/Live-Kamera startet nicht/)).toBeTruthy();
+    expect(screen.getByText("Foto mit Geräte-Kamera / aus Galerie")).toBeTruthy();
+  });
+
+  it("Schließen während Kodierung liefert keinen veralteten Foto-Callback", async () => {
+    setMediaDevices(async () => fakeStream().stream);
+    media.videoWidth = 640;
+    media.videoHeight = 480;
+    media.toBlob = "never";
+    const { onCapture, rerender } = renderCam();
+    fireEvent.click(await screen.findByLabelText("Foto aufnehmen"));
+    rerender(<CameraCapture open={false} title="Vorne" variant="front" onClose={vi.fn()} onCapture={onCapture} />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 1700));
+    });
+    expect(onCapture).not.toHaveBeenCalled();
+  });
 });
