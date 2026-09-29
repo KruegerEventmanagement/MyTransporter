@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { Camera, Check, ChevronRight, MessageSquare, Key, Plus, X, AlertTriangle, ChevronLeft } from "lucide-react";
+import { Camera, ChevronRight, MessageSquare, Key, Plus, X, AlertTriangle, ChevronLeft } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
