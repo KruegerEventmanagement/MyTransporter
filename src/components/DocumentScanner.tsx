@@ -75,6 +75,8 @@ export function DocumentScanner({
   const [torchAvailable, setTorchAvailable] = useState(false);
   const [shotUrl, setShotUrl] = useState<string | null>(null);
   const pendingBlobRef = useRef<Blob | null>(null);
+  /** Speicherpfad, falls die aktuelle Aufnahme bereits hochgeladen wurde (Retry ohne Doppel-Upload). */
+  const uploadedPathRef = useRef<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -198,6 +200,7 @@ export function DocumentScanner({
         const blob = await normalizeImageFile(file);
         if (gen !== genRef.current || !mountedRef.current) return;
         pendingBlobRef.current = blob;
+        uploadedPathRef.current = null;
         sourceRef.current = "file";
         replaceShotUrl(URL.createObjectURL(blob));
         setRejectMsg("");
@@ -284,6 +287,7 @@ export function DocumentScanner({
       const blob = await canvasToJpegBlob(canvas);
       if (!mountedRef.current || gen !== genRef.current) return;
       pendingBlobRef.current = blob;
+        uploadedPathRef.current = null;
       sourceRef.current = "live";
       replaceShotUrl(URL.createObjectURL(blob));
       setPhase("preview");
@@ -317,23 +321,41 @@ export function DocumentScanner({
       } else {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Nicht angemeldet");
-        const path = `${user.id}/${docType}_${Date.now()}.jpg`;
-        const { error: upErr } = await supabase.storage
-          .from("user-documents")
-          .upload(path, blob, { contentType: "image/jpeg", upsert: false });
-        if (upErr) throw upErr;
-        const { data: inserted, error: insErr } = await supabase
+        let path = uploadedPathRef.current;
+        if (!path) {
+          const candidate = `${user.id}/${docType}_${Date.now()}.jpg`;
+          const { error: upErr } = await supabase.storage
+            .from("user-documents")
+            .upload(candidate, blob, { contentType: "image/jpeg", upsert: false });
+          if (upErr) throw upErr;
+          path = candidate;
+          uploadedPathRef.current = candidate;
+        }
+        // Retry nach verlorener Antwort: vorhandenen Eintrag genau dieses Pfads wiederverwenden.
+        let inserted: { id: string } | null = null;
+        const { data: existing } = await supabase
           .from("user_documents")
-          .insert({
-            user_id: user.id,
-            doc_type: docType,
-            photo_url: path,
-            ai_verified: true,
-            verified_at: new Date().toISOString(),
-          })
           .select("id")
-          .single();
-        if (insErr) throw insErr;
+          .eq("user_id", user.id)
+          .eq("photo_url", path)
+          .maybeSingle();
+        if (existing?.id) {
+          inserted = existing;
+        } else {
+          const { data, error: insErr } = await supabase
+            .from("user_documents")
+            .insert({
+              user_id: user.id,
+              doc_type: docType,
+              photo_url: path,
+              ai_verified: true,
+              verified_at: new Date().toISOString(),
+            })
+            .select("id")
+            .single();
+          if (insErr || !data) throw insErr ?? new Error("Eintrag nicht bestätigt");
+          inserted = data;
+        }
         // Erst wenn das neue Foto sicher gespeichert ist, ältere Aufnahmen
         // derselben Seite zurückziehen – so geht bei Uploadfehlern nichts verloren.
         if (isComplete && inserted?.id) {
@@ -349,7 +371,16 @@ export function DocumentScanner({
       }
 
       if (!mountedRef.current) return;
+      if (stale()) {
+        // Während des Speicherns geschlossen: Overlay nicht wieder öffnen,
+        // gespeichertes Foto aber in der Übersicht aktualisieren.
+        pendingBlobRef.current = null;
+        uploadedPathRef.current = null;
+        void Promise.resolve(onComplete()).catch(() => undefined);
+        return;
+      }
       pendingBlobRef.current = null;
+      uploadedPathRef.current = null;
       sourceRef.current = null;
       replaceShotUrl(null);
       genRef.current += 1;
@@ -361,7 +392,7 @@ export function DocumentScanner({
         console.warn("Document refresh error:", error);
       });
     } catch (err) {
-      if (!mountedRef.current) return;
+      if (stale()) return;
       console.error("Document upload error:", err);
       setRejectMsg(
         err instanceof Error && err.message
