@@ -174,7 +174,7 @@ describe("ReturnFlow (Rückgabe)", () => {
     fireEvent.click(screen.getByText("Erneut versuchen"));
     const summary = await screen.findByText("Kilometer-Abrechnung");
     // Preisberechnung unverändert: km-Tarif berechnet alle 50 gefahrenen km
-    expect(within(summary.parentElement!).getByText("50 km", { selector: "span" })).toBeTruthy();
+    expect(within(summary.parentElement!).getAllByText(/^50\s*km$/)).toHaveLength(2);
     const updates = fake.calls.filter((c) => c.table === "bookings" && c.op === "update");
     expect(updates[1].values).toMatchObject({ end_km: 150, extra_km: 50 });
 
