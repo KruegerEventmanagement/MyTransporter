@@ -60,6 +60,8 @@ import {
 } from "@/lib/booking-rules";
 import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot, addonBaseId, resolveAddonSelection } from "@/lib/addons";
 import { AddonPackageCard } from "./AddonPackageCard";
+import { CustomKmCard } from "./CustomKmCard";
+import { parseCustomKmInput, quoteCustomKm } from "@/lib/custom-km";
 import { useSuppressAds } from "@/lib/ad-visibility";
 import {
   PENDING_DOC_TYPES,
@@ -189,6 +191,9 @@ export function BookingSection() {
   // Eigene 15-Minuten-Reservierung: darf die eigene Auswahl nicht blockieren.
   const [ownHold, setOwnHold] = useState<{ plate: string; start: number; end: number } | null>(null);
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
+  // Individuelles Kilometerpaket (optional): Rohtext bleibt erhalten, Prüfung streng.
+  const [customKmEnabled, setCustomKmEnabled] = useState(false);
+  const [customKmInput, setCustomKmInput] = useState("");
   const [pendingDocTypes, setPendingDocTypes] = useState<Set<string>>(new Set());
   const [pendingUploading, setPendingUploading] = useState(false);
   const [pendingUploadError, setPendingUploadError] = useState<string | null>(null);
@@ -558,6 +563,9 @@ export function BookingSection() {
             selectedPlanId?: string | null;
             vehicleId?: string | null;
             vehiclePlate?: string | null;
+            addonIds?: unknown;
+            customKmEnabled?: unknown;
+            customKmInput?: unknown;
           };
           if (draft.from) {
             setRange({
@@ -567,6 +575,9 @@ export function BookingSection() {
           }
           if (typeof draft.startHour === "number") setStartHour(draft.startHour);
           if (typeof draft.selectedPlanId === "string") setSelectedPlanId(draft.selectedPlanId);
+          if (Array.isArray(draft.addonIds)) setSelectedAddonIds(draft.addonIds.filter((x): x is string => typeof x === "string").slice(0, 5));
+          if (draft.customKmEnabled === true) setCustomKmEnabled(true);
+          if (typeof draft.customKmInput === "string") setCustomKmInput(draft.customKmInput.slice(0, 12));
           if (typeof draft.vehicleId === "string" || typeof draft.vehiclePlate === "string") {
             setRestoreVehicle({ id: draft.vehicleId ?? null, plate: draft.vehiclePlate ?? null });
             if (draft.vehiclePlate) setExplicitPlate(draft.vehiclePlate);
@@ -644,6 +655,9 @@ export function BookingSection() {
         selectedPlanId,
         vehicleId: currentVehicle?.id ?? null,
         vehiclePlate: currentVehicle?.plate ?? null,
+        addonIds: selectedAddonIds,
+        customKmEnabled,
+        customKmInput,
       }),
     );
     type SignUpResult = Awaited<ReturnType<typeof supabase.auth.signUp>>;
@@ -888,7 +902,26 @@ export function BookingSection() {
     return { valid: true, msg: `Rückgabe ${dayStr} bis ${timeStr} Uhr` };
   };
 
-  const total = selectedPlanEntry ? selectedPlanEntry.price + addonsTotal + DEPOSIT : null;
+  // Kilometerpaket: gleiche reine Funktion wie der Server (Server rechnet erneut).
+  const customKmParsed = customKmEnabled ? parseCustomKmInput(customKmInput) : null;
+  const customKmError =
+    !customKmEnabled
+      ? null
+      : selectedPlanId === "km"
+        ? "Beim reinen Kilometer-Tarif ist kein Kilometerpaket nötig. Bitte deaktivieren."
+        : customKmParsed && !customKmParsed.ok
+          ? customKmParsed.error
+          : null;
+  const customKmQuote =
+    customKmEnabled && !customKmError && customKmParsed?.ok && selectedPlanId
+      ? quoteCustomKm(selectedPlanId, vehicleClass, customKmParsed.value)
+      : null;
+  const kmPackageEur = customKmQuote ? customKmQuote.surchargeCents / 100 : 0;
+  const rentWithKmEur = selectedPlanEntry ? Math.round((selectedPlanEntry.price + kmPackageEur) * 100) / 100 : 0;
+  const total = selectedPlanEntry ? Math.round((selectedPlanEntry.price + kmPackageEur + addonsTotal + DEPOSIT) * 100) / 100 : null;
+  const fmtEur = (v: number) => v.toLocaleString("de-DE", { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 });
+  const contractKmShown = customKmQuote ? customKmQuote.contractKm : selectedPlanEntry?.freeKm ?? 0;
+  const contractRateCents = customKmQuote ? customKmQuote.rateCents : selectedPlanEntry?.extraKmCents ?? 0;
 
   const [paid, setPaid] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
@@ -1535,6 +1568,18 @@ export function BookingSection() {
               <div className="mt-4 rounded-xl border border-border bg-secondary/50 p-4">
                 <p className="text-xs text-foreground text-center">{ADDON_TRUST}</p>
               </div>
+              <CustomKmCard
+                enabled={customKmEnabled}
+                onEnabledChange={(v) => setCustomKmEnabled(v)}
+                value={customKmInput}
+                onValueChange={setCustomKmInput}
+                error={customKmError}
+                quote={customKmQuote}
+                includedKm={selectedPlanEntry?.freeKm ?? null}
+                includedRateCents={selectedPlanEntry?.extraKmCents ?? null}
+                addonsCents={Math.round(addonsTotal * 100)}
+                depositEur={DEPOSIT}
+              />
             </div>
 
             {/* Summary */}
@@ -1542,17 +1587,19 @@ export function BookingSection() {
               <div className="mt-6 p-6 rounded-2xl bg-primary text-primary-foreground">
                 <div className="flex items-center justify-between">
                   <p className="text-lg">Gesamt</p>
-                  <p className="text-3xl font-bold">{total} €</p>
+                  <p className="text-3xl font-bold">{fmtEur(total)} €</p>
                 </div>
                 <p className="text-sm opacity-80 mt-1">
                   {selectedPlanEntry &&
                     `${selectedPlanEntry.price} € Miete${
+                      kmPackageEur > 0 ? ` + ${fmtEur(kmPackageEur)} € Kilometerpaket` : ""
+                    }${
                       addonsTotal > 0 ? ` + ${addonsTotal} € Zubehör` : ""
                     } + ${DEPOSIT} € Kaution (separat, wird erstattet)`}
                 </p>
                 {selectedPlanEntry && (
                   <p className="text-xs opacity-80 mt-1">
-                    {displayVehicle.name} · {displayVehicle.plate} · {selectedPlanEntry.freeKm.toLocaleString("de-DE")} km inklusive, danach {(selectedPlanEntry.extraKmCents / 100).toFixed(2).replace(".", ",")} €/km bei Rückgabe
+                    {displayVehicle.name} · {displayVehicle.plate} · {contractKmShown.toLocaleString("de-DE")} km inklusive, danach {(contractRateCents / 100).toFixed(2).replace(".", ",")} €/km bei Rückgabe
                   </p>
                 )}
                 {isSpeedLimited(currentVehicle) && (
@@ -1604,7 +1651,7 @@ export function BookingSection() {
               </button>
               <button
                 onClick={() => setStep(registrationComplete && docsReady ? 5 : 3)}
-                disabled={!canProceedStep2}
+                disabled={!canProceedStep2 || !!customKmError}
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 Buchen & bezahlen <ChevronRight className="w-5 h-5" />
@@ -1968,11 +2015,13 @@ export function BookingSection() {
               <div className="mt-8 p-6 rounded-2xl bg-primary text-primary-foreground">
                 <div className="flex items-center justify-between">
                   <p className="text-lg">Zu zahlen</p>
-                  <p className="text-3xl font-bold">{total} €</p>
+                  <p className="text-3xl font-bold">{fmtEur(total)} €</p>
                 </div>
                 <p className="text-sm opacity-80 mt-1">
                   {selectedPlanEntry &&
                     `${selectedPlanEntry.price} € Miete${
+                      kmPackageEur > 0 ? ` + ${fmtEur(kmPackageEur)} € Kilometerpaket (${contractKmShown.toLocaleString("de-DE")} km gesamt)` : ""
+                    }${
                       addonsTotal > 0 ? ` + ${addonsTotal} € Zubehör` : ""
                     } + ${DEPOSIT} € Kaution`}
                 </p>
@@ -2107,6 +2156,7 @@ export function BookingSection() {
                           startHour: startHour ?? undefined,
                           couponCode: couponInfo?.valid ? couponCode.trim() : undefined,
                           kmCatalog: KM_CATALOG_VERSION,
+                          customKm: customKmQuote && customKmQuote.surchargeCents > 0 ? customKmQuote.desiredKm : null,
                        },
                      });
                       if ("error" in result) throw new Error(result.error);
@@ -2115,7 +2165,7 @@ export function BookingSection() {
                       // → InitiateCheckout (kein Purchase). Wert ohne Kaution.
                       trackEvent({
                         name: "checkout_start",
-                        valueEur: selectedPlanEntry ? selectedPlanEntry.price + addonsTotal : 0,
+                        valueEur: selectedPlanEntry ? rentWithKmEur + addonsTotal : 0,
                         planId: selectedPlanId ?? "",
                       });
                    } catch (e) {
