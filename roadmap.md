@@ -25,3 +25,4 @@
 - [x] Mehrkilometersatz 0,45 € überall – durch Auftrag „Individuelles Kilometerpaket“ (45/35/29 ct) ersetzt und zurückgenommen
 - [x] Individuelles Kilometerpaket in normaler Buchung (UI, Checkout, Webhook, Rückgabe, Storno, QA)
 - [x] 0,45 € wiederhergestellt, Paket-Tests angepasst, Rechnung (Mock) geprüft
+- [x] Review 3a996fdf-Lücken behoben

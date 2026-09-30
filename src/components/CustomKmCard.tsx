@@ -58,6 +58,9 @@ export function CustomKmCard(props: {
             Gesamte geplante Strecke, nicht zusätzliche Kilometer. Bereits enthaltene Kilometer werden berücksichtigt.
           </p>
           {error && <p className="mt-2 text-sm font-medium text-foreground" role="alert">{error}</p>}
+          {!error && value.trim() === "" && (
+            <p className="mt-2 text-sm text-muted-foreground" data-testid="custom-km-empty">Keine zusätzlichen Kilometer ausgewählt</p>
+          )}
           {!error && quote && includedKm !== null && (
             <dl className="mt-4 space-y-1 text-sm">
               <Row k="Im Tarif bisher inklusive" v={km(includedKm)} />

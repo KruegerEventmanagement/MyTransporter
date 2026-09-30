@@ -13,7 +13,8 @@ import { getPlanById, planCatalog, type PlanEntry, type VehicleClass } from "@/l
 import { LONG_TERM_MAX_KM } from "@/lib/long-term";
 
 /** Version der Paketberechnung (Stripe-Metadata). */
-export const CUSTOM_KM_VERSION = "ckm-1";
+/** ckm-1 (nie veröffentlicht, ohne vollständigen Preis-Snapshot) wird als ungültig abgewiesen. */
+export const CUSTOM_KM_VERSION = "ckm-2";
 export const CUSTOM_KM_ADDON_ID = "km_paket";
 export const CUSTOM_KM_MAX = LONG_TERM_MAX_KM;
 
@@ -23,6 +24,7 @@ export type CustomKmParse = { ok: true; value: number } | { ok: false; error: st
 export function parseCustomKmInput(raw: unknown): CustomKmParse {
   const s = typeof raw === "number" ? String(raw) : typeof raw === "string" ? raw.trim() : "";
   if (s === "") return { ok: false, error: "Bitte gewünschte Gesamtkilometer eingeben." };
+  // Hinweis: Die Buchungsmaske behandelt leere Eingabe vorher als „kein Paket“.
   if (!/^\d+$/.test(s)) return { ok: false, error: "Bitte nur ganze Kilometer ohne Komma oder Minus eingeben." };
   const v = Number(s);
   if (!Number.isSafeInteger(v)) return { ok: false, error: "Ungültige Kilometerzahl." };
@@ -87,49 +89,137 @@ export function customKmLabel(q: CustomKmQuote): string {
   return `Kilometerpaket: ${q.contractKm.toLocaleString("de-DE")} km gesamt${via}`;
 }
 
-/** Stripe-Metadata (nur Zahlen/IDs, keine personenbezogenen Daten). */
-export function customKmMetadata(q: CustomKmQuote): Record<string, string> {
-  return {
+export type SnapshotAddon = { id: string; label: string; price_cents: number };
+
+/** Vollständiger serverseitiger Preis-Snapshot einer Checkout-Session mit Kilometerpaket. */
+export type CustomKmPriceSnapshot = {
+  planId: string;
+  vehicleClass: VehicleClass;
+  planLabel: string;
+  rentFullCents: number;
+  discountCents: number;
+  /** Physisches Zubehör, exakt wie bezahlt. */
+  addons: SnapshotAddon[];
+  quote: CustomKmQuote;
+  depositCents: number;
+};
+
+const MD_MAX = 480; // Stripe: max 500 Zeichen je Wert
+const MAX_SNAPSHOT_ADDONS = 5;
+const cleanLabel = (s: string) => s.replace(/[|\n\r]/g, " ").slice(0, 200);
+
+export function snapshotTotalCents(s: { rentFullCents: number; discountCents: number; addons: SnapshotAddon[]; quote: { surchargeCents: number }; depositCents: number }): number {
+  return s.rentFullCents - s.discountCents + s.quote.surchargeCents + s.addons.reduce((t, a) => t + a.price_cents, 0) + s.depositCents;
+}
+
+/**
+ * Stripe-Metadata (nur Zahlen/IDs/Tariflabels, keine personenbezogenen Daten).
+ * Kurze Einzel-Keys, damit 50 Keys / 500 Zeichen nie überschritten werden.
+ */
+export function customKmMetadata(s: CustomKmPriceSnapshot): Record<string, string> {
+  const q = s.quote;
+  if (s.addons.length > MAX_SNAPSHOT_ADDONS) throw new Error("Zu viele Zusatzpakete");
+  const md: Record<string, string> = {
     ckV: CUSTOM_KM_VERSION,
     ckPlan: q.originalPlanId,
+    ckCls: s.vehicleClass,
+    ckLbl: cleanLabel(s.planLabel),
+    ckRentFull: String(s.rentFullCents),
+    ckDisc: String(s.discountCents),
     ckBaseKm: String(q.baseFreeKm),
     ckDesired: String(q.desiredKm),
     ckVia: q.consideredPlanId,
+    ckViaLbl: cleanLabel(q.consideredPlanLabel),
     ckContract: String(q.contractKm),
     ckSurcharge: String(q.surchargeCents),
     ckRate: String(q.rateCents),
+    ckDep: String(s.depositCents),
+    ckAddN: String(s.addons.length),
+    ckTot: String(snapshotTotalCents(s)),
   };
+  s.addons.forEach((a, i) => {
+    md[`ckA${i}`] = `${a.price_cents}|${a.id.slice(0, 60)}|${cleanLabel(a.label)}`.slice(0, MD_MAX);
+  });
+  return md;
 }
 
 export type CustomKmSnapshot =
   | { kind: "none" }
   | { kind: "invalid"; reason: string }
-  | { kind: "ok"; contractKm: number; rateCents: number; surchargeCents: number; addon: { id: string; label: string; price_cents: number } };
+  | {
+      kind: "ok";
+      planLabel: string;
+      /** Bezahlte Grundmiete nach Rabatt (Cent). */
+      planPriceCents: number;
+      discountCents: number;
+      contractKm: number;
+      rateCents: number;
+      surchargeCents: number;
+      depositCents: number;
+      totalCents: number;
+      /** Physisches Zubehör + Kilometerpaket, exakt wie bezahlt. */
+      addons: SnapshotAddon[];
+      addon: SnapshotAddon;
+    };
+
+const intOf = (v: string | undefined) => (v != null && /^\d{1,12}$/.test(v) ? Number(v) : NaN);
 
 /**
- * Webhook: Snapshot aus der Session lesen – exakt die bezahlten Werte, NIE neu
- * aus dem aktuellen Katalog berechnen. Defekter Snapshot → "invalid" (prüfen).
+ * Webhook: Snapshot aus der (signaturgeprüften) Session lesen – exakt die bezahlten
+ * Werte, NIE aus dem aktuellen Katalog. Teil-/Fremd-/Alt-Snapshot → "invalid".
+ * Ohne jedes ck*-Feld → "none" (bisheriger Legacy-Pfad).
  */
-export function readCustomKmSnapshot(md: Record<string, string | undefined>, planId: string): CustomKmSnapshot {
-  if (md.ckV == null) return { kind: "none" };
-  if (md.ckV !== CUSTOM_KM_VERSION) return { kind: "invalid", reason: `unbekannte Version ${md.ckV}` };
-  const int = (v: string | undefined) => (v != null && /^\d+$/.test(v) ? Number(v) : NaN);
-  const base = int(md.ckBaseKm), desired = int(md.ckDesired), contract = int(md.ckContract);
-  const surcharge = int(md.ckSurcharge), rate = int(md.ckRate);
-  if (![base, desired, contract, surcharge, rate].every(Number.isSafeInteger)) return { kind: "invalid", reason: "Zahlenwerte fehlen/ungültig" };
+export function readCustomKmSnapshot(
+  md: Record<string, string | undefined>,
+  planId: string,
+  paid?: { amountTotal?: number | null; currency?: string | null },
+): CustomKmSnapshot {
+  const hasAny = Object.keys(md).some((k) => /^ck[A-Z]/.test(k));
+  if (!hasAny) return { kind: "none" };
+  if (md.ckV == null) return { kind: "invalid", reason: "Teil-Snapshot ohne Version" };
+  if (md.ckV !== CUSTOM_KM_VERSION) return { kind: "invalid", reason: `unbekannte/alte Version ${md.ckV}` };
+  const base = intOf(md.ckBaseKm), desired = intOf(md.ckDesired), contract = intOf(md.ckContract);
+  const surcharge = intOf(md.ckSurcharge), rate = intOf(md.ckRate), rentFull = intOf(md.ckRentFull);
+  const disc = intOf(md.ckDisc), dep = intOf(md.ckDep), n = intOf(md.ckAddN), tot = intOf(md.ckTot);
+  if (![base, desired, contract, surcharge, rate, rentFull, disc, dep, n, tot].every(Number.isSafeInteger)) {
+    return { kind: "invalid", reason: "Zahlenwerte fehlen/ungültig" };
+  }
   if (md.ckPlan !== planId) return { kind: "invalid", reason: "Tarif passt nicht zum Snapshot" };
-  if (surcharge <= 0 || contract < base || contract < desired || rate <= 0) return { kind: "invalid", reason: "Werte widersprüchlich" };
-  const via = md.ckVia && md.ckVia !== planId ? getPlanById(md.ckVia)?.shortLabel : null;
+  if (!md.ckLbl || !md.ckVia) return { kind: "invalid", reason: "Tarifangaben fehlen" };
+  if (surcharge <= 0 || contract < base || contract < desired || rate <= 0 || disc > rentFull || n > MAX_SNAPSHOT_ADDONS) {
+    return { kind: "invalid", reason: "Werte widersprüchlich" };
+  }
+  const phys: SnapshotAddon[] = [];
+  for (let i = 0; i < n; i++) {
+    const m = /^(\d{1,9})\|([^|]+)\|(.+)$/.exec(md[`ckA${i}`] ?? "");
+    if (!m || m[2] === CUSTOM_KM_ADDON_ID) return { kind: "invalid", reason: `Zubehörzeile ${i} ungültig` };
+    phys.push({ id: m[2]!, label: m[3]!, price_cents: Number(m[1]) });
+  }
+  if (md[`ckA${n}`] != null) return { kind: "invalid", reason: "Zubehöranzahl passt nicht" };
+  const sum = rentFull - disc + surcharge + phys.reduce((t, a) => t + a.price_cents, 0) + dep;
+  if (sum !== tot) return { kind: "invalid", reason: `Summe ${sum} ≠ Snapshot ${tot}` };
+  if (paid) {
+    if ((paid.currency ?? "").toLowerCase() !== "eur") return { kind: "invalid", reason: `Währung ${paid.currency}` };
+    if (paid.amountTotal !== tot) return { kind: "invalid", reason: `Stripe-Betrag ${paid.amountTotal} ≠ Snapshot ${tot}` };
+  }
+  const via = md.ckVia !== planId ? md.ckViaLbl : null;
+  const addon: SnapshotAddon = {
+    id: CUSTOM_KM_ADDON_ID,
+    label: `Kilometerpaket: ${contract.toLocaleString("de-DE")} km gesamt${via ? ` (berechnet über ${via})` : ""}`,
+    price_cents: surcharge,
+  };
   return {
     kind: "ok",
+    planLabel: md.ckLbl,
+    planPriceCents: rentFull - disc,
+    discountCents: disc,
     contractKm: contract,
     rateCents: rate,
     surchargeCents: surcharge,
-    addon: {
-      id: CUSTOM_KM_ADDON_ID,
-      label: `Kilometerpaket: ${contract.toLocaleString("de-DE")} km gesamt${via ? ` (berechnet über ${via})` : ""}`,
-      price_cents: surcharge,
-    },
+    depositCents: dep,
+    totalCents: tot,
+    addons: [...phys, addon],
+    addon,
   };
 }
 

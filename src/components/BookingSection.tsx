@@ -123,6 +123,8 @@ const cmToM = (cm: number | null | undefined) =>
 
 const AUTH_CONFIRM_URL = "https://www.mytransporter.org/auth/confirm";
 const AUTH_BOOKING_DRAFT_KEY = "mt_auth_booking_draft";
+const BOOKING_DRAFT_KEY = "mt_booking_draft";
+const BOOKING_DRAFT_VERSION = 1;
 const RESEND_COOLDOWN_SECONDS = 60;
 const RESEND_LAST_SENT_KEY = "mt_resend_last_sent";
 /** Auth-Aufrufe dürfen nie endlos hängen (iOS/Safari-Sperren, schlechtes Netz). */
@@ -623,6 +625,44 @@ export function BookingSection() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Versionierter Buchungsentwurf (nur Auswahl – keine Ausweis-, Passwort- oder
+  // Zahlungsdaten) für gewöhnliches Neuladen. Einmal beim Einstieg wiederherstellen,
+  // erst danach automatisch speichern. Verfügbarkeit/Hold werden danach frisch geprüft.
+  const [draftRestored, setDraftRestored] = useState(false);
+  useEffect(() => {
+    try {
+      const fromEmail = new URLSearchParams(window.location.search).get("email_confirmed") === "1";
+      const raw = fromEmail ? null : sessionStorage.getItem(BOOKING_DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw) as Record<string, unknown>;
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const from = typeof d.from === "string" ? new Date(d.from) : null;
+        const fresh = d.v === BOOKING_DRAFT_VERSION && typeof d.savedAt === "number" && Date.now() - d.savedAt < 24 * 3600_000;
+        if (!fresh || !from || isNaN(from.getTime()) || from < today) {
+          sessionStorage.removeItem(BOOKING_DRAFT_KEY);
+        } else {
+          const to = typeof d.to === "string" ? new Date(d.to) : from;
+          setRange({ from, to: isNaN(to.getTime()) ? from : to });
+          if (typeof d.startHour === "number") setStartHour(d.startHour);
+          if (typeof d.selectedPlanId === "string") setSelectedPlanId(d.selectedPlanId);
+          if (Array.isArray(d.addonIds)) setSelectedAddonIds(d.addonIds.filter((x): x is string => typeof x === "string").slice(0, 5));
+          if (d.customKmEnabled === true) setCustomKmEnabled(true);
+          if (typeof d.customKmInput === "string") setCustomKmInput(d.customKmInput.slice(0, 12));
+          if (typeof d.vehicleId === "string" || typeof d.vehiclePlate === "string") {
+            setRestoreVehicle({ id: (d.vehicleId as string) ?? null, plate: (d.vehiclePlate as string) ?? null });
+            if (typeof d.vehiclePlate === "string") setExplicitPlate(d.vehiclePlate);
+          }
+          // Höchstens bis „Fahrzeug & Zubehör“ – Reservierung entsteht erst später neu.
+          if (typeof d.step === "number") setStep(d.step >= 2 ? 2 : d.step >= 1 ? 1 : 0);
+        }
+      }
+    } catch {
+      try { sessionStorage.removeItem(BOOKING_DRAFT_KEY); } catch { /* Speicher nicht verfügbar */ }
+    }
+    setDraftRestored(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (registrationComplete && step === 4 && !pendingUploading) {
       setStep(5);
@@ -903,9 +943,10 @@ export function BookingSection() {
   };
 
   // Kilometerpaket: gleiche reine Funktion wie der Server (Server rechnet erneut).
-  const customKmParsed = customKmEnabled ? parseCustomKmInput(customKmInput) : null;
+  // Leeres Feld = kein Paket (bisheriger Tarif), kein Fehler.
+  const customKmParsed = customKmEnabled && customKmInput.trim() !== "" ? parseCustomKmInput(customKmInput) : null;
   const customKmError =
-    !customKmEnabled
+    !customKmEnabled || customKmInput.trim() === ""
       ? null
       : selectedPlanId === "km"
         ? "Beim reinen Kilometer-Tarif ist kein Kilometerpaket nötig. Bitte deaktivieren."
@@ -923,7 +964,23 @@ export function BookingSection() {
   const contractKmShown = customKmQuote ? customKmQuote.contractKm : selectedPlanEntry?.freeKm ?? 0;
   const contractRateCents = customKmQuote ? customKmQuote.rateCents : selectedPlanEntry?.extraKmCents ?? 0;
 
+
   const [paid, setPaid] = useState(false);
+
+  // Entwurf nach Änderungen speichern (erst nach der Wiederherstellung).
+  useEffect(() => {
+    if (!draftRestored || paid) return;
+    try {
+      if (!rangeFrom) { sessionStorage.removeItem(BOOKING_DRAFT_KEY); return; }
+      sessionStorage.setItem(BOOKING_DRAFT_KEY, JSON.stringify({
+        v: BOOKING_DRAFT_VERSION, savedAt: Date.now(), step: Math.min(step, 2),
+        from: rangeFrom.toISOString(), to: rangeTo?.toISOString(), startHour, selectedPlanId,
+        vehicleId: currentVehicle?.id ?? null, vehiclePlate: currentVehicle?.plate ?? null,
+        addonIds: selectedAddonIds, customKmEnabled, customKmInput,
+      }));
+    } catch { /* Speicher voll/gesperrt – Buchung funktioniert weiter */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftRestored, paid, step, rangeFrom?.getTime(), rangeTo?.getTime(), startHour, selectedPlanId, currentVehicle?.id, selectedAddonIds, customKmEnabled, customKmInput]);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [pickupCode, setPickupCode] = useState<string | null>(null);
   const [startKm, setStartKm] = useState<number>(0);
@@ -1454,7 +1511,7 @@ export function BookingSection() {
 
             {/* Kraftstoff- & Freikilometer-Hinweis (rein informativ) */}
             {selectedPlanEntry && (
-              <FuelInfoNote freeKm={selectedPlanEntry.freeKm} />
+              <FuelInfoNote freeKm={contractKmShown} />
             )}
 
             <div className="mt-10 flex justify-between">
@@ -1529,7 +1586,7 @@ export function BookingSection() {
                         <span className="font-semibold text-foreground whitespace-nowrap">{selectedPlanEntry.price} € Miete</span>
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {selectedPlanEntry.freeKm.toLocaleString("de-DE")} km inklusive · Mehrkilometer bei Rückgabe {(selectedPlanEntry.extraKmCents / 100).toFixed(2).replace(".", ",")} €/km · Kaution {DEPOSIT} € separat
+                        {contractKmShown.toLocaleString("de-DE")} km inklusive · Mehrkilometer bei Rückgabe {(contractRateCents / 100).toFixed(2).replace(".", ",")} €/km · Kaution {DEPOSIT} € separat
                       </p>
                     </div>
                   )}
@@ -2049,7 +2106,7 @@ export function BookingSection() {
                     </span>
                   </span>
                 </label>
-              <FuelInfoNote freeKm={selectedPlanEntry?.freeKm} className="mt-4" />
+              <FuelInfoNote freeKm={selectedPlanEntry ? contractKmShown : undefined} className="mt-4" />
 
               {/* Gutscheincode (z. B. Geburtstagsvorteil) – Prüfung erfolgt serverseitig */}
               <div className="mt-4 rounded-2xl border border-border bg-background p-4">
@@ -2106,6 +2163,8 @@ export function BookingSection() {
               <button
                 disabled={!liabilityAccepted || !!customKmError}
                 onClick={async () => {
+                  // Zahlung gestartet: Entwurf verwerfen (kein späteres Reaktivieren eines kostenpflichtigen Pakets)
+                  try { sessionStorage.removeItem(BOOKING_DRAFT_KEY); } catch { /* ignorieren */ }
                   // Pending Booking für /checkout/return persistieren
                   if (typeof window !== "undefined" && date && startHour !== null && selectedPlanEntry) {
                     localStorage.setItem(
