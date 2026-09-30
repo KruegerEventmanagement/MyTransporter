@@ -63,7 +63,7 @@ function AgbPage() {
               <li>5-Tage-Tarif „Projektwoche Mini": 399 € (L4H2 449 €) inklusive 1.000 Freikilometern.</li>
               <li>6-Tage-Tarif „Projektwoche": 449 € (L4H2 509 €) inklusive 1.200 Freikilometern.</li>
               <li>7-Tage-Tarif „Wochenmiete": 499 € (L4H2 569 €) inklusive 1.400 Freikilometern.</li>
-              <li>Jeder über das jeweilige Freikilometer-Kontingent hinaus gefahrene Kilometer wird bei allen Tarifen mit 0,45 € berechnet.</li>
+              <li>Jeder über das jeweilige Freikilometer-Kontingent hinaus gefahrene Kilometer wird bei Eintagestarifen (3 Stunden, 6 Stunden, 24 Stunden) mit 0,45 € berechnet; bei Mehrtagestarifen von 2 bis 6 Tagen mit 0,35 €, bei der 7-Tage-Wochenmiete mit 0,29 €.</li>
               <li>Reiner Kilometer-Tarif: 0,90 € pro gefahrenem Kilometer (Mindestbetrag L1H1 100 €, L4H2 110 €).</li>
               <li>Optionales „Umzugspaket" für 29 €: 2 dicke Spanngurte, 4 dünne Zurrgurte, 1 Rolle Klebeband/Panzertape, 1 Paar Arbeitshandschuhe, 5 Umzugsdecken.</li>
             </ul>

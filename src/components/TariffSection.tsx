@@ -132,7 +132,7 @@ export function TariffSection() {
             </table>
           </div>
           <p className="mt-3 text-xs text-muted-foreground text-center">
-            Mehrkilometer: 0,45 €/km bei allen Tarifen · Kaution 200 € (wird zurückerstattet)
+            Mehrkilometer: Tagesmieten 0,45 €/km · 2–6 Tage 0,35 €/km · Wochenmiete 0,29 €/km · Kaution 200 € (wird zurückerstattet)
           </p>
         </div>
       </div>
