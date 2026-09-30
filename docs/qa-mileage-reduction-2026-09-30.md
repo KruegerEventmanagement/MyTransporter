@@ -51,5 +51,7 @@ Der Browser sendet beim Checkout `kmCatalog` (KM_CATALOG_VERSION). Der Server pr
 
 Der AGB-Hinweis lautete zuvor „Für Buchungen vor diesem Datum gelten die bei Buchung bestätigten Freikilometer.“ Das war missverständlich, weil auch bereits vor der Veröffentlichung abgeschlossene Buchungen ihre alten Werte behalten. Neu: „Für bereits abgeschlossene Buchungen gelten unverändert die bei der Buchung bestätigten Freikilometer und Mehrkilometersätze.“ Der Stand „30. September 2026“ bleibt, es gibt keine Datums- oder Mitternachtsgrenze und keine inhaltliche AGB-Änderung. Der Km-Snapshot-Bestand (bookings.free_km, Stripe-Metadata) und die Altbuchungsauflösung sind unberührt.
 
-## Nachtrag: Mehrkilometer einheitlich 0,45 €
+## Nachtrag: Mehrkilometer einheitlich 0,45 € (ZURÜCKGENOMMEN)
+Durch den späteren Eigentümerauftrag „Individuelles Kilometerpaket“ (45/35/29 ct je Band) vor Veröffentlichung vollständig zurückgenommen; Katalogversion wieder km-2026-09-30.
+
 Eigentümerauftrag: Mehrkilometer bei Rückgabe kosten jetzt bei allen Tarifen und Klassen 0,45 €/km (vorher 0,35 € bei 2–6 Tagen, 0,29 € ab 7 Tagen/Langzeit). Unverändert: im Voraus hinzugewählte Langzeit-km (0,29/0,22/0,18), Gutschrift, Mietpreise, Kontingente. KM_CATALOG_VERSION → km-2026-09-30b, damit alte Tabs mit 0,35/0,29 € keinen Checkout mehr starten. Sessions aus km-2026-09-30 behalten ihren Snapshot (z. B. 600 km/0,35 €); Sessions ohne Version erhalten Legacy-km und Legacy-Satz (LEGACY_EXTRA_KM_CENTS). Gespeicherte Buchungen (km_price_cents) unverändert. 315 Tests bestanden.

@@ -22,4 +22,5 @@
 - [x] Review-Punkte 1–5: nativer Wechsel stoppt Streams, play()-Zeitlimit, Generation-Token, reproduzierbarer Typecheck, weitere Tests + Doppel-Eintrag-Schutz
 - [x] Gesamttests, Typprüfung, Build, Browsercheck, docs/qa-camera-2026-09-29.md
 
-- [x] Mehrkilometersatz 0,45 €/km statt 0,29 € (Umfang mit Christian klären)
+- [x] Mehrkilometersatz 0,45 € überall – durch Auftrag „Individuelles Kilometerpaket“ (45/35/29 ct) ersetzt und zurückgenommen
+- [ ] Individuelles Kilometerpaket in normaler Buchung (UI, Checkout, Webhook, Rückgabe, Storno, QA)
