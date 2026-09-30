@@ -38,6 +38,21 @@ Die Staffelwerte oben (0,29 / 0,22 / 0,18 €, Gutschrift 0,05 €) sind mein Vo
 - Anfangs nutze ich die vorhandenen Fahrzeugfotos und Standardbilder je Klasse.
 - Deine Bilder, die du nach und nach schickst, baue ich je Transporter ein.
 
+## Fahrzeugdaten unter dem Bild
+
+Unter der großen Bildansicht steht ein übersichtlicher Steckbrief des gewählten Transporters, auf dem Handy in zwei Spalten:
+
+- Ladefläche (Länge × Breite) und Laderaum-Volumen
+- Ladehöhe (Innenhöhe)
+- Außenmaße (Länge, Breite, Höhe)
+- Nutzlast und zulässiges Gesamtgewicht
+- Tankgröße (ca. Liter)
+- ungefähre Reichweite mit einer Tankfüllung (ca. km)
+- Kraftstoff, Leistung, Sitzplätze, Anhängelast
+- Abholort
+
+Maße, Gewichte und Leistung kommen aus den bereits gepflegten Fahrzeugdaten. Tankgröße und Reichweite gibt es dort noch nicht. Ich ergänze dafür zwei Felder, die du im Admin-Bereich bei jedem Fahrzeug eintragen kannst. Bis du Werte einträgst, zeige ich übliche Richtwerte je Fahrzeugmodell mit „ca.“, zum Beispiel Jumper/Ducato rund 90 l und rund 900–1.000 km. Bitte prüfe diese Richtwerte später. Leere Angaben werden ausgeblendet.
+
 ## Unverändert
 
 Normale Buchung, Tarife, Zahlung, Kalender, Werbung, AGB und Anmeldung bleiben unverändert. Die Langzeitmiete wird nicht online bezahlt, es gibt nur die Anfrage per E-Mail.
@@ -50,7 +65,8 @@ Normale Buchung, Tarife, Zahlung, Kalender, Werbung, AGB und Anmeldung bleiben u
   - Konstanten für Staffel und Gutschrift
   - bestehende `quoteLongTerm`/`longTermPriceEur` bleiben
 - Neue Tests für Dauer (Uhrzeit, Kulanz, Sommerzeit Europe/Berlin), Staffel, Gutschrift-Deckel und das Beispiel mit 2.500 km.
-- Fahrzeugdaten: `vehicles` (is_active, name, plate, vehicle_class, photo_urls, Maße) über eine öffentliche Lesefunktion, die nur unkritische Felder liefert. Keine VIN, Besitzer oder Notizen. Fallback-Bilder aus `src/assets`.
+- Fahrzeugdaten: `vehicles` (is_active, name, plate, vehicle_class, photo_urls, Maße, Gewichte, Leistung, Kraftstoff, Sitze, Anhängelast, Abholort) über eine öffentliche Lesefunktion, die nur unkritische Felder liefert. Keine VIN, Besitzer oder Notizen. Fallback-Bilder aus `src/assets`.
+- Migration, rückwärtsverträglich: `vehicles.tank_liters integer null` und `vehicles.range_km integer null`. Beide Felder werden im `VehiclesAdmin`-Formular ergänzt. Richtwerte je Modell kommen als Fallback aus dem Code.
 - Neue Komponenten:
   - `LongTermVehiclePicker`: Mini-Bilder, Karussell mit Touch-Swipe und Pfeilen, Pfeil zum nächsten Fahrzeug, ohne neue Bibliothek, falls embla schon vorhanden
   - `LongTermCalculator`
