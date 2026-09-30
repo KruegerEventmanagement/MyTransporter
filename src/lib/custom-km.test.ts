@@ -28,7 +28,7 @@ describe("Beispiele L1H1", () => {
   it("500/800-Grenzen ±1 km", () => {
     expect(eur("24h_300", 499)).toBe(189);
     expect(eur("24h_300", 501)).toBe(189.45);
-    expect(eur("24h_300", 799)).toBe(298.55);
+    expect(eur("24h_300", 799)).toBe(299); // 800er-Paket günstiger als 500 + 299 × 0,45
     expect(eur("24h_300", 801)).toBe(299.45);
   });
 });
