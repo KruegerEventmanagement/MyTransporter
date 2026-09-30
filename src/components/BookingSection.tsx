@@ -13,8 +13,8 @@ import { ageOn, MIN_DRIVER_AGE } from "@/lib/birthday";
 import { createBookingHold, releaseBookingHold } from "@/lib/booking-holds.functions";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
-import fiatDucato from "@/assets/fiat-ducato.jpg";
-import jumperL1H1 from "@/assets/citroen-jumper-l1h1.jpg";
+import { VehiclePicker, type PickerVehicle } from "./VehiclePicker";
+import { isSpeedLimited, SPEED_LIMIT_TEXT } from "@/lib/vehicle-facts";
 
 import { DocumentScanner } from "./DocumentScanner";
 import { PreDriveFlow } from "./PreDriveFlow";
@@ -72,22 +72,10 @@ import {
 
 const DEPOSIT = DEPOSIT_EUR;
 
-/** Standardbild, wenn im Fahrzeug kein eigenes Foto hinterlegt ist. */
-function fallbackPhotoFor(name?: string | null) {
-  return (name ?? "").toLowerCase().includes("l1h1") ? jumperL1H1 : fiatDucato;
-}
 
 
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8:00 - 20:00 (letzte Buchung 20 Uhr)
 
-const VEHICLE = {
-  name: "Citroën Jumper",
-  plate: "",
-  km: 0,
-  fuel: "Diesel",
-  payload: "1.200 kg",
-  length: "5,40 – 6,36 m",
-};
 
 
 type DbVehicle = {
@@ -113,6 +101,10 @@ type DbVehicle = {
   cargo_volume_m3: number | null;
   pickup_location: string | null;
   pickup_address: string | null;
+  trailer_load_braked_kg: number | null;
+  tank_liters: number | null;
+  range_km: number | null;
+  first_registration: string | null;
 };
 
 /** cm → Meter mit einer Dezimalstelle, deutsch formatiert. */
@@ -184,6 +176,7 @@ export function BookingSection() {
   /** Ausdrücklich vom Kunden gewähltes Fahrzeug (Kennzeichen) – hat Vorrang. */
   const [explicitPlate, setExplicitPlate] = useState<string | null>(null);
   const [vehicleIdx, setVehicleIdx] = useState(0);
+  const [restoreVehicle, setRestoreVehicle] = useState<{ id: string | null; plate: string | null } | null>(null);
   const [busySlots, setBusySlots] = useState<BusySlot[]>([]);
   // Eigene 15-Minuten-Reservierung: darf die eigene Auswahl nicht blockieren.
   const [ownHold, setOwnHold] = useState<{ plate: string; start: number; end: number } | null>(null);
@@ -247,7 +240,7 @@ export function BookingSection() {
       try {
         const { data, error } = await supabase
           .from("vehicles")
-          .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address")
+          .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address, trailer_load_braked_kg, tank_liters, range_km, first_registration")
           .order("created_at", { ascending: true });
         if (seq !== vehiclesSeqRef.current) return;
         if (error || !data) {
@@ -363,9 +356,6 @@ export function BookingSection() {
     ? {
         name: currentVehicle.name || `${currentVehicle.brand ?? ""} ${currentVehicle.model ?? ""}`.trim() || "Fahrzeug",
         plate: currentVehicle.plate || "-",
-        photo: currentVehicle.photo_urls?.[0] ?? fallbackPhotoFor(currentVehicle.name),
-        fuel: currentVehicle.fuel_type ?? VEHICLE.fuel,
-        payload: currentVehicle.payload_kg ? `${currentVehicle.payload_kg.toLocaleString("de-DE")} kg` : VEHICLE.payload,
         seats: currentVehicle.seats,
         power: currentVehicle.power_kw,
         totalLength: cmToM(currentVehicle.length_cm),
@@ -381,7 +371,7 @@ export function BookingSection() {
         pickupAddress: currentVehicle.pickup_address,
       }
     : {
-        name: "", plate: "", photo: fiatDucato, fuel: VEHICLE.fuel, payload: VEHICLE.payload,
+        name: "", plate: "",
         seats: null as number | null, power: null as number | null,
         totalLength: null as string | null, totalWidth: null as string | null, totalHeight: null as string | null,
         cargoLength: null as string | null, cargoWidth: null as string | null, cargoHeight: null as string | null,
@@ -487,6 +477,31 @@ export function BookingSection() {
     setExplicitPlate(vehicles[i]?.plate ?? null);
   };
 
+  // Nach Registrierung/Rückkehr: gespeichertes Fahrzeug wiederherstellen (nicht auf Index 0 fallen).
+  useEffect(() => {
+    if (!restoreVehicle || vehicles.length === 0) return;
+    const norm = (p: string) => p.replace(/\s+/g, "").toUpperCase();
+    const i = vehicles.findIndex(
+      (v) => (restoreVehicle.id && v.id === restoreVehicle.id) ||
+        (!!restoreVehicle.plate && norm(v.plate ?? "") === norm(restoreVehicle.plate)),
+    );
+    if (i >= 0) {
+      setVehicleIdx(i);
+      setExplicitPlate(vehicles[i]?.plate ?? null);
+    }
+    setRestoreVehicle(null);
+  }, [restoreVehicle, vehicles]);
+
+  const pickerVehicles: PickerVehicle[] = useMemo(
+    () =>
+      vehicles.map((v) => ({
+        ...v,
+        plate: v.plate ?? "",
+        classLabel: VEHICLE_CLASS_SHORT_LABEL[vehicleClassFromName(v.name, v.model, v.plate)],
+      })),
+    [vehicles],
+  );
+
   /**
    * Tarif: sperren, wenn KEIN freigegebenes Fahrzeug den kompletten Zeitraum
    * frei hat. Keine Einschränkung auf eine Fahrzeugklasse.
@@ -533,6 +548,8 @@ export function BookingSection() {
             to?: string;
             startHour?: number | null;
             selectedPlanId?: string | null;
+            vehicleId?: string | null;
+            vehiclePlate?: string | null;
           };
           if (draft.from) {
             setRange({
@@ -542,6 +559,10 @@ export function BookingSection() {
           }
           if (typeof draft.startHour === "number") setStartHour(draft.startHour);
           if (typeof draft.selectedPlanId === "string") setSelectedPlanId(draft.selectedPlanId);
+          if (typeof draft.vehicleId === "string" || typeof draft.vehiclePlate === "string") {
+            setRestoreVehicle({ id: draft.vehicleId ?? null, plate: draft.vehiclePlate ?? null });
+            if (draft.vehiclePlate) setExplicitPlate(draft.vehiclePlate);
+          }
         }
       } catch {
         localStorage.removeItem(AUTH_BOOKING_DRAFT_KEY);
@@ -613,6 +634,8 @@ export function BookingSection() {
         to: rangeTo?.toISOString(),
         startHour,
         selectedPlanId,
+        vehicleId: currentVehicle?.id ?? null,
+        vehiclePlate: currentVehicle?.plate ?? null,
       }),
     );
     type SignUpResult = Awaited<ReturnType<typeof supabase.auth.signUp>>;
@@ -1415,56 +1438,22 @@ export function BookingSection() {
         {step === 2 && (
           <div className="mt-12 max-w-2xl mx-auto animate-fade-in-up">
             <p className="text-center text-muted-foreground text-lg mb-2">Dein Fahrzeug</p>
-            {vehicles.length > 1 && (
-              <p className="text-center text-xs text-muted-foreground mb-6">
-                {vehicleIdx + 1} / {vehicles.length}, wische oder nutze die Pfeile
-              </p>
-            )}
-
-            <div className="relative">
-              {vehicles.length > 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => chooseVehicle((vehicleIdx - 1 + vehicles.length) % vehicles.length)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/90 border border-border shadow flex items-center justify-center hover:bg-background"
-                    aria-label="Vorheriges Fahrzeug"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => chooseVehicle((vehicleIdx + 1) % vehicles.length)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/90 border border-border shadow flex items-center justify-center hover:bg-background"
-                    aria-label="Nächstes Fahrzeug"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </>
-              )}
-
-              <div
-                className={`rounded-2xl border border-border overflow-hidden bg-card shadow-sm ${
-                  currentVehicleUnavailable ? "opacity-60 grayscale" : ""
-                }`}
-              >
-                <img
-                  src={displayVehicle.photo}
-                  alt={displayVehicle.name}
-                  className="w-full h-64 object-cover"
-                  width={1024}
-                  height={576}
-                  loading="lazy"
-                />
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-2xl font-bold text-foreground">{displayVehicle.name}</h3>
-                    <span className="px-4 py-1.5 rounded-full bg-secondary text-sm font-mono font-medium text-foreground">
-                      {displayVehicle.plate}
-                    </span>
-                  </div>
+            <div className="rounded-3xl border border-border bg-card p-4 sm:p-6 shadow-sm min-w-0">
+              {pickerVehicles.length > 0 && (
+                <VehiclePicker
+                  vehicles={pickerVehicles}
+                  selectedIndex={vehicleIdx}
+                  onSelect={chooseVehicle}
+                  statusFor={(pv) => {
+                    const v = vehicles.find((x) => x.id === pv.id);
+                    if (!v) return undefined;
+                    if (!v.is_active) return { label: "nicht verfügbar", dimmed: true };
+                    if (!isPlateAvailable(v.plate ?? "")) return { label: "belegt", disabled: true };
+                    return { label: "verfügbar" };
+                  }}
+                >
                   {currentVehicle && !currentVehicle.is_active && (
-                    <div className="mb-4 rounded-xl border border-border bg-secondary p-3 text-sm">
+                    <div className="mt-4 rounded-xl border border-border bg-secondary p-3 text-sm">
                       <p className="font-semibold text-foreground">Aktuell nicht verfügbar</p>
                       <p className="text-muted-foreground mt-1">
                         Dieser Transporter ist noch nicht freigegeben und kann derzeit nicht gebucht
@@ -1473,7 +1462,7 @@ export function BookingSection() {
                     </div>
                   )}
                   {currentVehicleUnavailable && currentVehicle?.is_active && (
-                    <div className="mb-4 rounded-xl border border-border bg-secondary p-3 text-sm">
+                    <div className="mt-4 rounded-xl border border-border bg-secondary p-3 text-sm">
                       <p className="font-semibold text-foreground">
                         {selectionWindow
                           ? `Dieser Transporter ist am ${format(new Date(selectionWindow.start), "dd.MM.yyyy", { locale: de })} von ${format(new Date(selectionWindow.start), "HH:mm")} bis ${format(new Date(selectionWindow.end), "HH:mm")} Uhr nicht verfügbar.`
@@ -1492,129 +1481,18 @@ export function BookingSection() {
                       </p>
                     </div>
                   )}
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Kraftstoff</p>
-                      <p className="font-medium text-foreground">{displayVehicle.fuel}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Nutzlast</p>
-                      <p className="font-medium text-foreground">{displayVehicle.payload}</p>
-                    </div>
-                    {displayVehicle.power && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Leistung</p>
-                        <p className="font-medium text-foreground">{displayVehicle.power} kW</p>
+                  {selectedPlanEntry && (
+                    <div className="mt-4 rounded-xl border border-border bg-secondary/50 p-3 text-sm">
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">{selectedPlanEntry.shortLabel} · {VEHICLE_CLASS_SHORT_LABEL[vehicleClass]}</span>
+                        <span className="font-semibold text-foreground whitespace-nowrap">{selectedPlanEntry.price} € Miete</span>
                       </div>
-                    )}
-                    {displayVehicle.seats && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Sitzplätze</p>
-                        <p className="font-medium text-foreground">{displayVehicle.seats}</p>
-                      </div>
-                    )}
-                    {displayVehicle.totalLength && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Außenlänge</p>
-                        <p className="font-medium text-foreground">{displayVehicle.totalLength}</p>
-                      </div>
-                    )}
-                    {displayVehicle.totalHeight && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Außenhöhe</p>
-                        <p className="font-medium text-foreground">{displayVehicle.totalHeight}</p>
-                      </div>
-                    )}
-                    {displayVehicle.cargoVolume && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Ladevolumen</p>
-                        <p className="font-medium text-foreground">{displayVehicle.cargoVolume}</p>
-                      </div>
-                    )}
-                    {displayVehicle.cargoLength && (
-                      <div className="col-span-2">
-                        <p className="text-xs text-muted-foreground">Ladefläche (L × B × H)</p>
-                        <p className="font-medium text-foreground">
-                          {[displayVehicle.cargoLength, displayVehicle.cargoWidth, displayVehicle.cargoHeight]
-                            .filter(Boolean)
-                            .join(" × ")}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {(displayVehicle.pickupLocation || displayVehicle.pickupAddress) && (
-                    <div className="mt-4 rounded-xl border border-border bg-secondary/50 p-4">
-                      <p className="text-xs text-muted-foreground">Abholort</p>
-                      <p className="font-medium text-foreground">
-                        {displayVehicle.pickupLocation ?? "Abholung"}
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {selectedPlanEntry.freeKm.toLocaleString("de-DE")} km inklusive · Mehrkilometer bei Rückgabe {(selectedPlanEntry.extraKmCents / 100).toFixed(2).replace(".", ",")} €/km · Kaution {DEPOSIT} € separat
                       </p>
-                      {displayVehicle.pickupAddress && (
-                        <p className="text-sm text-muted-foreground">{displayVehicle.pickupAddress}</p>
-                      )}
                     </div>
                   )}
-                </div>
-              </div>
-
-              {vehicles.length > 1 && (
-                <>
-                  <div className="flex justify-center gap-1.5 mt-4">
-                    {vehicles.map((_, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => chooseVehicle(i)}
-                        aria-label={`Fahrzeug ${i + 1}`}
-                        className={`w-2 h-2 rounded-full transition-all ${
-                          i === vehicleIdx ? "bg-foreground w-6" : "bg-border"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    {vehicles.map((v, i) => {
-                       const free = isPlateAvailable(v.plate ?? "");
-                      const notReleased = !v.is_active;
-                      return (
-                        <button
-                          key={v.plate ?? i}
-                          type="button"
-                          disabled={!free && !notReleased}
-                          onClick={() => chooseVehicle(i)}
-                          className={`w-full flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all hover:bg-secondary ${
-                            i === vehicleIdx ? "border-foreground" : "border-border"
-                          } ${free ? "" : "opacity-50 grayscale"} ${
-                            !free && !notReleased ? "cursor-not-allowed" : ""
-                          }`}
-                        >
-                          <span className="min-w-0">
-                            <span className="block font-medium text-foreground">{v.name}</span>
-                            <span className="block text-xs text-muted-foreground">
-                              {[
-                                cmToM(v.length_cm) ? `${cmToM(v.length_cm)} lang` : null,
-                                v.cargo_volume_m3 ? `${String(v.cargo_volume_m3).replace(".", ",")} m³` : null,
-                                v.pickup_location,
-                                `${VEHICLE_CLASS_SHORT_LABEL[classOfVehicle(v)]}-Preis`,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                          </span>
-                          <span className="text-muted-foreground whitespace-nowrap">
-                            {notReleased
-                              ? "aktuell nicht verfügbar"
-                              : free
-                                ? "verfügbar"
-                                : "nicht verfügbar"}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                </>
+                </VehiclePicker>
               )}
             </div>
 
@@ -1655,15 +1533,23 @@ export function BookingSection() {
             {total !== null && (
               <div className="mt-6 p-6 rounded-2xl bg-primary text-primary-foreground">
                 <div className="flex items-center justify-between">
-                  <p className="text-lg">Grundbetrag</p>
+                  <p className="text-lg">Gesamt</p>
                   <p className="text-3xl font-bold">{total} €</p>
                 </div>
                 <p className="text-sm opacity-80 mt-1">
                   {selectedPlanEntry &&
-                    `inkl. ${selectedPlanEntry.price} € Miete${
+                    `${selectedPlanEntry.price} € Miete${
                       addonsTotal > 0 ? ` + ${addonsTotal} € Zubehör` : ""
-                    } + ${DEPOSIT} € Kaution`}
+                    } + ${DEPOSIT} € Kaution (separat, wird erstattet)`}
                 </p>
+                {selectedPlanEntry && (
+                  <p className="text-xs opacity-80 mt-1">
+                    {displayVehicle.name} · {displayVehicle.plate} · {selectedPlanEntry.freeKm.toLocaleString("de-DE")} km inklusive, danach {(selectedPlanEntry.extraKmCents / 100).toFixed(2).replace(".", ",")} €/km bei Rückgabe
+                  </p>
+                )}
+                {isSpeedLimited(currentVehicle) && (
+                  <p className="text-xs mt-2 font-medium">{SPEED_LIMIT_TEXT}</p>
+                )}
                 {selectedPlanEntry && selectedPlanEntry.vehicleClass === "l4h2" && (
                   <p className="text-xs opacity-80 mt-2">
                     Endpreis für den langen Transporter mit Hochdach (+{L4H2_SURCHARGE_PER_DAY_EUR} €
@@ -2082,6 +1968,12 @@ export function BookingSection() {
                       addonsTotal > 0 ? ` + ${addonsTotal} € Zubehör` : ""
                     } + ${DEPOSIT} € Kaution`}
                 </p>
+                <p className="text-xs opacity-80 mt-1">
+                  {displayVehicle.name} · {displayVehicle.plate}
+                </p>
+                {isSpeedLimited(currentVehicle) && (
+                  <p className="text-xs mt-2 font-medium">{SPEED_LIMIT_TEXT}</p>
+                )}
               </div>
             )}
 
