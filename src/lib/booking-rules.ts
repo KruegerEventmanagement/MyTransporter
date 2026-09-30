@@ -96,11 +96,36 @@ export type PlanEntry = {
 
 type PlanTemplate = Omit<
   PlanEntry,
-  "price" | "basePrice" | "priceL4h2" | "priceL5h2" | "vehicleClass" | "classLabel"
+  "price" | "basePrice" | "priceL4h2" | "priceL5h2" | "vehicleClass" | "classLabel" | "extraKmCents"
 > & {
   basePrice: number;
   basePriceL4h2: number;
 };
+
+/** Mehrkilometer-Bänder: Eintagestarife, 2–6 Tage, Wochenmiete (ab 7 Tagen). */
+export type ExtraKmBand = "day" | "multi" | "week";
+
+/**
+ * Mehrkilometersätze (ct/km) je Fahrzeugklasse und Band – einzige Quelle.
+ * Aktuell für ALLE Klassen gleich (0,45 / 0,35 / 0,29 €, unverändert übernommen);
+ * klassenbezogene Abweichungen werden nur hier eingetragen.
+ */
+export const EXTRA_KM_CENTS_BY_CLASS: Record<VehicleClass, Record<ExtraKmBand, number>> = {
+  l1h1: { day: 45, multi: 35, week: 29 },
+  l4h2: { day: 45, multi: 35, week: 29 },
+  l5h2: { day: 45, multi: 35, week: 29 },
+};
+
+export function extraKmBandForDays(days: number): ExtraKmBand {
+  if (days >= 7) return "week";
+  if (days >= 2) return "multi";
+  return "day";
+}
+
+/** Mehrkilometersatz in Cent für Klasse + Tarif-Tage. */
+export function extraKmCentsFor(vehicleClass: VehicleClass, days: number): number {
+  return EXTRA_KM_CENTS_BY_CLASS[vehicleClass][extraKmBandForDays(days)];
+}
 
 
 /** Alle aktiven Tarife – verbindliche Preise für L1H1 und L4H2. */
@@ -200,6 +225,7 @@ function withClass(tpl: PlanTemplate, vehicleClass: VehicleClass): PlanEntry {
   const priceL5h2 = l5h2PriceFrom(basePriceL4h2);
   return {
     ...rest,
+    extraKmCents: extraKmCentsFor(vehicleClass, tpl.days),
     vehicleClass,
     classLabel: VEHICLE_CLASS_LABEL[vehicleClass],
     basePrice: tpl.basePrice,
