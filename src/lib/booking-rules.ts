@@ -238,6 +238,27 @@ export function freeKmForCatalogVersion(
   return legacyFreeKmFor(planId);
 }
 
+/**
+ * Kilometer-Snapshot für eine neue Buchung aus Stripe-Metadata (Webhook).
+ * Gültiger aktueller Snapshot → genau diese Werte; alte Session ohne Version →
+ * Legacy-Kontingent. Reiner km-Tarif/unbekannt → 0 km.
+ */
+export function resolveCheckoutKmSnapshot(
+  md: Record<string, string | undefined>,
+  planId: string,
+  vehicleClass: VehicleClass,
+): { freeKm: number; kmPriceCents: number } {
+  const num = (v: string | undefined) => (v != null && v !== "" ? Number(v) : NaN);
+  const f = num(md.freeKm);
+  const c = num(md.kmPriceCents);
+  const plan = getPlanById(planId, vehicleClass);
+  const fallbackCents = plan?.extraKmCents ?? KM_TARIFF_CENTS_PER_KM;
+  if (md.kmCatalog === KM_CATALOG_VERSION && Number.isInteger(f) && f >= 0) {
+    return { freeKm: f, kmPriceCents: Number.isInteger(c) && c >= 0 ? c : fallbackCents };
+  }
+  return { freeKm: freeKmForCatalogVersion(planId, md.kmCatalog ?? null, vehicleClass) ?? 0, kmPriceCents: fallbackCents };
+}
+
 /** Alte Tarif-IDs aus Altbuchungen → aktueller Katalogeintrag (nur für Labels/Freikilometer). */
 const LEGACY_PLAN_ALIASES: Record<string, string> = {
   "24h": "24h_300",

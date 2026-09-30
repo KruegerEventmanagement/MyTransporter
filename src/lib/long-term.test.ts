@@ -54,7 +54,7 @@ describe("Langzeitmiete", () => {
     expect(q.savingsEur).toBe(49.9);
     expect(q.isExactWeekDiscount).toBe(true);
     expect(q.depositEur).toBe(200);
-    expect(q.freeKm).toBe(933);
+    expect(q.freeKm).toBe(622);
     expect(q.extraKmEur).toBe(0.29);
     expect(longTermPriceEur(7, "l4h2")).toBe(512.1);
     expect(longTermPriceEur(7, "l5h2")).toBe(526.5);
@@ -87,12 +87,13 @@ describe("Langzeitmiete", () => {
     expect(longTermPriceEur(120, "l4h2") / 120).toBeCloseTo(2599 / 60, 4);
   });
 
-  it("Freikilometer: 4.000 km je 30 Tage, tagesgenau proportional", () => {
-    expect(longTermFreeKm(30)).toBe(4000);
-    expect(longTermFreeKm(45)).toBe(6000);
-    expect(longTermFreeKm(60)).toBe(8000);
-    expect(longTermFreeKm(7)).toBe(933);
-    expect(longTermFreeKm(90)).toBe(12000);
+  it("Freikilometer: 2/3 von 4.000 km je 30 Tage, erst am Ende gerundet", () => {
+    expect(longTermFreeKm(30)).toBe(2667);
+    expect(longTermFreeKm(45)).toBe(4000);
+    expect(longTermFreeKm(60)).toBe(5333);
+    expect(longTermFreeKm(7)).toBe(622);
+    expect(longTermFreeKm(14)).toBe(1244);
+    expect(longTermFreeKm(90)).toBe(8000);
     expect(longTermFreeKm(0)).toBe(0);
   });
 

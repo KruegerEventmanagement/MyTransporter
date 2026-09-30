@@ -9,8 +9,7 @@ import {
   KM_TARIFF_CENTS_PER_KM,
   KM_TARIFF_MIN_EUR,
   type VehicleClass,
-  KM_CATALOG_VERSION,
-  freeKmForCatalogVersion,
+  resolveCheckoutKmSnapshot,
 } from "@/lib/booking-rules";
 import { buildAddonSnapshot } from "@/lib/addons";
 
@@ -247,16 +246,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
   const planPrice = Math.round(planPriceFull * 100 - appliedDiscountCents) / 100;
   // Kilometer-Snapshot: aktueller Checkout → Metadata-Snapshot; alte Session ohne
   // Version → Legacy-Kontingent (nie das gekürzte neue). Reiner km-Tarif → 0.
-  const mdFreeKm = md.freeKm != null && md.freeKm !== "" ? Number(md.freeKm) : NaN;
-  const mdKmCents = md.kmPriceCents != null && md.kmPriceCents !== "" ? Number(md.kmPriceCents) : NaN;
-  const snapshotValid = md.kmCatalog === KM_CATALOG_VERSION && Number.isInteger(mdFreeKm) && mdFreeKm >= 0;
-  const freeKm = snapshotValid
-    ? mdFreeKm
-    : (freeKmForCatalogVersion(planId, (md.kmCatalog as string | undefined) ?? null, vehicleClass) ?? 0);
-  const kmPriceCents =
-    snapshotValid && Number.isInteger(mdKmCents) && mdKmCents >= 0
-      ? mdKmCents
-      : (planEntry?.extraKmCents ?? KM_TARIFF_CENTS_PER_KM);
+  const { freeKm, kmPriceCents } = resolveCheckoutKmSnapshot(md as Record<string, string | undefined>, planId, vehicleClass);
 
   const addons = buildAddonSnapshot(addonIds);
   const addonsTotalCents = addons.reduce((s, a) => s + a.price_cents, 0);
