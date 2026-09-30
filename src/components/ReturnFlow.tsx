@@ -13,7 +13,7 @@ import {
 import { useServerFn } from "@tanstack/react-start";
 import { recognizeOdometer } from "@/lib/odometer-ai.functions";
 import { notifyAdmin } from "@/lib/admin-notify";
-import { getPlanById, KM_TARIFF_CENTS_PER_KM, legacyFreeKmFor } from "@/lib/booking-rules";
+import { getPlanById, KM_TARIFF_CENTS_PER_KM, bookingFreeKm } from "@/lib/booking-rules";
 
 const TEST_MODE_ADMIN_EMAIL = "krueger.christian96@gmx.de";
 
@@ -326,7 +326,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
     const start = typeof startKm === "number" ? startKm : 0;
     const plan = planId && planId !== "km" ? getPlanById(planId) : null;
     // Gespeicherter Buchungs-Snapshot gilt; fehlt er, Legacy-Kontingent (nie gekürzter Neukatalog).
-    const free = typeof freeKm === "number" ? freeKm : (planId ? (legacyFreeKmFor(planId) ?? plan?.freeKm ?? 0) : 0);
+    const free = bookingFreeKm(planId, freeKm);
     const pricePerKmCents =
       typeof kmPriceCents === "number"
         ? kmPriceCents

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { quoteRental } from "@/lib/rental-quote";
-import { EXTRA_KM_CENTS_BY_CLASS, getPlanById, planCatalog, VEHICLE_CLASSES, KM_CATALOG_VERSION, legacyFreeKmFor, resolveCheckoutKmSnapshot, KM_TARIFF_CENTS_PER_KM } from "@/lib/booking-rules";
+import { EXTRA_KM_CENTS_BY_CLASS, getPlanById, planCatalog, VEHICLE_CLASSES, KM_CATALOG_VERSION, legacyFreeKmFor, resolveCheckoutKmSnapshot, bookingFreeKm, KM_TARIFF_CENTS_PER_KM } from "@/lib/booking-rules";
 import { longTermFreeKm } from "@/lib/long-term";
 import { extraKmCostEur, LONG_TERM_KM_CONFIG, LONG_TERM_MAX_KM, rentalDaysFromDateTimes } from "@/lib/long-term";
 import { buildRequestMail, returnLabel } from "@/components/LongTermPlanner";
@@ -184,5 +184,22 @@ describe("Km-Reduktion um ein Drittel (2/3)", () => {
     expect(resolveCheckoutKmSnapshot({ kmCatalog: KM_CATALOG_VERSION, freeKm: "0" }, "multi_3d", "l1h1").freeKm).toBe(0);
     expect(resolveCheckoutKmSnapshot({}, "km", "l1h1")).toEqual({ freeKm: 0, kmPriceCents: KM_TARIFF_CENTS_PER_KM });
     expect(resolveCheckoutKmSnapshot({}, "24h_800", "l1h1").freeKm).toBe(800);
+  });
+});
+
+describe("Altbuchungen behalten ihre Kilometer", () => {
+  const extra = (driven: number, planId: string, stored: number | null, cents: number) => Math.max(0, driven - bookingFreeKm(planId, stored)) * cents;
+  it("Alt 3 Tage / 900 km gespeichert, 900 gefahren → 0 €", () => {
+    expect(extra(900, "multi_3d", 900, 35)).toBe(0);
+  });
+  it("Alt 24h_300 / 300 km gespeichert, 300 gefahren → 0 €", () => {
+    expect(extra(300, "24h_300", 300, 45)).toBe(0);
+  });
+  it("gespeicherte 0 km bleiben 0 (nullish statt ||)", () => {
+    expect(bookingFreeKm("24h", 0)).toBe(0);
+  });
+  it("fehlender Snapshot → Legacy, nicht neuer Katalog", () => {
+    expect(bookingFreeKm("multi_3d", null)).toBe(900);
+    expect(bookingFreeKm("km", null)).toBe(0);
   });
 });

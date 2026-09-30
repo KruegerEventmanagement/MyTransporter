@@ -259,6 +259,16 @@ export function resolveCheckoutKmSnapshot(
   return { freeKm: freeKmForCatalogVersion(planId, md.kmCatalog ?? null, vehicleClass) ?? 0, kmPriceCents: fallbackCents };
 }
 
+/**
+ * Freikilometer einer bestehenden Buchung: gespeicherter Snapshot gilt strikt
+ * (0 ist gültig); nur wenn er fehlt → Legacy-Katalog, nie der gekürzte neue.
+ */
+export function bookingFreeKm(planId: string | null | undefined, storedFreeKm: number | null | undefined): number {
+  if (typeof storedFreeKm === "number" && Number.isFinite(storedFreeKm)) return storedFreeKm;
+  if (!planId || planId === "km") return 0;
+  return legacyFreeKmFor(planId) ?? 0;
+}
+
 /** Alte Tarif-IDs aus Altbuchungen → aktueller Katalogeintrag (nur für Labels/Freikilometer). */
 const LEGACY_PLAN_ALIASES: Record<string, string> = {
   "24h": "24h_300",
