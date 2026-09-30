@@ -325,7 +325,8 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
     }
     const start = typeof startKm === "number" ? startKm : 0;
     const plan = planId && planId !== "km" ? getPlanById(planId) : null;
-    const free = typeof freeKm === "number" ? freeKm : (plan?.freeKm ?? 0);
+    // Gespeicherter Buchungs-Snapshot gilt; fehlt er, Legacy-Kontingent (nie gekürzter Neukatalog).
+    const free = typeof freeKm === "number" ? freeKm : (planId ? (legacyFreeKmFor(planId) ?? plan?.freeKm ?? 0) : 0);
     const pricePerKmCents =
       typeof kmPriceCents === "number"
         ? kmPriceCents

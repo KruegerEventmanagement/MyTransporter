@@ -6,9 +6,13 @@
  * Der Zahlbetrag wird ausschließlich serverseitig aus diesem Katalog berechnet.
  *
  * Preis-Invariante: Grundtarif + Mehrkilometer ist nie günstiger als ein
- * beworbenes Kilometerpaket. Beispiel L1H1: 24h/300 km (99 €) + 200 km × 0,45 €
- * = 189 € = 24h/500-km-Paket; 24h/800 km kostet als Paket 299 € statt 324 €
- * nach Einzelabrechnung.
+ * beworbenes Kilometerpaket. Beispiel L1H1: 24h/200 km (99 €) + 300 km × 0,45 €
+ * = 234 € > 189 € (24h/500-km-Paket); 24h/800 km kostet als Paket 299 € statt 369 €.
+ *
+ * Kilometer-Katalogversion: Seit KM_CATALOG_VERSION sind die zeitabhängigen
+ * Inklusivkilometer um ein Drittel reduziert (Faktor 2/3). Bestehende Buchungen
+ * behalten ihre gespeicherten free_km/km_price_cents; Checkouts ohne Version
+ * werden mit LEGACY_FREE_KM aufgelöst (siehe freeKmForCatalogVersion).
  */
 
 export const EARLIEST_START_HOUR = 8;
@@ -132,19 +136,19 @@ export function extraKmCentsFor(vehicleClass: VehicleClass, days: number): numbe
 const PLAN_TEMPLATES: PlanTemplate[] = [
   {
     id: "3h", label: "3 Stunden Express", shortLabel: "3 h Express",
-    days: 1, durationHours: 3, basePrice: 49, basePriceL4h2: 59, freeKm: 100,
+    days: 1, durationHours: 3, basePrice: 49, basePriceL4h2: 59, freeKm: 67,
     returnRule: "Rückgabe nach 3 Stunden",
     idealFor: "Kurze Transporte, Möbelhaus, Kleinanzeigen-Abholung",
   },
   {
     id: "6h", label: "6 Stunden Umzug Mini", shortLabel: "6 h Mini",
-    days: 1, durationHours: 6, basePrice: 69, basePriceL4h2: 79, freeKm: 200,
+    days: 1, durationHours: 6, basePrice: 69, basePriceL4h2: 79, freeKm: 133,
     returnRule: "Rückgabe nach 6 Stunden",
     idealFor: "Kleine Umzüge, mehrere Fahrten, Entrümpelung",
   },
   {
-    id: "24h_300", label: "24 Stunden Umzugstag", shortLabel: "24 h · 300 km",
-    days: 1, durationHours: 24, basePrice: 99, basePriceL4h2: 109, freeKm: 300,
+    id: "24h_300", label: "24 Stunden Umzugstag", shortLabel: "24 h · 200 km",
+    days: 1, durationHours: 24, basePrice: 99, basePriceL4h2: 109, freeKm: 200,
     returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit",
     idealFor: "Kompletter Umzugstag, stressfreies Be- und Entladen",
     highlight: "popular", highlightLabel: "Beliebtester Tarif",
@@ -164,43 +168,75 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
   },
   {
     id: "multi_2d", label: "2 Tage Kurzprojekt", shortLabel: "2 Tage",
-    days: 2, durationHours: 48, basePrice: 189, basePriceL4h2: 209, freeKm: 600,
+    days: 2, durationHours: 48, basePrice: 189, basePriceL4h2: 209, freeKm: 400,
     returnRule: "Rückgabe nach 2 Tagen zur gleichen Uhrzeit",
     idealFor: "Wochenende, kleiner Umzug, Möbeltransport",
   },
   {
     id: "multi_3d", label: "3 Tage Umzug Plus", shortLabel: "3 Tage",
-    days: 3, durationHours: 72, basePrice: 269, basePriceL4h2: 299, freeKm: 900,
+    days: 3, durationHours: 72, basePrice: 269, basePriceL4h2: 299, freeKm: 600,
     returnRule: "Rückgabe nach 3 Tagen zur gleichen Uhrzeit",
     idealFor: "Entspannter Umzug, Abbau, Transport und Aufbau ohne Zeitdruck",
     highlight: "popular", highlightLabel: "Beliebt für Umzüge",
   },
   {
     id: "multi_4d", label: "4 Tage Renovierungs-Tarif", shortLabel: "4 Tage",
-    days: 4, durationHours: 96, basePrice: 339, basePriceL4h2: 379, freeKm: 1200,
+    days: 4, durationHours: 96, basePrice: 339, basePriceL4h2: 379, freeKm: 800,
     returnRule: "Rückgabe nach 4 Tagen zur gleichen Uhrzeit",
     idealFor: "Renovierung, Baumarkt, Möbelhaus, Entsorgung",
   },
   {
     id: "multi_5d", label: "5 Tage Projektwoche Mini", shortLabel: "5 Tage",
-    days: 5, durationHours: 120, basePrice: 399, basePriceL4h2: 449, freeKm: 1500,
+    days: 5, durationHours: 120, basePrice: 399, basePriceL4h2: 449, freeKm: 1000,
     returnRule: "Rückgabe nach 5 Tagen zur gleichen Uhrzeit",
     idealFor: "Längere Projekte, mehrere Transporte, Firmen oder Umbauten",
   },
   {
     id: "multi_6d", label: "6 Tage Projektwoche", shortLabel: "6 Tage",
-    days: 6, durationHours: 144, basePrice: 449, basePriceL4h2: 509, freeKm: 1800,
+    days: 6, durationHours: 144, basePrice: 449, basePriceL4h2: 509, freeKm: 1200,
     returnRule: "Rückgabe nach 6 Tagen zur gleichen Uhrzeit",
     idealFor: "Intensive Umzugswoche, Renovierung, gewerbliche Nutzung",
   },
   {
     id: "multi_7d", label: "7 Tage Wochenmiete", shortLabel: "7 Tage Wochenmiete",
-    days: 7, durationHours: 168, basePrice: 499, basePriceL4h2: 569, freeKm: 2100,
+    days: 7, durationHours: 168, basePrice: 499, basePriceL4h2: 569, freeKm: 1400,
     returnRule: "Rückgabe nach 7 Tagen zur gleichen Uhrzeit",
     idealFor: "Komplette Projektwoche, Baustelle, Umzug, Firmen",
     highlight: "best_daily", highlightLabel: "Bester Tagespreis",
   },
 ];
+
+/** Aktuelle Kilometer-Katalogversion (wird in Stripe-Metadata festgehalten). */
+export const KM_CATALOG_VERSION = "km-2026-09-30";
+
+/** Inklusivkilometer VOR dem 30.09.2026 – nur für Checkouts/Buchungen ohne Versions-Snapshot. */
+export const LEGACY_FREE_KM: Record<string, number> = {
+  "3h": 100, "6h": 200, "24h_300": 300, "24h_500": 500, "24h_800": 800,
+  multi_2d: 600, multi_3d: 900, multi_4d: 1200, multi_5d: 1500, multi_6d: 1800, multi_7d: 2100,
+};
+
+/** Alt-Kontingent eines Tarifs (auch Alias-IDs und week_xN = 2100 × N); null wenn unbekannt. */
+export function legacyFreeKmFor(planId: string): number | null {
+  const id = LEGACY_PLAN_ALIASES[planId] ?? planId;
+  if (id in LEGACY_FREE_KM) return LEGACY_FREE_KM[id];
+  const m = /^week_x(\d+)$/.exec(id);
+  if (m) return LEGACY_FREE_KM.multi_7d * Math.max(1, parseInt(m[1], 10));
+  return null;
+}
+
+/**
+ * Inklusivkilometer passend zur Katalogversion eines Checkouts:
+ * aktuelle Version → aktueller Katalog, fehlende/alte Version → Legacy-Werte.
+ * Niemals ein altes Checkout mit dem gekürzten Kontingent auflösen.
+ */
+export function freeKmForCatalogVersion(
+  planId: string,
+  version: string | null | undefined,
+  vehicleClass: VehicleClass = "l1h1",
+): number | null {
+  if (version === KM_CATALOG_VERSION) return getPlanById(planId, vehicleClass)?.freeKm ?? null;
+  return legacyFreeKmFor(planId);
+}
 
 /** Alte Tarif-IDs aus Altbuchungen → aktueller Katalogeintrag (nur für Labels/Freikilometer). */
 const LEGACY_PLAN_ALIASES: Record<string, string> = {
