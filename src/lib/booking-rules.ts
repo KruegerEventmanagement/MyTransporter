@@ -250,14 +250,17 @@ export function freeKmForCatalogVersion(
   version: string | null | undefined,
   vehicleClass: VehicleClass = "l1h1",
 ): number | null {
-  if (version === KM_CATALOG_VERSION) return getPlanById(planId, vehicleClass)?.freeKm ?? null;
+  if (version === KM_CATALOG_VERSION || (PREVIOUS_KM_CATALOG_VERSIONS as readonly string[]).includes(version ?? "")) {
+    return getPlanById(planId, vehicleClass)?.freeKm ?? null;
+  }
   return legacyFreeKmFor(planId);
 }
 
 /**
  * Kilometer-Snapshot für eine neue Buchung aus Stripe-Metadata (Webhook).
- * Gültiger aktueller Snapshot → genau diese Werte; alte Session ohne Version →
- * Legacy-Kontingent. Reiner km-Tarif/unbekannt → 0 km.
+ * Gültiger Snapshot (aktuelle oder vorherige Version) → genau diese Werte;
+ * alte Session ohne Snapshot → Legacy-Kontingent UND Legacy-Mehrkilometersatz,
+ * damit nie ein höherer Satz als beim Checkout angezeigt berechnet wird.
  */
 export function resolveCheckoutKmSnapshot(
   md: Record<string, string | undefined>,
@@ -268,8 +271,11 @@ export function resolveCheckoutKmSnapshot(
   const f = num(md.freeKm);
   const c = num(md.kmPriceCents);
   const plan = getPlanById(planId, vehicleClass);
-  const fallbackCents = plan?.extraKmCents ?? KM_TARIFF_CENTS_PER_KM;
-  if (md.kmCatalog === KM_CATALOG_VERSION && Number.isInteger(f) && f >= 0) {
+  const isCurrent = md.kmCatalog === KM_CATALOG_VERSION;
+  const legacyCents = plan && plan.id !== "km" ? LEGACY_EXTRA_KM_CENTS[extraKmBandForDays(plan.days)] : KM_TARIFF_CENTS_PER_KM;
+  const fallbackCents = isCurrent ? (plan?.extraKmCents ?? KM_TARIFF_CENTS_PER_KM) : legacyCents;
+  const known = isCurrent || (PREVIOUS_KM_CATALOG_VERSIONS as readonly string[]).includes(md.kmCatalog ?? "");
+  if (known && Number.isInteger(f) && f >= 0) {
     return { freeKm: f, kmPriceCents: Number.isInteger(c) && c >= 0 ? c : fallbackCents };
   }
   return { freeKm: freeKmForCatalogVersion(planId, md.kmCatalog ?? null, vehicleClass) ?? 0, kmPriceCents: fallbackCents };
