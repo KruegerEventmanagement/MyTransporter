@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { checkoutKmCatalogError, KM_CATALOG_OUTDATED_MESSAGE } from "./booking-rules";
 import { quoteRental } from "@/lib/rental-quote";
 import { EXTRA_KM_CENTS_BY_CLASS, getPlanById, planCatalog, VEHICLE_CLASSES, KM_CATALOG_VERSION, legacyFreeKmFor, resolveCheckoutKmSnapshot, bookingFreeKm, KM_TARIFF_CENTS_PER_KM } from "@/lib/booking-rules";
 import { longTermFreeKm } from "@/lib/long-term";
