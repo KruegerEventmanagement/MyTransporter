@@ -157,6 +157,7 @@ function VehicleEditor({
 
   const numField = (key: keyof Vehicle) => ({
     type: "number" as const,
+    step: "any",
     value: (form[key] as number | null) ?? "",
     onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
       set(key, (e.target.value === "" ? null : Number(e.target.value)) as never),

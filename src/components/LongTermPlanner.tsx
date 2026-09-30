@@ -11,7 +11,7 @@ import { isSpeedLimited, SPEED_LIMIT_TEXT } from "@/lib/vehicle-facts";
 type LtVehicle = PickerVehicle & { brand: string | null; model: string | null; vehicle_class: string | null };
 
 const FIELDS =
-  "id, name, plate, brand, model, vehicle_class, fuel_type, power_kw, seats, max_weight_kg, payload_kg, trailer_load_braked_kg, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address, photo_urls, tank_liters, range_km, first_registration";
+  "id, name, plate, brand, model, vehicle_class, fuel_type, power_kw, seats, max_weight_kg, payload_kg, trailer_load_braked_kg, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address, photo_urls, tank_liters, range_km, first_registration, cargo_width_between_arches_cm, rear_door_width_cm, rear_door_height_cm, side_door_width_cm, side_door_height_cm, specs_status, specs_source";
 
 function classOf(v: { vehicle_class: string | null; name: string; model: string | null }): VehicleClass {
   return vehicleClassFromName(v.vehicle_class, v.name, v.model);

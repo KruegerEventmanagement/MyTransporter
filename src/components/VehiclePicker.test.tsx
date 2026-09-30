@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { VehiclePicker, type PickerVehicle } from "./VehiclePicker";
-import { vehicleSpecRows } from "@/lib/vehicle-facts";
+import { vehicleSpecNote, vehicleSpecRows } from "@/lib/vehicle-facts";
 
 afterEach(cleanup);
 
@@ -67,13 +67,28 @@ describe("vehicleSpecRows", () => {
     const rows = vehicleSpecRows({ id: "43261a5f-cd8a-4bd4-a3db-f89c4741c463", payload_kg: 3000, max_weight_kg: 3500, cargo_height_cm: 214, cargo_volume_m3: 17, first_registration: "2011-11-25" });
     const get = (l: string) => rows.find((r) => r.label === l);
     expect(get("Nutzlast")!.value).toBe("noch nicht bestätigt");
-    expect(get("Ladehöhe")!.value).toBe("noch nicht bestätigt");
+    expect(get("Innenhöhe")!.value).toBe("noch nicht bestätigt");
     expect(get("Ladevolumen")!.value).toBe("noch nicht bestätigt");
-    expect(get("Zul. Gesamtgewicht")!.value).toBe("3.500 kg");
-    expect(get("Erstzulassung")!.value).toBe("25.11.2011");
+    expect(get("Erstzulassung")!.value).toBe("noch nicht bestätigt");
+    expect(get("Zul. Gesamtgewicht")).toBeDefined();
     expect(rows.some((r) => /Baujahr/.test(r.label))).toBe(false);
     expect(get("Tankgröße")).toBeUndefined();
     expect(get("Reichweite")).toBeUndefined();
     expect(vehicleSpecRows({ id: "x" })).toEqual([]);
+  });
+});
+
+describe("Werksmaße L1H1", () => {
+  it("mm-genau, Innenhöhe/Hecktür getrennt, Quelle und Hinweis", () => {
+    const v = { id: "02220fa6-9a77-4069-8a24-f7028365808b", length_cm: 496.3, width_cm: 205, height_cm: 225.4, cargo_length_cm: 267, cargo_width_cm: 187, cargo_height_cm: 166.2, cargo_width_between_arches_cm: 142.2, rear_door_width_cm: 156.2, rear_door_height_cm: 152, side_door_width_cm: 107.5, side_door_height_cm: 148.5, first_registration: "2007-04-03", specs_status: "werksangabe_modellvariante", specs_source: "Citroën Prospekt 2010" };
+    const rows = Object.fromEntries(vehicleSpecRows(v).map((r) => [r.label, r.value]));
+    expect(rows["Außenmaße (L × B ohne Spiegel × H)"]).toBe("4,963 m × 2,05 m × 2,254 m");
+    expect(rows["Innenhöhe"]).toBe("1,662 m");
+    expect(rows["Breite zwischen Radkästen"]).toBe("1,422 m");
+    expect(rows["Hecktüröffnung (B × H)"]).toBe("1,562 m × 1,52 m");
+    expect(rows["Schiebetüröffnung (B × H)"]).toBe("1,075 m × 1,485 m");
+    expect(rows["Erstzulassung"]).toBe("03.04.2007");
+    expect(vehicleSpecNote(v)).toMatch(/Werksmaße der Modellvariante.*nachmessen/);
+    expect(vehicleSpecNote({ id: "43261a5f-cd8a-4bd4-a3db-f89c4741c463" })).toMatch(/noch nicht/);
   });
 });
