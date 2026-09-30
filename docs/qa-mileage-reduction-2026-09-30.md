@@ -46,3 +46,7 @@ Echter Stripe-Checkout/Webhook-Lauf (nur Unit-Tests), Buchungsbestätigungs- und
 
 ## Nachtrag: Alter Browser-Tab
 Der Browser sendet beim Checkout `kmCatalog` (KM_CATALOG_VERSION). Der Server prüft vor jedem neuen Checkout mit `checkoutKmCatalogError`; fehlt die Version oder ist sie veraltet (alter Tab mit 300/900 km), wird keine Session erzeugt und die Meldung „Tarife wurden aktualisiert. Bitte Seite neu laden und die aktuellen Konditionen prüfen.“ angezeigt. Die Version ist kein Preis-Input; Kilometer/Preise rechnet weiterhin der Server. Bereits existierende Stripe-Sessions sind unberührt (Webhook: Snapshot bzw. Legacy). Tests in rental-quote.test.ts; kein echter Checkout/keine Mail ausgeführt.
+
+## Nachtrag: Textpräzisierung AGB
+
+Der AGB-Hinweis lautete zuvor „Für Buchungen vor diesem Datum gelten die bei Buchung bestätigten Freikilometer.“ Das war missverständlich, weil auch bereits vor der Veröffentlichung abgeschlossene Buchungen ihre alten Werte behalten. Neu: „Für bereits abgeschlossene Buchungen gelten unverändert die bei der Buchung bestätigten Freikilometer und Mehrkilometersätze.“ Der Stand „30. September 2026“ bleibt, es gibt keine Datums- oder Mitternachtsgrenze und keine inhaltliche AGB-Änderung. Der Km-Snapshot-Bestand (bookings.free_km, Stripe-Metadata) und die Altbuchungsauflösung sind unberührt.
