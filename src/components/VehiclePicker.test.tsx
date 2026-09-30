@@ -36,7 +36,7 @@ describe("VehiclePicker", () => {
     expect(screen.getByText("Noch kein Foto vorhanden")).toBeTruthy();
     fireEvent.click(screen.getByLabelText(/PF MY 1003 auswählen/));
     expect(screen.getByText("Foto 1 / 6")).toBeTruthy();
-    expect(mainImg()!.getAttribute("src")).toBe("https://img/b84d0d58-8f7a-4111-ae7b-796fc2f587a1-0.jpg");
+    expect(mainImg()!.getAttribute("src")).toBe("https://img/b84d0d58-8f7a-4111-ae7b-796fc2f587a1-2.jpg");
   });
   it("1 Bild: keine Bildpfeile", () => {
     render(<VehiclePicker vehicles={[LEO102]} selectedIndex={0} onSelect={() => {}} />);
