@@ -33,3 +33,6 @@ Echter Stripe-Checkout/Webhook, echte Mails, echte Stornoerstattung, iPhone-Ger�
 6. Browser localhost (1280 und 375 px, zwei Kalendertage → 24 h, 09:00, L1H1 LEO MY 102): 503 → Aufschlag 91,35 € (über 24 h · 500 km), Miete 190,35 €, Kaution 200 €, 503 km gebucht; Neuladen → identische Werte, Fahrzeug und „503 km inklusive“; leeren → 200 km, 99 €, nicht gesperrt; „12,5“ → gesperrt; aus → Originaltarif. Keine Holds/Zahlungen/Mails. Bild: docs/qa-custom-mileage-375-reload.png.
 
 Offen: echter Stripe-Lauf, echte Mails/Erstattung, iPhone-Gerät; Wiederherstellung nach E-Mail-Bestätigung weiterhin über den bestehenden Registrierungsentwurf (nicht erneut im Browser geprüft).
+
+## Nachtrag 19:58
+Tarifzeile im Fahrzeugschritt zeigt Miete inkl. Paket (503 km → „190,35 € Miete inkl. Kilometerpaket“; leer/aus → „99 € Miete“, 200 km), lokal geprüft. Kaution wird aus resolveBookingPricing in bookings.deposit geschrieben (Paket: Snapshot-Wert; bisheriger Pfad: 200 €); Test mit abweichendem Snapshot-Betrag (150 €).
