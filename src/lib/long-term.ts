@@ -11,7 +11,7 @@
  * Die Kaution bleibt immer unberührt und wird nicht rabattiert.
  */
 
-import { DEPOSIT_EUR, getPlanById, type VehicleClass } from "@/lib/booking-rules";
+import { DEPOSIT_EUR, extraKmCentsFor, getPlanById, type VehicleClass } from "@/lib/booking-rules";
 
 export const LONG_TERM_MIN_DAYS = 7;
 /** Rabatt, der bei genau 7 Tagen gegenüber dem Wochenpreis gilt. */
@@ -26,8 +26,8 @@ export const LONG_TERM_ANCHORS: Record<VehicleClass, Record<30 | 45 | 60, number
 
 /** Inklusiv-Kilometer je 30 Miettage. */
 export const LONG_TERM_FREE_KM_PER_30_DAYS = 4000;
-/** Mehrkilometer-Satz (Wochen-/Langzeitniveau) in Euro pro km. */
-export const LONG_TERM_EXTRA_KM_EUR = 0.29;
+/** Mehrkilometer-Satz bei Rückgabe (Wochen-/Langzeitniveau, L1H1) in Euro pro km. */
+export const LONG_TERM_EXTRA_KM_EUR = extraKmCentsFor("l1h1", 7) / 100;
 
 /** Inklusiv-Kilometer für eine Anzahl Miettage (proportional, auf ganze km gerundet). */
 export function longTermFreeKm(days: number): number {
@@ -151,7 +151,7 @@ export function quoteLongTerm(
     tierLabel: longTermTierLabel(days),
     depositEur: DEPOSIT_EUR,
     freeKm: longTermFreeKm(days),
-    extraKmEur: LONG_TERM_EXTRA_KM_EUR,
+    extraKmEur: longTermKmConfig(vehicleClass).returnExtraKmEur,
   };
 }
 
@@ -165,7 +165,7 @@ export function formatEur(value: number): string {
 
 /** Kulanz in Minuten, bevor ein angefangener 24-h-Block als weiterer Tag zählt. */
 export const LONG_TERM_GRACE_MINUTES = 60;
-/** Gestaffelter Mehrkilometer-Preis für Wunschkilometer über dem Inklusivkontingent. */
+/** Gestaffelter Preis für vorab hinzugewählte Kilometer über dem Inklusivkontingent. */
 export const LONG_TERM_KM_TIERS: Array<{ upToExtraKm: number; eurPerKm: number }> = [
   { upToExtraKm: 1000, eurPerKm: 0.29 },
   { upToExtraKm: 5000, eurPerKm: 0.22 },
@@ -175,8 +175,48 @@ export const LONG_TERM_KM_TIERS: Array<{ upToExtraKm: number; eurPerKm: number }
 export const LONG_TERM_UNUSED_KM_CREDIT_EUR = 0.05;
 /** Maximale Gutschrift in Prozent des Grundpreises. */
 export const LONG_TERM_MAX_CREDIT_PERCENT = 10;
+/** Obergrenze der Wunschkilometer im Rechner. */
+export const LONG_TERM_MAX_KM = 30000;
+
+export type LongTermKmConfig = {
+  tiers: Array<{ upToExtraKm: number; eurPerKm: number }>;
+  unusedKmCreditEur: number;
+  maxCreditPercent: number;
+  /** Vertraglicher Mehrkilometersatz bei Rückgabe (über gebuchtes Kontingent). */
+  returnExtraKmEur: number;
+};
+
+/**
+ * Km-Konfiguration je Fahrzeugklasse – aktuell für alle Klassen gleich
+ * (bestehende Werte unverändert). Abweichungen nur hier eintragen.
+ */
+export const LONG_TERM_KM_CONFIG: Record<VehicleClass, LongTermKmConfig> = {
+  l1h1: { tiers: LONG_TERM_KM_TIERS, unusedKmCreditEur: LONG_TERM_UNUSED_KM_CREDIT_EUR, maxCreditPercent: LONG_TERM_MAX_CREDIT_PERCENT, returnExtraKmEur: extraKmCentsFor("l1h1", 7) / 100 },
+  l4h2: { tiers: LONG_TERM_KM_TIERS, unusedKmCreditEur: LONG_TERM_UNUSED_KM_CREDIT_EUR, maxCreditPercent: LONG_TERM_MAX_CREDIT_PERCENT, returnExtraKmEur: extraKmCentsFor("l4h2", 7) / 100 },
+  l5h2: { tiers: LONG_TERM_KM_TIERS, unusedKmCreditEur: LONG_TERM_UNUSED_KM_CREDIT_EUR, maxCreditPercent: LONG_TERM_MAX_CREDIT_PERCENT, returnExtraKmEur: extraKmCentsFor("l5h2", 7) / 100 },
+};
+
+export function longTermKmConfig(vehicleClass: VehicleClass): LongTermKmConfig {
+  return LONG_TERM_KM_CONFIG[vehicleClass];
+}
 
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+/** Echtes Kalenderdatum YYYY-MM-DD (kein 31.02.). */
+export function isRealIsoDate(v: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v ?? "")) return false;
+  const t = Date.parse(`${v}T00:00:00Z`);
+  return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === v;
+}
+
+/** Mietdauer in Minuten aus Datum + Uhrzeit (Wandzeit); null bei ungültiger Eingabe. */
+export function rentalMinutesFromDateTimes(startDate: string, startTime: string, endDate: string, endTime: string): number | null {
+  if (!isRealIsoDate(startDate) || !isRealIsoDate(endDate) || !TIME_RE.test(startTime ?? "") || !TIME_RE.test(endTime ?? "")) return null;
+  const s = Date.parse(`${startDate}T${startTime}:00Z`);
+  const e = Date.parse(`${endDate}T${endTime}:00Z`);
+  if (Number.isNaN(s) || Number.isNaN(e) || e <= s) return null;
+  return (e - s) / 60_000;
+}
 
 /** Miettage aus Datum + Uhrzeit (angefangene 24-h-Blöcke, 1 h Kulanz). Wandzeit, daher sommerzeitneutral. */
 export function rentalDaysFromDateTimes(
@@ -185,8 +225,7 @@ export function rentalDaysFromDateTimes(
   endDate: string,
   endTime: string,
 ): number | null {
-  const isIso = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v ?? "");
-  if (!isIso(startDate) || !isIso(endDate) || !TIME_RE.test(startTime) || !TIME_RE.test(endTime)) return null;
+  if (!isRealIsoDate(startDate) || !isRealIsoDate(endDate) || !TIME_RE.test(startTime ?? "") || !TIME_RE.test(endTime ?? "")) return null;
   const s = Date.parse(`${startDate}T${startTime}:00Z`);
   const e = Date.parse(`${endDate}T${endTime}:00Z`);
   if (Number.isNaN(s) || Number.isNaN(e) || e <= s) return null;
@@ -195,11 +234,12 @@ export function rentalDaysFromDateTimes(
 }
 
 /** Aufpreis für Zusatzkilometer nach Staffel. */
-export function extraKmCostEur(extraKm: number): number {
+export function extraKmCostEur(extraKm: number, vehicleClass: VehicleClass = "l1h1"): number {
+  if (!Number.isFinite(extraKm)) return 0;
   let rest = Math.max(0, Math.round(extraKm));
   let prevCap = 0;
   let total = 0;
-  for (const tier of LONG_TERM_KM_TIERS) {
+  for (const tier of longTermKmConfig(vehicleClass).tiers) {
     const span = tier.upToExtraKm - prevCap;
     const used = Math.min(rest, span);
     total += used * tier.eurPerKm;
@@ -224,7 +264,8 @@ export type LongTermKmQuote =
       creditEur: number;
       totalEur: number;
       effectivePricePerDayEur: number;
-      nextKmEur: number;
+      /** Vertraglicher Satz je km über dem gebuchten Kontingent (inklusive + hinzugewählt). */
+      returnExtraKmEur: number;
       depositEur: number;
     };
 
@@ -240,13 +281,13 @@ export function quoteLongTermWithKm(
   const basePriceEur = longTermPriceEur(days, vehicleClass);
   const includedKm = longTermFreeKm(days);
   const extraKm = Math.max(0, km - includedKm);
-  const extra = extraKmCostEur(extraKm);
+  const cfg = longTermKmConfig(vehicleClass);
+  const extra = extraKmCostEur(extraKm, vehicleClass);
   const unused = Math.max(0, includedKm - km);
   const creditEur = roundCents(
-    Math.min(unused * LONG_TERM_UNUSED_KM_CREDIT_EUR, (basePriceEur * LONG_TERM_MAX_CREDIT_PERCENT) / 100),
+    Math.min(unused * cfg.unusedKmCreditEur, (basePriceEur * cfg.maxCreditPercent) / 100),
   );
   const totalEur = roundCents(basePriceEur + extra - creditEur);
-  const tier = LONG_TERM_KM_TIERS.find((t) => extraKm < t.upToExtraKm) ?? LONG_TERM_KM_TIERS[LONG_TERM_KM_TIERS.length - 1]!;
   return {
     eligible: true,
     days,
@@ -259,7 +300,7 @@ export function quoteLongTermWithKm(
     creditEur,
     totalEur,
     effectivePricePerDayEur: roundCents(totalEur / days),
-    nextKmEur: tier.eurPerKm,
+    returnExtraKmEur: cfg.returnExtraKmEur,
     depositEur: DEPOSIT_EUR,
   };
 }
