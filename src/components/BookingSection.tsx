@@ -105,6 +105,13 @@ type DbVehicle = {
   tank_liters: number | null;
   range_km: number | null;
   first_registration: string | null;
+  cargo_width_between_arches_cm: number | null;
+  rear_door_width_cm: number | null;
+  rear_door_height_cm: number | null;
+  side_door_width_cm: number | null;
+  side_door_height_cm: number | null;
+  specs_status: string | null;
+  specs_source: string | null;
 };
 
 /** cm → Meter mit einer Dezimalstelle, deutsch formatiert. */
@@ -240,7 +247,7 @@ export function BookingSection() {
       try {
         const { data, error } = await supabase
           .from("vehicles")
-          .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address, trailer_load_braked_kg, tank_liters, range_km, first_registration")
+          .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address, trailer_load_braked_kg, tank_liters, range_km, first_registration, cargo_width_between_arches_cm, rear_door_width_cm, rear_door_height_cm, side_door_width_cm, side_door_height_cm, specs_status, specs_source")
           .order("created_at", { ascending: true });
         if (seq !== vehiclesSeqRef.current) return;
         if (error || !data) {

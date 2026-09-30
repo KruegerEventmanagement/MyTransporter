@@ -22,12 +22,17 @@ export type SpecField =
   | "cargo_width_cm"
   | "max_weight_kg"
   | "tank_liters"
-  | "range_km";
+  | "range_km"
+  | "body"
+  | "power_kw"
+  | "first_registration";
 
 /** Hinterlegte, aber noch nicht dokumentgeprüfte/unplausible Werte → „noch nicht bestätigt“. */
 export const UNCONFIRMED_SPECS: Record<string, SpecField[]> = {
   // VW Crafter: Nutzlast 3.000 kg bei 3.500 kg zGG unplausibel; Ladehöhe/-volumen ungeprüft.
-  "43261a5f-cd8a-4bd4-a3db-f89c4741c463": ["payload_kg", "cargo_height_cm", "cargo_volume_m3"],
+  // Hochgeladenes „Fahrzeugschein“-Bild ist ein Fahrzeugfoto (Kennzeichen LEO MY 104), kein Dokument:
+  // Karosserievariante, Maße, Gewichte, Motor und EZ sind nicht dokumentgeprüft.
+  "43261a5f-cd8a-4bd4-a3db-f89c4741c463": ["payload_kg", "cargo_height_cm", "cargo_volume_m3", "cargo_length_cm", "cargo_width_cm", "max_weight_kg", "body", "power_kw", "first_registration"],
 };
 
 export const UNCONFIRMED_LABEL = "noch nicht bestätigt";
@@ -47,6 +52,13 @@ export type SpecVehicle = {
   cargo_width_cm?: number | null;
   cargo_height_cm?: number | null;
   cargo_volume_m3?: number | null;
+  cargo_width_between_arches_cm?: number | null;
+  rear_door_width_cm?: number | null;
+  rear_door_height_cm?: number | null;
+  side_door_width_cm?: number | null;
+  side_door_height_cm?: number | null;
+  specs_status?: string | null;
+  specs_source?: string | null;
   tank_liters?: number | null;
   range_km?: number | null;
   first_registration?: string | null;
@@ -57,7 +69,8 @@ export type SpecVehicle = {
 export type SpecRow = { label: string; value: string; unconfirmed?: boolean };
 
 const pos = (n: number | null | undefined): n is number => typeof n === "number" && Number.isFinite(n) && n > 0;
-const m = (cm: number) => `${(cm / 100).toLocaleString("de-DE", { maximumFractionDigits: 2 })} m`;
+/** cm (0,1-genau) → Meter mit bis zu 3 Nachkommastellen, ohne auf volle cm zu runden. */
+const m = (cm: number) => `${(Number(cm) / 100).toLocaleString("de-DE", { maximumFractionDigits: 3 })} m`;
 const kg = (n: number) => `${n.toLocaleString("de-DE")} kg`;
 
 function fmtDate(iso: string): string | null {
@@ -75,18 +88,32 @@ export function vehicleSpecRows(v: SpecVehicle): SpecRow[] {
     else rows.push({ label, value });
   };
   add("Ladefläche (L × B)", pos(v.cargo_length_cm) && pos(v.cargo_width_cm) ? `${m(v.cargo_length_cm)} × ${m(v.cargo_width_cm)}` : null, ["cargo_length_cm", "cargo_width_cm"]);
-  add("Ladehöhe", pos(v.cargo_height_cm) ? m(v.cargo_height_cm) : null, ["cargo_height_cm"]);
+  add("Breite zwischen Radkästen", pos(v.cargo_width_between_arches_cm) ? m(v.cargo_width_between_arches_cm) : null, ["body"]);
+  add("Innenhöhe", pos(v.cargo_height_cm) ? m(v.cargo_height_cm) : null, ["cargo_height_cm"]);
   add("Ladevolumen", pos(v.cargo_volume_m3) ? `${Number(v.cargo_volume_m3).toLocaleString("de-DE")} m³` : null, ["cargo_volume_m3"]);
-  add("Außenmaße (L × B × H)", pos(v.length_cm) && pos(v.width_cm) && pos(v.height_cm) ? `${m(v.length_cm)} × ${m(v.width_cm)} × ${m(v.height_cm)}` : null);
+  add("Hecktüröffnung (B × H)", pos(v.rear_door_width_cm) && pos(v.rear_door_height_cm) ? `${m(v.rear_door_width_cm)} × ${m(v.rear_door_height_cm)}` : null, ["body"]);
+  add("Schiebetüröffnung (B × H)", pos(v.side_door_width_cm) && pos(v.side_door_height_cm) ? `${m(v.side_door_width_cm)} × ${m(v.side_door_height_cm)}` : null, ["body"]);
+  add("Außenmaße (L × B ohne Spiegel × H)", pos(v.length_cm) && pos(v.width_cm) && pos(v.height_cm) ? `${m(v.length_cm)} × ${m(v.width_cm)} × ${m(v.height_cm)}` : null, ["body"]);
   add("Nutzlast", pos(v.payload_kg) ? kg(v.payload_kg) : null, ["payload_kg"]);
   add("Zul. Gesamtgewicht", pos(v.max_weight_kg) ? kg(v.max_weight_kg) : null, ["max_weight_kg"]);
   add("Tankgröße", pos(v.tank_liters) ? `${v.tank_liters} l` : null, ["tank_liters"]);
   add("Reichweite", pos(v.range_km) ? `ca. ${v.range_km.toLocaleString("de-DE")} km` : null, ["range_km"]);
   add("Kraftstoff", v.fuel_type?.trim() || null);
-  add("Leistung", pos(v.power_kw) ? `${v.power_kw} kW (${Math.round(v.power_kw * 1.36)} PS)` : null);
+  add("Leistung", pos(v.power_kw) ? `${v.power_kw} kW (${Math.round(v.power_kw * 1.36)} PS)` : null, ["power_kw"]);
   add("Sitzplätze", pos(v.seats) ? String(v.seats) : null);
   add("Anhängelast (gebremst)", pos(v.trailer_load_braked_kg) ? kg(v.trailer_load_braked_kg) : null);
-  add("Erstzulassung", v.first_registration ? fmtDate(v.first_registration) : null);
+  add("Erstzulassung", v.first_registration ? fmtDate(v.first_registration) : null, ["first_registration"]);
   add("Abholort", v.pickup_address?.trim() || v.pickup_location?.trim() || null);
   return rows;
+}
+
+/** Hinweis zur Herkunft der Maße (unter dem Steckbrief). */
+export function vehicleSpecNote(v: SpecVehicle): string | null {
+  if (UNCONFIRMED_SPECS[v.id]?.includes("body") || v.specs_status === "unbestaetigt") {
+    return "Karosserievariante und Maße dieses Transporters sind noch nicht anhand der Fahrzeugpapiere bestätigt.";
+  }
+  if (v.specs_status === "werksangabe_modellvariante") {
+    return `Werksmaße der Modellvariante${v.specs_source ? ` (Quelle: ${v.specs_source})` : ""}. Innenverkleidung/Ausbau können nutzbare Maße verringern. Bei passgenauer Ladung bitte nachmessen. Die Außenhöhe schwankt je nach Fahrwerk und Bereifung und ist keine garantierte Durchfahrtshöhe.`;
+  }
+  return null;
 }

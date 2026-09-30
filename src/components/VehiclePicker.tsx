@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Truck } from "lucide-react";
-import { isSpeedLimited, SPEED_LIMIT_BADGE, SPEED_LIMIT_TEXT, vehicleSpecRows, type SpecVehicle } from "@/lib/vehicle-facts";
+import { isSpeedLimited, SPEED_LIMIT_BADGE, SPEED_LIMIT_TEXT, vehicleSpecNote, vehicleSpecRows, type SpecVehicle } from "@/lib/vehicle-facts";
 
 export type PickerVehicle = SpecVehicle & {
   id: string;
@@ -38,6 +38,7 @@ export function VehiclePicker({ vehicles, selectedIndex, onSelect, statusFor, ch
     }
   };
   const specs = vehicleSpecRows(v);
+  const specNote = vehicleSpecNote(v);
   const limited = isSpeedLimited(v);
 
   return (
@@ -96,6 +97,7 @@ export function VehiclePicker({ vehicles, selectedIndex, onSelect, statusFor, ch
           ))}
         </dl>
       )}
+      {showSpecs && specNote && <p className="mt-2 text-[11px] text-muted-foreground">{specNote}</p>}
 
       {vehicles.length > 1 && (
         <div className="mt-3 flex justify-center gap-2">
