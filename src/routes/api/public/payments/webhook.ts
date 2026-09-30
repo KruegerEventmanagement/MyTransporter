@@ -9,6 +9,8 @@ import {
   KM_TARIFF_CENTS_PER_KM,
   KM_TARIFF_MIN_EUR,
   type VehicleClass,
+  KM_CATALOG_VERSION,
+  freeKmForCatalogVersion,
 } from "@/lib/booking-rules";
 import { buildAddonSnapshot } from "@/lib/addons";
 

@@ -13,6 +13,7 @@ import {
   KM_TARIFF_MIN_EUR,
   VEHICLE_CLASS_SHORT_LABEL,
   type VehicleClass,
+  KM_CATALOG_VERSION,
 } from "@/lib/booking-rules";
 import { getAddonById, resolveAddonSelection } from "@/lib/addons";
 
