@@ -257,7 +257,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
     });
     return true; // sichtbar + Stripe-Retry
   }
-  const { planLabel, planPrice, appliedDiscountCents, freeKm, kmPriceCents, addons, addonsTotalCents } = pricing;
+  const { planLabel, planPrice, appliedDiscountCents, freeKm, kmPriceCents, addons, addonsTotalCents, deposit } = pricing;
   const pickupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
   const { data: booking, error: insertError } = await supabaseAdmin
@@ -267,6 +267,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
       plan_id: planId,
       plan_label: planLabel,
       plan_price: planPrice,
+      deposit,
       start_date: startDate,
       start_hour: startHour,
       pickup_code: pickupCode,
