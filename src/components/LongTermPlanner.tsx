@@ -1,62 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, Mail, CalendarDays, Clock, Gauge } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Mail, CalendarDays, Clock, Gauge } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { RollingNumber } from "@/components/RollingNumber";
+import { VehiclePicker, type PickerVehicle } from "@/components/VehiclePicker";
 import { VEHICLE_CLASS_SHORT_LABEL, vehicleClassFromName, type VehicleClass } from "@/lib/booking-rules";
-import { formatEur, quoteLongTermWithKm, rentalDaysFromDateTimes, LONG_TERM_MIN_DAYS } from "@/lib/long-term";
-import jumperImg from "@/assets/citroen-jumper-l1h1.jpg";
-import ducatoImg from "@/assets/fiat-ducato.jpg";
-import heroImg from "@/assets/hero-van.jpg";
+import { formatEur, LONG_TERM_MAX_KM } from "@/lib/long-term";
+import { quoteRental, type RentalQuote } from "@/lib/rental-quote";
+import { isSpeedLimited, SPEED_LIMIT_TEXT } from "@/lib/vehicle-facts";
 
-type LtVehicle = {
-  id: string;
-  name: string;
-  plate: string;
-  brand: string | null;
-  model: string | null;
-  vehicle_class: string | null;
-  fuel_type: string | null;
-  power_kw: number | null;
-  seats: number | null;
-  max_weight_kg: number | null;
-  payload_kg: number | null;
-  trailer_load_braked_kg: number | null;
-  length_cm: number | null;
-  width_cm: number | null;
-  height_cm: number | null;
-  cargo_length_cm: number | null;
-  cargo_width_cm: number | null;
-  cargo_height_cm: number | null;
-  cargo_volume_m3: number | null;
-  pickup_location: string | null;
-  photo_urls: string[];
-  tank_liters: number | null;
-  range_km: number | null;
-};
+type LtVehicle = PickerVehicle & { brand: string | null; model: string | null; vehicle_class: string | null };
 
 const FIELDS =
-  "id, name, plate, brand, model, vehicle_class, fuel_type, power_kw, seats, max_weight_kg, payload_kg, trailer_load_braked_kg, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, photo_urls, tank_liters, range_km";
+  "id, name, plate, brand, model, vehicle_class, fuel_type, power_kw, seats, max_weight_kg, payload_kg, trailer_load_braked_kg, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address, photo_urls, tank_liters, range_km, first_registration";
 
-function classOf(v: LtVehicle): VehicleClass {
+function classOf(v: { vehicle_class: string | null; name: string; model: string | null }): VehicleClass {
   return vehicleClassFromName(v.vehicle_class, v.name, v.model);
 }
-
-/** Richtwerte, falls im Admin nichts eingetragen ist. */
-function tankGuess(v: LtVehicle): { liters: number; range: string } {
-  const s = `${v.brand ?? ""} ${v.model ?? ""} ${v.name}`.toLowerCase();
-  if (s.includes("crafter")) return { liters: 75, range: "800–900" };
-  return { liters: 90, range: "900–1.000" };
-}
-
-function fallbackImages(v: LtVehicle): string[] {
-  const s = `${v.brand ?? ""} ${v.name}`.toLowerCase();
-  if (s.includes("jumper") || s.includes("citro")) return [jumperImg];
-  if (s.includes("ducato") || s.includes("fiat")) return [ducatoImg];
-  return [heroImg];
-}
-
-const images = (v: LtVehicle) => (v.photo_urls?.length ? v.photo_urls : fallbackImages(v));
-const cm = (n: number | null) => (n ? `${(n / 100).toLocaleString("de-DE", { maximumFractionDigits: 2 })} m` : null);
 
 function addDaysIso(iso: string, days: number): string {
   return new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
@@ -64,6 +23,48 @@ function addDaysIso(iso: string, days: number): string {
 function fmtDate(iso: string) {
   const [y, m, d] = iso.split("-");
   return `${d}.${m}.${y}`;
+}
+const km = (n: number) => `${n.toLocaleString("de-DE")} km`;
+
+/** Mailtext der unverbindlichen Anfrage – enthält alle Posten des Rechners. */
+export function buildRequestMail(
+  v: { name: string; plate: string },
+  vClass: VehicleClass,
+  q: Extract<RentalQuote, { ok: true }>,
+  t: { startDate: string; startTime: string; endDate: string; endTime: string },
+  speedLimited = false,
+): string {
+  const lines = [
+    "Hallo MyTransporter-Team,",
+    "",
+    `ich möchte unverbindlich folgende ${q.kind === "long_term" ? "Langzeitmiete" : "Miete"} anfragen:`,
+    "",
+    `Fahrzeug: ${v.name} (${VEHICLE_CLASS_SHORT_LABEL[vClass]}, ${v.plate})`,
+    ...(speedLimited ? [SPEED_LIMIT_TEXT] : []),
+    `Abholung: ${fmtDate(t.startDate)}, ${t.startTime} Uhr`,
+    `Rückgabe: ${fmtDate(t.endDate)}, ${t.endTime} Uhr`,
+    `Miettage: ${q.days}`,
+    `Tarif: ${q.planLabel}`,
+    `Wunschkilometer: ${km(q.desiredKm)}`,
+    `Grundpreis: ${formatEur(q.basePriceEur)} € (inkl. ${km(q.includedKm)})`,
+    ...(q.extraKm > 0
+      ? [q.kind === "long_term"
+          ? `Zusätzliches km-Kontingent: ${km(q.extraKm)} = ${formatEur(q.extraKmCostEur)} €`
+          : `Voraussichtliche Mehrkilometer: ${km(q.extraKm)} × ${formatEur(q.extraKmRateEur ?? 0)} € = ${formatEur(q.extraKmCostEur)} €`]
+      : []),
+    ...(q.creditEur > 0 ? [`Gutschrift weniger km: − ${formatEur(q.creditEur)} €`] : []),
+    `Richtpreis Miete: ${formatEur(q.totalEur)} €`,
+    `Kaution (separat, nicht im Mietpreis): ${formatEur(q.depositEur)} €`,
+    `Mehrkilometer bei Rückgabe über ${km(q.contractKm)}: ${formatEur(q.returnExtraKmEur)} € je km`,
+    "",
+    "Mir ist bewusst, dass dies eine unverbindliche Anfrage ist.",
+    "",
+    "Name:",
+    "Telefon:",
+    "",
+    "Viele Grüße",
+  ];
+  return lines.join("\n");
 }
 
 export function LongTermPlanner() {
