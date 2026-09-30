@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import { VehiclePicker, type PickerVehicle } from "./VehiclePicker";
+import { orderedVehiclePhotos, VehiclePicker, type PickerVehicle } from "./VehiclePicker";
 import { vehicleSpecNote, vehicleSpecRows } from "@/lib/vehicle-facts";
 
 afterEach(cleanup);
@@ -36,7 +36,7 @@ describe("VehiclePicker", () => {
     expect(screen.getByText("Noch kein Foto vorhanden")).toBeTruthy();
     fireEvent.click(screen.getByLabelText(/PF MY 1003 auswählen/));
     expect(screen.getByText("Foto 1 / 6")).toBeTruthy();
-    expect(mainImg()!.getAttribute("src")).toBe("https://img/b84d0d58-8f7a-4111-ae7b-796fc2f587a1-0.jpg");
+    expect(mainImg()!.getAttribute("src")).toBe("https://img/b84d0d58-8f7a-4111-ae7b-796fc2f587a1-2.jpg");
   });
   it("1 Bild: keine Bildpfeile", () => {
     render(<VehiclePicker vehicles={[LEO102]} selectedIndex={0} onSelect={() => {}} />);
@@ -59,6 +59,12 @@ describe("VehiclePicker", () => {
     render(<VehiclePicker vehicles={[LEO102, PF]} selectedIndex={0} onSelect={(i) => (sel = i)} statusFor={(v) => (v.id === PF.id ? { disabled: true, label: "belegt" } : undefined)} />);
     fireEvent.click(screen.getByLabelText(/PF MY 1003 auswählen/));
     expect(sel).toBe(0);
+  });
+  it("beginnt je Fahrzeug mit der vollständigen Seitenansicht nach links", () => {
+    const crafter = mk("43261a5f-cd8a-4bd4-a3db-f89c4741c463", "OF-DK 1234", 6, { classLabel: "L5H2" });
+    expect(orderedVehiclePhotos(crafter)[0]).toBe("https://img/43261a5f-cd8a-4bd4-a3db-f89c4741c463-3.jpg");
+    expect(orderedVehiclePhotos(PF)[0]).toBe("https://img/b84d0d58-8f7a-4111-ae7b-796fc2f587a1-2.jpg");
+    expect(orderedVehiclePhotos(LEO102)[0]).toBe("https://img/02220fa6-9a77-4069-8a24-f7028365808b-0.jpg");
   });
 });
 

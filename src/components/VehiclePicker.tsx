@@ -12,6 +12,24 @@ export type PickerVehicle = SpecVehicle & {
 
 export type PickerStatus = { label?: string; disabled?: boolean; dimmed?: boolean };
 
+/**
+ * Bevorzugtes Startfoto: vollständige Seitenansicht mit Fahrzeugfront nach links.
+ * Die gespeicherte Galerie bleibt unverändert; nur die Anzeige beginnt beim passenden Foto.
+ */
+const PREFERRED_START_PHOTO_BY_VEHICLE_ID: Readonly<Record<string, number>> = {
+  "02220fa6-9a77-4069-8a24-f7028365808b": 0,
+  "b408f5fe-4a10-4c3c-9f83-ab56a3ac74a5": 0,
+  "43261a5f-cd8a-4bd4-a3db-f89c4741c463": 3,
+  "b84d0d58-8f7a-4111-ae7b-796fc2f587a1": 2,
+};
+
+export function orderedVehiclePhotos(vehicle: Pick<PickerVehicle, "id" | "photo_urls">): string[] {
+  const photos = (vehicle.photo_urls ?? []).filter(Boolean);
+  const preferredIndex = PREFERRED_START_PHOTO_BY_VEHICLE_ID[vehicle.id] ?? 0;
+  if (preferredIndex <= 0 || preferredIndex >= photos.length) return photos;
+  return [photos[preferredIndex], ...photos.slice(0, preferredIndex), ...photos.slice(preferredIndex + 1)];
+}
+
 type Props = {
   vehicles: PickerVehicle[];
   selectedIndex: number;
@@ -47,7 +65,7 @@ export function VehiclePicker({ vehicles, selectedIndex, onSelect, statusFor, ch
         {vehicles.map((veh, i) => {
           const st = statusFor?.(veh);
           const sel = i === selectedIndex;
-          const cover = veh.photo_urls?.[0];
+          const cover = orderedVehiclePhotos(veh)[0];
           return (
             <button
               key={veh.id}
@@ -115,7 +133,7 @@ export function VehiclePicker({ vehicles, selectedIndex, onSelect, statusFor, ch
 
 /** Bildergalerie eines Fahrzeugs. Wird per key je Fahrzeug neu gestartet (Bildindex = 0). */
 export function VehicleGallery({ vehicle, speedLimited }: { vehicle: PickerVehicle; speedLimited: boolean }) {
-  const imgs = (vehicle.photo_urls ?? []).filter(Boolean);
+  const imgs = orderedVehiclePhotos(vehicle);
   const [img, setImg] = useState(0);
   const touchX = useRef<number | null>(null);
   const n = imgs.length;
