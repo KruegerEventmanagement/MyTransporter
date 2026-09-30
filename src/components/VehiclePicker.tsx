@@ -67,7 +67,7 @@ export function VehiclePicker({ vehicles, selectedIndex, onSelect, statusFor, ch
                 )}
               </span>
               <span className="mt-1 block truncate text-[10px] font-semibold leading-tight text-foreground">{veh.classLabel}</span>
-              <span className="block truncate font-mono text-[10px] leading-tight text-muted-foreground">{veh.plate}</span>
+              <span className="block break-words font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground">{veh.plate}</span>
               {st?.label && <span className="block truncate text-[10px] leading-tight text-muted-foreground">{st.label}</span>}
             </button>
           );
