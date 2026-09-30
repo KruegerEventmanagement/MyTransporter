@@ -125,7 +125,7 @@ function AgbPage() {
             <p>Es gilt das Recht der Bundesrepublik Deutschland. Gerichtsstand ist Leonberg. Sollten einzelne Bestimmungen unwirksam sein, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.</p>
           </div>
 
-          <p className="text-xs text-muted-foreground mt-8">Stand: 30. September 2026. Für Buchungen vor diesem Datum gelten die bei Buchung bestätigten Freikilometer.</p>
+          <p className="text-xs text-muted-foreground mt-8">Stand: 30. September 2026. Für bereits abgeschlossene Buchungen gelten unverändert die bei der Buchung bestätigten Freikilometer und Mehrkilometersätze.</p>
         </div>
       </div>
     </main>
