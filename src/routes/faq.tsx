@@ -11,7 +11,7 @@ const FAQS = [
   },
   {
     q: "Was kostet die Transporter-Miete?",
-    a: "Wir haben zwei Fahrzeugklassen: den kurzen L1H1 und den langen L4H2 (+10 € pro Miettag). L1H1: 3 Stunden 49 € (100 km inkl.), 6 Stunden 69 € (200 km), 24 Stunden 99 € (300 km), 189 € (500-km-Langstreckentarif) oder 299 € (800-km-Fernstreckentarif). Mehrtagestarife L1H1: 2 Tage 189 € (600 km), 3 Tage 269 € (900 km), 4 Tage 339 € (1.200 km), 5 Tage 399 € (1.500 km), 6 Tage 449 € (1.800 km), 7 Tage 499 € (2.100 km). L4H2 z. B.: 24 Stunden 109 €, 2 Tage 209 €, 7 Tage 569 €. Mehrkilometer kosten 0,45 € bei Tagesmieten, 0,35 € bei 2 bis 6 Tagen und 0,29 € bei der 7-Tage-Wochenmiete. Alternativ gibt es die reine Kilometer-Abrechnung zu 0,90 € pro Kilometer (Mindestbetrag L1H1 100 €, L4H2 110 €).",
+    a: "Wir haben zwei Fahrzeugklassen: den kurzen L1H1 und den langen L4H2 (+10 € pro Miettag). L1H1: 3 Stunden 49 € (67 km inkl.), 6 Stunden 69 € (133 km), 24 Stunden 99 € (200 km), 189 € (500-km-Langstreckentarif) oder 299 € (800-km-Fernstreckentarif). Mehrtagestarife L1H1: 2 Tage 189 € (400 km), 3 Tage 269 € (600 km), 4 Tage 339 € (800 km), 5 Tage 399 € (1.000 km), 6 Tage 449 € (1.200 km), 7 Tage 499 € (1.400 km). L4H2 z. B.: 24 Stunden 109 €, 2 Tage 209 €, 7 Tage 569 €. Mehrkilometer kosten 0,45 € bei Tagesmieten, 0,35 € bei 2 bis 6 Tagen und 0,29 € bei der 7-Tage-Wochenmiete. Alternativ gibt es die reine Kilometer-Abrechnung zu 0,90 € pro Kilometer (Mindestbetrag L1H1 100 €, L4H2 110 €).",
   },
   {
     q: "Gibt es eine Kaution?",
@@ -170,7 +170,7 @@ const SEO_BLOCKS = [
   },
   {
     h: "Preise & Kaution, alles transparent",
-    p: "Preise für den kurzen L1H1, der lange L4H2 kostet 10 € pro Miettag mehr: 3 Stunden 49 € (100 km), 6 Stunden 69 € (200 km), 24 Stunden 99 € (300 km), 189 € (500-km-Langstreckentarif) oder 299 € (800-km-Fernstreckentarif). Mehrtagestarife: 2 Tage 189 € (600 km), 3 Tage 269 € (900 km), 4 Tage 339 € (1.200 km), 5 Tage 399 € (1.500 km), 6 Tage 449 € (1.800 km), 7 Tage 499 € (2.100 km). Alternativ reine Kilometer-Abrechnung zu 0,90 € / km (Mindestbetrag 100 € bzw. 110 €). Mehrkilometer kosten 0,45 € bei Tagesmieten, 0,35 € bei 2 bis 6 Tagen und 0,29 € bei der Wochenmiete. Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer und vollgetankter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
+    p: "Preise für den kurzen L1H1, der lange L4H2 kostet 10 € pro Miettag mehr: 3 Stunden 49 € (67 km), 6 Stunden 69 € (133 km), 24 Stunden 99 € (200 km), 189 € (500-km-Langstreckentarif) oder 299 € (800-km-Fernstreckentarif). Mehrtagestarife: 2 Tage 189 € (400 km), 3 Tage 269 € (600 km), 4 Tage 339 € (800 km), 5 Tage 399 € (1.000 km), 6 Tage 449 € (1.200 km), 7 Tage 499 € (1.400 km). Alternativ reine Kilometer-Abrechnung zu 0,90 € / km (Mindestbetrag 100 € bzw. 110 €). Mehrkilometer kosten 0,45 € bei Tagesmieten, 0,35 € bei 2 bis 6 Tagen und 0,29 € bei der Wochenmiete. Die Kaution beträgt 200 € und wird nach unbeschädigter, sauberer und vollgetankter Rückgabe automatisch freigegeben. Keine versteckten Gebühren.",
   },
   {
     h: "Ablauf der Vermietung",
