@@ -1,3 +1,4 @@
+import { isPhysicalAddon } from "@/lib/custom-km";
 import { useState, useCallback, useEffect } from "react";
 import { Camera, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,7 +51,9 @@ type CaptureTarget =
 
 type ReturnStep = "photos" | "km" | "receipt" | "code" | "done";
 
-export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, addons, onComplete }: ReturnFlowProps) {
+export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, addons: allAddons, onComplete }: ReturnFlowProps) {
+  // Kilometerpaket ist kein physisches Zubehör und wird nicht "zurückgegeben".
+  const addons = allAddons?.filter(isPhysicalAddon);
   const [returnStep, setReturnStep] = useState<ReturnStep>("photos");
   const [photos, setPhotos] = useState<Record<string, StoredTripPhoto>>({});
   const [interiorPhoto, setInteriorPhoto] = useState<StoredTripPhoto | null>(null);
