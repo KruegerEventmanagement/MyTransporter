@@ -13,6 +13,7 @@ import {
   KM_TARIFF_MIN_EUR,
   VEHICLE_CLASS_SHORT_LABEL,
   type VehicleClass,
+  KM_CATALOG_VERSION,
 } from "@/lib/booking-rules";
 import { getAddonById, resolveAddonSelection } from "@/lib/addons";
 
@@ -219,6 +220,9 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
             plan: data.plan,
             planId,
             vehicleClass,
+            // Kilometer-Snapshot serverseitig festhalten (Webhook nutzt ihn statt Katalog).
+            kmCatalog: KM_CATALOG_VERSION,
+            ...(planEntry && { freeKm: String(planEntry.freeKm), kmPriceCents: String(planEntry.extraKmCents) }),
             ...(data.startDate && { startDate: data.startDate }),
             ...(typeof data.startHour === "number" && { startHour: String(data.startHour) }),
             ...(data.vehicleName && { vehicleName: String(data.vehicleName).slice(0, 200) }),

@@ -47,7 +47,7 @@ export function TariffSection() {
                   L1H1 · L4H2 {plan.priceL4h2} € · Crafter {plan.priceL5h2} €
                 </p>
 
-                <p className="text-xs text-muted-foreground mt-1">inkl. {plan.freeKm} km</p>
+                <p className="text-xs text-muted-foreground mt-1">inkl. {plan.freeKm.toLocaleString("de-DE")} km</p>
                 {plan.idealFor && (
                   <p className="text-xs text-muted-foreground mt-3 leading-relaxed flex-1">
                     {plan.idealFor}

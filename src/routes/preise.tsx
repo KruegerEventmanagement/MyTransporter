@@ -89,7 +89,7 @@ function PreisePage() {
                   L4H2 {p.priceL4h2} € · Crafter {p.priceL5h2} €
                 </p>
 
-                <p className="text-xs text-muted-foreground mt-1">inkl. {p.freeKm} km</p>
+                <p className="text-xs text-muted-foreground mt-1">inkl. {p.freeKm.toLocaleString("de-DE")} km</p>
               </div>
             ))}
           </div>

@@ -9,6 +9,7 @@ import {
   KM_TARIFF_CENTS_PER_KM,
   KM_TARIFF_MIN_EUR,
   type VehicleClass,
+  resolveCheckoutKmSnapshot,
 } from "@/lib/booking-rules";
 import { buildAddonSnapshot } from "@/lib/addons";
 
@@ -243,8 +244,9 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
     Math.max(0, Math.round(planPriceFull * 100) - 100),
   );
   const planPrice = Math.round(planPriceFull * 100 - appliedDiscountCents) / 100;
-  const freeKm = planEntry?.freeKm ?? 0;
-  const kmPriceCents = planEntry?.extraKmCents ?? KM_TARIFF_CENTS_PER_KM;
+  // Kilometer-Snapshot: aktueller Checkout → Metadata-Snapshot; alte Session ohne
+  // Version → Legacy-Kontingent (nie das gekürzte neue). Reiner km-Tarif → 0.
+  const { freeKm, kmPriceCents } = resolveCheckoutKmSnapshot(md as Record<string, string | undefined>, planId, vehicleClass);
 
   const addons = buildAddonSnapshot(addonIds);
   const addonsTotalCents = addons.reduce((s, a) => s + a.price_cents, 0);

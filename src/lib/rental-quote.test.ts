@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { quoteRental } from "@/lib/rental-quote";
-import { EXTRA_KM_CENTS_BY_CLASS, getPlanById, planCatalog, VEHICLE_CLASSES } from "@/lib/booking-rules";
+import { EXTRA_KM_CENTS_BY_CLASS, getPlanById, planCatalog, VEHICLE_CLASSES, KM_CATALOG_VERSION, legacyFreeKmFor, resolveCheckoutKmSnapshot, bookingFreeKm, KM_TARIFF_CENTS_PER_KM } from "@/lib/booking-rules";
+import { longTermFreeKm } from "@/lib/long-term";
 import { extraKmCostEur, LONG_TERM_KM_CONFIG, LONG_TERM_MAX_KM, rentalDaysFromDateTimes } from "@/lib/long-term";
 import { buildRequestMail, returnLabel } from "@/components/LongTermPlanner";
 
@@ -32,35 +33,38 @@ describe("Katalog unverändert", () => {
 });
 
 describe("quoteRental", () => {
-  it("3 Tage / 900 km: Standardtarif, keine Gutschrift", () => {
+  it("3 Tage / 600 km: Standardtarif, keine Gutschrift", () => {
     const exp = { l1h1: 269, l4h2: 299, l5h2: 315 } as const;
     for (const c of VEHICLE_CLASSES) {
-      const q = ok(quoteRental({ ...t3, desiredKm: 900 }, c));
+      const q = ok(quoteRental({ ...t3, desiredKm: 600 }, c));
       expect(q.kind).toBe("standard");
       expect(q.planId).toBe("multi_3d");
       expect(q.totalEur).toBe(exp[c]);
-      expect(q.includedKm).toBe(900);
+      expect(q.includedKm).toBe(600);
       expect(q.creditEur).toBe(0);
       expect(q.depositEur).toBe(200);
       expect(q.returnExtraKmEur).toBe(0.35);
     }
   });
-  it("3 Tage / 1.200 km: 300 Mehr-km × 0,35", () => {
-    expect(ok(quoteRental({ ...t3, desiredKm: 1200 }, "l1h1")).totalEur).toBe(374);
-    expect(ok(quoteRental({ ...t3, desiredKm: 1200 }, "l4h2")).totalEur).toBe(404);
-    expect(ok(quoteRental({ ...t3, desiredKm: 1200 }, "l5h2")).totalEur).toBe(420);
+  it("3 Tage / 900 km: 300 Mehr-km × 0,35 = 105 €", () => {
+    expect(ok(quoteRental({ ...t3, desiredKm: 900 }, "l1h1")).totalEur).toBe(374);
+    expect(ok(quoteRental({ ...t3, desiredKm: 900 }, "l4h2")).totalEur).toBe(404);
+    expect(ok(quoteRental({ ...t3, desiredKm: 900 }, "l5h2")).totalEur).toBe(420);
+    expect(ok(quoteRental({ ...t3, desiredKm: 900 }, "l1h1")).extraKmCostEur).toBe(105);
+    expect(ok(quoteRental({ ...t3, desiredKm: 1200 }, "l1h1")).totalEur).toBe(479);
   });
   it("3 Tage / 0 km: keine Gutschrift auf Standardpaket", () => {
     expect(ok(quoteRental({ ...t3, desiredKm: 0 }, "l1h1")).totalEur).toBe(269);
   });
-  it("30 Tage / 4.000 km: Monatsanker je Klasse", () => {
+  it("30 Tage / 2.667 km: Monatsanker je Klasse", () => {
     const exp = { l1h1: 999, l4h2: 1399, l5h2: 1699 } as const;
     for (const c of VEHICLE_CLASSES) {
-      const q = ok(quoteRental({ ...t30, desiredKm: 4000 }, c));
+      const q = ok(quoteRental({ ...t30, desiredKm: 2667 }, c));
       expect(q.kind).toBe("long_term");
       expect(q.totalEur).toBe(exp[c]);
       expect(q.extraKm).toBe(0);
-      expect(q.contractKm).toBe(4000);
+      expect(q.includedKm).toBe(2667);
+      expect(q.contractKm).toBe(2667);
     }
   });
   it("Staffelgrenzen", () => {
@@ -68,7 +72,7 @@ describe("quoteRental", () => {
     expect(extraKmCostEur(5000, "l5h2")).toBe(290 + 880);
     expect(extraKmCostEur(5001, "l1h1")).toBe(1170.18);
     const q = ok(quoteRental({ ...t30, desiredKm: 5000 }, "l1h1"));
-    expect(q.totalEur).toBe(1289);
+    expect(q.totalEur).toBe(1582.26);
     expect(q.contractKm).toBe(5000);
   });
   it("1 Tag: günstigster 24h-Tarif je km", () => {
@@ -95,7 +99,7 @@ describe("quoteRental", () => {
   it("Anfragemail enthält alle Posten", () => {
     const q = ok(quoteRental({ ...t3, desiredKm: 1200 }, "l1h1"));
     const m = buildRequestMail({ name: "Citroen Jumper L1H1", plate: "LEO MY 102" }, "l1h1", q, t3, true);
-    for (const s of ["LEO MY 102", "269,00 €", "300 km × 0,35 €", "374,00 €", "Kaution", "200,00 €", "unverbindliche", "maximal 100 km/h"]) {
+    for (const s of ["LEO MY 102", "269,00 €", "600 km × 0,35 €", "479,00 €", "Kaution", "200,00 €", "unverbindliche", "maximal 100 km/h"]) {
       expect(m).toContain(s);
     }
   });
@@ -104,9 +108,9 @@ describe("quoteRental", () => {
 describe("Langzeit: angefragtes Kontingent = Wunschkilometer", () => {
   const cases: Array<[number, number, number, number]> = [
     // km, total, credit, contractKm
-    [2500, 924, 75, 2500],
-    [4000, 999, 0, 4000],
-    [5000, 1289, 0, 5000],
+    [2500, 990.65, 8.35, 2500],
+    [4000, 1362.26, 0, 4000],
+    [5000, 1582.26, 0, 5000],
     [0, 899.1, 99.9, 0],
   ];
   for (const [kmv, total, credit, contract] of cases) {
@@ -114,19 +118,88 @@ describe("Langzeit: angefragtes Kontingent = Wunschkilometer", () => {
       const q = ok(quoteRental({ ...t30, desiredKm: kmv }, "l1h1"));
       expect(q.totalEur).toBe(total);
       expect(q.creditEur).toBe(credit);
-      expect(q.includedKm).toBe(4000);
+      expect(q.includedKm).toBe(2667);
       expect(q.contractKm).toBe(contract);
       const label = returnLabel(q);
       expect(label).toContain(`über ${contract.toLocaleString("de-DE")} km`);
       const mail = buildRequestMail({ name: "Van", plate: "PF MY 1003" }, "l1h1", q, t30);
-      expect(mail).toContain("Grundtarifbasis: 4.000 km");
+      expect(mail).toContain("Grundtarifbasis: 2.667 km");
       expect(mail).toContain(`Angefragtes Kontingent: ${contract.toLocaleString("de-DE")} km`);
       expect(mail).toContain(label);
     });
   }
   it("Standard 3 Tage unverändert", () => {
-    const q = ok(quoteRental({ ...t3, desiredKm: 1200 }, "l1h1"));
-    expect([q.includedKm, q.contractKm, q.extraKmCostEur, q.creditEur]).toEqual([900, 900, 105, 0]);
-    expect(returnLabel(q)).toBe("Mehrkilometer bei Rückgabe über 900 km");
+    const q = ok(quoteRental({ ...t3, desiredKm: 900 }, "l1h1"));
+    expect([q.includedKm, q.contractKm, q.extraKmCostEur, q.creditEur]).toEqual([600, 600, 105, 0]);
+    expect(returnLabel(q)).toBe("Mehrkilometer bei Rückgabe über 600 km");
+  });
+});
+
+describe("Km-Reduktion um ein Drittel (2/3)", () => {
+  const NEW: Record<string, number> = { "3h": 67, "6h": 133, "24h_300": 200, "24h_500": 500, "24h_800": 800, multi_2d: 400, multi_3d: 600, multi_4d: 800, multi_5d: 1000, multi_6d: 1200, multi_7d: 1400 };
+  const PRICES: Record<string, [number, number]> = { "3h": [49, 59], "6h": [69, 79], "24h_300": [99, 109], "24h_500": [189, 199], "24h_800": [299, 309], multi_2d: [189, 209], multi_3d: [269, 299], multi_4d: [339, 379], multi_5d: [399, 449], multi_6d: [449, 509], multi_7d: [499, 569] };
+  it("jede Klasse × jeder Tarif: neue km, unveränderte Preise", () => {
+    for (const c of VEHICLE_CLASSES) for (const [id, km] of Object.entries(NEW)) {
+      const p = getPlanById(id, c)!;
+      expect(p.freeKm).toBe(km);
+      expect(p.basePrice).toBe(PRICES[id][0]);
+      expect(p.priceL4h2).toBe(PRICES[id][1]);
+    }
+    expect(getPlanById("multi_3d", "l5h2")!.price).toBe(315);
+    expect(getPlanById("week_x3", "l1h1")!.freeKm).toBe(4200);
+    expect(getPlanById("week_x3", "l1h1")!.price).toBe(1497);
+    expect(getPlanById("24h_300", "l1h1")!.shortLabel).toBe("24 h · 200 km");
+    expect(getPlanById("24h", "l1h1")!.freeKm).toBe(200);
+  });
+  it("24h: 200 km ohne Extras, 300 km = 100 × 0,45 = 45 €", () => {
+    const d = { startDate: "2026-10-05", startTime: "09:00", endDate: "2026-10-06", endTime: "09:00" };
+    const a = ok(quoteRental({ ...d, desiredKm: 200 }, "l1h1"));
+    expect([a.planId, a.totalEur, a.extraKmCostEur]).toEqual(["24h_300", 99, 0]);
+    const b = ok(quoteRental({ ...d, desiredKm: 300 }, "l1h1"));
+    expect([b.planId, b.totalEur, b.extraKmCostEur]).toEqual(["24h_300", 144, 45]);
+    expect(ok(quoteRental({ ...d, desiredKm: 500 }, "l1h1")).planId).toBe("24h_500");
+  });
+  it("Langzeitbasis erst am Ende gerundet", () => {
+    expect([7, 14, 30, 45, 60].map(longTermFreeKm)).toEqual([622, 1244, 2667, 4000, 5333]);
+    expect(longTermFreeKm(7)).not.toBe(getPlanById("multi_7d")!.freeKm);
+    const t45 = { ...t30, endDate: "2026-11-19" };
+    const q = ok(quoteRental({ ...t45, desiredKm: 4000 }, "l1h1"));
+    expect([q.includedKm, q.contractKm, q.extraKm]).toEqual([4000, 4000, 0]);
+    const t60 = { ...t30, endDate: "2026-12-04" };
+    expect(ok(quoteRental({ ...t60, desiredKm: 0 }, "l1h1")).includedKm).toBe(5333);
+  });
+  it("Legacy-Kontingente für Altbuchungen/Altsessions", () => {
+    expect(legacyFreeKmFor("multi_3d")).toBe(900);
+    expect(legacyFreeKmFor("24h_300")).toBe(300);
+    expect(legacyFreeKmFor("24h")).toBe(300);
+    expect(legacyFreeKmFor("week_x2")).toBe(4200);
+    expect(legacyFreeKmFor("km")).toBeNull();
+  });
+  it("Webhook: alte Session ohne Version → Legacy, neue Session → Snapshot", () => {
+    expect(resolveCheckoutKmSnapshot({}, "multi_3d", "l1h1")).toEqual({ freeKm: 900, kmPriceCents: 35 });
+    expect(resolveCheckoutKmSnapshot({ kmCatalog: "alt" }, "24h_300", "l4h2")).toEqual({ freeKm: 300, kmPriceCents: 45 });
+    expect(resolveCheckoutKmSnapshot({ kmCatalog: KM_CATALOG_VERSION, freeKm: "600", kmPriceCents: "35" }, "multi_3d", "l1h1")).toEqual({ freeKm: 600, kmPriceCents: 35 });
+    // manipulierte/defekte Snapshot-Werte → nie gekürzt ohne gültigen Snapshot
+    expect(resolveCheckoutKmSnapshot({ kmCatalog: KM_CATALOG_VERSION, freeKm: "abc" }, "multi_3d", "l1h1")).toEqual({ freeKm: 600, kmPriceCents: 35 });
+    expect(resolveCheckoutKmSnapshot({ kmCatalog: KM_CATALOG_VERSION, freeKm: "0" }, "multi_3d", "l1h1").freeKm).toBe(0);
+    expect(resolveCheckoutKmSnapshot({}, "km", "l1h1")).toEqual({ freeKm: 0, kmPriceCents: KM_TARIFF_CENTS_PER_KM });
+    expect(resolveCheckoutKmSnapshot({}, "24h_800", "l1h1").freeKm).toBe(800);
+  });
+});
+
+describe("Altbuchungen behalten ihre Kilometer", () => {
+  const extra = (driven: number, planId: string, stored: number | null, cents: number) => Math.max(0, driven - bookingFreeKm(planId, stored)) * cents;
+  it("Alt 3 Tage / 900 km gespeichert, 900 gefahren → 0 €", () => {
+    expect(extra(900, "multi_3d", 900, 35)).toBe(0);
+  });
+  it("Alt 24h_300 / 300 km gespeichert, 300 gefahren → 0 €", () => {
+    expect(extra(300, "24h_300", 300, 45)).toBe(0);
+  });
+  it("gespeicherte 0 km bleiben 0 (nullish statt ||)", () => {
+    expect(bookingFreeKm("24h", 0)).toBe(0);
+  });
+  it("fehlender Snapshot → Legacy, nicht neuer Katalog", () => {
+    expect(bookingFreeKm("multi_3d", null)).toBe(900);
+    expect(bookingFreeKm("km", null)).toBe(0);
   });
 });

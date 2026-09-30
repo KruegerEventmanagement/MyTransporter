@@ -25,14 +25,18 @@ export const LONG_TERM_ANCHORS: Record<VehicleClass, Record<30 | 45 | 60, number
 };
 
 /** Inklusiv-Kilometer je 30 Miettage. */
-export const LONG_TERM_FREE_KM_PER_30_DAYS = 4000;
+/** Frühere Langzeitbasis (bis 30.09.2026): 4000 km je 30 Tage. */
+export const LONG_TERM_LEGACY_KM_PER_30_DAYS = 4000;
+/** Reduktionsfaktor der zeitabhängigen Inklusivkilometer (ein Drittel weniger). */
+export const KM_REDUCTION_FACTOR = 2 / 3;
 /** Mehrkilometer-Satz bei Rückgabe (Wochen-/Langzeitniveau, L1H1) in Euro pro km. */
 export const LONG_TERM_EXTRA_KM_EUR = extraKmCentsFor("l1h1", 7) / 100;
 
 /** Inklusiv-Kilometer für eine Anzahl Miettage (proportional, auf ganze km gerundet). */
 export function longTermFreeKm(days: number): number {
   if (!Number.isFinite(days) || days <= 0) return 0;
-  return Math.round((LONG_TERM_FREE_KM_PER_30_DAYS / 30) * days);
+  // Erst am Ende auf ganze km runden (ungerundeter Tageswert ≈ 88,89 km).
+  return Math.round((LONG_TERM_LEGACY_KM_PER_30_DAYS / 30) * days * KM_REDUCTION_FACTOR);
 }
 
 /** Wochenpreis (7 Tage) der Fahrzeugklasse in Euro. */
