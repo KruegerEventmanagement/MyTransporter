@@ -11,8 +11,7 @@ import {
   type VehicleClass,
   resolveCheckoutKmSnapshot,
 } from "@/lib/booking-rules";
-import { buildAddonSnapshot } from "@/lib/addons";
-import { readCustomKmSnapshot } from "@/lib/custom-km";
+import { resolveBookingPricing } from "@/lib/booking-persist";
 
 type StripeCheckoutSession = {
   id: string;
@@ -22,6 +21,8 @@ type StripeCheckoutSession = {
   client_reference_id?: string | null;
   customer_details?: { email?: string | null } | null;
   metadata?: Record<string, string> | null;
+  amount_total?: number | null;
+  currency?: string | null;
 };
 
 function extractId(x: unknown): string | null {
@@ -236,35 +237,27 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
     }
   }
 
-  const planEntry = getPlanById(planId, vehicleClass);
-  const planLabel = planEntry ? planLabelWithClass(planEntry) : (md.plan ?? "Transporter-Miete");
-  const planPriceFull = planEntry?.price ?? KM_TARIFF_MIN_EUR[vehicleClass];
-  // Rabatt wirkt ausschließlich auf die Mietleistung; Kaution bleibt unberührt.
-  const appliedDiscountCents = Math.min(
+  // Preis-/Kilometerwerte: Paket-Snapshot exakt wie bezahlt (gegen amount_total geprüft),
+  // sonst bisheriger Pfad inkl. Legacy-Kilometer. Nie still als Grundtarif buchen.
+  const pricing = resolveBookingPricing({
+    md: md as Record<string, string | undefined>,
+    planId,
+    vehicleClass,
+    addonIds,
     couponDiscountCents,
-    Math.max(0, Math.round(planPriceFull * 100) - 100),
-  );
-  const planPrice = Math.round(planPriceFull * 100 - appliedDiscountCents) / 100;
-  // Kilometer-Snapshot: aktueller Checkout → Metadata-Snapshot; alte Session ohne
-  // Version → Legacy-Kontingent (nie das gekürzte neue). Reiner km-Tarif → 0.
-  const kmSnap = resolveCheckoutKmSnapshot(md as Record<string, string | undefined>, planId, vehicleClass);
-  // Individuelles Kilometerpaket: exakt der bezahlte Snapshot, nie Katalog-Neuberechnung.
-  const customKm = readCustomKmSnapshot(md as Record<string, string | undefined>, planId);
-  if (customKm.kind === "invalid") {
-    console.error("[webhook] Kilometerpaket-Snapshot ungültig", session.id, customKm.reason);
+    paid: { amountTotal: session.amount_total ?? null, currency: session.currency ?? null },
+  });
+  if (pricing.kind === "invalid") {
+    console.error("[webhook] Kilometerpaket-Snapshot ungültig", session.id, pricing.reason);
     await supabaseAdmin.from("admin_notifications").insert({
       type: "email_failed",
       title: "Zahlung mit ungültigem Kilometerpaket – Buchung nicht angelegt",
-      body: `Session ${session.id} · PaymentIntent ${paymentIntentId} · ${customKm.reason}. Bitte manuell prüfen.`,
+      body: `Session ${session.id} · PaymentIntent ${paymentIntentId} · ${pricing.reason}. Bitte manuell prüfen.`,
       user_id: userId,
     });
-    return true; // sichtbar + Stripe-Retry, niemals still als Grundtarif buchen
+    return true; // sichtbar + Stripe-Retry
   }
-  const freeKm = customKm.kind === "ok" ? customKm.contractKm : kmSnap.freeKm;
-  const kmPriceCents = customKm.kind === "ok" ? customKm.rateCents : kmSnap.kmPriceCents;
-
-  const addons = [...buildAddonSnapshot(addonIds), ...(customKm.kind === "ok" ? [customKm.addon] : [])];
-  const addonsTotalCents = addons.reduce((s, a) => s + a.price_cents, 0);
+  const { planLabel, planPrice, appliedDiscountCents, freeKm, kmPriceCents, addons, addonsTotalCents } = pricing;
   const pickupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
   const { data: booking, error: insertError } = await supabaseAdmin

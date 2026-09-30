@@ -17,7 +17,7 @@ import {
   checkoutKmCatalogError,
 } from "@/lib/booking-rules";
 import { getAddonById, resolveAddonSelection } from "@/lib/addons";
-import { CUSTOM_KM_MAX, customKmLabel, customKmMetadata, paidCustomKmCents, quoteCustomKm } from "@/lib/custom-km";
+import { CUSTOM_KM_MAX, paidCustomKmCents } from "@/lib/custom-km";
 
 const DEPOSIT_CENTS = 200_00;
 
@@ -30,29 +30,6 @@ function assertStripeEnvironment(environment: StripeEnv) {
 }
 
 const REQUIRED_DOC_TYPES = ["id_front", "id_back", "license_front", "license_back"] as const;
-
-/**
- * Ermittelt die Fahrzeugklasse serverseitig verlässlich: primär aus der
- * Fahrzeug-Tabelle (Kennzeichen), erst danach aus den übergebenen Angaben.
- * Der Browser kann dadurch keinen günstigeren Preis erzwingen.
- */
-async function resolveVehicleClass(
-  plate?: string | null,
-  name?: string | null,
-  hint?: unknown,
-): Promise<VehicleClass> {
-  if (plate) {
-    const { data } = await supabaseAdmin
-      .from("vehicles")
-      .select("name, model, plate")
-      .eq("plate", plate)
-      .maybeSingle();
-    if (data) return vehicleClassFromName(data.name, data.model, data.plate);
-  }
-  if (name) return vehicleClassFromName(name);
-  if (isVehicleClass(hint)) return hint;
-  return "l1h1";
-}
 
 export const createBookingCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -96,177 +73,8 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
-    // 0) Alter Browser-Tab mit veralteten Konditionen → kein stiller Wechsel.
-    const catalogError = checkoutKmCatalogError(data.kmCatalog);
-    if (catalogError) return { error: catalogError };
-    try {
-      // 1) Verifizierungs-Gate: Ausweis + Führerschein müssen hochgeladen sein
-      const { data: docs } = await context.supabase
-        .from("user_documents")
-        .select("doc_type")
-        .eq("user_id", context.userId);
-      const have = new Set((docs ?? []).map((d: { doc_type: string }) => d.doc_type));
-      const missing = REQUIRED_DOC_TYPES.filter((t) => !have.has(t));
-      if (missing.length > 0) {
-        return { error: "Bitte zuerst Ausweis und Führerschein hochladen, bevor du bezahlen kannst." };
-      }
-
-      // 2) Aktive Reservierung für genau diesen Slot (User + Fahrzeug + Tarif + Zeit)
-      const checkoutPlanId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;
-      if (data.startDate && typeof data.startHour === "number") {
-        let holdQuery = supabaseAdmin
-          .from("booking_holds")
-          .select("id, expires_at, plan_id, vehicle_plate")
-          .eq("user_id", context.userId)
-          .eq("start_date", data.startDate)
-          .eq("start_hour", data.startHour)
-          .eq("plan_id", checkoutPlanId)
-          .gt("expires_at", new Date().toISOString());
-        if (data.vehiclePlate) holdQuery = holdQuery.eq("vehicle_plate", data.vehiclePlate);
-        const { data: holds } = await holdQuery.limit(1);
-        if (!holds || holds.length === 0) {
-          return { error: "Deine 15-Minuten-Reservierung ist abgelaufen. Bitte wähle dein Zeitfenster neu." };
-        }
-
-        // 3) Reale Verfügbarkeit erneut prüfen (eigener Hold zählt nicht als Konflikt)
-        const { findVehicleConflicts, conflictMessage } = await import("@/lib/availability.server");
-        const conflicts = await findVehicleConflicts({
-          vehiclePlate: data.vehiclePlate ?? "",
-          planId: checkoutPlanId,
-          startDate: data.startDate,
-          startHour: data.startHour,
-          ignoreHoldUserId: context.userId,
-        });
-        if (conflicts.length > 0) return { error: conflictMessage(conflicts) };
-      }
-
-
-      const stripe = createStripeClient(data.environment);
-      const planId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;
-      // Fahrzeugklasse serverseitig bestimmen – sie entscheidet über den Preis
-      const vehicleClass = await resolveVehicleClass(
-        data.vehiclePlate,
-        data.vehicleName,
-        data.vehicleClass,
-      );
-      const planEntry = getPlanById(planId, vehicleClass);
-      const plan = planEntry
-        ? { rent: planEntry.price * 100, label: `Transporter-Miete · ${planLabelWithClass(planEntry)}` }
-        : {
-            rent: KM_TARIFF_MIN_EUR[vehicleClass] * 100,
-            label: `Transporter-Miete · ${VEHICLE_CLASS_SHORT_LABEL[vehicleClass]} · Kilometer-Tarif (${(
-              KM_TARIFF_CENTS_PER_KM / 100
-            )
-              .toFixed(2)
-              .replace(".", ",")} €/km, Mindestbetrag ${KM_TARIFF_MIN_EUR[vehicleClass]} €)`,
-          };
-
-    // Gutschein: gilt ausschließlich auf die Mietleistung, nie auf Kaution
-    // oder Zusatzpakete. Prüfung ausschließlich serverseitig.
-    const { resolveCouponForRent } = await import("@/lib/birthday.server");
-    const coupon = await resolveCouponForRent(data.couponCode, context.userId, plan.rent);
-    if (!coupon.ok) return { error: coupon.reason ?? "Gutscheincode ungültig." };
-    const discountCents = Math.min(coupon.discountCents ?? 0, Math.max(0, plan.rent - 100));
-    const rentAfterDiscount = plan.rent - discountCents;
-    const rentLabel =
-      discountCents > 0
-        ? `${plan.label} · inkl. ${coupon.discountPercent} % Geburtstagsrabatt`
-        : plan.label;
-
-    const line_items: Array<{
-      price_data: {
-        currency: string;
-        product_data: { name: string };
-        unit_amount: number;
-      };
-      quantity: number;
-    }> = [];
-    if (rentAfterDiscount > 0) {
-      line_items.push({
-        price_data: {
-          currency: "eur",
-          product_data: { name: rentLabel },
-          unit_amount: rentAfterDiscount,
-        },
-        quantity: 1,
-      });
-    }
-    // Individuelles Kilometerpaket: ausschließlich serverseitig berechnet, eigene
-    // Stripe-Position, nie vom Gutschein erfasst.
-    const kmQuote = data.customKm != null && planEntry ? quoteCustomKm(planId, vehicleClass, data.customKm) : null;
-    const kmPackage = kmQuote && kmQuote.surchargeCents > 0 ? kmQuote : null;
-    if (kmPackage) {
-      line_items.push({
-        price_data: { currency: "eur", product_data: { name: customKmLabel(kmPackage) }, unit_amount: kmPackage.surchargeCents },
-        quantity: 1,
-      });
-    }
-    const addonIds = data.addonIds ?? [];
-    for (const id of addonIds) {
-      const sel = resolveAddonSelection(id);
-      if (!sel) continue;
-      line_items.push({
-        price_data: {
-          currency: "eur",
-          product_data: { name: sel.label },
-          unit_amount: sel.priceCents,
-        },
-        quantity: 1,
-      });
-    }
-
-    line_items.push({
-      price_data: {
-        currency: "eur",
-        product_data: { name: "Kaution (wird nach Rückgabe erstattet)" },
-        unit_amount: DEPOSIT_CENTS,
-      },
-      quantity: 1,
-    });
-
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        ui_mode: "embedded_page",
-        line_items,
-        return_url: data.returnUrl,
-        customer_creation: "always",
-        ...(data.customerEmail && { customer_email: data.customerEmail }),
-        payment_intent_data: {
-          description: plan.rent > 0 ? `${plan.label} + Kaution` : "Transporter-Miete · Kaution",
-          setup_future_usage: "off_session",
-        },
-        ...(context.userId && {
-          client_reference_id: context.userId,
-          metadata: {
-            userId: context.userId,
-            plan: data.plan,
-            planId,
-            vehicleClass,
-            // Kilometer-Snapshot serverseitig festhalten (Webhook nutzt ihn statt Katalog).
-            kmCatalog: KM_CATALOG_VERSION,
-            ...(planEntry && {
-              freeKm: String(kmPackage ? kmPackage.contractKm : planEntry.freeKm),
-              kmPriceCents: String(kmPackage ? kmPackage.rateCents : planEntry.extraKmCents),
-            }),
-            ...(kmPackage && customKmMetadata(kmPackage)),
-            ...(data.startDate && { startDate: data.startDate }),
-            ...(typeof data.startHour === "number" && { startHour: String(data.startHour) }),
-            ...(data.vehicleName && { vehicleName: String(data.vehicleName).slice(0, 200) }),
-            ...(data.vehiclePlate && { vehiclePlate: String(data.vehiclePlate).slice(0, 50) }),
-            ...(addonIds.length > 0 && { addonIds: addonIds.join(",") }),
-            ...(discountCents > 0 && {
-              couponCode: coupon.code!,
-              discountCents: String(discountCents),
-            }),
-          },
-        }),
-      });
-
-      if (!session.client_secret) throw new Error("Stripe hat kein Checkout-Token zurückgegeben");
-      return { clientSecret: session.client_secret };
-    } catch (error) {
-      return { error: getStripeErrorMessage(error) };
-    }
+    const { runBookingCheckout } = await import("@/lib/booking-checkout.server");
+    return runBookingCheckout(data, context);
   });
 
 /** Liest Customer / PaymentIntent / PaymentMethod aus einer abgeschlossenen Session. */
