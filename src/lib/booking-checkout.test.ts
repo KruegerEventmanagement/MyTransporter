@@ -151,6 +151,16 @@ describe("echter Checkout-Handler + Webhook-Persistenz", () => {
     expect(resolveBookingPricing({ md, planId: md.planId!, vehicleClass: "l1h1", addonIds: [], couponDiscountCents: 0, paid: { amountTotal: total, currency: "usd" } }).kind).toBe("invalid");
   });
 
+  it("Kaution aus vollständigem Snapshot wird durchgereicht; ohne Paket 200 €", async () => {
+    const { total, md } = await checkout({ customKm: 503 });
+    const alt = { ...md, ckDep: "15000", ckTot: String(Number(md.ckTot) - 5000) };
+    const b = persist(alt, total - 5000);
+    expect(b.kind === "ok" && b.deposit).toBe(150);
+    expect((persist(md, total) as any).deposit).toBe(200);
+    const legacy = persist({ planId: "24h_300" }, 29900);
+    expect(legacy.kind === "ok" && legacy.deposit).toBe(200);
+  });
+
   it("ohne Paket (leer/aus) keine ck-Felder; alte Session 35 ct bleibt 35 ct", async () => {
     const { md, total } = await checkout({ customKm: null });
     expect(Object.keys(md).some((k) => k.startsWith("ck"))).toBe(false);

@@ -1583,7 +1583,7 @@ export function BookingSection() {
                     <div className="mt-4 rounded-xl border border-border bg-secondary/50 p-3 text-sm">
                       <div className="flex justify-between gap-3">
                         <span className="text-muted-foreground">{selectedPlanEntry.shortLabel} · {VEHICLE_CLASS_SHORT_LABEL[vehicleClass]}</span>
-                        <span className="font-semibold text-foreground whitespace-nowrap">{selectedPlanEntry.price} € Miete</span>
+                        <span className="font-semibold text-foreground whitespace-nowrap" data-testid="plan-rent-line">{fmtEur(rentWithKmEur)} € Miete{kmPackageEur > 0 ? " inkl. Kilometerpaket" : ""}</span>
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {contractKmShown.toLocaleString("de-DE")} km inklusive · Mehrkilometer bei Rückgabe {(contractRateCents / 100).toFixed(2).replace(".", ",")} €/km · Kaution {DEPOSIT} € separat

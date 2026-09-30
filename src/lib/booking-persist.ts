@@ -14,6 +14,8 @@ import {
 import { buildAddonSnapshot } from "@/lib/addons";
 import { readCustomKmSnapshot, type SnapshotAddon } from "@/lib/custom-km";
 
+const LEGACY_DEPOSIT_EUR = 200;
+
 export type BookingPricing =
   | { kind: "invalid"; reason: string }
   | {
@@ -25,6 +27,8 @@ export type BookingPricing =
       kmPriceCents: number;
       addons: SnapshotAddon[];
       addonsTotalCents: number;
+      /** Bezahlte Kaution in Euro (Paket-Snapshot; bisheriger Pfad unverändert 200 €). */
+      deposit: number;
     };
 
 export function resolveBookingPricing(params: {
@@ -48,6 +52,7 @@ export function resolveBookingPricing(params: {
       kmPriceCents: ck.rateCents,
       addons: ck.addons,
       addonsTotalCents: ck.addons.reduce((s, a) => s + a.price_cents, 0),
+      deposit: ck.depositCents / 100,
     };
   }
   // Bisheriger Pfad (unverändert).
@@ -66,5 +71,6 @@ export function resolveBookingPricing(params: {
     kmPriceCents: kmSnap.kmPriceCents,
     addons,
     addonsTotalCents: addons.reduce((s, a) => s + a.price_cents, 0),
+    deposit: LEGACY_DEPOSIT_EUR,
   };
 }
