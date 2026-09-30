@@ -1535,21 +1535,22 @@ export function BookingSection() {
         {/* Step 2: Vehicle */}
         {step === 2 && (
           <div className="mt-12 max-w-2xl mx-auto animate-fade-in-up">
-            <p className="text-center text-muted-foreground text-lg mb-2">Dein Fahrzeug</p>
-            <div className="rounded-3xl border border-border bg-card p-4 sm:p-6 shadow-sm min-w-0">
+            <section className="rounded-3xl border border-border bg-card p-4 sm:p-6 shadow-sm min-w-0">
+              <h3 className="text-lg font-semibold text-foreground">Transporter wählen</h3>
               {pickerVehicles.length > 0 && (
-                <VehiclePicker
-                  vehicles={pickerVehicles}
-                  selectedIndex={vehicleIdx}
-                  onSelect={chooseVehicle}
-                  statusFor={(pv) => {
-                    const v = vehicles.find((x) => x.id === pv.id);
-                    if (!v) return undefined;
-                    if (!v.is_active) return { label: "nicht verfügbar", dimmed: true };
-                    if (!isPlateAvailable(v.plate ?? "")) return { label: "belegt", disabled: true };
-                    return { label: "verfügbar" };
-                  }}
-                >
+                <div className="mt-3">
+                  <VehiclePicker
+                    vehicles={pickerVehicles}
+                    selectedIndex={vehicleIdx}
+                    onSelect={chooseVehicle}
+                    statusFor={(pv) => {
+                      const v = vehicles.find((x) => x.id === pv.id);
+                      if (!v) return undefined;
+                      if (!v.is_active) return { label: "nicht verfügbar", dimmed: true };
+                      if (!isPlateAvailable(v.plate ?? "")) return { label: "belegt", disabled: true };
+                      return { label: "verfügbar" };
+                    }}
+                  >
                   {currentVehicle && !currentVehicle.is_active && (
                     <div className="mt-4 rounded-xl border border-border bg-secondary p-3 text-sm">
                       <p className="font-semibold text-foreground">Aktuell nicht verfügbar</p>
@@ -1590,9 +1591,10 @@ export function BookingSection() {
                       </p>
                     </div>
                   )}
-                </VehiclePicker>
+                  </VehiclePicker>
+                </div>
               )}
-            </div>
+            </section>
 
             {/* Optionale Zusatzpakete */}
             <div className="mt-12">
