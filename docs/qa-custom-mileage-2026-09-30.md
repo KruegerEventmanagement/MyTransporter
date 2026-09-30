@@ -23,3 +23,13 @@ docs/qa-custom-mileage-invoice-mock.png: 99 + 29 (Umzugspaket) + 91,35 (Kilomete
 
 ## Nicht geprüft
 Echter Stripe-Checkout/Webhook, echte Mails, echte Stornoerstattung, iPhone-Gerät, Reload-Wiederherstellung nach echter Registrierung (nur Draft-Logik + lokaler Browser).
+
+## Nachtrag Review 3a996fdf (30.09.2026)
+1. Leeres/Leerzeichen-Feld = kein Paket, kein Fehler, Hinweis „Keine zusätzlichen Kilometer ausgewählt“; Kraftstoffhinweis und alle km-Zusammenfassungen zeigen das gebuchte Kontingent.
+2. Versionierter Entwurf (sessionStorage `mt_booking_draft`, v1, 24 h, nur Auswahl): einmal beim Einstieg wiederherstellen, erst danach speichern; höchstens bis „Fahrzeug & Zubehör“, Reservierung entsteht später neu; vergangene Daten/abgelaufene Entwürfe verworfen; beim Start der Zahlung gelöscht; Speicherfehler abgefangen.
+3. Mit Paket: Checkout verlangt genau ein aktives DB-Fahrzeug mit dem Kennzeichen, sonst klarer Fehler ohne Stripe-Sitzung; Browserklasse/-name werden ignoriert. plan_id/Hold unverändert.
+4. Snapshot `ckm-2` (≤17 + Zubehörzeilen Keys, Werte ≤500 Zeichen): Tarif/Klasse/Label, Grundmiete vor Rabatt, Rabatt, Zubehörzeilen, Paketbetrag, Kontingent, Satz, Kaution, Gesamtsumme. Webhook (`src/lib/booking-persist.ts`) übernimmt ihn ohne Katalog und prüft Summe gegen `amount_total`/`eur`. ck-Feld ohne ckV, `ckm-1`, Summen-/Betragsabweichung → ungültig (Admin-Hinweis, Stripe-Retry). Sessions ohne ck* → bisheriger Pfad.
+5. Echte Handlerlogik getestet: `src/lib/booking-checkout.server.ts` (von `createBookingCheckout` genutzt) + `resolveBookingPricing`, gemocktes Stripe/Backend: `src/lib/booking-checkout.test.ts` (7 Fälle: 503+Umzugspaket+Gutschein, Katalogänderung danach, 3 d 900 → 404 € + 200 €, 900/901 km, falsches/inaktives/doppeltes Fahrzeug, Klasse aus DB, defekte Snapshots/falscher Betrag/Währung, ohne Paket, alte Session 35 ct).
+6. Browser localhost (1280 und 375 px, zwei Kalendertage → 24 h, 09:00, L1H1 LEO MY 102): 503 → Aufschlag 91,35 € (über 24 h · 500 km), Miete 190,35 €, Kaution 200 €, 503 km gebucht; Neuladen → identische Werte, Fahrzeug und „503 km inklusive“; leeren → 200 km, 99 €, nicht gesperrt; „12,5“ → gesperrt; aus → Originaltarif. Keine Holds/Zahlungen/Mails. Bild: docs/qa-custom-mileage-375-reload.png.
+
+Offen: echter Stripe-Lauf, echte Mails/Erstattung, iPhone-Gerät; Wiederherstellung nach E-Mail-Bestätigung weiterhin über den bestehenden Registrierungsentwurf (nicht erneut im Browser geprüft).
