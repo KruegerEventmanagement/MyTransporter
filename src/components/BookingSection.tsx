@@ -2100,8 +2100,11 @@ export function BookingSection() {
                 </p>
               </div>
 
+              {customKmError && (
+                <p className="mt-4 text-sm font-medium text-foreground" role="alert">Kilometerpaket: {customKmError}</p>
+              )}
               <button
-                disabled={!liabilityAccepted}
+                disabled={!liabilityAccepted || !!customKmError}
                 onClick={async () => {
                   // Pending Booking für /checkout/return persistieren
                   if (typeof window !== "undefined" && date && startHour !== null && selectedPlanEntry) {
