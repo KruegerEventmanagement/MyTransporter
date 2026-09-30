@@ -14,6 +14,7 @@ import {
   VEHICLE_CLASS_SHORT_LABEL,
   type VehicleClass,
   KM_CATALOG_VERSION,
+  checkoutKmCatalogError,
 } from "@/lib/booking-rules";
 import { getAddonById, resolveAddonSelection } from "@/lib/addons";
 
@@ -68,6 +69,8 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     startHour?: number;
     /** Optionaler persönlicher Gutscheincode (z. B. Geburtstagsvorteil). */
     couponCode?: string | null;
+    /** Im Browser angezeigte Kilometer-Katalogversion (nur Konsistenzprüfung). */
+    kmCatalog?: string;
   }) => {
     const planId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;
     const plan = getPlanById(planId);
@@ -87,6 +90,9 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
+    // 0) Alter Browser-Tab mit veralteten Konditionen → kein stiller Wechsel.
+    const catalogError = checkoutKmCatalogError(data.kmCatalog);
+    if (catalogError) return { error: catalogError };
     try {
       // 1) Verifizierungs-Gate: Ausweis + Führerschein müssen hochgeladen sein
       const { data: docs } = await context.supabase
