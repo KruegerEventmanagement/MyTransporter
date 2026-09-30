@@ -1,0 +1,1 @@
+ALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS tank_liters integer, ADD COLUMN IF NOT EXISTS range_km integer;

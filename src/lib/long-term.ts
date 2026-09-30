@@ -158,3 +158,108 @@ export function quoteLongTerm(
 export function formatEur(value: number): string {
   return value.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+
+// ---------------------------------------------------------------------------
+// Langzeitmiete mit Uhrzeit und Wunschkilometern (Anfrage-Rechner)
+// ---------------------------------------------------------------------------
+
+/** Kulanz in Minuten, bevor ein angefangener 24-h-Block als weiterer Tag zählt. */
+export const LONG_TERM_GRACE_MINUTES = 60;
+/** Gestaffelter Mehrkilometer-Preis für Wunschkilometer über dem Inklusivkontingent. */
+export const LONG_TERM_KM_TIERS: Array<{ upToExtraKm: number; eurPerKm: number }> = [
+  { upToExtraKm: 1000, eurPerKm: 0.29 },
+  { upToExtraKm: 5000, eurPerKm: 0.22 },
+  { upToExtraKm: Infinity, eurPerKm: 0.18 },
+];
+/** Gutschrift je nicht benötigtem Inklusiv-km. */
+export const LONG_TERM_UNUSED_KM_CREDIT_EUR = 0.05;
+/** Maximale Gutschrift in Prozent des Grundpreises. */
+export const LONG_TERM_MAX_CREDIT_PERCENT = 10;
+
+const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+/** Miettage aus Datum + Uhrzeit (angefangene 24-h-Blöcke, 1 h Kulanz). Wandzeit, daher sommerzeitneutral. */
+export function rentalDaysFromDateTimes(
+  startDate: string,
+  startTime: string,
+  endDate: string,
+  endTime: string,
+): number | null {
+  const isIso = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v ?? "");
+  if (!isIso(startDate) || !isIso(endDate) || !TIME_RE.test(startTime) || !TIME_RE.test(endTime)) return null;
+  const s = Date.parse(`${startDate}T${startTime}:00Z`);
+  const e = Date.parse(`${endDate}T${endTime}:00Z`);
+  if (Number.isNaN(s) || Number.isNaN(e) || e <= s) return null;
+  const minutes = (e - s) / 60_000 - LONG_TERM_GRACE_MINUTES;
+  return Math.max(1, Math.ceil(minutes / 1440));
+}
+
+/** Aufpreis für Zusatzkilometer nach Staffel. */
+export function extraKmCostEur(extraKm: number): number {
+  let rest = Math.max(0, Math.round(extraKm));
+  let prevCap = 0;
+  let total = 0;
+  for (const tier of LONG_TERM_KM_TIERS) {
+    const span = tier.upToExtraKm - prevCap;
+    const used = Math.min(rest, span);
+    total += used * tier.eurPerKm;
+    rest -= used;
+    prevCap = tier.upToExtraKm;
+    if (rest <= 0) break;
+  }
+  return roundCents(total);
+}
+
+export type LongTermKmQuote =
+  | { eligible: false; days: number | null; reason: "invalid_range" | "below_minimum" }
+  | {
+      eligible: true;
+      days: number;
+      vehicleClass: VehicleClass;
+      desiredKm: number;
+      includedKm: number;
+      basePriceEur: number;
+      extraKm: number;
+      extraKmCostEur: number;
+      creditEur: number;
+      totalEur: number;
+      effectivePricePerDayEur: number;
+      nextKmEur: number;
+      depositEur: number;
+    };
+
+/** Richtpreis für Tage + Wunschkilometer. */
+export function quoteLongTermWithKm(
+  days: number | null,
+  vehicleClass: VehicleClass,
+  desiredKm: number,
+): LongTermKmQuote {
+  if (days === null || !Number.isFinite(days)) return { eligible: false, days: null, reason: "invalid_range" };
+  if (days < LONG_TERM_MIN_DAYS) return { eligible: false, days, reason: "below_minimum" };
+  const km = Math.max(0, Math.round(Number.isFinite(desiredKm) ? desiredKm : 0));
+  const basePriceEur = longTermPriceEur(days, vehicleClass);
+  const includedKm = longTermFreeKm(days);
+  const extraKm = Math.max(0, km - includedKm);
+  const extra = extraKmCostEur(extraKm);
+  const unused = Math.max(0, includedKm - km);
+  const creditEur = roundCents(
+    Math.min(unused * LONG_TERM_UNUSED_KM_CREDIT_EUR, (basePriceEur * LONG_TERM_MAX_CREDIT_PERCENT) / 100),
+  );
+  const totalEur = roundCents(basePriceEur + extra - creditEur);
+  const tier = LONG_TERM_KM_TIERS.find((t) => extraKm < t.upToExtraKm) ?? LONG_TERM_KM_TIERS[LONG_TERM_KM_TIERS.length - 1]!;
+  return {
+    eligible: true,
+    days,
+    vehicleClass,
+    desiredKm: km,
+    includedKm,
+    basePriceEur,
+    extraKm,
+    extraKmCostEur: extra,
+    creditEur,
+    totalEur,
+    effectivePricePerDayEur: roundCents(totalEur / days),
+    nextKmEur: tier.eurPerKm,
+    depositEur: DEPOSIT_EUR,
+  };
+}

@@ -42,6 +42,8 @@ interface Vehicle {
   cargo_volume_m3: number | null;
   pickup_location: string | null;
   pickup_address: string | null;
+  tank_liters: number | null;
+  range_km: number | null;
 }
 
 const empty: Partial<Vehicle> = {
@@ -253,6 +255,8 @@ function VehicleEditor({
         cargo_volume_m3: form.cargo_volume_m3,
         pickup_location: form.pickup_location,
         pickup_address: form.pickup_address,
+        tank_liters: form.tank_liters,
+        range_km: form.range_km,
         is_active: form.is_active,
       };
       if (isNew) {
@@ -380,6 +384,8 @@ function VehicleEditor({
         <Field label="Ladevolumen (m³)"><input className={inp} {...numField("cargo_volume_m3")} /></Field>
         <Field label="Abholort (Kurzform)"><input className={inp} {...txtField("pickup_location")} /></Field>
         <Field label="Abholadresse"><input className={inp} {...txtField("pickup_address")} /></Field>
+        <Field label="Tankgröße (Liter, ca.)"><input className={inp} {...numField("tank_liters")} /></Field>
+        <Field label="Reichweite (km, ca.)"><input className={inp} {...numField("range_km")} /></Field>
       </Section>
 
       <Section title="Notizen">

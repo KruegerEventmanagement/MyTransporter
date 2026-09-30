@@ -923,8 +923,10 @@ export type Database = {
           pickup_location: string | null
           plate: string
           power_kw: number | null
+          range_km: number | null
           registration_doc_url: string | null
           seats: number | null
+          tank_liters: number | null
           tire_size: string | null
           trailer_load_braked_kg: number | null
           trailer_load_unbraked_kg: number | null
@@ -966,8 +968,10 @@ export type Database = {
           pickup_location?: string | null
           plate?: string
           power_kw?: number | null
+          range_km?: number | null
           registration_doc_url?: string | null
           seats?: number | null
+          tank_liters?: number | null
           tire_size?: string | null
           trailer_load_braked_kg?: number | null
           trailer_load_unbraked_kg?: number | null
@@ -1009,8 +1013,10 @@ export type Database = {
           pickup_location?: string | null
           plate?: string
           power_kw?: number | null
+          range_km?: number | null
           registration_doc_url?: string | null
           seats?: number | null
+          tank_liters?: number | null
           tire_size?: string | null
           trailer_load_braked_kg?: number | null
           trailer_load_unbraked_kg?: number | null
