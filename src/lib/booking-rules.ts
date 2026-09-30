@@ -111,14 +111,17 @@ export type ExtraKmBand = "day" | "multi" | "week";
 
 /**
  * Mehrkilometersätze (ct/km) je Fahrzeugklasse und Band – einzige Quelle.
- * Aktuell für ALLE Klassen gleich (0,45 / 0,35 / 0,29 €, unverändert übernommen);
- * klassenbezogene Abweichungen werden nur hier eingetragen.
+ * Seit 30.09.2026 (Eigentümerauftrag) einheitlich 0,45 € für alle Klassen und Bänder.
+ * Frühere Sätze (0,45 / 0,35 / 0,29) stehen in LEGACY_EXTRA_KM_CENTS für Altsessions.
  */
 export const EXTRA_KM_CENTS_BY_CLASS: Record<VehicleClass, Record<ExtraKmBand, number>> = {
-  l1h1: { day: 45, multi: 35, week: 29 },
-  l4h2: { day: 45, multi: 35, week: 29 },
-  l5h2: { day: 45, multi: 35, week: 29 },
+  l1h1: { day: 45, multi: 45, week: 45 },
+  l4h2: { day: 45, multi: 45, week: 45 },
+  l5h2: { day: 45, multi: 45, week: 45 },
 };
+
+/** Mehrkilometersätze vor der Vereinheitlichung auf 0,45 € – nur für alte Checkouts. */
+export const LEGACY_EXTRA_KM_CENTS: Record<ExtraKmBand, number> = { day: 45, multi: 35, week: 29 };
 
 export function extraKmBandForDays(days: number): ExtraKmBand {
   if (days >= 7) return "week";
@@ -207,7 +210,9 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
 ];
 
 /** Aktuelle Kilometer-Katalogversion (wird in Stripe-Metadata festgehalten). */
-export const KM_CATALOG_VERSION = "km-2026-09-30";
+export const KM_CATALOG_VERSION = "km-2026-09-30b";
+/** Vorherige Version (neue km, alte Sätze 0,35/0,29) – Snapshots daraus bleiben gültig. */
+export const PREVIOUS_KM_CATALOG_VERSIONS = ["km-2026-09-30"] as const;
 
 export const KM_CATALOG_OUTDATED_MESSAGE =
   "Tarife wurden aktualisiert. Bitte Seite neu laden und die aktuellen Konditionen prüfen.";
@@ -245,14 +250,17 @@ export function freeKmForCatalogVersion(
   version: string | null | undefined,
   vehicleClass: VehicleClass = "l1h1",
 ): number | null {
-  if (version === KM_CATALOG_VERSION) return getPlanById(planId, vehicleClass)?.freeKm ?? null;
+  if (version === KM_CATALOG_VERSION || (PREVIOUS_KM_CATALOG_VERSIONS as readonly string[]).includes(version ?? "")) {
+    return getPlanById(planId, vehicleClass)?.freeKm ?? null;
+  }
   return legacyFreeKmFor(planId);
 }
 
 /**
  * Kilometer-Snapshot für eine neue Buchung aus Stripe-Metadata (Webhook).
- * Gültiger aktueller Snapshot → genau diese Werte; alte Session ohne Version →
- * Legacy-Kontingent. Reiner km-Tarif/unbekannt → 0 km.
+ * Gültiger Snapshot (aktuelle oder vorherige Version) → genau diese Werte;
+ * alte Session ohne Snapshot → Legacy-Kontingent UND Legacy-Mehrkilometersatz,
+ * damit nie ein höherer Satz als beim Checkout angezeigt berechnet wird.
  */
 export function resolveCheckoutKmSnapshot(
   md: Record<string, string | undefined>,
@@ -263,8 +271,11 @@ export function resolveCheckoutKmSnapshot(
   const f = num(md.freeKm);
   const c = num(md.kmPriceCents);
   const plan = getPlanById(planId, vehicleClass);
-  const fallbackCents = plan?.extraKmCents ?? KM_TARIFF_CENTS_PER_KM;
-  if (md.kmCatalog === KM_CATALOG_VERSION && Number.isInteger(f) && f >= 0) {
+  const isCurrent = md.kmCatalog === KM_CATALOG_VERSION;
+  const legacyCents = plan && plan.id !== "km" ? LEGACY_EXTRA_KM_CENTS[extraKmBandForDays(plan.days)] : KM_TARIFF_CENTS_PER_KM;
+  const fallbackCents = isCurrent ? (plan?.extraKmCents ?? KM_TARIFF_CENTS_PER_KM) : legacyCents;
+  const known = isCurrent || (PREVIOUS_KM_CATALOG_VERSIONS as readonly string[]).includes(md.kmCatalog ?? "");
+  if (known && Number.isInteger(f) && f >= 0) {
     return { freeKm: f, kmPriceCents: Number.isInteger(c) && c >= 0 ? c : fallbackCents };
   }
   return { freeKm: freeKmForCatalogVersion(planId, md.kmCatalog ?? null, vehicleClass) ?? 0, kmPriceCents: fallbackCents };

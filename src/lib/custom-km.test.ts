@@ -18,12 +18,12 @@ describe("Beispiele L1H1", () => {
     expect(quoteCustomKm("24h_300", "l1h1", 400)!.contractKm).toBe(500);
   });
   it("Mehrtage/Woche", () => {
-    expect([600, 900, 1200].map((k) => eur("multi_3d", k))).toEqual([269, 374, 479]);
-    expect(eur("multi_3d", 900, "l4h2")).toBe(404);
-    expect(eur("multi_3d", 900, "l5h2")).toBe(420);
+    expect([600, 900, 1200].map((k) => eur("multi_3d", k))).toEqual([269, 404, 539]);
+    expect(eur("multi_3d", 900, "l4h2")).toBe(434);
+    expect(eur("multi_3d", 900, "l5h2")).toBe(450);
     expect(eur("multi_7d", 1400)).toBe(499);
-    expect(eur("multi_7d", 2000)).toBe(673);
-    expect(quoteCustomKm("multi_7d", "l1h1", 2000)!.rateCents).toBe(29);
+    expect(eur("multi_7d", 2000)).toBe(769);
+    expect(quoteCustomKm("multi_7d", "l1h1", 2000)!.rateCents).toBe(45);
   });
   it("500/800-Grenzen ±1 km", () => {
     expect(eur("24h_300", 499)).toBe(189);
@@ -78,11 +78,11 @@ describe("Eingabe", () => {
   });
 });
 
-describe("Anfragerechner unverändert", () => {
+describe("Anfragerechner (Katalog 0,45 €)", () => {
   it("gleiche Beträge wie vorher", () => {
     const t3 = { startDate: "2026-10-05", startTime: "09:00", endDate: "2026-10-08", endTime: "09:00" };
     const q = quoteRental({ ...t3, desiredKm: 900 }, "l1h1");
-    expect(q.ok && q.totalEur).toBe(374);
+    expect(q.ok && q.totalEur).toBe(404);
     const t30 = { ...t3, endDate: "2026-11-04" };
     const l = quoteRental({ ...t30, desiredKm: 2667 }, "l1h1");
     expect(l.ok && l.totalEur).toBe(999);
@@ -121,12 +121,12 @@ describe("Checkout → Webhook → Buchung (gemockt, ohne Stripe)", () => {
     const b = webhook(md, "multi_3d", "l1h1", ["umzugspaket"], 2690) as Exclude<ReturnType<typeof webhook>, { error: string }>;
     const stripeTotal = lines.reduce((a, c) => a + c, 0);
     expect(Math.round(b.plan_price * 100) + b.addons_total_cents + b.deposit * 100).toBe(stripeTotal);
-    expect(lines).toContain(10500); // Paket nicht rabattiert
-    expect([b.free_km, b.km_price_cents]).toEqual([900, 35]);
+    expect(lines).toContain(13500); // Paket nicht rabattiert
+    expect([b.free_km, b.km_price_cents]).toEqual([900, 45]);
     const extra = (driven: number) => Math.max(0, driven - bookingFreeKm("multi_3d", b.free_km)) * b.km_price_cents;
     expect(extra(900)).toBe(0);
-    expect(extra(901)).toBe(35);
-    expect(paidCustomKmCents(b.addons)).toBe(10500);
+    expect(extra(901)).toBe(45);
+    expect(paidCustomKmCents(b.addons)).toBe(13500);
     expect(b.addons.filter(isPhysicalAddon).map((a) => a.id)).toEqual(["umzugspaket"]);
   });
   it("24 h + 503 km: bis 503 frei, 504 → 0,45 €", () => {
@@ -139,7 +139,7 @@ describe("Checkout → Webhook → Buchung (gemockt, ohne Stripe)", () => {
     expect(readCustomKmSnapshot({}, "multi_3d")).toEqual({ kind: "none" });
     expect(webhook({ planId: "multi_3d" }, "multi_3d", "l1h1", [], 0)).toMatchObject({ free_km: 900, km_price_cents: 35, addons_total_cents: 0 });
     const { md } = checkout("multi_3d", "l1h1", null, [], 0);
-    expect(webhook(md, "multi_3d", "l1h1", [], 0)).toMatchObject({ free_km: 600, km_price_cents: 35 });
+    expect(webhook(md, "multi_3d", "l1h1", [], 0)).toMatchObject({ free_km: 600, km_price_cents: 45 });
   });
   it("defekter Snapshot → Fehler, nie stiller Grundtarif", () => {
     const { md } = checkout("multi_3d", "l1h1", 900, [], 0);

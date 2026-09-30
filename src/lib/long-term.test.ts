@@ -55,7 +55,7 @@ describe("Langzeitmiete", () => {
     expect(q.isExactWeekDiscount).toBe(true);
     expect(q.depositEur).toBe(200);
     expect(q.freeKm).toBe(622);
-    expect(q.extraKmEur).toBe(0.29);
+    expect(q.extraKmEur).toBe(0.45);
     expect(longTermPriceEur(7, "l4h2")).toBe(512.1);
     expect(longTermPriceEur(7, "l5h2")).toBe(526.5);
   });
