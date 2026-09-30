@@ -8,6 +8,7 @@ import { de } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { FuelInfoNote } from "./FuelInfoNote";
 import { createBookingCheckout } from "@/lib/payments.functions";
+import { KM_CATALOG_VERSION } from "@/lib/booking-rules";
 import { previewCoupon, type CouponPreview } from "@/lib/birthday.functions";
 import { ageOn, MIN_DRIVER_AGE } from "@/lib/birthday";
 import { createBookingHold, releaseBookingHold } from "@/lib/booking-holds.functions";
@@ -2105,6 +2106,7 @@ export function BookingSection() {
                           startDate: date ? format(date, "yyyy-MM-dd") : undefined,
                           startHour: startHour ?? undefined,
                           couponCode: couponInfo?.valid ? couponCode.trim() : undefined,
+                          kmCatalog: KM_CATALOG_VERSION,
                        },
                      });
                       if ("error" in result) throw new Error(result.error);

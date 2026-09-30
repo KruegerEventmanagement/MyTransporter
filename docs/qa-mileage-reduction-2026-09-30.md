@@ -43,3 +43,6 @@ booking-rules (Katalog, Kommentar), long-term, Preise/TariffSection/BookingSecti
 ## Nicht geprüft
 
 Echter Stripe-Checkout/Webhook-Lauf (nur Unit-Tests), Buchungsbestätigungs- und Admin-Mails live, Galerie/Badge/Auth nur über bestehende Regressionstests, Live-Domain (nicht veröffentlicht), echtes iPhone.
+
+## Nachtrag: Alter Browser-Tab
+Der Browser sendet beim Checkout `kmCatalog` (KM_CATALOG_VERSION). Der Server prüft vor jedem neuen Checkout mit `checkoutKmCatalogError`; fehlt die Version oder ist sie veraltet (alter Tab mit 300/900 km), wird keine Session erzeugt und die Meldung „Tarife wurden aktualisiert. Bitte Seite neu laden und die aktuellen Konditionen prüfen.“ angezeigt. Die Version ist kein Preis-Input; Kilometer/Preise rechnet weiterhin der Server. Bereits existierende Stripe-Sessions sind unberührt (Webhook: Snapshot bzw. Legacy). Tests in rental-quote.test.ts; kein echter Checkout/keine Mail ausgeführt.

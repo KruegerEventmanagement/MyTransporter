@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { checkoutKmCatalogError, KM_CATALOG_OUTDATED_MESSAGE } from "./booking-rules";
 import { quoteRental } from "@/lib/rental-quote";
 import { EXTRA_KM_CENTS_BY_CLASS, getPlanById, planCatalog, VEHICLE_CLASSES, KM_CATALOG_VERSION, legacyFreeKmFor, resolveCheckoutKmSnapshot, bookingFreeKm, KM_TARIFF_CENTS_PER_KM } from "@/lib/booking-rules";
 import { longTermFreeKm } from "@/lib/long-term";
@@ -201,5 +202,21 @@ describe("Altbuchungen behalten ihre Kilometer", () => {
   it("fehlender Snapshot → Legacy, nicht neuer Katalog", () => {
     expect(bookingFreeKm("multi_3d", null)).toBe(900);
     expect(bookingFreeKm("km", null)).toBe(0);
+  });
+});
+
+describe("Alter Browser-Tab fordert neuen Checkout an", () => {
+  it("fehlende oder veraltete Version → verständlicher Fehler, kein Checkout", () => {
+    expect(checkoutKmCatalogError(undefined)).toBe(KM_CATALOG_OUTDATED_MESSAGE);
+    expect(checkoutKmCatalogError("km-2026-01-01")).toBe(KM_CATALOG_OUTDATED_MESSAGE);
+    expect(checkoutKmCatalogError(123)).toBe(KM_CATALOG_OUTDATED_MESSAGE);
+    expect(KM_CATALOG_OUTDATED_MESSAGE).toBe("Tarife wurden aktualisiert. Bitte Seite neu laden und die aktuellen Konditionen prüfen.");
+  });
+  it("aktuelle Version → erlaubt; Kilometer bleiben Serverwerte", () => {
+    expect(checkoutKmCatalogError(KM_CATALOG_VERSION)).toBeNull();
+    expect(getPlanById("multi_3d", "l1h1")!.freeKm).toBe(600);
+  });
+  it("bereits existierende Session ohne Version behält Legacy-Werte", () => {
+    expect(resolveCheckoutKmSnapshot({ planId: "multi_3d" }, "multi_3d", "l1h1").freeKm).toBe(900);
   });
 });

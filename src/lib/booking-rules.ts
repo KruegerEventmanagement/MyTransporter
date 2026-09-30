@@ -209,6 +209,17 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
 /** Aktuelle Kilometer-Katalogversion (wird in Stripe-Metadata festgehalten). */
 export const KM_CATALOG_VERSION = "km-2026-09-30";
 
+export const KM_CATALOG_OUTDATED_MESSAGE =
+  "Tarife wurden aktualisiert. Bitte Seite neu laden und die aktuellen Konditionen prüfen.";
+
+/**
+ * Prüft die vom Browser angezeigte Katalogversion vor einem neuen Checkout.
+ * Nur Konsistenzprüfung – kein Preis-Input; der Server rechnet selbst.
+ */
+export function checkoutKmCatalogError(clientVersion: unknown): string | null {
+  return clientVersion === KM_CATALOG_VERSION ? null : KM_CATALOG_OUTDATED_MESSAGE;
+}
+
 /** Inklusivkilometer VOR dem 30.09.2026 – nur für Checkouts/Buchungen ohne Versions-Snapshot. */
 export const LEGACY_FREE_KM: Record<string, number> = {
   "3h": 100, "6h": 200, "24h_300": 300, "24h_500": 500, "24h_800": 800,
