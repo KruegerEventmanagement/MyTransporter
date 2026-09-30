@@ -13,7 +13,7 @@ import {
 import { useServerFn } from "@tanstack/react-start";
 import { recognizeOdometer } from "@/lib/odometer-ai.functions";
 import { notifyAdmin } from "@/lib/admin-notify";
-import { getPlanById, KM_TARIFF_CENTS_PER_KM } from "@/lib/booking-rules";
+import { getPlanById, KM_TARIFF_CENTS_PER_KM, legacyFreeKmFor } from "@/lib/booking-rules";
 
 const TEST_MODE_ADMIN_EMAIL = "krueger.christian96@gmx.de";
 
