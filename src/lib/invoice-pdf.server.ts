@@ -208,7 +208,13 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
 
   itemRow(`Miete · ${booking.plan_label}`, rentSplit.netC, rentSplit.vatC, rentSplit.grossC);
   for (const a of addonSplits) {
-    itemRow(`Zubehör · ${a.label}`, a.netC, a.vatC, a.grossC);
+    if (a.label.startsWith("Kilometerpaket")) {
+      // Kurz in der Zeile, Details (berücksichtigter Tarif) in zweiter Zeile – kein Überlappen der Beträge.
+      const m = /^Kilometerpaket:\s*(.+?)(?:\s*\((.+)\))?$/.exec(a.label);
+      itemRow(`Kilometerpaket · ${m?.[1] ?? ""}`.trim(), a.netC, a.vatC, a.grossC, m?.[2] ? { sub: m[2] } : undefined);
+    } else {
+      itemRow(`Zubehör · ${a.label}`, a.netC, a.vatC, a.grossC);
+    }
   }
   itemRow("Kaution", null, null, depositGrossC);
   if (booking.free_km != null) {
