@@ -12,6 +12,7 @@ import {
   resolveCheckoutKmSnapshot,
 } from "@/lib/booking-rules";
 import { buildAddonSnapshot } from "@/lib/addons";
+import { readCustomKmSnapshot } from "@/lib/custom-km";
 
 type StripeCheckoutSession = {
   id: string;
@@ -246,9 +247,23 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
   const planPrice = Math.round(planPriceFull * 100 - appliedDiscountCents) / 100;
   // Kilometer-Snapshot: aktueller Checkout → Metadata-Snapshot; alte Session ohne
   // Version → Legacy-Kontingent (nie das gekürzte neue). Reiner km-Tarif → 0.
-  const { freeKm, kmPriceCents } = resolveCheckoutKmSnapshot(md as Record<string, string | undefined>, planId, vehicleClass);
+  const kmSnap = resolveCheckoutKmSnapshot(md as Record<string, string | undefined>, planId, vehicleClass);
+  // Individuelles Kilometerpaket: exakt der bezahlte Snapshot, nie Katalog-Neuberechnung.
+  const customKm = readCustomKmSnapshot(md as Record<string, string | undefined>, planId);
+  if (customKm.kind === "invalid") {
+    console.error("[webhook] Kilometerpaket-Snapshot ungültig", session.id, customKm.reason);
+    await supabaseAdmin.from("admin_notifications").insert({
+      type: "email_failed",
+      title: "Zahlung mit ungültigem Kilometerpaket – Buchung nicht angelegt",
+      body: `Session ${session.id} · PaymentIntent ${paymentIntentId} · ${customKm.reason}. Bitte manuell prüfen.`,
+      user_id: userId,
+    });
+    return true; // sichtbar + Stripe-Retry, niemals still als Grundtarif buchen
+  }
+  const freeKm = customKm.kind === "ok" ? customKm.contractKm : kmSnap.freeKm;
+  const kmPriceCents = customKm.kind === "ok" ? customKm.rateCents : kmSnap.kmPriceCents;
 
-  const addons = buildAddonSnapshot(addonIds);
+  const addons = [...buildAddonSnapshot(addonIds), ...(customKm.kind === "ok" ? [customKm.addon] : [])];
   const addonsTotalCents = addons.reduce((s, a) => s + a.price_cents, 0);
   const pickupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 

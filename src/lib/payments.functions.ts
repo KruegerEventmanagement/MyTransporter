@@ -17,6 +17,7 @@ import {
   checkoutKmCatalogError,
 } from "@/lib/booking-rules";
 import { getAddonById, resolveAddonSelection } from "@/lib/addons";
+import { CUSTOM_KM_MAX, customKmLabel, customKmMetadata, paidCustomKmCents, quoteCustomKm } from "@/lib/custom-km";
 
 const DEPOSIT_CENTS = 200_00;
 
@@ -71,7 +72,12 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     couponCode?: string | null;
     /** Im Browser angezeigte Kilometer-Katalogversion (nur Konsistenzprüfung). */
     kmCatalog?: string;
+    /** Optionales individuelles Kilometerpaket: gewünschte GESAMT-km (sonst null). */
+    customKm?: number | null;
   }) => {
+    if (data.customKm != null && (!Number.isSafeInteger(data.customKm) || data.customKm < 0 || data.customKm > CUSTOM_KM_MAX)) {
+      throw new Error("Ungültige Kilometerangabe");
+    }
     const planId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;
     const plan = getPlanById(planId);
     if (!plan && planId !== "km") throw new Error("Invalid plan");
@@ -185,6 +191,16 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
         quantity: 1,
       });
     }
+    // Individuelles Kilometerpaket: ausschließlich serverseitig berechnet, eigene
+    // Stripe-Position, nie vom Gutschein erfasst.
+    const kmQuote = data.customKm != null && planEntry ? quoteCustomKm(planId, vehicleClass, data.customKm) : null;
+    const kmPackage = kmQuote && kmQuote.surchargeCents > 0 ? kmQuote : null;
+    if (kmPackage) {
+      line_items.push({
+        price_data: { currency: "eur", product_data: { name: customKmLabel(kmPackage) }, unit_amount: kmPackage.surchargeCents },
+        quantity: 1,
+      });
+    }
     const addonIds = data.addonIds ?? [];
     for (const id of addonIds) {
       const sel = resolveAddonSelection(id);
@@ -228,7 +244,11 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
             vehicleClass,
             // Kilometer-Snapshot serverseitig festhalten (Webhook nutzt ihn statt Katalog).
             kmCatalog: KM_CATALOG_VERSION,
-            ...(planEntry && { freeKm: String(planEntry.freeKm), kmPriceCents: String(planEntry.extraKmCents) }),
+            ...(planEntry && {
+              freeKm: String(kmPackage ? kmPackage.contractKm : planEntry.freeKm),
+              kmPriceCents: String(kmPackage ? kmPackage.rateCents : planEntry.extraKmCents),
+            }),
+            ...(kmPackage && customKmMetadata(kmPackage)),
             ...(data.startDate && { startDate: data.startDate }),
             ...(typeof data.startHour === "number" && { startHour: String(data.startHour) }),
             ...(data.vehicleName && { vehicleName: String(data.vehicleName).slice(0, 200) }),
@@ -484,7 +504,7 @@ export const cancelBookingWithRefund = createServerFn({ method: "POST" })
     const { data: booking, error } = await supabaseAdmin
       .from("bookings")
       .select(
-        "id, user_id, status, start_date, start_hour, start_km, plan_price, deposit, deposit_status, stripe_payment_intent_id, remarks"
+        "id, user_id, status, start_date, start_hour, start_km, plan_price, deposit, deposit_status, stripe_payment_intent_id, remarks, addons"
       )
       .eq("id", data.bookingId)
       .maybeSingle();
@@ -503,7 +523,9 @@ export const cancelBookingWithRefund = createServerFn({ method: "POST" })
     const depositCents = Math.round(Number(booking.deposit) * 100);
     // Erstattet wird die Miete abzüglich Gebühr + die volle Kaution
     const rentRefundCents = Math.max(0, planPriceCents - feeCents);
-    const refundCents = rentRefundCents + depositCents;
+    // Vorab bezahltes Kilometerpaket wird bei nicht begonnener Fahrt voll erstattet.
+    const kmPackageCents = paidCustomKmCents(booking.addons);
+    const refundCents = rentRefundCents + depositCents + kmPackageCents;
 
     const stripe = createStripeClient(data.environment);
     let refundId: string | null = null;
