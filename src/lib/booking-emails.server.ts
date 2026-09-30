@@ -1,3 +1,4 @@
+import { isPhysicalAddon } from "@/lib/custom-km";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computePlanReturn } from "@/lib/booking-rules";
 import { pushToAdmins } from "@/lib/push.functions";
@@ -193,18 +194,28 @@ export async function sendBookingConfirmationImpl(data: {
   const addons = Array.isArray(booking.addons)
     ? (booking.addons as Array<{ id: string; label: string; price_cents: number }>)
     : [];
+  const kmPackages = addons.filter((a) => !isPhysicalAddon(a));
+  const physical = addons.filter(isPhysicalAddon);
+  const kmPackageHtmlBlock =
+    kmPackages.length === 0
+      ? ""
+      : rawListBlock(
+          "Vorab gebuchtes Kilometerpaket",
+          kmPackages.map((a) => `${esc(a.label)} · <strong>${(a.price_cents / 100).toFixed(2)} €</strong>`),
+        );
   const addonsHtmlBlock =
-    addons.length === 0
+    kmPackageHtmlBlock +
+    (physical.length === 0
       ? ""
       : rawListBlock(
           "Gebuchtes Zubehör",
-          addons.map(
+          physical.map(
             (a) => `${esc(a.label)} · <strong>${(a.price_cents / 100).toFixed(2)} €</strong>`,
           ),
         ) +
         noteBlock(
-          `Summe Zubehör: <strong>${(((booking.addons_total_cents ?? 0) as number) / 100).toFixed(2)} €</strong>. Bitte vollständig &amp; unbeschädigt zurückgeben.`,
-        );
+          `Summe Zubehör: <strong>${(physical.reduce((s, a) => s + a.price_cents, 0) / 100).toFixed(2)} €</strong>. Bitte vollständig &amp; unbeschädigt zurückgeben.`,
+        ));
 
   const html = renderEmail({
     firstName: profile?.first_name,
