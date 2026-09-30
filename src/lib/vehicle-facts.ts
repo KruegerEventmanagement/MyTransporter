@@ -29,11 +29,11 @@ export type SpecField =
 
 /** Hinterlegte, aber noch nicht dokumentgeprüfte/unplausible Werte → „noch nicht bestätigt“. */
 export const UNCONFIRMED_SPECS: Record<string, SpecField[]> = {
-  // VW Crafter: Nutzlast 3.000 kg bei 3.500 kg zGG unplausibel; Ladehöhe/-volumen ungeprüft.
-  // Hochgeladenes „Fahrzeugschein“-Bild ist ein Fahrzeugfoto (Kennzeichen LEO MY 104), kein Dokument:
-  // Karosserievariante, Maße, Gewichte, Motor und EZ sind nicht dokumentgeprüft.
-  "43261a5f-cd8a-4bd4-a3db-f89c4741c463": ["payload_kg", "cargo_height_cm", "cargo_volume_m3", "cargo_length_cm", "cargo_width_cm", "max_weight_kg", "body", "power_kw", "first_registration"],
+  // VW Crafter OF-DK 1234: seit 30.09.2026 per Fahrzeugschein bestätigt (lang, Hochdach) – kein Eintrag mehr.
 };
+
+/** Nutzlast rechnerisch aus Fahrzeugschein (zGG − max. Leergewicht), nicht Herstellerangabe. */
+export const PAYLOAD_CALCULATED_IDS = new Set(["43261a5f-cd8a-4bd4-a3db-f89c4741c463"]);
 
 export const UNCONFIRMED_LABEL = "noch nicht bestätigt";
 
@@ -94,7 +94,7 @@ export function vehicleSpecRows(v: SpecVehicle): SpecRow[] {
   add("Hecktüröffnung (B × H)", pos(v.rear_door_width_cm) && pos(v.rear_door_height_cm) ? `${m(v.rear_door_width_cm)} × ${m(v.rear_door_height_cm)}` : null, ["body"]);
   add("Schiebetüröffnung (B × H)", pos(v.side_door_width_cm) && pos(v.side_door_height_cm) ? `${m(v.side_door_width_cm)} × ${m(v.side_door_height_cm)}` : null, ["body"]);
   add("Außenmaße (L × B ohne Spiegel × H)", pos(v.length_cm) && pos(v.width_cm) && pos(v.height_cm) ? `${m(v.length_cm)} × ${m(v.width_cm)} × ${m(v.height_cm)}` : null, ["body"]);
-  add("Nutzlast", pos(v.payload_kg) ? kg(v.payload_kg) : null, ["payload_kg"]);
+  add("Nutzlast", pos(v.payload_kg) ? (PAYLOAD_CALCULATED_IDS.has(v.id) ? `ca. ${kg(v.payload_kg)} (rechnerisch aus Fahrzeugschein)` : kg(v.payload_kg)) : null, ["payload_kg"]);
   add("Zul. Gesamtgewicht", pos(v.max_weight_kg) ? kg(v.max_weight_kg) : null, ["max_weight_kg"]);
   add("Tankgröße", pos(v.tank_liters) ? `${v.tank_liters} l` : null, ["tank_liters"]);
   add("Reichweite", pos(v.range_km) ? `ca. ${v.range_km.toLocaleString("de-DE")} km` : null, ["range_km"]);

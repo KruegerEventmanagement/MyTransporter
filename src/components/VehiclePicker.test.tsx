@@ -63,17 +63,18 @@ describe("VehiclePicker", () => {
 });
 
 describe("vehicleSpecRows", () => {
-  it("keine erfundenen Werte, Crafter unbestätigt, Erstzulassung", () => {
-    const rows = vehicleSpecRows({ id: "43261a5f-cd8a-4bd4-a3db-f89c4741c463", payload_kg: 3000, max_weight_kg: 3500, cargo_height_cm: 214, cargo_volume_m3: 17, first_registration: "2011-11-25" });
+  it("Crafter laut Fahrzeugschein bestätigt, keine erfundenen Werte", () => {
+    const rows = vehicleSpecRows({ id: "43261a5f-cd8a-4bd4-a3db-f89c4741c463", payload_kg: 1145, max_weight_kg: 3500, cargo_length_cm: 430, cargo_width_cm: 178, cargo_height_cm: 194, cargo_volume_m3: 14, length_cm: 694.5, width_cm: 199.3, height_cm: 272.5, power_kw: 120, first_registration: "2011-11-25", specs_status: "werksangabe_modellvariante" });
     const get = (l: string) => rows.find((r) => r.label === l);
-    expect(get("Nutzlast")!.value).toBe("noch nicht bestätigt");
-    expect(get("Innenhöhe")!.value).toBe("noch nicht bestätigt");
-    expect(get("Ladevolumen")!.value).toBe("noch nicht bestätigt");
-    expect(get("Erstzulassung")!.value).toBe("noch nicht bestätigt");
-    expect(get("Zul. Gesamtgewicht")).toBeDefined();
+    expect(get("Nutzlast")!.value).toBe("ca. 1.145 kg (rechnerisch aus Fahrzeugschein)");
+    expect(get("Innenhöhe")!.value).toBe("1,94 m");
+    expect(get("Ladevolumen")!.value).toBe("14 m³");
+    expect(get("Außenmaße (L × B ohne Spiegel × H)")!.value).toBe("6,945 m × 1,993 m × 2,725 m");
+    expect(get("Erstzulassung")!.value).toBe("25.11.2011");
+    expect(rows.some((r) => r.unconfirmed)).toBe(false);
     expect(rows.some((r) => /Baujahr/.test(r.label))).toBe(false);
+    expect(JSON.stringify(rows)).not.toMatch(/WV1|Krüger|Neu-Isenburg/);
     expect(get("Tankgröße")).toBeUndefined();
-    expect(get("Reichweite")).toBeUndefined();
     expect(vehicleSpecRows({ id: "x" })).toEqual([]);
   });
 });
@@ -89,6 +90,6 @@ describe("Werksmaße L1H1", () => {
     expect(rows["Schiebetüröffnung (B × H)"]).toBe("1,075 m × 1,485 m");
     expect(rows["Erstzulassung"]).toBe("03.04.2007");
     expect(vehicleSpecNote(v)).toMatch(/Werksmaße der Modellvariante.*nachmessen/);
-    expect(vehicleSpecNote({ id: "43261a5f-cd8a-4bd4-a3db-f89c4741c463" })).toMatch(/noch nicht/);
+    expect(vehicleSpecNote({ id: "x", specs_status: "unbestaetigt" })).toMatch(/noch nicht/);
   });
 });
