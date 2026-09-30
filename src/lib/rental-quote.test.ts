@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { quoteRental } from "@/lib/rental-quote";
 import { EXTRA_KM_CENTS_BY_CLASS, getPlanById, planCatalog, VEHICLE_CLASSES } from "@/lib/booking-rules";
 import { extraKmCostEur, LONG_TERM_KM_CONFIG, LONG_TERM_MAX_KM, rentalDaysFromDateTimes } from "@/lib/long-term";
-import { buildRequestMail } from "@/components/LongTermPlanner";
+import { buildRequestMail, returnLabel } from "@/components/LongTermPlanner";
 
 const t3 = { startDate: "2026-10-05", startTime: "09:00", endDate: "2026-10-08", endTime: "09:00" };
 const t30 = { startDate: "2026-10-05", startTime: "09:00", endDate: "2026-11-04", endTime: "09:00" };
@@ -98,5 +98,35 @@ describe("quoteRental", () => {
     for (const s of ["LEO MY 102", "269,00 €", "300 km × 0,35 €", "374,00 €", "Kaution", "200,00 €", "unverbindliche", "maximal 100 km/h"]) {
       expect(m).toContain(s);
     }
+  });
+});
+
+describe("Langzeit: angefragtes Kontingent = Wunschkilometer", () => {
+  const cases: Array<[number, number, number, number]> = [
+    // km, total, credit, contractKm
+    [2500, 924, 75, 2500],
+    [4000, 999, 0, 4000],
+    [5000, 1289, 0, 5000],
+    [0, 899.1, 99.9, 0],
+  ];
+  for (const [kmv, total, credit, contract] of cases) {
+    it(`30 Tage / ${kmv} km`, () => {
+      const q = ok(quoteRental({ ...t30, desiredKm: kmv }, "l1h1"));
+      expect(q.totalEur).toBe(total);
+      expect(q.creditEur).toBe(credit);
+      expect(q.includedKm).toBe(4000);
+      expect(q.contractKm).toBe(contract);
+      const label = returnLabel(q);
+      expect(label).toContain(`über ${contract.toLocaleString("de-DE")} km`);
+      const mail = buildRequestMail({ name: "Van", plate: "PF MY 1003" }, "l1h1", q, t30);
+      expect(mail).toContain("Grundtarifbasis: 4.000 km");
+      expect(mail).toContain(`Angefragtes Kontingent: ${contract.toLocaleString("de-DE")} km`);
+      expect(mail).toContain(label);
+    });
+  }
+  it("Standard 3 Tage unverändert", () => {
+    const q = ok(quoteRental({ ...t3, desiredKm: 1200 }, "l1h1"));
+    expect([q.includedKm, q.contractKm, q.extraKmCostEur, q.creditEur]).toEqual([900, 900, 105, 0]);
+    expect(returnLabel(q)).toBe("Mehrkilometer bei Rückgabe über 900 km");
   });
 });

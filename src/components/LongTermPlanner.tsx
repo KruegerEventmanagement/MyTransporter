@@ -26,6 +26,11 @@ function fmtDate(iso: string) {
 }
 const km = (n: number) => `${n.toLocaleString("de-DE")} km`;
 
+/** Gemeinsame Schwellen-Beschriftung für UI und Mail. */
+export function returnLabel(q: Extract<RentalQuote, { ok: true }>): string {
+  return `Mehrkilometer bei Rückgabe über ${km(q.contractKm)}${q.kind === "long_term" ? " (nach verbindlicher Bestätigung)" : ""}`;
+}
+
 /** Mailtext der unverbindlichen Anfrage – enthält alle Posten des Rechners. */
 export function buildRequestMail(
   v: { name: string; plate: string },
@@ -46,7 +51,10 @@ export function buildRequestMail(
     `Miettage: ${q.days}`,
     `Tarif: ${q.planLabel}`,
     `Wunschkilometer: ${km(q.desiredKm)}`,
-    `Grundpreis: ${formatEur(q.basePriceEur)} € (inkl. ${km(q.includedKm)})`,
+    q.kind === "long_term"
+      ? `Grundpreis: ${formatEur(q.basePriceEur)} € (Grundtarifbasis: ${km(q.includedKm)})`
+      : `Grundpreis: ${formatEur(q.basePriceEur)} € (inkl. ${km(q.includedKm)})`,
+    ...(q.kind === "long_term" ? [`Angefragtes Kontingent: ${km(q.contractKm)}`] : []),
     ...(q.extraKm > 0
       ? [q.kind === "long_term"
           ? `Zusätzliches km-Kontingent: ${km(q.extraKm)} = ${formatEur(q.extraKmCostEur)} €`
@@ -55,7 +63,7 @@ export function buildRequestMail(
     ...(q.creditEur > 0 ? [`Gutschrift weniger km: − ${formatEur(q.creditEur)} €`] : []),
     `Richtpreis Miete: ${formatEur(q.totalEur)} €`,
     `Kaution (separat, nicht im Mietpreis): ${formatEur(q.depositEur)} €`,
-    `Mehrkilometer bei Rückgabe über ${km(q.contractKm)}: ${formatEur(q.returnExtraKmEur)} € je km`,
+    `${returnLabel(q)}: ${formatEur(q.returnExtraKmEur)} € je km`,
     "",
     "Mir ist bewusst, dass dies eine unverbindliche Anfrage ist.",
     "",
@@ -185,7 +193,14 @@ export function LongTermPlanner() {
               <p className="mt-1 text-xs text-muted-foreground">Mietpreis · entspricht {formatEur(quote.pricePerDayEur)} € pro Tag</p>
               <dl className="mt-5 space-y-2 text-sm">
                 <Row l={quote.kind === "long_term" ? "Langzeit-Grundpreis" : `Tarif: ${quote.planLabel}`} r={`${formatEur(quote.basePriceEur)} €`} />
-                <Row l={`Inklusive ${km(quote.includedKm)}`} r="" />
+                {quote.kind === "long_term" ? (
+                  <>
+                    <Row l={`Grundtarifbasis: ${km(quote.includedKm)}`} r="" />
+                    <Row l={`Angefragtes Kontingent: ${km(quote.contractKm)}`} r="" />
+                  </>
+                ) : (
+                  <Row l={`Inklusive ${km(quote.includedKm)}`} r="" />
+                )}
                 {quote.extraKm > 0 && (
                   <Row
                     l={quote.kind === "long_term"
@@ -197,7 +212,7 @@ export function LongTermPlanner() {
                 {quote.creditEur > 0 && <Row l="Gutschrift weniger km" r={`− ${formatEur(quote.creditEur)} €`} />}
                 <Row l="Mietpreis gesamt" r={`${formatEur(quote.totalEur)} €`} />
                 <Row l="Kaution (separat)" r={`${formatEur(quote.depositEur)} €`} />
-                <Row l={`Mehrkilometer bei Rückgabe über ${km(quote.contractKm)}`} r={`${formatEur(quote.returnExtraKmEur)} €/km`} />
+                <Row l={returnLabel(quote)} r={`${formatEur(quote.returnExtraKmEur)} €/km`} />
               </dl>
               {isSpeedLimited(v) && <p className="mt-3 text-xs text-foreground">{SPEED_LIMIT_TEXT}</p>}
               <a href={mailHref} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-3 text-sm font-medium text-background hover:opacity-90">

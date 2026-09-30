@@ -89,7 +89,8 @@ export function quoteRental(input: RentalQuoteInput, vehicleClass: VehicleClass)
       creditEur: q.creditEur,
       totalEur: q.totalEur,
       pricePerDayEur: q.effectivePricePerDayEur,
-      contractKm: q.includedKm + q.extraKm,
+      // Langzeit: angefragtes Kontingent = Wunschkilometer (auch unter der Grundtarifbasis).
+      contractKm: km,
       returnExtraKmEur: q.returnExtraKmEur,
       depositEur: DEPOSIT_EUR,
     };
