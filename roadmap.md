@@ -21,3 +21,5 @@
 ## Foto-Reparatur 29.09. (genehmigt, nicht veröffentlichen)
 - [x] Review-Punkte 1–5: nativer Wechsel stoppt Streams, play()-Zeitlimit, Generation-Token, reproduzierbarer Typecheck, weitere Tests + Doppel-Eintrag-Schutz
 - [x] Gesamttests, Typprüfung, Build, Browsercheck, docs/qa-camera-2026-09-29.md
+
+- [ ] Mehrkilometersatz 0,45 €/km statt 0,29 € (Umfang mit Christian klären)
