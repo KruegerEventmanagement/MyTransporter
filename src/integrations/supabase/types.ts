@@ -899,6 +899,7 @@ export type Database = {
           cargo_height_cm: number | null
           cargo_length_cm: number | null
           cargo_volume_m3: number | null
+          cargo_width_between_arches_cm: number | null
           cargo_width_cm: number | null
           color: string | null
           created_at: string
@@ -924,8 +925,14 @@ export type Database = {
           plate: string
           power_kw: number | null
           range_km: number | null
+          rear_door_height_cm: number | null
+          rear_door_width_cm: number | null
           registration_doc_url: string | null
           seats: number | null
+          side_door_height_cm: number | null
+          side_door_width_cm: number | null
+          specs_source: string | null
+          specs_status: string | null
           tank_liters: number | null
           tire_size: string | null
           trailer_load_braked_kg: number | null
@@ -944,6 +951,7 @@ export type Database = {
           cargo_height_cm?: number | null
           cargo_length_cm?: number | null
           cargo_volume_m3?: number | null
+          cargo_width_between_arches_cm?: number | null
           cargo_width_cm?: number | null
           color?: string | null
           created_at?: string
@@ -969,8 +977,14 @@ export type Database = {
           plate?: string
           power_kw?: number | null
           range_km?: number | null
+          rear_door_height_cm?: number | null
+          rear_door_width_cm?: number | null
           registration_doc_url?: string | null
           seats?: number | null
+          side_door_height_cm?: number | null
+          side_door_width_cm?: number | null
+          specs_source?: string | null
+          specs_status?: string | null
           tank_liters?: number | null
           tire_size?: string | null
           trailer_load_braked_kg?: number | null
@@ -989,6 +1003,7 @@ export type Database = {
           cargo_height_cm?: number | null
           cargo_length_cm?: number | null
           cargo_volume_m3?: number | null
+          cargo_width_between_arches_cm?: number | null
           cargo_width_cm?: number | null
           color?: string | null
           created_at?: string
@@ -1014,8 +1029,14 @@ export type Database = {
           plate?: string
           power_kw?: number | null
           range_km?: number | null
+          rear_door_height_cm?: number | null
+          rear_door_width_cm?: number | null
           registration_doc_url?: string | null
           seats?: number | null
+          side_door_height_cm?: number | null
+          side_door_width_cm?: number | null
+          specs_source?: string | null
+          specs_status?: string | null
           tank_liters?: number | null
           tire_size?: string | null
           trailer_load_braked_kg?: number | null
