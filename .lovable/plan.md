@@ -1,19 +1,22 @@
-## Live-Befund Langzeitrechner (nur gelesen) – keine Änderungen nötig
+# Fahrzeugauswahl in der normalen Buchung angleichen
 
-Frischer Playwright-Kontext (keine Cookies, Service Worker blockiert) gegen https://mytransporter.org/langzeitmiete – HTTP 200, finale URL unverändert. Kein Cookie-Ablehnen-Button gefunden, also nichts angeklickt. Fahrzeug: Citroen Jumper L1H1, PF MY 1003 (über Foto-Kachel).
+## Ziel
+Im Schritt „Fahrzeug & Zubehör“ soll die Fahrzeugauswahl genauso aufgebaut sein wie bei der Langzeitmiete: kleine Fahrzeugkacheln oben, darunter das vollständig sichtbare ausgewählte Fahrzeug, Foto-Navigation per Wischen/Pfeilen und anschließend alle vorhandenen Fahrzeugdetails.
 
-Fall 1 – 05.10.2026 09:00 bis 08.10.2026 09:00, 900 km:
-- Tarif: 3 Tage Umzug Plus 269,00 €
-- Inklusive 600 km
-- + 300 km Mehr-km × 0,35 € = 105,00 €
-- Mietpreis gesamt 374,00 € · Kaution separat 200,00 €
+## Umsetzung
+1. Die normale Buchungsansicht auf denselben klaren Aufbau wie die Langzeitmiete bringen und die abweichende Überschrift bzw. Einrahmung entfernen, die aktuell wie eine eigene Galerieansicht wirkt.
+2. Die kleinen Fahrzeugkacheln oben gut sichtbar und horizontal nutzbar halten; Fahrzeugklasse, Kennzeichen sowie „verfügbar“/„belegt“ bleiben erhalten.
+3. Das große Fahrzeugfoto vollständig mit `object-contain` zeigen. Wischen, Pfeile, Bildzähler und Foto-Vorschauen bleiben erhalten; beim Fahrzeugwechsel beginnt die Galerie wieder beim Startfoto.
+4. Für jedes Fahrzeug aus den vorhandenen Fotos das seitliche Gesamtfahrzeug mit der Front nach links als Startbild verwenden. Fotos werden nicht gespiegelt oder verfälscht. Falls für ein Fahrzeug kein solches Foto vorhanden ist, wird das vollständigste vorhandene Seitenfoto verwendet und die Lücke im Ergebnis genannt.
+5. Unter dem Foto weiterhin Fahrzeugname, Klasse, Kennzeichen, das fahrzeugbezogene 100-km/h-Schild und alle bestätigten Details anzeigen. Preis, Kilometerpaket, Kaution und Verfügbarkeitslogik bleiben unverändert.
+6. Die Darstellung auf Desktop und schmalem Smartphone prüfen: Fahrzeug komplett sichtbar, Kacheln erreichbar, Foto-Wischen/Pfeile funktionsfähig und keine überlappenden Texte.
 
-Fall 2 – 05.10.2026 bis 04.11.2026 (30 Tage), 2.667 km:
-- Langzeit-Grundpreis 999,00 €
-- Grundtarifbasis 2.667 km · angefragtes Kontingent 2.667 km
-- Mietpreis gesamt 999,00 € · Kaution 200,00 €
-- Mehrkilometer über 2.667 km: 0,29 €/km
+## Technische Leitplanken
+- Die bestehende gemeinsame Fahrzeugauswahl bleibt die Grundlage; keine zweite Galerie wird eingeführt.
+- Keine Änderungen an Tarifen, Kilometerlogik, Fahrzeugdaten, Buchungen, Holds oder Zahlung.
+- Keine Veröffentlichung; nur Vorschau und Tests.
 
-900 km inklusive tauchte nicht auf. Wer das noch sieht, hat vermutlich eine ältere, zwischengespeicherte Seite offen – neu laden hilft. Nichts angefragt, keine Mail, kein Checkout, nichts geschrieben.
-
-Kein Umsetzungsschritt vorgesehen.
+## Prüfung
+- Komponententests für Startfoto, Fahrzeugwechsel, Bildnavigation und gesperrte Fahrzeuge ergänzen bzw. aktualisieren.
+- Typprüfung, vollständige Tests und Produktions-Build ausführen.
+- Den normalen Buchungsablauf lokal bis „Fahrzeug & Zubehör“ auf Desktop und Smartphone prüfen, ohne Buchung oder Zahlung auszulösen.
