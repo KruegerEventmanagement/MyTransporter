@@ -42,11 +42,11 @@ export function CustomKmCard(props: {
           <label className="block text-sm font-medium text-foreground" htmlFor="custom-km-input">Gewünschte Gesamtkilometer</label>
           <input
             id="custom-km-input"
-            type="number"
+            type="text"
             inputMode="numeric"
-            min={0}
-            max={CUSTOM_KM_MAX}
-            step={1}
+            pattern="[0-9]*"
+            autoComplete="off"
+            data-max={CUSTOM_KM_MAX}
             value={value}
             onChange={(e) => props.onValueChange(e.target.value)}
             aria-invalid={!!error}
