@@ -1352,6 +1352,16 @@ export type Database = {
         Args: { _plan_id: string; _start: string }
         Returns: string
       }
+      report_trip_return: {
+        Args: {
+          _booking_id: string
+          _end_fuel_percent?: number
+          _end_km: number
+          _end_km_manual?: boolean
+          _exceptions?: Json
+        }
+        Returns: Json
+      }
       set_calendar_source_event: {
         Args: {
           _adopted: boolean
@@ -1362,6 +1372,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      trip_active_statuses: { Args: never; Returns: string[] }
+      trip_confirmed_photo_types: {
+        Args: { _booking_id: string }
+        Returns: string[]
+      }
+      trip_returning_statuses: { Args: never; Returns: string[] }
       vehicle_conflicts: {
         Args: {
           _end: string

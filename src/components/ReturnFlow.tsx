@@ -594,11 +594,12 @@ export function ReturnFlow({
     setSaving(true);
     setActionError(null);
     try {
+      // Nur Entwurfsfelder, die der DB-Schutz während der Miete erlaubt.
+      // Mehrkilometer/Preis werden ausschließlich serverseitig bei der Rückgabemeldung
+      // aus den unveränderten Buchungs-Snapshots gesetzt.
       await updateBookingChecked(supabase, bookingId, {
         end_km: end,
         end_km_manual: endKmManual,
-        extra_km: km.extra,
-        extra_km_charge_cents: km.chargeCents,
         ...(endFuelPercent !== "" ? { ai_end_fuel_percent: parseInt(endFuelPercent) } : {}),
       });
     } catch (err) {

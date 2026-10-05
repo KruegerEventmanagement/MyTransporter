@@ -209,7 +209,10 @@ describe("ReturnFlow (Rückgabe)", () => {
     // Preisberechnung unverändert: km-Tarif berechnet alle 50 gefahrenen km
     expect(within(summary.parentElement!).getAllByText(/^50\s*km$/)).toHaveLength(2);
     const updates = fake.calls.filter((c) => c.table === "bookings" && c.op === "update");
-    expect(updates[1].values).toMatchObject({ end_km: 150, extra_km: 50 });
+    expect(updates[1].values).toMatchObject({ end_km: 150 });
+    // Mehrkilometer/Preis setzt nur der Server (report_trip_return), nie der Browser.
+    expect(updates[1].values).not.toHaveProperty("extra_km");
+    expect(updates[1].values).not.toHaveProperty("extra_km_charge_cents");
 
     fireEvent.click(screen.getByText(/Schlüssel zurückgeben/));
     expect(await screen.findByText(/Rückgabe nicht gespeichert/)).toBeTruthy();
