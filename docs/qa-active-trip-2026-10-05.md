@@ -55,3 +55,19 @@ Migration `supabase/migrations/20261005180935_31a66dbd-ce17-4149-92b0-5c7ce5b82f
 6. **Preis:** Mehrkilometer/Preis werden nur noch in `report_trip_return` aus `start_km`, `free_km`, `km_price_cents`, `plan_id` der Buchung berechnet; der Browser schreibt keine `extra_km`/`extra_km_charge_cents` mehr. Endstand < Start → Prüfungsfall ohne Berechnung.
 
 Linter: neuer Hinweis „SECURITY DEFINER durch angemeldete Nutzer ausführbar“ für `report_trip_return` ist beabsichtigt (Funktion prüft `auth.uid()` + Eigentum + Status). Vorbestehend: Extension im public-Schema, Leaked-Password-Schutz aus. Vorbestehend und nicht geändert: Hook `send-reminders` prüft kein Token.
+
+## Abschlussprüfung 05.10.2026 ~19:15 UTC (ab Commit 8afd1db3739bb7856571b0eac8f1429568de4d53, HEAD 9f028f2)
+
+Seit 8afd1db nur `src/routeTree.gen.ts` (automatisch generiert) geändert; keine offene Implementierung gefunden.
+
+| Befehl | Exitcode | Ergebnis |
+|---|---|---|
+| `bunx vitest run` gezielt: active-trip, trip-return, trip-return-sql (PGlite), photo-queue, return-draft, return-reminder, ActiveTrip.test.tsx (inkl. Service-Worker notificationclick), TripFlows.test.tsx | 0 | 8 Dateien, 65 Tests |
+| `bunx vitest run` (gesamt) | 0 | 39 Dateien, 420 Tests |
+| `bunx tsgo --noEmit` | 0 | keine Typfehler |
+| `bun run build` | 0 | Produktionsbuild erfolgreich |
+| Playwright 390 px / 1280 px (`/`, `/trip/<fremde-UUID>` nicht angemeldet) | 0 | kein horizontaler Overflow, keine Page-Errors, Leiste unsichtbar, Fahrt leitet ohne Login um |
+
+Live-DB (nur lesend geprüft): Trigger `bookings_guard_customer_update_trigger` aktiv; `report_trip_return` für `anon` nicht ausführbar; Cron-Jobs: `mt-return-reminders` minütlich (neu), `mt-send-booking-reminders` */15 und `mt-process-manual-notifications` */15 unverändert. Migrationen nur additiv (Spalten nullable, Funktionen, Trigger, ein Cron-Job); keine Bestandsbuchung verändert.
+
+Weiterhin offen: kein physischer iPhone/Android-Test, kein Push-Empfangstest, kein echter Rückgabe-Durchlauf mit Live-Buchung, kein Deploy; `bookingWindowMs` kennt `week_xN` nicht (separat prüfen); Hook `send-reminders` ohne Token (vorbestehend, unverändert).
