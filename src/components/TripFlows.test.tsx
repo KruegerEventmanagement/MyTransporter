@@ -6,6 +6,7 @@ const fake = await vi.hoisted(async () => (await import("@/test/fake-supabase"))
 vi.mock("@/integrations/supabase/client", () => ({ supabase: fake.client }));
 vi.mock("@/lib/admin-notify", () => ({ notifyAdmin: vi.fn() }));
 vi.mock("@/lib/odometer-ai.functions", () => ({ recognizeOdometer: vi.fn() }));
+vi.mock("@/lib/trip-return.functions", () => ({ reportReturn: vi.fn() }));
 vi.mock("@tanstack/react-start", () => ({
   useServerFn: () => async () => ({ km: null, fuelPercent: null, confidence: "low" }),
 }));
@@ -186,7 +187,7 @@ describe("ReturnFlow (Rückgabe)", () => {
 
   it("KM-Speicherfehler bleibt im Schritt; Erfolg führt weiter, Rückgabefehler zeigt keinen Code", async () => {
     fake.on("trip_photos", "select", {
-      data: rows("post", ["post_interior", "post_odometer", "tank_receipt"]),
+      data: rows("post", ["post_interior", "post_odometer", "post_fuel", "tank_receipt"]),
       error: null,
     });
     fake.on(
