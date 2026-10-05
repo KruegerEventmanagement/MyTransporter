@@ -5,3 +5,4 @@
 - Komponententests laufen mit jsdom per Datei-Kommentar und vollständig gemockten Diensten aus src/test/.
 - Inklusivkilometer sind versioniert (KM_CATALOG_VERSION, LEGACY_FREE_KM, resolveCheckoutKmSnapshot, bookingFreeKm in booking-rules.ts); Altbuchungen und alte Stripe-Sessions dürfen nie mit gekürztem Neukatalog abgerechnet werden.
 - Individuelles Kilometerpaket: einzige Preislogik in src/lib/custom-km.ts (Aufschlag auf unveränderte plan_id, Stripe-Metadata ck*, Webhook übernimmt Snapshot unverändert, addon id km_paket); damit UI, Checkout, Buchung und Storno dieselben Beträge nutzen.
+- Admin-Kalenderdetails laufen nur über getCalendarEntryDetails (src/lib/calendar-details.server.ts): Client sendet Art+ID, Server prüft Admin-Rolle, verknüpft Profil/Dokumente nur per user_id bzw. reservation_id und signiert kurzfristig; damit nie fremde Pfade oder Kunden vertauscht werden.

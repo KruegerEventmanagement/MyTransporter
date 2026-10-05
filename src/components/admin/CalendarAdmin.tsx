@@ -4,12 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   CalendarDays,
-  Cake,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   FileText,
-  Mail,
-  Phone,
   Plus,
   Trash2,
   X,
@@ -29,6 +27,8 @@ import { bookingWindowMs } from "@/lib/booking-window";
 import { ageOnIsoDate, isValidIsoDate, todayIsoBerlin } from "@/lib/age";
 import { getCalendarSyncStatus, type CalendarSyncStatus } from "@/lib/calendar-status.functions";
 import { calendarStatusView } from "@/lib/calendar-status";
+import { CalendarEntryDetailsPanel } from "@/components/admin/CalendarEntryDetails";
+import { fmtBerlinDateTime, overlapsBerlinDay } from "@/lib/calendar-details";
 
 function CalendarSyncBanner() {
   const fetchStatus = useServerFn(getCalendarSyncStatus);
@@ -118,6 +118,7 @@ interface BookingSlot {
   start: Date;
   end: Date;
   customerHint: string;
+  customerName: string | null;
 }
 
 type Entry =
@@ -141,12 +142,9 @@ function fromLocalInput(date: string, time: string): Date {
   return new Date(`${date}T${time || "00:00"}:00`);
 }
 
-function fmtTime(d: Date): string {
-  return d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-}
-
+/** Immer Europe/Berlin, unabhängig von der Zeitzone des Browsers. */
 function fmtDateTime(d: Date): string {
-  return d.toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
+  return fmtBerlinDateTime(d);
 }
 
 function sameDay(a: Date, b: Date): boolean {
@@ -154,9 +152,14 @@ function sameDay(a: Date, b: Date): boolean {
 }
 
 function overlapsDay(entry: Entry, day: Date): boolean {
-  const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0);
-  const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59);
-  return entry.start <= dayEnd && entry.end >= dayStart;
+  // Kalenderzelle = Berliner Kalendertag, damit Zuordnung und Anzeige übereinstimmen.
+  return overlapsBerlinDay(
+    entry.start.getTime(),
+    entry.end.getTime(),
+    day.getFullYear(),
+    day.getMonth() + 1,
+    day.getDate(),
+  );
 }
 
 interface FormState {
@@ -228,6 +231,7 @@ export function CalendarAdmin() {
   const [manuals, setManuals] = useState<ManualReservation[]>([]);
   const [notifyStates, setNotifyStates] = useState<Record<string, ManualNotificationState>>({});
   const [loading, setLoading] = useState(true);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -313,7 +317,7 @@ export function CalendarAdmin() {
         supabase.from("vehicles").select("id, name, plate").eq("is_active", true).order("name"),
         supabase
           .from("bookings")
-          .select("id, vehicle_name, vehicle_plate, plan_id, plan_label, start_date, start_hour, status")
+          .select("id, user_id, vehicle_name, vehicle_plate, plan_id, plan_label, start_date, start_hour, status")
           .in("status", ["paid", "active", "returning", "in_progress", "picked_up"]),
         fetchManual({ data: { fromIso: rangeFrom.toISOString(), toIso: rangeTo.toISOString() } }),
       ]);
@@ -335,6 +339,20 @@ export function CalendarAdmin() {
         setNotifyStates({});
       }
 
+      // Kundenname nur über die gespeicherte user_id (Admin-RLS), kein Namensabgleich.
+      const userIds = [...new Set((bookingRows ?? []).map((b) => b.user_id).filter(Boolean))];
+      const names: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name")
+          .in("id", userIds);
+        for (const p of profs ?? []) {
+          const n = [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
+          if (n) names[p.id] = n;
+        }
+      }
+
       const slots: BookingSlot[] = (bookingRows ?? [])
         .filter((b) => b.start_date && b.start_hour !== null)
         .map((b) => {
@@ -350,6 +368,7 @@ export function CalendarAdmin() {
             start,
             end,
             customerHint: b.status,
+            customerName: names[b.user_id] ?? null,
           };
         });
       setBookingSlots(slots);
@@ -668,86 +687,70 @@ export function CalendarAdmin() {
           <p className="text-sm text-muted-foreground py-4">Keine Belegung an diesem Tag.</p>
         )}
         <ul className="space-y-2">
-          {dayEntries.map((e) => (
-            <li
-              key={`${e.kind}-${e.id}`}
-              className="rounded-2xl border border-border bg-card p-4 flex items-start justify-between gap-3"
-            >
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">
-                  {fmtTime(e.start)} – {fmtTime(e.end)}
-                  {!sameDay(e.start, e.end) && ` (bis ${e.end.toLocaleDateString("de-DE")})`}
-                </p>
-                {e.kind === "booking" ? (
-                  <>
-                    <p className="font-semibold truncate">
-                      {e.booking.vehicleName} · {e.booking.vehiclePlate}
+          {dayEntries.map((e) => {
+            const key = `${e.kind}-${e.id}`;
+            const open = expandedKey === key;
+            const name = e.kind === "manual" ? e.manual.customer_name : e.booking.customerName;
+            return (
+              <li key={key} className="rounded-2xl border border-border bg-card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold break-words">
+                      {e.kind === "booking"
+                        ? `${e.booking.vehicleName} · ${e.booking.vehiclePlate}`
+                        : `${e.manual.vehicle_name || "Transporter"} · ${e.manual.vehicle_plate}`}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      Online-Buchung · {e.booking.label}
+                    <p className="text-sm break-words">{name || "Kundenname nicht hinterlegt"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {e.kind === "booking" ? `Online-Buchung · ${e.booking.label}` : "Manueller Termin"}
                     </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="font-semibold truncate">
-                      {e.manual.vehicle_name || "Transporter"} · {e.manual.vehicle_plate}
-                    </p>
-                    <p className="text-xs truncate">{e.manual.customer_name}</p>
-                    <p className="text-xs text-muted-foreground flex flex-wrap gap-x-3">
-                      {e.manual.customer_phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="w-3 h-3" /> {e.manual.customer_phone}
-                        </span>
-                      )}
-                      {e.manual.customer_email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="w-3 h-3" /> {e.manual.customer_email}
-                        </span>
-                      )}
-                      {birthLabel(e.manual.customer_birth_date) && (
-                        <span className="flex items-center gap-1">
-                          <Cake className="w-3 h-3" /> {birthLabel(e.manual.customer_birth_date)}
-                        </span>
-                      )}
-                    </p>
-                    {(e.manual.customer_street || e.manual.customer_city) && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        {[e.manual.customer_street, e.manual.customer_city]
-                          .filter(Boolean)
-                          .join(", ")}
+                    <p className="text-xs mt-1">Von: {fmtDateTime(e.start)}</p>
+                    <p className="text-xs">Bis: {fmtDateTime(e.end)}</p>
+                    {e.kind === "manual" && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {notifyLabel(notifyStates[e.manual.id])}
                       </p>
                     )}
-                    {e.manual.note && (
-                      <p className="text-xs text-muted-foreground mt-1">{e.manual.note}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {notifyLabel(notifyStates[e.manual.id])}
-                    </p>
-                  </>
-                )}
-              </div>
-              {e.kind === "manual" ? (
-                <div className="flex flex-col gap-1 shrink-0">
-                  <button
-                    onClick={() => openEdit(e.manual)}
-                    className="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium"
-                  >
-                    Bearbeiten
-                  </button>
-                  <button
-                    onClick={() => handleDelete(e.id)}
-                    className="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium flex items-center gap-1 justify-center"
-                  >
-                    <Trash2 className="w-3 h-3" /> Löschen
-                  </button>
+                  </div>
+                  {e.kind === "manual" ? (
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <button
+                        onClick={() => openEdit(e.manual)}
+                        className="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium"
+                      >
+                        Bearbeiten
+                      </button>
+                      <button
+                        onClick={() => handleDelete(e.id)}
+                        className="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium flex items-center gap-1 justify-center"
+                      >
+                        <Trash2 className="w-3 h-3" /> Löschen
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
+                      Buchung
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
-                  Buchung
-                </span>
-              )}
-            </li>
-          ))}
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  aria-controls={`details-${key}`}
+                  onClick={() => setExpandedKey(open ? null : key)}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-foreground text-background px-3 py-1.5 text-xs font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2"
+                >
+                  {open ? "Details schließen" : "Buchungsdetails anzeigen"}
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+                </button>
+                {open && (
+                  <div id={`details-${key}`} className="mt-3 border-t border-border pt-3">
+                    <CalendarEntryDetailsPanel key={key} kind={e.kind} id={e.id} />
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </section>
 
@@ -761,11 +764,11 @@ export function CalendarAdmin() {
               key={`up-${e.kind}-${e.id}`}
               className="text-sm rounded-xl border border-border bg-card px-3 py-2 flex items-center justify-between gap-3"
             >
-              <span className="truncate">
-                {fmtDateTime(e.start)} ·{" "}
+              <span className="min-w-0 break-words">
+                Von: {fmtDateTime(e.start)} · Bis: {fmtDateTime(e.end)} ·{" "}
                 {e.kind === "manual"
                   ? `${e.manual.vehicle_plate} · ${e.manual.customer_name}`
-                  : `${e.booking.vehiclePlate} · Online-Buchung`}
+                  : `${e.booking.vehiclePlate} · ${e.booking.customerName ?? "Online-Buchung"}`}
               </span>
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
                 {e.kind === "manual" ? "Manuell" : "Buchung"}
