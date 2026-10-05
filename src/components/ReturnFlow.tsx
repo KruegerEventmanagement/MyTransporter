@@ -1,6 +1,6 @@
 import { isPhysicalAddon } from "@/lib/custom-km";
-import { useState, useCallback, useEffect } from "react";
-import { Camera, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine } from "lucide-react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { Camera, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine, Fuel, CloudOff, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
 import { TripErrorBanner, TripPhotoThumb } from "./TripPhotoParts";
@@ -13,10 +13,31 @@ import {
 } from "@/lib/trip-photo-store";
 import { useServerFn } from "@tanstack/react-start";
 import { recognizeOdometer } from "@/lib/odometer-ai.functions";
-import { notifyAdmin } from "@/lib/admin-notify";
-import { getPlanById, KM_TARIFF_CENTS_PER_KM, bookingFreeKm } from "@/lib/booking-rules";
+import { reportReturn } from "@/lib/trip-return.functions";
+import {
+  evaluateReturnKm,
+  validReason,
+  MIN_REASON_LENGTH,
+  RETURN_FUEL_TAG,
+  RETURN_INTERIOR_TAG,
+  RETURN_ODOMETER_TAG,
+  RETURN_RECEIPT_TAG,
+  type ExceptionKey,
+  type ReturnExceptions,
+} from "@/lib/trip-return";
+import { loadReturnDraft, saveReturnDraft, type DraftStep } from "@/lib/return-draft";
+import {
+  enqueuePhoto,
+  openIdbQueueStore,
+  QueueUnavailableError,
+  transferQueuedPhoto,
+  type QueueStore,
+} from "@/lib/photo-queue";
 
 const TEST_MODE_ADMIN_EMAIL = "krueger.christian96@gmx.de";
+
+export const RETURN_DOCUMENTATION_NOTICE =
+  "Bitte dokumentiere die Rückgabe vollständig. Bei fehlenden oder unleserlichen Nachweisen kann eine zusätzliche Prüfung erforderlich sein. Nachvollziehbar belegte und rechtlich berechtigte Forderungen aus dem Mietvertrag können nach Prüfung mit deiner Kaution verrechnet werden.";
 
 const PHOTO_SIDES = [
   { id: "post_front", label: "Vorne", icon: "⬆️", variant: "front" as SilhouetteVariant },
@@ -29,9 +50,6 @@ const PHOTO_SIDES = [
   { id: "post_front_left", label: "Vorne links", icon: "↖️", variant: "three-quarter-front-left" as SilhouetteVariant },
 ] as const;
 
-const POST_INTERIOR_ID = "post_interior";
-const POST_ODOMETER_ID = "post_odometer";
-
 interface ReturnFlowProps {
   bookingId: string;
   planId?: string;
@@ -40,6 +58,10 @@ interface ReturnFlowProps {
   kmPriceCents?: number | null;
   addons?: Array<{ id: string; label: string; price_cents: number }>;
   onComplete: (returnCode: string) => void;
+  /** Für Entwurf + Foto-Warteschlange (pro Nutzer isoliert). Ohne: direkter Online-Upload. */
+  userId?: string | null;
+  /** Serverseitig bereits gespeicherter Rückgabecode (Status returning). */
+  serverReturnCode?: string | null;
 }
 
 type CaptureTarget =
@@ -47,49 +69,143 @@ type CaptureTarget =
   | { kind: "interior" }
   | { kind: "damage" }
   | { kind: "odometer" }
+  | { kind: "fuel" }
   | { kind: "receipt" };
 
-type ReturnStep = "photos" | "km" | "receipt" | "code" | "done";
+type ReturnStep = DraftStep | "done";
+type PendingState = { id: string; status: "local" | "uploading" | "error"; preview: string | null; message?: string };
 
-export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, addons: allAddons, onComplete }: ReturnFlowProps) {
+const tagOf = (t: CaptureTarget) =>
+  t.kind === "side"
+    ? t.id
+    : t.kind === "interior"
+      ? RETURN_INTERIOR_TAG
+      : t.kind === "damage"
+        ? "post_damage"
+        : t.kind === "odometer"
+          ? RETURN_ODOMETER_TAG
+          : t.kind === "fuel"
+            ? RETURN_FUEL_TAG
+            : RETURN_RECEIPT_TAG;
+
+const targetOfTag = (tag: string): CaptureTarget =>
+  tag === RETURN_INTERIOR_TAG
+    ? { kind: "interior" }
+    : tag === "post_damage"
+      ? { kind: "damage" }
+      : tag === RETURN_ODOMETER_TAG
+        ? { kind: "odometer" }
+        : tag === RETURN_FUEL_TAG
+          ? { kind: "fuel" }
+          : tag === RETURN_RECEIPT_TAG
+            ? { kind: "receipt" }
+            : { kind: "side", id: tag };
+
+function makePreview(blob: Blob): string | null {
+  try {
+    return typeof URL !== "undefined" && URL.createObjectURL ? URL.createObjectURL(blob) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function ReturnFlow({
+  bookingId,
+  planId,
+  startKm,
+  freeKm,
+  kmPriceCents,
+  addons: allAddons,
+  onComplete,
+  userId,
+  serverReturnCode,
+}: ReturnFlowProps) {
   // Kilometerpaket ist kein physisches Zubehör und wird nicht "zurückgegeben".
   const addons = allAddons?.filter(isPhysicalAddon);
-  const [returnStep, setReturnStep] = useState<ReturnStep>("photos");
+  const draft0 = useRef(userId ? loadReturnDraft(userId, bookingId) : null).current;
+  const initialCode = serverReturnCode ?? draft0?.returnCode ?? null;
+  const [returnStep, setReturnStep] = useState<ReturnStep>(initialCode ? "code" : (draft0?.step ?? "photos"));
   const [photos, setPhotos] = useState<Record<string, StoredTripPhoto>>({});
   const [interiorPhoto, setInteriorPhoto] = useState<StoredTripPhoto | null>(null);
   const [damagePhotos, setDamagePhotos] = useState<StoredTripPhoto[]>([]);
   const [odometerPhoto, setOdometerPhoto] = useState<StoredTripPhoto | null>(null);
-  const [endKm, setEndKm] = useState("");
+  const [fuelPhoto, setFuelPhoto] = useState<StoredTripPhoto | null>(null);
+  const [endKm, setEndKm] = useState(draft0?.endKm ?? "");
+  const [endKmManual, setEndKmManual] = useState(draft0?.endKmManual ?? false);
   const [receiptPhoto, setReceiptPhoto] = useState<StoredTripPhoto | null>(null);
+  const [exceptions, setExceptions] = useState<ReturnExceptions>(draft0?.exceptions ?? {});
+  const [openException, setOpenException] = useState<ExceptionKey | null>(null);
   const [photoError, setPhotoError] = useState<{
     message: string;
     target: CaptureTarget;
-    file: File;
+    file: Blob;
     uploadedPath: string | null;
+    queueId?: string;
   } | null>(null);
+  const [pending, setPending] = useState<Record<string, PendingState>>({});
+  const [queueNotice, setQueueNotice] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [actionError, setActionError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [returnCode, setReturnCode] = useState<string | null>(null);
+  const [returnCode, setReturnCode] = useState<string | null>(initialCode);
+  const [reportPending, setReportPending] = useState(draft0?.reportPending ?? false);
+  const [reviewNote, setReviewNote] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [awaitingAdmin, setAwaitingAdmin] = useState(false);
+  const [awaitingAdmin, setAwaitingAdmin] = useState(!!initialCode);
   const [isAdmin, setIsAdmin] = useState(false);
   const [aiRecognition, setAiRecognition] = useState<{ km: number | null; fuelPercent: number | null; confidence: string } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
-  const [endFuelPercent, setEndFuelPercent] = useState<string>("");
-  const [addonsReturned, setAddonsReturned] = useState(false);
+  const [endFuelPercent, setEndFuelPercent] = useState<string>(draft0?.endFuelPercent ?? "");
+  const [fuelManual, setFuelManual] = useState(!!draft0?.endFuelPercent);
+  const [addonsReturned, setAddonsReturned] = useState(draft0?.addonsReturned ?? false);
   const recognize = useServerFn(recognizeOdometer);
-  const [kmSummary, setKmSummary] = useState<{
-    driven: number;
-    free: number;
-    extra: number;
-    chargeCents: number;
-    pricePerKmCents: number;
-  } | null>(null);
+  const report = useServerFn(reportReturn);
+  const [kmSummary, setKmSummary] = useState<ReturnType<typeof evaluateReturnKm> | null>(null);
   const [currentTarget, setCurrentTarget] = useState<CaptureTarget | null>(null);
+  const storeRef = useRef<QueueStore | null>(null);
+  const endKmManualRef = useRef(endKmManual);
+  endKmManualRef.current = endKmManual;
+  const fuelManualRef = useRef(fuelManual);
+  fuelManualRef.current = fuelManual;
 
-  // Bereits gespeicherte Rückgabe-Fotos (inkl. Tacho und Tankbeleg) wiederherstellen
+  // Entwurf fortlaufend sichern (nicht erst beim Verlassen).
+  useEffect(() => {
+    if (!userId || returnStep === "done") return;
+    saveReturnDraft(userId, bookingId, {
+      started: true,
+      step: returnStep,
+      endKm,
+      endKmManual,
+      endFuelPercent,
+      exceptions,
+      addonsReturned,
+      returnCode,
+      reportPending,
+    });
+  }, [userId, bookingId, returnStep, endKm, endKmManual, endFuelPercent, exceptions, addonsReturned, returnCode, reportPending]);
+
+  // Server-Code hat Vorrang (z. B. nach verlorener Antwort).
+  useEffect(() => {
+    if (serverReturnCode && serverReturnCode !== returnCode) {
+      setReturnCode(serverReturnCode);
+      setReportPending(false);
+      setAwaitingAdmin(true);
+      setReturnStep("code");
+    }
+  }, [serverReturnCode, returnCode]);
+
+  const applySaved = useCallback((tag: string, saved: StoredTripPhoto) => {
+    const t = targetOfTag(tag);
+    if (t.kind === "side") setPhotos((prev) => ({ ...prev, [t.id]: saved }));
+    else if (t.kind === "interior") setInteriorPhoto(saved);
+    else if (t.kind === "damage") setDamagePhotos((prev) => (prev.some((p) => p.path === saved.path) ? prev : [...prev, saved]));
+    else if (t.kind === "odometer") setOdometerPhoto(saved);
+    else if (t.kind === "fuel") setFuelPhoto(saved);
+    else setReceiptPhoto(saved);
+  }, []);
+
+  // Bereits bestätigte Rückgabe-Fotos (inkl. Tacho, Tank, Beleg) wiederherstellen
   useEffect(() => {
     let mounted = true;
     setLoadError(null);
@@ -101,64 +217,115 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
         const damages: StoredTripPhoto[] = [];
         let interior: StoredTripPhoto | null = null;
         let odometer: StoredTripPhoto | null = null;
+        let fuel: StoredTripPhoto | null = null;
         let receipt: StoredTripPhoto | null = null;
         for (const row of rows) {
           const photo = { path: row.photo_url, url: row.url };
-          if (row.photo_type === POST_INTERIOR_ID) interior = photo;
-          else if (row.photo_type === POST_ODOMETER_ID) odometer = photo;
-          else if (row.photo_type === "tank_receipt") receipt = photo;
+          if (row.photo_type === RETURN_INTERIOR_TAG) interior = photo;
+          else if (row.photo_type === RETURN_ODOMETER_TAG) odometer = photo;
+          else if (row.photo_type === RETURN_FUEL_TAG) fuel = photo;
+          else if (row.photo_type === RETURN_RECEIPT_TAG) receipt = photo;
           else if (row.photo_type === "post_damage") damages.push(photo);
           else sides[row.photo_type] = photo;
         }
         if (Object.keys(sides).length) setPhotos((prev) => ({ ...sides, ...prev }));
         if (interior) setInteriorPhoto((prev) => prev ?? interior);
         if (odometer) setOdometerPhoto((prev) => prev ?? odometer);
+        if (fuel) setFuelPhoto((prev) => prev ?? fuel);
         if (receipt) setReceiptPhoto((prev) => prev ?? receipt);
         if (damages.length) setDamagePhotos((prev) => (prev.length ? prev : damages.slice(-4)));
       } catch (err) {
         if (mounted) setLoadError(err instanceof Error ? err.message : "Gespeicherte Fotos konnten nicht geladen werden.");
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [bookingId, loadAttempt]);
+
+  const transfer = useCallback(
+    async (id: string, tag: string) => {
+      const store = storeRef.current;
+      if (!store) return;
+      setPending((p) => ({ ...p, [id]: { ...(p[id] ?? { id, preview: null }), id, status: "uploading" } as PendingState }));
+      try {
+        const saved = await transferQueuedPhoto(supabase, store, id);
+        setPending((p) => {
+          const { [id]: done, ...rest } = p;
+          if (done?.preview) URL.revokeObjectURL?.(done.preview);
+          return rest;
+        });
+        applySaved(tag, saved);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Übertragung fehlgeschlagen.";
+        setPending((p) => (p[id] ? { ...p, [id]: { ...p[id]!, status: "error", message } } : p));
+      }
+    },
+    [applySaved],
+  );
+
+  const pendingTags = useRef<Record<string, string>>({});
+  const transferAll = useCallback(() => {
+    Object.entries(pendingTags.current).forEach(([id, tag]) => void transfer(id, tag));
+  }, [transfer]);
+
+  // Warteschlange öffnen, offene Aufnahmen anzeigen und übertragen; bei online erneut.
+  useEffect(() => {
+    if (!userId) return;
+    let alive = true;
+    (async () => {
+      const store = await openIdbQueueStore();
+      if (!alive) return;
+      storeRef.current = store;
+      if (!store) {
+        setQueueNotice("Fotos können auf diesem Gerät nicht zwischengespeichert werden. Sie werden direkt online übertragen – bitte mit Verbindung aufnehmen.");
+        return;
+      }
+      const items = await store.list(userId, bookingId).catch(() => []);
+      if (!alive) return;
+      const next: Record<string, PendingState> = {};
+      for (const it of items) {
+        pendingTags.current[it.id] = it.tag;
+        next[it.id] = { id: it.id, status: "local", preview: makePreview(it.blob) };
+      }
+      setPending((p) => ({ ...next, ...p }));
+      items.forEach((it) => void transfer(it.id, it.tag));
+    })();
+    const onOnline = () => transferAll();
+    window.addEventListener("online", onOnline);
+    return () => {
+      alive = false;
+      window.removeEventListener("online", onOnline);
+    };
+  }, [userId, bookingId, transfer, transferAll]);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!mounted || !userData.user) return;
-      if (mounted) {
-        setIsAdmin(
-          userData.user.email?.toLowerCase() === TEST_MODE_ADMIN_EMAIL.toLowerCase()
-        );
-      }
+      setIsAdmin(userData.user.email?.toLowerCase() === TEST_MODE_ADMIN_EMAIL.toLowerCase());
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Auf Admin-Bestätigung warten: Realtime + Fallback-Polling auf bookings.status
   useEffect(() => {
     if (!awaitingAdmin || !returnCode) return;
     let cancelled = false;
-
     const finish = () => {
       if (cancelled) return;
       cancelled = true;
       onComplete(returnCode);
     };
-
     const check = async () => {
-      const { data } = await supabase
-        .from("bookings")
-        .select("status")
-        .eq("id", bookingId)
-        .maybeSingle();
+      const { data } = await supabase.from("bookings").select("status").eq("id", bookingId).maybeSingle();
       if (data?.status === "completed") finish();
     };
-
     check();
     const poll = setInterval(check, 5000);
-
     const channel = supabase
       .channel(`booking-status-${bookingId}`)
       .on(
@@ -167,10 +334,9 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
         (payload) => {
           const next = (payload.new as { status?: string } | null)?.status;
           if (next === "completed") finish();
-        }
+        },
       )
       .subscribe();
-
     return () => {
       cancelled = true;
       clearInterval(poll);
@@ -180,13 +346,15 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
 
   const allSidesTaken = PHOTO_SIDES.every((s) => photos[s.id]);
   const interiorTaken = !!interiorPhoto;
-  const photosReady = allSidesTaken && interiorTaken;
+  const photosException = validReason(exceptions.photos);
+  const photosReady = (allSidesTaken && interiorTaken) || photosException;
+  const pendingCount = Object.keys(pending).length;
 
   const fillTestPhotos = () => {
     const placeholder =
       "data:image/svg+xml;utf8," +
       encodeURIComponent(
-        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='#e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#333'>TEST</text></svg>`
+        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='#e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#333'>TEST</text></svg>`,
       );
     const test = { path: "admin-test", url: placeholder };
     const next: Record<string, StoredTripPhoto> = {};
@@ -199,57 +367,74 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
     const placeholder =
       "data:image/svg+xml;utf8," +
       encodeURIComponent(
-        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='#e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#333'>TEST</text></svg>`
+        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='#e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#333'>TEST</text></svg>`,
       );
     setOdometerPhoto({ path: "admin-test", url: placeholder });
+    setFuelPhoto({ path: "admin-test", url: placeholder });
     if (!endKm) setEndKm("42920");
   };
 
+  const runOdometerAi = useCallback(
+    async (path: string) => {
+      setAiBusy(true);
+      setAiRecognition(null);
+      try {
+        const result = await recognize({ data: { photoPath: path, bookingId, phase: "end" } });
+        setAiRecognition({ km: result.km, fuelPercent: result.fuelPercent, confidence: result.confidence });
+        // KI ist nur ein Vorschlag: manuelle Eingaben werden nie überschrieben.
+        if (result.km !== null && result.confidence !== "low" && !endKmManualRef.current) setEndKm(String(result.km));
+        if (result.fuelPercent !== null && result.confidence !== "low" && !fuelManualRef.current)
+          setEndFuelPercent(String(result.fuelPercent));
+      } catch (err) {
+        console.warn("Odometer-KI nicht verfügbar", err);
+      } finally {
+        setAiBusy(false);
+      }
+    },
+    [bookingId, recognize],
+  );
+
   const savePhoto = useCallback(
-    async (file: File, target: CaptureTarget, uploadedPath: string | null = null) => {
+    async (file: Blob, target: CaptureTarget, uploadedPath: string | null = null) => {
       setUploading(true);
       setPhotoError(null);
-      const tag =
-        target.kind === "side"
-          ? target.id
-          : target.kind === "interior"
-          ? POST_INTERIOR_ID
-          : target.kind === "damage"
-          ? "post_damage"
-          : target.kind === "odometer"
-          ? POST_ODOMETER_ID
-          : "tank_receipt";
+      const tag = tagOf(target);
+      const store = storeRef.current;
+      // Mit Warteschlange: erst sicher auf dem Gerät ablegen, dann übertragen.
+      if (store && userId && !uploadedPath) {
+        try {
+          const item = await enqueuePhoto(store, { userId, bookingId, tag, blob: file });
+          pendingTags.current[item.id] = tag;
+          setPending((p) => ({ ...p, [item.id]: { id: item.id, status: "local", preview: makePreview(file) } }));
+          setCurrentTarget(null);
+          setUploading(false);
+          try {
+            const saved = await transferQueuedPhoto(supabase, store, item.id);
+            delete pendingTags.current[item.id];
+            setPending((p) => {
+              const { [item.id]: done, ...rest } = p;
+              if (done?.preview) URL.revokeObjectURL?.(done.preview);
+              return rest;
+            });
+            applySaved(tag, saved);
+            if (target.kind === "odometer") void runOdometerAi(saved.path);
+          } catch (err) {
+            const message = err instanceof Error ? err.message : "Übertragung fehlgeschlagen.";
+            setPending((p) => (p[item.id] ? { ...p, [item.id]: { ...p[item.id]!, status: "error", message } } : p));
+          }
+          return;
+        } catch (err) {
+          if (!(err instanceof QueueUnavailableError)) throw err;
+          setQueueNotice(err.message);
+          // ehrlich: kein Gerätespeicher → direkter Online-Upload
+        }
+      }
       try {
         // Erfolg erst nach Storage-Upload UND bestätigtem Datenbankeintrag.
         const saved = await saveTripPhoto(supabase, { bookingId, tag, file, uploadedPath });
         setCurrentTarget(null);
-        if (target.kind === "side") {
-          setPhotos((prev) => ({ ...prev, [target.id]: saved }));
-        } else if (target.kind === "interior") {
-          setInteriorPhoto(saved);
-        } else if (target.kind === "damage") {
-          setDamagePhotos((prev) => [...prev, saved]);
-        } else if (target.kind === "odometer") {
-          setOdometerPhoto(saved);
-          setAiBusy(true);
-          setAiRecognition(null);
-          try {
-            const result = await recognize({ data: { photoPath: saved.path, bookingId, phase: "end" } });
-            setAiRecognition({ km: result.km, fuelPercent: result.fuelPercent, confidence: result.confidence });
-            if (result.km !== null && result.confidence !== "low") {
-              setEndKm(String(result.km));
-            }
-            if (result.fuelPercent !== null && result.confidence !== "low") {
-              setEndFuelPercent(String(result.fuelPercent));
-            }
-          } catch (err) {
-            console.warn("Odometer-KI nicht verfügbar", err);
-          } finally {
-            setAiBusy(false);
-          }
-        } else {
-          setReceiptPhoto(saved);
-        }
+        applySaved(tag, saved);
+        if (target.kind === "odometer") void runOdometerAi(saved.path);
       } catch (err) {
         console.error("Upload error:", err);
         setCurrentTarget(null);
@@ -263,7 +448,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
         setUploading(false);
       }
     },
-    [bookingId, recognize]
+    [bookingId, userId, applySaved, runOdometerAi],
   );
 
   const handleCapture = useCallback(
@@ -271,7 +456,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
       if (!file || !currentTarget) return;
       await savePhoto(file, currentTarget);
     },
-    [currentTarget, savePhoto]
+    [currentTarget, savePhoto],
   );
 
   const openCamera = (target: CaptureTarget) => {
@@ -279,11 +464,13 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
     setCurrentTarget(target);
   };
 
+  const pendingList = Object.values(pending);
   const photoBanners = (
     <>
       {loadError && (
         <TripErrorBanner message={loadError} onRetry={() => setLoadAttempt((n) => n + 1)} retryLabel="Neu laden" />
       )}
+      {queueNotice && <TripErrorBanner message={queueNotice} onDismiss={() => setQueueNotice(null)} />}
       {photoError && (
         <TripErrorBanner
           message={photoError.message}
@@ -292,15 +479,77 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           onDismiss={() => setPhotoError(null)}
         />
       )}
+      {pendingList.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-border bg-secondary/60 p-4" data-testid="photo-queue">
+          <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+            <CloudOff className="w-4 h-4" /> {pendingList.length} Foto(s) noch nicht übertragen
+          </p>
+          <ul className="space-y-1 text-xs text-muted-foreground">
+            {pendingList.map((p) => (
+              <li key={p.id} className="flex items-center gap-2">
+                {p.status === "uploading" ? <Loader2 className="w-3 h-3 animate-spin" /> : <span className="w-3 h-3 rounded-full border border-foreground inline-block" />}
+                <span>
+                  {p.status === "uploading"
+                    ? "Wird übertragen"
+                    : p.status === "error"
+                      ? `Auf diesem Gerät gespeichert · Übertragung fehlgeschlagen`
+                      : "Auf diesem Gerät gespeichert"}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={transferAll}
+            className="mt-3 min-h-11 rounded-full bg-foreground px-4 text-xs font-semibold text-background"
+          >
+            Jetzt übertragen
+          </button>
+        </div>
+      )}
     </>
   );
+
+  const notice = (
+    <p className="mb-4 rounded-2xl border border-border p-3 text-xs leading-relaxed text-muted-foreground" data-testid="return-notice">
+      {RETURN_DOCUMENTATION_NOTICE}
+    </p>
+  );
+
+  const exceptionBox = (key: ExceptionKey, label: string) => {
+    const value = exceptions[key] ?? "";
+    const open = openException === key || value.length > 0;
+    return (
+      <div className="mb-4">
+        {!open ? (
+          <button type="button" onClick={() => setOpenException(key)} className="min-h-11 text-xs font-medium underline">
+            {label}
+          </button>
+        ) : (
+          <div className="rounded-2xl border border-border p-3">
+            <label className="text-xs font-medium text-foreground" htmlFor={`ex-${key}`}>
+              {label} – bitte kurz begründen (mind. {MIN_REASON_LENGTH} Zeichen). MyTransporter prüft das manuell.
+            </label>
+            <textarea
+              id={`ex-${key}`}
+              value={value}
+              maxLength={500}
+              onChange={(e) => setExceptions((x) => ({ ...x, [key]: e.target.value }))}
+              className="mt-2 w-full rounded-xl border border-border bg-background p-2 text-sm"
+              rows={2}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const cameraOpen = currentTarget !== null;
   const cameraVariant: SilhouetteVariant = (() => {
     if (!currentTarget) return "front";
     if (currentTarget.kind === "interior") return "interior";
     if (currentTarget.kind === "damage") return "damage";
-    if (currentTarget.kind === "odometer") return "damage";
+    if (currentTarget.kind === "odometer" || currentTarget.kind === "fuel") return "damage";
     if (currentTarget.kind === "receipt") return "receipt";
     const side = PHOTO_SIDES.find((s) => s.id === currentTarget.id);
     return side?.variant ?? "front";
@@ -310,6 +559,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
     if (currentTarget.kind === "interior") return "Innenraum aufnehmen";
     if (currentTarget.kind === "damage") return "Schaden aufnehmen";
     if (currentTarget.kind === "odometer") return "Tacho / Kilometerstand fotografieren";
+    if (currentTarget.kind === "fuel") return "Tankanzeige fotografieren";
     if (currentTarget.kind === "receipt") return "Tankbeleg scannen";
     const side = PHOTO_SIDES.find((s) => s.id === currentTarget.id);
     return side?.label ?? "Foto aufnehmen";
@@ -317,37 +567,38 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
   const cameraHint =
     currentTarget?.kind === "receipt"
       ? "Beleg in den Rahmen legen, wird automatisch gescannt"
-      : "Richte das Fahrzeug an der Vorlage aus";
+      : currentTarget?.kind === "fuel"
+        ? "Tankanzeige gut lesbar mittig aufnehmen"
+        : "Richte das Fahrzeug an der Vorlage aus";
+
+  const camera = (
+    <CameraCapture
+      open={cameraOpen}
+      title={cameraTitle}
+      hint={cameraHint}
+      variant={cameraVariant}
+      scanMode={currentTarget?.kind === "receipt"}
+      onClose={() => setCurrentTarget(null)}
+      onCapture={(file) => handleCapture(file)}
+    />
+  );
 
   const handleSubmitKm = async () => {
     if (saving) return;
-    const end = parseInt(endKm);
-    if (!Number.isFinite(end) || end < 0) {
+    const end = Number(endKm);
+    if (endKm.trim() === "" || !Number.isInteger(end) || end < 0) {
       setActionError("Bitte einen gültigen Kilometerstand eintragen.");
       return;
     }
-    const start = typeof startKm === "number" ? startKm : 0;
-    const plan = planId && planId !== "km" ? getPlanById(planId) : null;
-    // Gespeicherter Buchungs-Snapshot gilt; fehlt er, Legacy-Kontingent (nie gekürzter Neukatalog).
-    const free = bookingFreeKm(planId, freeKm);
-    const pricePerKmCents =
-      typeof kmPriceCents === "number"
-        ? kmPriceCents
-        : planId === "km"
-          ? KM_TARIFF_CENTS_PER_KM
-          : (plan?.extraKmCents ?? KM_TARIFF_CENTS_PER_KM);
-    const driven = Math.max(0, end - start);
-    // Im reinen Kilometer-Tarif werden alle Kilometer berechnet (kein Freikontingent).
-    const billable = planId === "km" ? driven : Math.max(0, driven - free);
-    const chargeCents = billable * pricePerKmCents;
-
+    const km = evaluateReturnKm({ planId, startKm, endKm: end, freeKm, kmPriceCents });
     setSaving(true);
     setActionError(null);
     try {
       await updateBookingChecked(supabase, bookingId, {
         end_km: end,
-        extra_km: planId === "km" ? driven : Math.max(0, driven - free),
-        extra_km_charge_cents: chargeCents,
+        end_km_manual: endKmManual,
+        extra_km: km.extra,
+        extra_km_charge_cents: km.chargeCents,
         ...(endFuelPercent !== "" ? { ai_end_fuel_percent: parseInt(endFuelPercent) } : {}),
       });
     } catch (err) {
@@ -356,59 +607,60 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
       return;
     }
     setSaving(false);
-
-    setKmSummary({
-      pricePerKmCents,
-      driven,
-      free: planId === "km" ? 0 : free,
-      extra: planId === "km" ? driven : Math.max(0, driven - free),
-      chargeCents,
-    });
+    setKmSummary(km);
     setReturnStep("receipt");
   };
 
-  const handleFinish = async () => {
+  const submitReport = useCallback(async () => {
     if (saving) return;
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    setSaving(true);
     setActionError(null);
-    try {
-      await updateBookingChecked(supabase, bookingId, { return_code: code, status: "returning" });
-    } catch (err) {
-      setActionError(err instanceof Error ? `Rückgabe nicht gespeichert. ${err.message}` : "Rückgabe nicht gespeichert.");
-      setSaving(false);
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setReportPending(true);
+      setActionError("Keine Verbindung. Die Rückgabe ist noch NICHT gemeldet und wird automatisch gesendet, sobald du wieder online bist.");
       return;
     }
-    setSaving(false);
-    // Admin informieren, damit Rückgabe zeitnah bestätigt werden kann
-    notifyAdmin({
-      type: "trip_returning",
-      title: "Rückgabe steht an",
-      body: `Rückgabecode ${code}${kmSummary ? ` · ${kmSummary.driven} km gefahren · Mehrkilometer-Aufpreis ${(kmSummary.chargeCents / 100).toFixed(2)} €` : ""}`,
-      bookingId,
-    });
-    setReturnCode(code);
-    setAwaitingAdmin(true);
-    setReturnStep("code");
-  };
+    setSaving(true);
+    try {
+      const fuel = endFuelPercent === "" ? null : parseInt(endFuelPercent);
+      const res = await report({
+        data: { bookingId, endKm: Number(endKm), endFuelPercent: fuel, endKmManual, exceptions },
+      });
+      if (!res || (res as { ok?: boolean }).ok !== true) {
+        const r = res as { error?: string } | null;
+        setActionError(`Rückgabe nicht gespeichert. ${r?.error ?? ""}`.trim());
+        return;
+      }
+      const ok = res as { returnCode: string; reviewReason: string | null };
+      setReportPending(false);
+      setReviewNote(ok.reviewReason);
+      setReturnCode(ok.returnCode);
+      setAwaitingAdmin(true);
+      setReturnStep("code");
+    } catch (err) {
+      setReportPending(typeof navigator !== "undefined" && navigator.onLine === false);
+      setActionError(err instanceof Error ? `Rückgabe nicht gespeichert. ${err.message}` : "Rückgabe nicht gespeichert.");
+    } finally {
+      setSaving(false);
+    }
+  }, [saving, endFuelPercent, report, bookingId, endKm, endKmManual, exceptions]);
+
+  // Offline angeforderte Meldung nach Reconnect automatisch senden.
+  useEffect(() => {
+    if (!reportPending || returnCode) return;
+    const onOnline = () => void submitReport();
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [reportPending, returnCode, submitReport]);
 
   if (returnStep === "photos") {
     return (
       <div className="max-w-lg mx-auto animate-fade-in-up">
-        <CameraCapture
-          open={cameraOpen}
-          title={cameraTitle}
-          hint={cameraHint}
-          variant={cameraVariant}
-          scanMode={currentTarget?.kind === "receipt"}
-          onClose={() => setCurrentTarget(null)}
-          onCapture={(file) => handleCapture(file)}
-        />
-
+        {camera}
         <h3 className="text-xl font-bold text-foreground mb-2">Fahrzeug-Rückgabe dokumentieren</h3>
-        <p className="text-sm text-muted-foreground mb-6">
+        <p className="text-sm text-muted-foreground mb-4">
           Fotografiere das Fahrzeug von allen 8 Seiten und den Innenraum, bevor du den Schlüssel abgibst.
         </p>
+        {notice}
 
         {isAdmin && (
           <button
@@ -440,12 +692,14 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
                   <Camera className="w-8 h-8 text-muted-foreground" />
                 </div>
               )}
-              <p className="text-sm font-medium text-foreground">{side.icon} {side.label}</p>
+              <p className="text-sm font-medium text-foreground">
+                {side.icon} {side.label}
+              </p>
+              {photos[side.id] && <p className="text-[10px] text-muted-foreground">Übertragen</p>}
             </button>
           ))}
         </div>
 
-        {/* Innenraum */}
         <div className="mb-6">
           <p className="text-sm font-medium text-foreground mb-2">Innenraum & Sauberkeit</p>
           <button
@@ -468,7 +722,6 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           </button>
         </div>
 
-        {/* Schäden */}
         <div className="mb-6">
           <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" /> Schäden?
@@ -505,6 +758,8 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           </div>
         </div>
 
+        {!(allSidesTaken && interiorTaken) && exceptionBox("photos", "Foto oder Kamera funktioniert nicht?")}
+
         <button
           disabled={!photosReady}
           onClick={() => setReturnStep("km")}
@@ -516,6 +771,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
         {!photosReady && (
           <p className="text-xs text-muted-foreground text-center mt-3">
             Bitte alle 8 Außenfotos und das Innenraum-Foto aufnehmen
+            {pendingCount > 0 ? " – noch nicht übertragene Fotos zählen erst nach der Übertragung" : ""}
           </p>
         )}
       </div>
@@ -523,17 +779,12 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
   }
 
   if (returnStep === "km") {
+    const kmReady = endKm.trim() !== "" && (!!odometerPhoto || photosException);
+    const fuelReady = !!fuelPhoto || validReason(exceptions.fuel);
     return (
       <div className="max-w-lg mx-auto animate-fade-in-up">
-        <CameraCapture
-          open={cameraOpen}
-          title={cameraTitle}
-          hint={cameraHint}
-          variant={cameraVariant}
-          onClose={() => setCurrentTarget(null)}
-          onCapture={(file) => handleCapture(file)}
-        />
-        <h3 className="text-xl font-bold text-foreground mb-2">Kilometerstand (Ende)</h3>
+        {camera}
+        <h3 className="text-xl font-bold text-foreground mb-2">Kilometer- und Tankstand (Ende)</h3>
         <p className="text-sm text-muted-foreground mb-6">Trage den aktuellen Kilometerstand ein.</p>
         {photoBanners}
         {isAdmin && (
@@ -546,15 +797,17 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
         )}
         <input
           type="number"
+          inputMode="numeric"
           value={endKm}
-          onChange={(e) => setEndKm(e.target.value)}
+          onChange={(e) => {
+            setEndKm(e.target.value);
+            setEndKmManual(true);
+          }}
           placeholder="z.B. 42920"
           className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent mb-6"
         />
 
-        <p className="text-xs text-muted-foreground mb-2">
-          Pflicht: Foto vom Tacho mit aktuellem Kilometerstand.
-        </p>
+        <p className="text-xs text-muted-foreground mb-2">Pflicht: Foto vom Tacho mit aktuellem Kilometerstand.</p>
         <button
           onClick={() => openCamera({ kind: "odometer" })}
           disabled={uploading}
@@ -572,17 +825,37 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           )}
         </button>
 
-        {aiBusy && (
-          <p className="text-xs text-muted-foreground -mt-4 mb-4">🤖 KI analysiert Tacho…</p>
-        )}
+        {aiBusy && <p className="text-xs text-muted-foreground -mt-4 mb-4">🤖 KI analysiert Tacho…</p>}
         {!aiBusy && aiRecognition && (
           <p className="text-xs text-muted-foreground -mt-4 mb-4">
-            🤖 KI hat erkannt:&nbsp;
+            🤖 KI-Vorschlag:&nbsp;
             {aiRecognition.km !== null ? `${aiRecognition.km.toLocaleString("de-DE")} km` : "Kilometerstand nicht lesbar"}
             {aiRecognition.fuelPercent !== null ? ` · Tank ${aiRecognition.fuelPercent}%` : ""}
             {aiRecognition.confidence === "low" ? " (unsicher – bitte prüfen)" : " – bitte prüfen"}
+            {endKmManual ? " · deine Eingabe bleibt erhalten" : ""}
           </p>
         )}
+
+        <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+          <Fuel className="w-3.5 h-3.5" /> Pflicht: Foto der Tankanzeige.
+        </p>
+        <button
+          onClick={() => openCamera({ kind: "fuel" })}
+          disabled={uploading}
+          className={`w-full mb-4 p-4 rounded-2xl border-2 text-center transition-all ${
+            fuelPhoto ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
+          }`}
+        >
+          {fuelPhoto ? (
+            <TripPhotoThumb photo={fuelPhoto} alt="Tankanzeige" className="w-full h-32" />
+          ) : (
+            <div className="h-20 flex flex-col items-center justify-center gap-1">
+              <Fuel className="w-7 h-7 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Foto der Tankanzeige aufnehmen</span>
+            </div>
+          )}
+        </button>
+        {!fuelPhoto && exceptionBox("fuel", "Tankanzeige lässt sich nicht fotografieren?")}
 
         <label className="text-sm font-medium text-foreground">Tankstand (Ende, in %)</label>
         <input
@@ -590,14 +863,17 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           min={0}
           max={100}
           value={endFuelPercent}
-          onChange={(e) => setEndFuelPercent(e.target.value)}
+          onChange={(e) => {
+            setEndFuelPercent(e.target.value);
+            setFuelManual(true);
+          }}
           placeholder="z.B. 75"
           className="mt-1 mb-6 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
         />
 
         {actionError && <TripErrorBanner message={actionError} onRetry={() => void handleSubmitKm()} busy={saving} />}
         <button
-          disabled={!endKm || !odometerPhoto || saving || uploading}
+          disabled={!kmReady || !fuelReady || saving || uploading}
           onClick={handleSubmitKm}
           className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -608,17 +884,10 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
   }
 
   if (returnStep === "receipt") {
+    const receiptReady = !!receiptPhoto || validReason(exceptions.receipt);
     return (
       <div className="max-w-lg mx-auto animate-fade-in-up">
-        <CameraCapture
-          open={cameraOpen}
-          title={cameraTitle}
-          hint={cameraHint}
-          variant={cameraVariant}
-          scanMode={currentTarget?.kind === "receipt"}
-          onClose={() => setCurrentTarget(null)}
-          onCapture={(file) => handleCapture(file)}
-        />
+        {camera}
         <h3 className="text-xl font-bold text-foreground mb-2">Tankbeleg scannen</h3>
         <p className="text-sm text-muted-foreground mb-6">
           Lege den Tankbeleg gut sichtbar in den Rahmen, das Foto wird automatisch wie ein Scan in S/W aufbereitet.
@@ -627,18 +896,37 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
         {kmSummary && (
           <div className="mb-6 p-4 rounded-2xl border border-border bg-secondary/50">
             <p className="text-sm font-medium text-foreground mb-2">Kilometer-Abrechnung</p>
-            <div className="space-y-1 text-sm text-muted-foreground">
-              <div className="flex justify-between"><span>Gefahren</span><span className="text-foreground">{kmSummary.driven} km</span></div>
-              {kmSummary.free > 0 && (
-                <div className="flex justify-between"><span>Inklusive Freikilometer</span><span className="text-foreground">{kmSummary.free} km</span></div>
-              )}
-              <div className="flex justify-between"><span>{planId === "km" ? "Berechnete Kilometer" : "Mehrkilometer"}</span><span className="text-foreground">{kmSummary.extra} km</span></div>
-              <div className="flex justify-between font-medium pt-2 border-t border-border">
-                <span className="text-foreground">{kmSummary.extra > 0 ? `Aufpreis (${(kmSummary.pricePerKmCents / 100).toFixed(2).replace(".", ",")} €/km)` : "Aufpreis"}</span>
-                <span className="text-foreground">{(kmSummary.chargeCents / 100).toFixed(2)} €</span>
+            {kmSummary.reviewReason ? (
+              <p className="text-sm text-muted-foreground">
+                {kmSummary.reviewReason} Es wird nichts automatisch berechnet.
+              </p>
+            ) : (
+              <div className="space-y-1 text-sm text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>Gefahren</span>
+                  <span className="text-foreground">{kmSummary.driven} km</span>
+                </div>
+                {kmSummary.free > 0 && (
+                  <div className="flex justify-between">
+                    <span>Inklusive Freikilometer</span>
+                    <span className="text-foreground">{kmSummary.free} km</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>{planId === "km" ? "Berechnete Kilometer" : "Mehrkilometer"}</span>
+                  <span className="text-foreground">{kmSummary.extra} km</span>
+                </div>
+                <div className="flex justify-between font-medium pt-2 border-t border-border">
+                  <span className="text-foreground">
+                    {(kmSummary.extra ?? 0) > 0
+                      ? `Aufpreis (${(kmSummary.pricePerKmCents / 100).toFixed(2).replace(".", ",")} €/km)`
+                      : "Aufpreis"}
+                  </span>
+                  <span className="text-foreground">{((kmSummary.chargeCents ?? 0) / 100).toFixed(2)} €</span>
+                </div>
               </div>
-            </div>
-            {kmSummary.chargeCents > 0 && (
+            )}
+            {(kmSummary.chargeCents ?? 0) > 0 && (
               <p className="text-xs text-muted-foreground mt-3">
                 Der Betrag wird nach Bestätigung der Rückgabe von der Kaution einbehalten bzw. separat über deine hinterlegte Zahlungsmethode abgerechnet.
               </p>
@@ -652,7 +940,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
               const placeholder =
                 "data:image/svg+xml;utf8," +
                 encodeURIComponent(
-                  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 280'><rect width='200' height='280' fill='%23ffffff'/><text x='50%' y='40%' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='14' fill='%23000'>TEST-TANKBELEG</text><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='12' fill='%23000'>Admin-Modus</text></svg>`
+                  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 280'><rect width='200' height='280' fill='%23ffffff'/><text x='50%' y='40%' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='14' fill='%23000'>TEST-TANKBELEG</text><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='12' fill='%23000'>Admin-Modus</text></svg>`,
                 );
               setReceiptPhoto({ path: "admin-test", url: placeholder });
             }}
@@ -683,15 +971,18 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
             </button>
           </div>
         ) : (
-          <button
-            onClick={() => openCamera({ kind: "receipt" })}
-            disabled={uploading}
-            className="w-full p-8 rounded-2xl border-2 border-dashed border-border hover:border-accent/50 text-center mb-6 transition-all"
-          >
-            <ScanLine className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm font-medium text-foreground">Tankbeleg scannen</p>
-            <p className="text-[11px] text-muted-foreground mt-1">CamScanner-Modus aktiv</p>
-          </button>
+          <>
+            <button
+              onClick={() => openCamera({ kind: "receipt" })}
+              disabled={uploading}
+              className="w-full p-8 rounded-2xl border-2 border-dashed border-border hover:border-accent/50 text-center mb-4 transition-all"
+            >
+              <ScanLine className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm font-medium text-foreground">Tankbeleg scannen</p>
+              <p className="text-[11px] text-muted-foreground mt-1">CamScanner-Modus aktiv</p>
+            </button>
+            {exceptionBox("receipt", "Kein Tankbeleg vorhanden?")}
+          </>
         )}
 
         {addons && addons.length > 0 && (
@@ -703,21 +994,21 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
               ))}
             </ul>
             <label className="flex items-start gap-2 text-xs text-foreground cursor-pointer">
-              <input
-                type="checkbox"
-                checked={addonsReturned}
-                onChange={(e) => setAddonsReturned(e.target.checked)}
-                className="mt-0.5"
-              />
+              <input type="checkbox" checked={addonsReturned} onChange={(e) => setAddonsReturned(e.target.checked)} className="mt-0.5" />
               <span>Zubehör vollständig &amp; unbeschädigt zurückgegeben</span>
             </label>
           </div>
         )}
 
-        {actionError && <TripErrorBanner message={actionError} onRetry={() => void handleFinish()} busy={saving} />}
+        {pendingCount > 0 && (
+          <p className="mb-3 text-xs text-muted-foreground">
+            Es sind noch Fotos auf diesem Gerät, die nicht übertragen sind. Sie werden nicht als Nachweis gezählt, bis sie übertragen sind.
+          </p>
+        )}
+        {actionError && <TripErrorBanner message={actionError} onRetry={() => void submitReport()} busy={saving} />}
         <button
-          disabled={saving || uploading || !receiptPhoto || (!!addons && addons.length > 0 && !addonsReturned)}
-          onClick={handleFinish}
+          disabled={saving || uploading || !receiptReady || (!!addons && addons.length > 0 && !addonsReturned)}
+          onClick={() => void submitReport()}
           className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Schlüssel zurückgeben <Key className="w-5 h-5 inline" />
@@ -732,6 +1023,9 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
         <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6">
           <Key className="w-10 h-10 text-foreground" />
         </div>
+        <p className="inline-block mb-3 rounded-full border border-foreground px-3 py-1 text-xs font-semibold">
+          Rückgabe gemeldet · Bestätigung durch MyTransporter ausstehend
+        </p>
         <h3 className="text-2xl font-bold text-foreground mb-2">Schlüssel abgeben</h3>
         <p className="text-muted-foreground mb-2">
           Gehe zur <span className="font-medium text-foreground">Römerstraße 36</span> und nenne diesen Code:
@@ -742,9 +1036,12 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
           <p className="text-4xl font-mono font-bold tracking-[0.3em]">{returnCode}</p>
         </div>
 
+        {reviewNote && (
+          <p className="mb-6 text-xs text-muted-foreground">Hinweis: Deine Rückgabe wird zusätzlich geprüft ({reviewNote}).</p>
+        )}
+
         <p className="text-xs text-muted-foreground mb-8">
-          Nenne diesen Code dem Mitarbeiter. Erst wenn er die Schlüsselübergabe
-          bestätigt, ist deine Fahrt beendet.
+          Nenne diesen Code dem Mitarbeiter. Erst wenn er die Schlüsselübergabe bestätigt, ist deine Fahrt beendet.
         </p>
 
         <button
@@ -756,8 +1053,7 @@ export function ReturnFlow({ bookingId, planId, startKm, freeKm, kmPriceCents, a
         </button>
 
         <p className="text-xs text-muted-foreground mt-4">
-          Sobald MyTransporter den Schlüssel entgegennimmt und bestätigt, wird die
-          Fahrt automatisch als abgeschlossen markiert und diese Seite aktualisiert.
+          Sobald MyTransporter den Schlüssel entgegennimmt und bestätigt, wird die Fahrt automatisch als abgeschlossen markiert und diese Seite aktualisiert.
         </p>
       </div>
     );

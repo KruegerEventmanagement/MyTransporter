@@ -224,6 +224,7 @@ export type Database = {
           deposit_status: string
           discount_cents: number
           end_km: number | null
+          end_km_manual: boolean | null
           extra_charge_cents: number | null
           extra_charge_intent_id: string | null
           extra_charge_status: string | null
@@ -240,6 +241,10 @@ export type Database = {
           reminder_24h_sent_at: string | null
           reminder_30min_sent_at: string | null
           return_code: string | null
+          return_exceptions: Json | null
+          return_reminder_10min_for: string | null
+          return_reported_at: string | null
+          return_review_reason: string | null
           start_date: string
           start_hour: number
           start_km: number | null
@@ -271,6 +276,7 @@ export type Database = {
           deposit_status?: string
           discount_cents?: number
           end_km?: number | null
+          end_km_manual?: boolean | null
           extra_charge_cents?: number | null
           extra_charge_intent_id?: string | null
           extra_charge_status?: string | null
@@ -287,6 +293,10 @@ export type Database = {
           reminder_24h_sent_at?: string | null
           reminder_30min_sent_at?: string | null
           return_code?: string | null
+          return_exceptions?: Json | null
+          return_reminder_10min_for?: string | null
+          return_reported_at?: string | null
+          return_review_reason?: string | null
           start_date: string
           start_hour: number
           start_km?: number | null
@@ -318,6 +328,7 @@ export type Database = {
           deposit_status?: string
           discount_cents?: number
           end_km?: number | null
+          end_km_manual?: boolean | null
           extra_charge_cents?: number | null
           extra_charge_intent_id?: string | null
           extra_charge_status?: string | null
@@ -334,6 +345,10 @@ export type Database = {
           reminder_24h_sent_at?: string | null
           reminder_30min_sent_at?: string | null
           return_code?: string | null
+          return_exceptions?: Json | null
+          return_reminder_10min_for?: string | null
+          return_reported_at?: string | null
+          return_review_reason?: string | null
           start_date?: string
           start_hour?: number
           start_km?: number | null
