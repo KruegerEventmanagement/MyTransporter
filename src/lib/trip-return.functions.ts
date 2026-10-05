@@ -1,13 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { parseReportInput, performReturnReport, type ReportReturnResult } from "./trip-return.server";
+import { parseReportInput, type ReportReturnResult } from "./trip-return.server";
 
 /**
  * Kunde meldet die physische Rückgabe. Serverseitig als DB-Funktion
  * implementiert, damit der Trigger-Schutz "mt.trip_return_rpc" greift und
  * Mehrkilometer/Preis ausschließlich aus den unveränderten Buchungs-Snapshots
- * berechnet werden. Fällt die RPC aus (z. B. Migration verzögert), wird auf
- * den TypeScript-Pfad zurückgefallen, der dieselben Regeln spiegelt.
+ * berechnet werden. Bei Fehlern wird ehrlich "nicht gespeichert" gemeldet.
  */
 export const reportReturn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -29,6 +28,6 @@ export const reportReturn = createServerFn({ method: "POST" })
       if (r.ok === false)
         return { ok: false, error: String(r.error ?? "Rückgabe nicht gespeichert."), ...(Array.isArray(r.missing) ? { missing: r.missing as string[] } : {}) };
     }
-    // Fallback: identische Prüfungen in TypeScript (kein Rückfall auf unsichere Felder).
-    return performReturnReport(context.supabase, context.userId, data);
+    // Kein unsicherer Ausweichpfad: Status/Preis darf nur die DB-Funktion setzen.
+    return { ok: false, error: "Rückgabe nicht gespeichert. Bitte erneut versuchen." };
   });
