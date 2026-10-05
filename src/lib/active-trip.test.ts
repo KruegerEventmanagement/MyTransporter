@@ -78,7 +78,7 @@ describe("Push-Erinnerung (Cron 15 min)", () => {
   const r = { id: "b1", user_id: "u1", status: "active", start_date: "2026-10-05", start_hour: 10, plan_id: "6h", return_reminder_10min_for: null };
   const end = resolveTripWindow(r).endMs;
   it("zu früh nicht, im Fenster ja, schon erinnert nein, Endzeit geändert erneut", () => {
-    expect(dueReturnReminders([r], end - 20 * 60_000)).toHaveLength(0);
+    expect(dueReturnReminders([r], end - 11 * 60_000)).toHaveLength(0);
     const due = dueReturnReminders([r], end - 10 * 60_000);
     expect(due).toHaveLength(1);
     expect(due[0]!.endIso).toBe(new Date(end).toISOString());
