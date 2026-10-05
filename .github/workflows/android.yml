@@ -61,7 +61,7 @@ jobs:
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    # Produktion nur über geschützte Umgebung (Reviewer in GitHub → Settings → Environments).
+    # Schutzregeln/Reviewer müssen separat in GitHub für play-production eingerichtet werden.
     environment: ${{ (github.event.inputs.track || vars.PLAY_TRACK || 'internal') == 'production' && 'play-production' || 'play-internal' }}
     env:
       PLAY_TRACK: ${{ github.event.inputs.track || vars.PLAY_TRACK || 'internal' }}
@@ -116,10 +116,19 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
+          umask 077
           export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
+          trap 'rm -f "$ANDROID_KEYSTORE_PATH"' EXIT
           printf '%s' "$KS" | base64 -d > "$ANDROID_KEYSTORE_PATH"
           cd android && chmod +x gradlew && ./gradlew bundleRelease --no-daemon
-          rm -f "$ANDROID_KEYSTORE_PATH"
+      - if: steps.cfg.outputs.configured == 'true'
+        name: Signiertes AAB sichern
+        uses: actions/upload-artifact@v4
+        with:
+          name: mytransporter-release-${{ env.MT_VERSION_CODE }}
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 30
       - if: steps.cfg.outputs.configured == 'true'
         name: Upload zu Google Play
         uses: r0adkll/upload-google-play@v1

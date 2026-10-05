@@ -84,7 +84,7 @@ Workflow `.github/workflows/android.yml` (iOS-CI deaktiviert, `ios/` bleibt im R
 - **Updates** kommen ausschließlich über Google Play. Kein `server.url`, kein Fremd-OTA.
 
 ### Version
-`scripts/android-version.mjs`: `versionCode = 1000 + run_number·10 + min(run_attempt, 9)` (Offset 1000; geprüft 1…2 100 000 000), `versionName = 1.0.<run_number>-<sha7>`. Gradle liest `MT_VERSION_CODE`/`MT_VERSION_NAME`; lokal `1`/`1.0-local` (nicht hochladen).
+`scripts/android-version.mjs`: `versionCode = 1000 + run_number*100 + run_attempt` (Versuch 1..99, strikt numerisch; ab 100 neuen Lauf starten). Signiertes AAB wird vor dem Upload als Artefakt `mytransporter-release-<versionCode>` (30 Tage) gesichert – für den manuellen Erstupload. Keystore mit `umask 077` geschrieben und per `trap` immer gelöscht. Die Umgebung `play-production` braucht separat eingerichtete Reviewer-Schutzregeln (Offset 1000; geprüft 1…2 100 000 000), `versionName = 1.0.<run_number>-<sha7>`. Gradle liest `MT_VERSION_CODE`/`MT_VERSION_NAME`; lokal `1`/`1.0-local` (nicht hochladen).
 
 ### Signierung
 Nur über `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. Unvollständig → `bundleRelease`/`assembleRelease` bricht mit klarer Meldung ab; nie Debug-Signierung. Unsigniertes Prüf-Bundle nur explizit: `./gradlew bundleRelease -PmtUnsignedRelease=true`.
