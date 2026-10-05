@@ -6,7 +6,7 @@ import { resolvePushTarget } from "./push-target";
 import { mapsDirectionsUrl } from "./external";
 
 const L = "capacitor://localhost";
-const R = "https://www.mytransporter.org";
+const R = "https://mytransporter.org";
 
 describe("rewriteToRemote", () => {
   it("leitet Server-Funktionen und API an den Worker", () => {

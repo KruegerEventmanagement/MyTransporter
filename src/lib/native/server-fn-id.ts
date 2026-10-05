@@ -3,8 +3,8 @@ import { relative } from "node:path";
 
 /**
  * Deterministische Server-Funktions-ID unabhängig vom Build-Verzeichnis.
- * Standard von TanStack Start hasht den ABSOLUTEN Pfad → native Builds aus
- * GitHub-CI hätten andere IDs als der Web-Worker. Wir hashen den
+ * Spiegel des TanStack-Compiler-Defaults (projektrelativ) – nur für Tests,
+ * nicht in vite.config.ts eingebunden. Hasht den
  * projektrelativen POSIX-Pfad (ohne Query) + Exportname.
  */
 export function stableServerFnId(filename: string, functionName: string, root: string): string {

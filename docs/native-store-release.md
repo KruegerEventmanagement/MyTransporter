@@ -6,10 +6,10 @@ Stand: 05.10.2026. Kein Store-Upload aus Lovable. Keine Secrets im Repository.
 
 - **Keine `server.url`-Wrapper-App.** `bun run build:native` baut mit `MT_NATIVE=1` den bestehenden TanStack-Start-Code als SPA-Shell (`tanstackStart.spa`) und kopiert ihn nach `dist-native/` (`_shell.html` → `index.html`). Capacitor bündelt diese Dateien lokal (`webDir: dist-native`).
 - Der normale Web-Build (`vite build`) bleibt unverändert SSR auf dem Worker.
-- Server-Funktionen (`/_serverFn/*`) und `/api/*` werden im Native-Build per `src/lib/native/remote-fetch.ts` an `https://www.mytransporter.org` geleitet (überschreibbar mit `VITE_MT_PUBLIC_ORIGIN`). Der Worker antwortet mit CORS nur für `capacitor://localhost`/`https://localhost` und nur auf diesen Pfaden, ohne Cookies (`src/lib/native/cors.ts`). Auth läuft wie im Web per Bearer-Token.
+- Server-Funktionen (`/_serverFn/*`) und `/api/*` werden im Native-Build per `src/lib/native/remote-fetch.ts` an die kanonische `https://mytransporter.org` geleitet (www antwortet mit 307 und bricht den CORS-Preflight) (überschreibbar mit `VITE_MT_PUBLIC_ORIGIN`). Der Worker antwortet mit CORS nur für `capacitor://localhost`/`https://localhost` und nur auf diesen Pfaden, ohne Cookies (`src/lib/native/cors.ts`). Auth läuft wie im Web per Bearer-Token.
 - Datenbank/Auth/Storage direkt über den bestehenden Backend-Client (RLS unverändert).
 - **Voraussetzung:** Der Web-Stand mit der CORS-Änderung in `src/server.ts` muss veröffentlicht sein, bevor eine App-Version Server-Funktionen nutzen kann. Ältere App-Versionen bleiben nur kompatibel, solange Server-Funktionen rückwärtskompatibel bleiben.
-- Stripe-Rückkehr und E-Mail-Bestätigung nutzen in der App immer `https://www.mytransporter.org/...` (`publicOrigin()`); über Universal/App Links öffnet sich wieder die App. Der Stripe-Webhook bleibt Source of Truth.
+- Stripe-Rückkehr und E-Mail-Bestätigung nutzen in der App immer `https://mytransporter.org/...` (`publicOrigin()`); über Universal/App Links öffnet sich wieder die App. Der Stripe-Webhook bleibt Source of Truth.
 
 ## Native Module
 
@@ -99,13 +99,16 @@ INTERNET, NETWORK_STATE, CAMERA, POST_NOTIFICATIONS, Vordergrund-Standort. `READ
 `scripts/build-native.mjs` löscht vorher `.output`, `dist`, `dist-native.tmp`, erkennt `.output/public` (Nitro, z. B. GitHub-CI) oder `dist/client`, kopiert nur Client-Dateien (ohne `sw.js`, `server/`, Source-Maps), ersetzt `dist-native` atomar. Ursache des fehlgeschlagenen Laufs 37366862397: Script suchte nur `dist`.
 
 ### Server-Funktions-IDs
-TanStack hashte bisher den absoluten Dateipfad → in CI gebaute Apps hätten andere IDs als der Web-Worker. Jetzt `stableServerFnId` (projektrelativer Pfad + Exportname) für Web und Native. Geprüft: Build in zweitem Verzeichnis liefert identische ID. **Hinweis:** Mit der nächsten Web-Veröffentlichung ändern sich die IDs einmalig; geöffnete alte Tabs müssen neu laden.
+Compiler-Default `sha256(<projektrelativer Pfad>--<Name>)` ist bereits verzeichnisunabhängig; kein Override (IDs bleiben gleich wie live). Test vergleicht Web- und Native-Build-IDs.
+
+### CORS
+Preflight `OPTIONS` auf `/_serverFn/*`, `/api/*` → 204 nur für App-Origins; CORS-Header auch auf Fehlerantworten (4xx/5xx/catch).
 
 ### Native Start / Push
 `bootstrap.ts`: jeder Schritt isoliert mit Timeout, Splash wird immer ausgeblendet, nur einmal initialisiert. Web-Push/Service Worker werden im nativen Build nicht registriert. **Nativer Push-Versand fehlt vollständig** (nur Token-Speicherung und Tipp-Navigation).
 
 ### Kontolöschung
-Öffentlich ohne Login: `https://www.mytransporter.org/konto-loeschen` (für Play-Datensicherheitsformular).
+Öffentlich ohne Login: `https://mytransporter.org/konto-loeschen` (für Play-Datensicherheitsformular).
 
 ## Validierung 05.10.2026, 20:30 UTC (Sandbox, Linux, ohne JDK/Android SDK)
 

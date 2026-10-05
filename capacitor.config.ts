@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 // Lokal gebündelte App-Shell (dist-native), KEIN server.url.
-// Server-Funktionen laufen über https://www.mytransporter.org (src/lib/native/remote-fetch.ts).
+// Server-Funktionen laufen über https://mytransporter.org (src/lib/native/remote-fetch.ts).
 const config: CapacitorConfig = {
   appId: "de.mytransporter.app",
   appName: "MyTransporter",
