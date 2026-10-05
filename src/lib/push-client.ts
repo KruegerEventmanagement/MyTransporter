@@ -1,7 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import { VAPID_PUBLIC_KEY, urlBase64ToUint8Array } from "./push-config";
+import { IS_NATIVE_BUILD } from "./native/platform";
 
 export function pushSupported(): boolean {
+  // Im nativen WebView kein Web-Push/Service Worker (native Push ist getrennt).
+  if (IS_NATIVE_BUILD) return false;
   return (
     typeof window !== "undefined" &&
     "serviceWorker" in navigator &&

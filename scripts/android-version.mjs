@@ -17,7 +17,8 @@ export function computeAndroidVersion(env = process.env) {
   return { versionCode: code, versionName: name };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+import { pathToFileURL } from "node:url";
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const v = computeAndroidVersion();
   // Ausgabe für $GITHUB_ENV
   console.log(`MT_VERSION_CODE=${v.versionCode}`);
