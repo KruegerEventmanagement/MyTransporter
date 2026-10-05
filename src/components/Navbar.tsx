@@ -1,3 +1,4 @@
+import { publicOrigin } from "@/lib/native/platform";
 import { AddressFields } from "@/components/AddressFields";
 import { EMPTY_ADDRESS, addressSignUpMetadata } from "@/lib/address";
 import { useEffect, useState } from "react";
@@ -15,7 +16,7 @@ import {
   todayIsoBerlin,
 } from "@/lib/age";
 
-const AUTH_CONFIRM_URL = `${typeof window !== "undefined" ? window.location.origin : "https://www.mytransporter.org"}/auth/confirm`;
+const AUTH_CONFIRM_URL = `${publicOrigin()}/auth/confirm`;
 
 export function Navbar() {
   const navigate = useNavigate();

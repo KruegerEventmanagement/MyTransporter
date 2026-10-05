@@ -1,0 +1,1 @@
+function e(t){return typeof t!="string"||!t.startsWith("/")||t.startsWith("//")?"/":/^\/trip\/[A-Za-z0-9-]{1,64}$/.test(t)||/^\/(admin|profil)(\/.*)?$/.test(t)||/^\/buchung\/[A-Za-z0-9-]{1,64}$/.test(t)?t:"/"}export{e as resolvePushTarget};

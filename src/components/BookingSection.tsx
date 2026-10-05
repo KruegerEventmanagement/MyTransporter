@@ -1,3 +1,4 @@
+import { publicOrigin } from "@/lib/native/platform";
 import { AddressFields } from "@/components/AddressFields";
 import { EMPTY_ADDRESS, addressSignUpMetadata } from "@/lib/address";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -2214,7 +2215,7 @@ export function BookingSection() {
                          "Deine Anmeldung wird noch abgeschlossen. Bitte tippe in wenigen Sekunden erneut auf „Sicher bezahlen“."
                        );
                      }
-                     const origin = window.location.origin;
+                     const origin = publicOrigin();
                      const result = await startBookingCheckout({
                        data: {
                          plan: planKey,

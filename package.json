@@ -12,10 +12,26 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p .",
+    "build:native": "node scripts/build-native.mjs",
+    "cap:sync": "node scripts/build-native.mjs && cap sync",
+    "cap:android": "node scripts/build-native.mjs && cap sync android && cap open android",
+    "cap:ios": "node scripts/build-native.mjs && cap sync ios && cap open ios",
+    "cap:doctor": "cap doctor",
+    "android:debug": "node scripts/build-native.mjs && cap sync android && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.48",
+    "@capacitor/android": "^7",
+    "@capacitor/app": "^7",
+    "@capacitor/browser": "^7",
+    "@capacitor/camera": "^7",
+    "@capacitor/core": "^7",
+    "@capacitor/ios": "^7",
+    "@capacitor/network": "^7",
+    "@capacitor/push-notifications": "^7",
+    "@capacitor/splash-screen": "^7",
+    "@capacitor/status-bar": "^7",
     "@cloudflare/vite-plugin": "^1.25.5",
     "@fontsource/fredoka": "^5.2.10",
     "@fontsource/space-grotesk": "^5.2.10",
@@ -86,6 +102,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7",
     "@electric-sql/pglite": "0.2",
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "2.25.2",

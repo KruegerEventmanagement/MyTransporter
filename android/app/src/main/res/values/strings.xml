@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MyTransporter</string>
+    <string name="title_activity_main">MyTransporter</string>
+    <string name="package_name">de.mytransporter.app</string>
+    <string name="custom_url_scheme">de.mytransporter.app</string>
+</resources>
