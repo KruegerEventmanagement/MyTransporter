@@ -13,7 +13,7 @@ const ALL = ["post_front", "post_front_right", "post_right", "post_back_right", 
 let db: PGlite;
 
 const STUB = `
-CREATE SCHEMA auth; CREATE SCHEMA storage;
+CREATE ROLE anon; CREATE ROLE authenticated; CREATE SCHEMA auth; CREATE SCHEMA storage;
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('test.uid', true), '')::uuid $$;
 CREATE TABLE storage.objects (bucket_id text, name text, metadata jsonb);
 CREATE TYPE public.app_role AS ENUM ('admin','user');
