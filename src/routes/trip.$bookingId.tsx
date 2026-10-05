@@ -9,9 +9,8 @@ import { ScheduledTripView } from "@/components/ScheduledTripView";
 import { Loader2, Check, RotateCcw } from "lucide-react";
 import { requireLogin } from "@/lib/login-redirect";
 import { resolveTripWindow } from "@/lib/trip-time";
-import { isReturningStatus } from "@/lib/active-trip";
+import { isReturningStatus, phaseFor } from "@/lib/active-trip";
 import { loadReturnDraft, saveReturnDraft, clearReturnDraft } from "@/lib/return-draft";
-import { bookingFreeKm } from "@/lib/booking-rules";
 import logoImage from "@/assets/logo.png";
 
 export const Route = createFileRoute("/trip/$bookingId")({
@@ -55,15 +54,6 @@ function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T> {
       },
     );
   });
-}
-
-/** Serverstatus → Phase. Ein lokal gestarteter Rückgabeentwurf hält "return" über Reloads. */
-export function phaseFor(status: string | null | undefined, returnStarted: boolean): Phase {
-  if (status === "completed" || status === "cancelled") return "done";
-  if (isReturningStatus(status)) return "return";
-  if (status === "active" || status === "started" || status === "running" || status === "in_progress" || status === "picked_up")
-    return returnStarted ? "return" : "active";
-  return "pre";
 }
 
 function TripLogoBar() {
@@ -338,7 +328,7 @@ function TripPage() {
             serverReturnCode={isReturningStatus(booking.status) ? (booking.return_code ?? null) : null}
             planId={booking.plan_id}
             startKm={effectiveStartKm}
-            freeKm={bookingFreeKm(booking.plan_id, booking.free_km)}
+            freeKm={booking.free_km ?? null}
             kmPriceCents={booking.km_price_cents ?? null}
             addons={booking.addons ?? undefined}
             onComplete={() => {
