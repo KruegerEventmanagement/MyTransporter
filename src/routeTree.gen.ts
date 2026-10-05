@@ -20,6 +20,7 @@ import { Route as LangzeitmieteRouteImport } from './routes/langzeitmiete'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as PreiseRouteImport } from './routes/preise'
 import { Route as ProfilRouteImport } from './routes/profil'
+import { Route as QaCalendarPreviewRouteImport } from './routes/qa-calendar-preview'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TransporterMietenPforzheimCalwRouteImport } from './routes/transporter-mieten-pforzheim-calw'
 import { Route as UeberUnsRouteImport } from './routes/ueber-uns'
@@ -92,6 +93,11 @@ const PreiseRoute = PreiseRouteImport.update({
 const ProfilRoute = ProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QaCalendarPreviewRoute = QaCalendarPreviewRouteImport.update({
+  id: '/qa-calendar-preview',
+  path: '/qa-calendar-preview',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/partner': typeof PartnerRoute
   '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
+  '/qa-calendar-preview': typeof QaCalendarPreviewRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -238,6 +245,7 @@ export interface FileRoutesByTo {
   '/partner': typeof PartnerRoute
   '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
+  '/qa-calendar-preview': typeof QaCalendarPreviewRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -270,6 +278,7 @@ export interface FileRoutesById {
   '/partner': typeof PartnerRoute
   '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
+  '/qa-calendar-preview': typeof QaCalendarPreviewRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -303,6 +312,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/preise'
     | '/profil'
+    | '/qa-calendar-preview'
     | '/sitemap.xml'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/preise'
     | '/profil'
+    | '/qa-calendar-preview'
     | '/sitemap.xml'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
@@ -365,6 +376,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/preise'
     | '/profil'
+    | '/qa-calendar-preview'
     | '/sitemap.xml'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
@@ -397,6 +409,7 @@ export interface RootRouteChildren {
   PartnerRoute: typeof PartnerRoute
   PreiseRoute: typeof PreiseRoute
   ProfilRoute: typeof ProfilRoute
+  QaCalendarPreviewRoute: typeof QaCalendarPreviewRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TransporterMietenPforzheimCalwRoute: typeof TransporterMietenPforzheimCalwRoute
   UeberUnsRoute: typeof UeberUnsRoute
@@ -494,6 +507,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/profil'
       preLoaderRoute: typeof ProfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qa-calendar-preview': {
+      id: '/qa-calendar-preview'
+      path: '/qa-calendar-preview'
+      fullPath: '/qa-calendar-preview'
+      preLoaderRoute: typeof QaCalendarPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -637,6 +657,7 @@ const rootRouteChildren: RootRouteChildren = {
   PartnerRoute: PartnerRoute,
   PreiseRoute: PreiseRoute,
   ProfilRoute: ProfilRoute,
+  QaCalendarPreviewRoute: QaCalendarPreviewRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TransporterMietenPforzheimCalwRoute: TransporterMietenPforzheimCalwRoute,
   UeberUnsRoute: UeberUnsRoute,
