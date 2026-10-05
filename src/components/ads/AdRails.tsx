@@ -17,7 +17,7 @@ interface AdRailsTreeArgs {
   suppressed: boolean;
   left: boolean;
   right: boolean;
-  /** Awin-Partnerkarten als Fallback, wenn kein AdSense-Slot aktiv ist. */
+  /** Awin-Partnerkarten unabhängig von den AdSense-Slots. */
   affiliate?: boolean;
   children: ReactNode;
 }
@@ -51,7 +51,8 @@ export function buildAdRailsTree({
     >
       {showLeft ? (
         <aside key="ad-rails-left" aria-label="Anzeige" className={asideClass}>
-          {left ? <AdSlot slot="railLeft" minHeight={600} /> : <AffiliateRail rail="left" />}
+          {left ? <AdSlot slot="railLeft" minHeight={600} /> : null}
+          {affiliate ? <AffiliateRail rail="left" /> : null}
         </aside>
       ) : null}
       <div
@@ -62,7 +63,8 @@ export function buildAdRailsTree({
       </div>
       {showRight ? (
         <aside key="ad-rails-right" aria-label="Anzeige" className={asideClass}>
-          {right ? <AdSlot slot="railRight" minHeight={600} /> : <AffiliateRail rail="right" />}
+          {right ? <AdSlot slot="railRight" minHeight={600} /> : null}
+          {affiliate ? <AffiliateRail rail="right" /> : null}
         </aside>
       ) : null}
     </div>

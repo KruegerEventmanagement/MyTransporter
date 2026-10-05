@@ -60,7 +60,7 @@ function OfferCard({ offer, rail }: { offer: AffiliateOffer; rail: AffiliateRail
       <span className="flex min-w-0 items-start gap-2">
         <OfferIcon offer={offer} />
         <span className="min-w-0">
-          <span className="block overflow-wrap-anywhere break-words text-sm font-bold leading-tight text-foreground">
+          <span className="block break-words [overflow-wrap:anywhere] text-sm font-bold leading-tight text-foreground">
             {offer.brand}
           </span>
           <span className="mt-1 block break-words text-[11px] leading-snug text-muted-foreground">
