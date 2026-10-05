@@ -2214,7 +2214,7 @@ export function BookingSection() {
                          "Deine Anmeldung wird noch abgeschlossen. Bitte tippe in wenigen Sekunden erneut auf „Sicher bezahlen“."
                        );
                      }
-                     const origin = window.location.origin;
+                     const origin = publicOrigin();
                      const result = await startBookingCheckout({
                        data: {
                          plan: planKey,
