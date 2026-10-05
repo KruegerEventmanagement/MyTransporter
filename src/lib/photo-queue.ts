@@ -12,10 +12,12 @@ export interface QueuedPhoto {
   bookingId: string;
   tag: string;
   blob: Blob;
-  /** Stabiler Zielpfad im Bucket. */
+  /** Stabiler KANDIDATEN-Pfad im Bucket (noch kein Beweis für einen Upload). */
   path: string;
-  /** true, sobald der Storage-Upload bestätigt ist (Retry trägt nur DB nach). */
+  /** true erst, wenn der Upload bestätigt ist (Retry trägt dann nur die DB-Zeile nach). */
   uploaded: boolean;
+  /** Tatsächlich bestätigter Upload-Pfad; null solange nur Kandidat. */
+  uploadedPath?: string | null;
   createdAt: number;
   lastError: string | null;
 }
@@ -150,14 +152,14 @@ export function transferQueuedPhoto(client: TripPhotoClient, store: QueueStore, 
         bookingId: item.bookingId,
         tag: item.tag,
         file: item.blob,
-        uploadedPath: item.uploaded ? item.path : null,
+        uploadedPath: item.uploaded ? (item.uploadedPath ?? item.path) : null,
         path: item.path,
       });
       await store.remove(id);
       return saved;
     } catch (e) {
       const uploaded = item.uploaded || (e instanceof TripPhotoError && e.uploadedPath === item.path);
-      await store.put({ ...item, uploaded, lastError: e instanceof Error ? e.message : "Übertragung fehlgeschlagen." }).catch(() => {});
+      await store.put({ ...item, uploaded, uploadedPath: uploaded ? item.path : null, lastError: e instanceof Error ? e.message : "Übertragung fehlgeschlagen." }).catch(() => {});
       throw e;
     }
   })();

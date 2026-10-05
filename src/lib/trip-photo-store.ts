@@ -71,8 +71,11 @@ export async function saveTripPhoto(
       upErr = e;
     }
     // Verlorene Antwort beim ersten Versuch: Datei liegt schon unter genau diesem Pfad.
-    const alreadyThere =
+    // Nur als hochgeladen werten, wenn das Objekt unter genau diesem Kandidatenpfad
+    // tatsächlich lesbar ist (Storage erlaubt kein Upsert/Überschreiben).
+    let alreadyThere =
       !!args.path && !!upErr && /exist|duplicate/i.test(String((upErr as { message?: string })?.message ?? upErr));
+    if (alreadyThere) alreadyThere = (await signTripPhoto(client, candidate)) !== null;
     if (upErr && !alreadyThere) {
       throw new TripPhotoError(
         "Das Foto konnte nicht hochgeladen werden. Bitte Internetverbindung prüfen und erneut versuchen.",
