@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { pageHead } from "@/lib/seo";
 import { openConsentSettings } from "@/components/CookieConsent";
+import { BrandHomeLink } from "@/components/BrandHomeLink";
 
 export const Route = createFileRoute("/datenschutz")({
   head: () =>
@@ -17,7 +18,7 @@ function DatenschutzPage() {
   return (
     <main className="min-h-screen bg-background px-4 py-12">
       <div className="max-w-2xl mx-auto">
-        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors mb-8 inline-block">← Zurück</Link>
+        <BrandHomeLink className="mb-8" imageClassName="h-8 w-auto" />
         <h1 className="text-3xl font-bold text-foreground mb-8">Datenschutzerklärung</h1>
 
         <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">

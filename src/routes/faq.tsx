@@ -3,6 +3,7 @@ import { RelatedLinks } from "@/components/seo/RelatedLinks";
 import { pageHead } from "@/lib/seo";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
+import { BrandHomeLink } from "@/components/BrandHomeLink";
 
 const FAQS = [
   {
@@ -71,12 +72,7 @@ function FaqPage() {
     <main className="min-h-screen bg-background px-4 py-12">
       <AdRails>
       <div className="max-w-3xl mx-auto">
-        <Link
-          to="/"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors mb-8 inline-block"
-        >
-          ← Zurück
-        </Link>
+        <BrandHomeLink className="mb-8" imageClassName="h-8 w-auto" />
         <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
           Häufige Fragen, Transporter mieten in Leonberg & Stuttgart
         </h1>
