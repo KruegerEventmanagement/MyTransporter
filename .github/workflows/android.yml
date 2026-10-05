@@ -1,0 +1,133 @@
+# Android-only CI (iOS-Projekt bleibt im Repo, Builds vorerst deaktiviert).
+# check:   push main + PR – frozen bun.lock, Typecheck, Tests, Native-Shell, cap sync android,
+#          Gradle assembleDebug + lintDebug, Debug-APK als Artefakt.
+# release: nur push auf main im Original-Repo nach grünem check (oder manuell) – signiertes AAB
+#          + Upload zu Google Play (Track konfigurierbar, Standard internal).
+name: android
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Play-Track (internal|alpha|beta|production)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21, cache: gradle }
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bunx vitest run
+      - run: bun run build:native
+      - run: npx cap sync android
+      - name: Gradle assembleDebug + lintDebug
+        working-directory: android
+        run: ./gradlew assembleDebug lintDebug --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-lint-report
+          path: android/app/build/reports/lint-results-debug.*
+          if-no-files-found: ignore
+
+  release:
+    needs: check
+    if: >-
+      github.repository == 'KruegerEventmanagement/MyTransporter' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Produktion nur über geschützte Umgebung (Reviewer in GitHub → Settings → Environments).
+    environment: ${{ (github.event.inputs.track || vars.PLAY_TRACK || 'internal') == 'production' && 'play-production' || 'play-internal' }}
+    env:
+      PLAY_TRACK: ${{ github.event.inputs.track || vars.PLAY_TRACK || 'internal' }}
+      PLAY_RELEASE_STATUS: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
+    steps:
+      - name: Secrets prüfen (ohne Ausgabe)
+        id: cfg
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KSP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KA: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PLAY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          missing=""
+          [ -n "$KS" ]   || missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -n "$KSP" ]  || missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ -n "$KA" ]   || missing="$missing ANDROID_KEY_ALIAS"
+          [ -n "$KP" ]   || missing="$missing ANDROID_KEY_PASSWORD"
+          [ -n "$PLAY" ] || missing="$missing PLAY_SERVICE_ACCOUNT_JSON"
+          case "$PLAY_TRACK" in internal|alpha|beta|production) ;; *) echo "::error::Ungültiger PLAY_TRACK"; exit 1;; esac
+          if [ -n "$missing" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Play-Release NICHT eingerichtet – fehlende Secrets:$missing. Kein AAB signiert, nichts hochgeladen."
+            echo "### Android-Release: NICHT eingerichtet" >> "$GITHUB_STEP_SUMMARY"
+            echo "Fehlende Secrets:$missing – es wurde nichts signiert oder hochgeladen." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.cfg.outputs.configured == 'true'
+        uses: actions/checkout@v4
+      - if: steps.cfg.outputs.configured == 'true'
+        uses: oven-sh/setup-bun@v2
+      - if: steps.cfg.outputs.configured == 'true'
+        uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - if: steps.cfg.outputs.configured == 'true'
+        uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21, cache: gradle }
+      - if: steps.cfg.outputs.configured == 'true'
+        run: bun install --frozen-lockfile
+      - if: steps.cfg.outputs.configured == 'true'
+        run: bun run build:native && npx cap sync android
+      - if: steps.cfg.outputs.configured == 'true'
+        name: Version setzen
+        run: node scripts/android-version.mjs >> "$GITHUB_ENV"
+      - if: steps.cfg.outputs.configured == 'true'
+        name: Signiertes AAB bauen
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
+          printf '%s' "$KS" | base64 -d > "$ANDROID_KEYSTORE_PATH"
+          cd android && ./gradlew bundleRelease --no-daemon
+          rm -f "$ANDROID_KEYSTORE_PATH"
+      - if: steps.cfg.outputs.configured == 'true'
+        name: Upload zu Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: de.mytransporter.app
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: ${{ env.PLAY_TRACK }}
+          status: ${{ env.PLAY_RELEASE_STATUS }}
+      - if: steps.cfg.outputs.configured == 'true'
+        run: echo "### Android-Release hochgeladen ($PLAY_TRACK, versionCode $MT_VERSION_CODE)" >> "$GITHUB_STEP_SUMMARY"
