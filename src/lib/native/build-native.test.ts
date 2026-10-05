@@ -39,7 +39,7 @@ describe("android version", () => {
     const a = computeAndroidVersion({ GITHUB_RUN_NUMBER: "5", GITHUB_RUN_ATTEMPT: "1", GITHUB_SHA: "abcdef123" });
     const b = computeAndroidVersion({ GITHUB_RUN_NUMBER: "5", GITHUB_RUN_ATTEMPT: "2" });
     const c = computeAndroidVersion({ GITHUB_RUN_NUMBER: "6", GITHUB_RUN_ATTEMPT: "1" });
-    expect(a).toEqual({ versionCode: 1051, versionName: "1.0.5-abcdef1" });
+    expect(a).toEqual({ versionCode: 1501, versionName: "1.0.5-abcdef1" });
     expect(b.versionCode).toBeGreaterThan(a.versionCode);
     expect(c.versionCode).toBeGreaterThan(b.versionCode);
     expect(computeAndroidVersion({ GITHUB_RUN_NUMBER: "5", GITHUB_RUN_ATTEMPT: "40" }).versionCode).toBeLessThan(c.versionCode);
@@ -47,6 +47,10 @@ describe("android version", () => {
   it("validiert Grenzen", () => {
     expect(() => computeAndroidVersion({})).toThrow();
     expect(() => computeAndroidVersion({ GITHUB_RUN_NUMBER: "0" })).toThrow();
+    expect(() => computeAndroidVersion({ GITHUB_RUN_NUMBER: "5invalid" })).toThrow();
+    expect(() => computeAndroidVersion({ GITHUB_RUN_NUMBER: "5", GITHUB_RUN_ATTEMPT: "100" })).toThrow();
+    expect(computeAndroidVersion({ GITHUB_RUN_NUMBER: "5", GITHUB_RUN_ATTEMPT: "10" }).versionCode)
+      .toBeGreaterThan(computeAndroidVersion({ GITHUB_RUN_NUMBER: "5", GITHUB_RUN_ATTEMPT: "9" }).versionCode);
     expect(() => computeAndroidVersion({ GITHUB_RUN_NUMBER: String(MAX_VERSION_CODE) })).toThrow(/außerhalb/);
   });
 });
