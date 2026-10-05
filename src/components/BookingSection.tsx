@@ -1230,20 +1230,27 @@ export function BookingSection() {
         </h2>
 
         {/* Step indicator */}
-        <div className={`mt-8 grid w-full max-w-lg mx-auto ${registrationComplete ? "grid-cols-5" : "grid-cols-6"}`}>
+        <div
+          className="mt-8 grid w-full max-w-2xl mx-auto gap-x-1"
+          style={{ gridTemplateColumns: `repeat(${stepTitles.length}, minmax(0, 1fr))` }}
+        >
           {stepTitles.map((title, i) => (
-            <div key={title} className="flex flex-col items-center gap-1">
+            <div key={title} className="flex min-w-0 flex-col items-center gap-1">
               <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-all flex-shrink-0 ${
                 i <= stepperIndex ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground"
               }`}>
                 {i + 1}
               </div>
-              <span className={`block text-[10px] sm:text-xs text-center leading-tight px-0.5 ${i <= stepperIndex ? "text-foreground" : "text-muted-foreground"}`}>
+              <span className={`hidden sm:block w-full break-words hyphens-auto text-xs text-center leading-tight px-0.5 ${i <= stepperIndex ? "text-foreground" : "text-muted-foreground"}`}>
                 {title}
               </span>
             </div>
           ))}
         </div>
+        <p className="mt-3 text-center text-sm text-foreground sm:hidden" aria-live="polite">
+          Schritt {Math.min(stepperIndex, stepTitles.length - 1) + 1} von {stepTitles.length}:{" "}
+          <span className="font-medium">{stepTitles[Math.min(stepperIndex, stepTitles.length - 1)]}</span>
+        </p>
 
         {/* Step 0: Date & Time */}
         {step === 0 && (
@@ -1263,7 +1270,7 @@ export function BookingSection() {
                   if (d < today) return true;
                   return isDayUnavailable(d);
                 }}
-                className="rounded-3xl border border-border p-8 shadow-lg pointer-events-auto text-lg [--cell-size:3.5rem]"
+                className="rounded-3xl border border-border p-3 sm:p-8 shadow-lg pointer-events-auto text-base sm:text-lg [--cell-size:2.5rem] min-[360px]:[--cell-size:2.75rem] min-[390px]:[--cell-size:3rem] sm:[--cell-size:3.5rem]"
               />
 
 
