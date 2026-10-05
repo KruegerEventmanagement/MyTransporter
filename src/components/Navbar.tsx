@@ -2,7 +2,7 @@ import { publicOrigin } from "@/lib/native/platform";
 import { AddressFields } from "@/components/AddressFields";
 import { EMPTY_ADDRESS, addressSignUpMetadata } from "@/lib/address";
 import { useEffect, useState } from "react";
-import { User, X, ChevronRight, Eye, EyeOff, Route as RouteIcon, Shield } from "lucide-react";
+import { Menu, User, X, ChevronRight, Eye, EyeOff, Route as RouteIcon, Shield } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { trackCompleteRegistration } from "@/lib/analytics";
@@ -25,6 +25,7 @@ export function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -217,7 +218,16 @@ export function Navbar() {
     <>
       <nav className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50">
         <div className="max-w-5xl mx-auto px-3 sm:px-4 h-12 flex items-center justify-end gap-2 sm:gap-3">
-          <div className="mr-auto flex items-center gap-2 sm:gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={() => setShowMobileMenu((v) => !v)}
+            aria-label={showMobileMenu ? "Menü schließen" : "Menü öffnen"}
+            aria-expanded={showMobileMenu}
+            className="sm:hidden mr-auto -ml-1 h-10 w-10 shrink-0 flex items-center justify-center rounded-full text-foreground hover:bg-secondary transition-colors"
+          >
+            {showMobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+          <div className="hidden sm:flex mr-auto items-center gap-3 min-w-0">
             <Link
               to="/werbung"
               className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
@@ -233,7 +243,7 @@ export function Navbar() {
           </div>
           <Link
             to="/preise"
-            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="hidden sm:inline text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             Preise
           </Link>
@@ -242,13 +252,13 @@ export function Navbar() {
             <>
               <button
                 onClick={() => { setShowModal("login"); setError(null); setInfo(null); }}
-                className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="min-h-10 px-2 sm:px-0 sm:min-h-0 text-sm sm:text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 Login
               </button>
               <button
                 onClick={() => { setShowModal("register"); setError(null); setInfo(null); }}
-                className="text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors whitespace-nowrap"
+                className="text-sm sm:text-xs font-medium px-3 py-2 sm:py-1.5 rounded-full bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors whitespace-nowrap"
               >
                 Registrieren
               </button>
@@ -297,6 +307,15 @@ export function Navbar() {
             </div>
           )}
         </div>
+        {showMobileMenu && (
+          <div className="sm:hidden border-t border-border/50 bg-background px-3 py-2">
+            {([["/preise","Preise"],["/langzeitmiete","Langzeitmiete"],["/werbung","Werbefläche"]] as const).map(([to,label]) => (
+              <Link key={to} to={to} onClick={() => setShowMobileMenu(false)} className="flex min-h-11 items-center rounded-lg px-2 text-base font-medium text-foreground hover:bg-secondary">
+                {label}
+              </Link>
+            ))}
+          </div>
+        )}
       </nav>
 
       {showModal && (
