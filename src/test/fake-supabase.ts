@@ -58,6 +58,10 @@ export function createFakeSupabase() {
         return q;
       },
       neq: () => q,
+      gte: (c: string, v: unknown) => {
+        state.filters.push([`${c}>=`, v]);
+        return q;
+      },
       order: () => q,
       single: () => {
         state.single = true;
