@@ -37,13 +37,14 @@ bun run android:debug     # Debug-APK (JDK 21 + Android SDK nötig)
 npx cap doctor
 ```
 
-## Universal Links / App Links (offen – Werte fehlen)
+## Universal Links / App Links
 
-Vorlagen in `native/well-known/`. Nach Erhalt der Werte als
-`public/.well-known/apple-app-site-association` (ohne Endung, `application/json`) und
-`public/.well-known/assetlinks.json` ablegen und Web veröffentlichen.
-- `APPLE_TEAM_ID` aus dem Apple Developer Account.
-- `PLAY_APP_SIGNING_SHA256_FINGERPRINT` aus Play Console → App-Integrität → App-Signatur.
+**Android (Stand 05.10.2026):** `public/.well-known/assetlinks.json` enthält `delegate_permission/common.handle_all_urls`, `android_app`, `de.mytransporter.app` und ausschließlich den SHA-256 der Google-Play-**App-Signatur** (`78:19:B9:…:81:E8`), keinen Upload- oder Debug-Key. Manifest: `autoVerify="true"` für `https://mytransporter.org` und `https://www.mytransporter.org`.
+- `https://mytransporter.org/.well-known/assetlinks.json` ist der verifizierte Host (Auslieferung siehe Prüfprotokoll unten).
+- `www.mytransporter.org` antwortet mit 302-Weiterleitung auf die Root-Domain. Android folgt bei der Verifizierung keinen Weiterleitungen, daher wird www **nicht** verifiziert; www-Links öffnen ggf. den Browser, der dann auf die Root-Domain umleitet. Root-Links sind davon unabhängig. Für www-Verifizierung müsste www die Datei direkt mit 200 ausliefern (Hosting-Einstellung) – keine neue App-Version nötig.
+- Ein lokaler Debug-Build (anderer Schlüssel) wird bewusst nicht verifiziert.
+
+**iOS (später):** Vorlage in `native/well-known/`; benötigt `APPLE_TEAM_ID`.
 
 ## Android / Google Play
 
@@ -125,11 +126,18 @@ Preflight `OPTIONS` auf `/_serverFn/*`, `/api/*` → 204 nur für App-Origins; C
 | `npx cap sync android` | 0 |
 | Gradle `assembleDebug`/`lintDebug`/`bundleRelease` | **nicht lokal ausführbar** – läuft erst im GitHub-Workflow |
 
+## Release-Stand Android (05.10.2026)
+
+- Play Console: App `de.mytransporter.app` angelegt; **interner Test** mit 1.0.0 / versionCode **1001** veröffentlicht. Kein offener oder Produktions-Release.
+- Nächster Build: **1.0.1 / versionCode 1002** mit den Mobile-Darstellungsfixes (Handy-Menü, Schrittanzeige, Kalenderbreite); wird lokal gebaut und manuell hochgeladen, bis die CI-Signierung eingerichtet ist. Achtung: die CI-Formel `1000 + run_number*100 + run_attempt` erzeugt deutlich höhere Codes – nach einem CI-Upload sind manuelle Codes darunter nicht mehr möglich.
+- Vor Produktionszugang (neues persönliches/Organisationskonto-Regel von Google Play): mindestens **12 echte Tester** müssen **14 Tage durchgehend** im geschlossenen Test angemeldet sein.
+- Die **fünf GitHub-Secrets** (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`) fehlen noch; bis dahin lädt CI nichts hoch.
+
 ## Offene Credentials / Blocker
 
-- Play-Konto vorhanden; App de.mytransporter.app prüfen/anlegen, erster manueller Upload, Upload-Keystore + 5 GitHub-Secrets
+- App angelegt, interner Release 1001 erfolgt; 5 GitHub-Secrets fehlen; 12 Tester / 14 Tage vor Produktion
 - Gradle-Lauf (SDK 36, JDK 21) läuft extern, Ergebnis offen
-- `PLAY_APP_SIGNING_SHA256_FINGERPRINT` für `assetlinks.json`
+- www-App-Link nicht verifizierbar, solange www per 302 umleitet
 - Firebase (`google-services.json`) und serverseitiger FCM-Versand (nicht gebaut)
 - 1024×1024-App-Icon nur für iOS (später); Android nutzt das 512er-Icon
 - (erledigt) Web mit CORS und /konto-loeschen veröffentlicht; per curl verifiziert: OPTIONS 204 mit ACAO https://localhost, /konto-loeschen 200
