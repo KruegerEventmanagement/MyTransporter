@@ -9,11 +9,11 @@ if (mtVersionCode <= 0 || mtVersionCode > 2100000000) {
 def mtVersionName = System.getenv("MT_VERSION_NAME") ?: "1.0-local"
 
 // Release-Signierung ausschließlich über Umgebungsvariablen. Nie Debug-Signierung für Release.
-def ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
-def ksPass = System.getenv("ANDROID_KEYSTORE_PASSWORD")
-def keyAlias = System.getenv("ANDROID_KEY_ALIAS")
-def keyPass = System.getenv("ANDROID_KEY_PASSWORD")
-def signingComplete = [ksPath, ksPass, keyAlias, keyPass].every { it != null && !it.isEmpty() } && file(ksPath).exists()
+def mtKsPath = System.getenv("ANDROID_KEYSTORE_PATH")
+def mtKsPass = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+def mtKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+def mtKeyPass = System.getenv("ANDROID_KEY_PASSWORD")
+def signingComplete = [mtKsPath, mtKsPass, mtKeyAlias, mtKeyPass].every { it != null && !it.isEmpty() } && file(mtKsPath).exists()
 // Explizit unsigniertes Bundle (nur CI-Prüfung, nicht hochladbar): -PmtUnsignedRelease=true
 def unsignedRelease = project.hasProperty("mtUnsignedRelease") && project.property("mtUnsignedRelease") == "true"
 
@@ -36,10 +36,10 @@ android {
     signingConfigs {
         if (signingComplete) {
             release {
-                storeFile file(ksPath)
-                storePassword ksPass
-                keyAlias keyAlias
-                keyPassword keyPass
+                storeFile file(mtKsPath)
+                storePassword mtKsPass
+                keyAlias mtKeyAlias
+                keyPassword mtKeyPass
             }
         }
     }
