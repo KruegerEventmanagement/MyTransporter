@@ -149,7 +149,7 @@ describe("bookings_guard_customer_update (SQL)", () => {
   const upd = (set: string) => db.query(`UPDATE public.bookings SET ${set} WHERE id='${B}'`);
   it("Kunde kann Status, Preis, Zeitraum, Code nicht direkt manipulieren", async () => {
     await as(null);
-    await seed();
+    await seed({ extra_km: 10, extra_km_charge_cents: 450, return_code: "OLD123", return_review_reason: "init", return_reminder_10min_for: null });
     await as(U1);
     for (const set of [
       "status='completed'",
