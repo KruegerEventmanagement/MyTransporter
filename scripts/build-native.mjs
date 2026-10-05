@@ -1,7 +1,7 @@
 // Baut die lokal gebündelte App-Shell für Capacitor (dist-native).
 import { execSync } from "node:child_process";
 import { cpSync, existsSync, renameSync, rmSync } from "node:fs";
-execSync("vite build", { stdio: "inherit", env: { ...process.env, MT_NATIVE: "1" } });
+execSync("npx vite build", { stdio: "inherit", env: { ...process.env, MT_NATIVE: "1" } });
 const src = existsSync("dist/client") ? "dist/client" : "dist";
 rmSync("dist-native", { recursive: true, force: true });
 cpSync(src, "dist-native", { recursive: true });
