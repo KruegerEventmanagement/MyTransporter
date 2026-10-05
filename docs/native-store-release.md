@@ -84,3 +84,17 @@ Vorlagen in `native/well-known/`. Nach Erhalt der Werte als
 - 1024×1024-App-Icon-Original für Store-Qualität
 - Veröffentlichung des Web-Stands mit CORS, bevor die App Server-Funktionen nutzt
 - Keine physischen Gerätetests durchgeführt
+
+## Validierung 05.10.2026 (Sandbox, Linux)
+
+| Befehl | Exit |
+|---|---|
+| `bunx vitest run src/lib/native` (9 Tests) | 0 |
+| `bunx vitest run` (41 Dateien, 491 Tests) | 0 |
+| `tsgo -p .` | 0 |
+| `npx vite build` (Web, SSR) | 0 |
+| `node scripts/build-native.mjs` (dist-native) | 0 |
+| `npx cap add android` / `npx cap add ios` / `npx cap sync` | 0 |
+| `npx cap doctor` | 1 – Android ok, „Xcode is not installed“ |
+
+Nicht möglich hier: Gradle-Build (kein JDK/Android SDK), `pod install`/Xcode (kein macOS), Gerätetests, Push-Empfang. Diese laufen im GitHub-Workflow bzw. Appflow.
