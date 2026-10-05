@@ -43,6 +43,7 @@ export function CookieConsent() {
     <div
       role="dialog"
       aria-label="Cookie-Einstellungen"
+      style={{ marginBottom: "var(--mt-trip-bar, 0px)" }}
       className="fixed inset-x-3 bottom-3 z-[60] mx-auto max-w-xl rounded-2xl border border-border bg-card p-5 shadow-xl"
     >
       <h2 className="text-base font-bold text-foreground">Cookies & Einwilligung</h2>

@@ -13,6 +13,7 @@ import { InstallBanner } from "@/components/InstallBanner";
 import { HelpBubble } from "@/components/HelpBubble";
 import { CookieConsent } from "@/components/CookieConsent";
 import { Toaster } from "@/components/ui/sonner";
+import { ActiveTripBanner } from "@/components/ActiveTripBanner";
 import { safeJsonLd, siteJsonLd } from "@/lib/seo";
 
 function NotFoundComponent() {
@@ -130,6 +131,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <InstallBanner />
       <Outlet />
+      <ActiveTripBanner />
       <HelpBubble />
       <CookieConsent />
       <Toaster position="top-center" />

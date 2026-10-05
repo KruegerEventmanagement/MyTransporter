@@ -25,7 +25,7 @@ export function HelpBubble() {
     <div
       ref={wrapRef}
       className="fixed z-50 right-4 bottom-4"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      style={{ paddingBottom: "env(safe-area-inset-bottom)", marginBottom: "var(--mt-trip-bar, 0px)" }}
     >
       {open && (
         <div className="mb-3 w-72 rounded-2xl bg-background border border-border shadow-2xl p-4 animate-in fade-in slide-in-from-bottom-2">

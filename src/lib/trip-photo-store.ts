@@ -49,11 +49,18 @@ export async function signTripPhoto(client: Client, path: string): Promise<strin
 
 export async function saveTripPhoto(
   client: Client,
-  args: { bookingId: string; tag: string; file: Blob; uploadedPath?: string | null },
+  args: {
+    bookingId: string;
+    tag: string;
+    file: Blob;
+    uploadedPath?: string | null;
+    /** Stabiler Zielpfad (Warteschlange). Ein "existiert bereits" gilt dann als hochgeladen. */
+    path?: string;
+  },
 ): Promise<StoredTripPhoto> {
   let path = args.uploadedPath ?? null;
   if (!path) {
-    const candidate = `${args.bookingId}/${args.tag}_${Date.now()}.jpg`;
+    const candidate = args.path ?? `${args.bookingId}/${args.tag}_${Date.now()}.jpg`;
     let upErr: unknown = null;
     try {
       const res = await client.storage
@@ -63,7 +70,10 @@ export async function saveTripPhoto(
     } catch (e) {
       upErr = e;
     }
-    if (upErr) {
+    // Verlorene Antwort beim ersten Versuch: Datei liegt schon unter genau diesem Pfad.
+    const alreadyThere =
+      !!args.path && !!upErr && /exist|duplicate/i.test(String((upErr as { message?: string })?.message ?? upErr));
+    if (upErr && !alreadyThere) {
       throw new TripPhotoError(
         "Das Foto konnte nicht hochgeladen werden. Bitte Internetverbindung prüfen und erneut versuchen.",
         "upload",
@@ -75,7 +85,7 @@ export async function saveTripPhoto(
 
   let recordOk = false;
   // Retry nach verlorener Antwort: gibt es den Eintrag für genau diesen Pfad schon?
-  if (args.uploadedPath) {
+  if (args.uploadedPath || args.path) {
     try {
       const { data: existing, error } = await client
         .from("trip_photos")
