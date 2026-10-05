@@ -21,12 +21,13 @@ import {
   AFFILIATE_REL,
   affiliateOffersForRail,
   affiliateTrackingUrl,
+  type AffiliateIcon,
   type AffiliateOffer,
   type AffiliateRail,
 } from "@/lib/affiliate";
 
 function OfferIcon({ offer }: { offer: AffiliateOffer }) {
-  const icons: Record<AffiliateOffer["icon"], LucideIcon> = {
+  const icons: Record<AffiliateIcon, LucideIcon> = {
     bike: Bike,
     box: Box,
     briefcase: BriefcaseBusiness,
@@ -41,11 +42,38 @@ function OfferIcon({ offer }: { offer: AffiliateOffer }) {
     tyre: CircleDot,
     zap: Zap,
   };
+  if (!offer.icon) return null;
   const Icon = icons[offer.icon];
   return <Icon className="h-4 w-4 shrink-0 text-foreground" aria-hidden="true" />;
 }
 
+function OriginalTextCard({ offer, rail }: { offer: AffiliateOffer; rail: AffiliateRail }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-2 rounded-md border border-border bg-card p-3">
+      <span className="break-words text-[10px] font-semibold uppercase text-muted-foreground">
+        {AFFILIATE_LABEL}
+      </span>
+      <span className="flex min-w-0 items-start gap-1">
+        <a
+          href={affiliateTrackingUrl(offer, rail)}
+          target="_blank"
+          rel={AFFILIATE_REL}
+          data-affiliate={offer.id}
+          className="min-w-0 break-words [overflow-wrap:anywhere] text-sm font-bold leading-tight text-foreground underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {offer.originalText}
+        </a>
+        <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-foreground" aria-hidden="true" />
+      </span>
+      <span className="block break-words border-t border-border pt-2 text-[10px] leading-snug text-muted-foreground">
+        {AFFILIATE_DISCLOSURE}
+      </span>
+    </div>
+  );
+}
+
 function OfferCard({ offer, rail }: { offer: AffiliateOffer; rail: AffiliateRail }) {
+  if (offer.originalText) return <OriginalTextCard offer={offer} rail={rail} />;
   return (
     <a
       href={affiliateTrackingUrl(offer, rail)}

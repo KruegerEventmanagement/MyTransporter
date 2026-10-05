@@ -22,15 +22,16 @@ afterEach(() => {
 });
 
 describe("Affiliate-Konfiguration", () => {
-  it("enthält genau die 16 verifizierten, eindeutigen Awin-Partner", () => {
+  it("enthält genau die 17 verifizierten, eindeutigen Awin-Partner", () => {
     expect(AFFILIATE_CONFIG.enabled).toBe(true);
-    expect(AFFILIATE_CONFIG.offers).toHaveLength(16);
-    expect(new Set(AFFILIATE_CONFIG.offers.map((o) => o.brand)).size).toBe(16);
-    expect(new Set(AFFILIATE_CONFIG.offers.map((o) => o.advertiserId)).size).toBe(16);
+    expect(AFFILIATE_CONFIG.offers).toHaveLength(17);
+    expect(new Set(AFFILIATE_CONFIG.offers.map((o) => o.brand)).size).toBe(17);
+    expect(new Set(AFFILIATE_CONFIG.offers.map((o) => o.advertiserId)).size).toBe(17);
     expect(AFFILIATE_CONFIG.offers.map((o) => o.advertiserId).sort()).toEqual(
       [
         "10719", "111366", "11609", "116725", "11823", "121692", "124474", "127589",
         "129151", "129787", "130403", "50865", "53027", "69786", "7605", "78152",
+        "117567",
       ].sort(),
     );
     expect(AFFILIATE_CONFIG.offers.map((o) => o.advertiserId)).not.toContain("24935");
@@ -39,7 +40,7 @@ describe("Affiliate-Konfiguration", () => {
   });
 
   it("erhält jeden Link-Builder-Link und ued exakt und ergänzt nur den sicheren clickref", () => {
-    for (const o of AFFILIATE_CONFIG.offers) {
+    for (const o of AFFILIATE_CONFIG.offers.filter((x) => !x.originalText)) {
       const u = new URL(o.trackingUrl);
       expect(u.protocol).toBe("https:");
       expect(AFFILIATE_TRACKING_HOSTS).toContain(u.hostname);
@@ -48,7 +49,7 @@ describe("Affiliate-Konfiguration", () => {
       expect(u.searchParams.get("awinaffid")).toBe("3102390");
       expect(u.searchParams.get("ued")).toBe(o.destination);
       expect(u.searchParams.get("clickref")).toBeNull();
-      expect(new URL(o.destination).protocol).toBe("https:");
+      expect(new URL(o.destination ?? "").protocol).toBe("https:");
 
       const clicked = new URL(affiliateTrackingUrl(o, o.rail));
       expect(clicked.searchParams.get("ued")).toBe(o.destination);
@@ -58,10 +59,36 @@ describe("Affiliate-Konfiguration", () => {
     }
   });
 
-  it("verteilt Mobilität links und Wohnen/weitere Angebote rechts exakt 8 zu 8", () => {
+  it("erhält den tesa-Original-Textlink exakt und füllt genau einen clickref", () => {
+    const tesa = AFFILIATE_CONFIG.offers.find((o) => o.id === "tesa");
+    expect(tesa).toBeDefined();
+    if (!tesa) return;
+    expect(tesa.trackingUrl).toBe(
+      "https://www.awin1.com/awclick.php?gid=583198&mid=117567&awinaffid=3102390&linkid=4535956&clickref=",
+    );
+    expect(tesa.originalText).toBe("tesa");
+    expect(tesa.destination).toBeUndefined();
+    expect(tesa.category).toBeUndefined();
+    const live = affiliateTrackingUrl(tesa, tesa.rail);
+    expect(live).toBe(
+      "https://www.awin1.com/awclick.php?gid=583198&mid=117567&awinaffid=3102390&linkid=4535956&clickref=mytransporter_left",
+    );
+    const u = new URL(live);
+    expect(u.hostname).toBe("www.awin1.com");
+    expect(u.pathname).toBe("/awclick.php");
+    expect(u.searchParams.get("mid")).toBe("117567");
+    expect(u.searchParams.get("awinaffid")).toBe("3102390");
+    expect(u.searchParams.get("gid")).toBe("583198");
+    expect(u.searchParams.get("linkid")).toBe("4535956");
+    expect(u.searchParams.getAll("clickref")).toEqual(["mytransporter_left"]);
+  });
+
+  it("verteilt Mobilität links und Wohnen/weitere Angebote rechts exakt 9 zu 8", () => {
     const left = affiliateOffersForRail("left");
     const right = affiliateOffersForRail("right");
-    expect(left).toHaveLength(8);
+    expect(left).toHaveLength(9);
+    expect(left[7].brand).toBe("MindeBox");
+    expect(left[8].brand).toBe("tesa");
     expect(right).toHaveLength(8);
     expect(left.slice(0, 5).map((o) => o.brand)).toEqual([
       "reifen.com", "ReifenDirekt", "Carshine", "reifen.de", "Evercross",
@@ -88,17 +115,17 @@ describe("Affiliate-Konfiguration", () => {
 });
 
 describe("Affiliate-Seitenleisten", () => {
-  it("zeigt 16 gekennzeichnete Karten mit korrekten Linkattributen und Texten", () => {
+  it("zeigt 17 gekennzeichnete Karten mit korrekten Linkattributen und Texten", () => {
     const { container } = render(
       <AdRails>
         <div>Inhalt</div>
       </AdRails>,
     );
-    expect(screen.getAllByText("Anzeige · Partnerlink")).toHaveLength(16);
-    expect(screen.getAllByText(AFFILIATE_DISCLOSURE)).toHaveLength(16);
+    expect(screen.getAllByText("Anzeige · Partnerlink")).toHaveLength(17);
+    expect(screen.getAllByText(AFFILIATE_DISCLOSURE)).toHaveLength(17);
     expect(screen.getAllByText("Zum Anbieter")).toHaveLength(16);
     const links = screen.getAllByRole("link");
-    expect(links).toHaveLength(16);
+    expect(links).toHaveLength(17);
     links.forEach((a) => {
       const offer = AFFILIATE_CONFIG.offers.find((candidate) => candidate.id === a.dataset.affiliate);
       expect(offer).toBeDefined();
@@ -108,9 +135,13 @@ describe("Affiliate-Seitenleisten", () => {
       const rel = (a.getAttribute("rel") ?? "").split(" ");
       for (const r of ["sponsored", "nofollow", "noopener", "noreferrer"]) expect(rel).toContain(r);
       expect(a.getAttribute("rel")).toBe(AFFILIATE_REL);
-      expect(a.textContent).toContain("Zum Anbieter");
+      if (offer.originalText) expect(a.textContent).toBe(offer.originalText);
+      else expect(a.textContent).toContain("Zum Anbieter");
     });
-    expect(container.querySelectorAll('[data-rail="left"] [data-affiliate]')).toHaveLength(8);
+    const tesaLink = container.querySelector('[data-affiliate="tesa"]');
+    expect(tesaLink?.textContent).toBe("tesa");
+    expect(tesaLink?.querySelector("svg")).toBeNull();
+    expect(container.querySelectorAll('[data-rail="left"] [data-affiliate]')).toHaveLength(9);
     expect(container.querySelectorAll('[data-rail="right"] [data-affiliate]')).toHaveLength(8);
   });
 
@@ -132,7 +163,7 @@ describe("Affiliate-Seitenleisten", () => {
         <div>Inhalt</div>
       </AdRails>,
     );
-    expect(container.querySelectorAll("svg")).toHaveLength(32);
+    expect(container.querySelectorAll("svg")).toHaveLength(33);
     expect(container.querySelectorAll("img, picture, source")).toHaveLength(0);
   });
 });
@@ -147,13 +178,13 @@ describe("AdRails mit Partnerkarten", () => {
     );
   }
 
-  it("zeigt links/rechts je acht Partnerkarten und erhält Inhalt beim Unterdrücken", () => {
+  it("zeigt links neun und rechts acht Partnerkarten und erhält Inhalt beim Unterdrücken", () => {
     const { container } = render(
       <AdRails>
         <Counter />
       </AdRails>,
     );
-    expect(container.querySelectorAll('[data-affiliate]')).toHaveLength(16);
+    expect(container.querySelectorAll('[data-affiliate]')).toHaveLength(17);
     const btn = screen.getByRole("button");
     act(() => btn.click());
     act(() => btn.click());
@@ -165,6 +196,6 @@ describe("AdRails mit Partnerkarten", () => {
     act(() => setAdsSuppressed(false));
     expect(screen.getByRole("button")).toBe(btn);
     expect(btn.textContent).toBe("Zähler 2");
-    expect(container.querySelectorAll('[data-affiliate]')).toHaveLength(16);
+    expect(container.querySelectorAll('[data-affiliate]')).toHaveLength(17);
   });
 });
