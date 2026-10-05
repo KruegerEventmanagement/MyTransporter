@@ -72,12 +72,13 @@ export default {
     const cors = nativeCorsHeaders(request);
     if (cors && request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
     try {
+      // CORS-Header auch auf 4xx/5xx der App-Pfade, damit die App Fehler lesen kann.
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return withCors(await normalizeCatastrophicSsrResponse(response), cors);
     } catch (error) {
       console.error(error);
-      return brandedErrorResponse();
+      return withCors(brandedErrorResponse(), cors);
     }
   },
 };

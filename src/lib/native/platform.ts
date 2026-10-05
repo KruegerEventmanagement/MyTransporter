@@ -6,7 +6,7 @@ export const IS_NATIVE_BUILD = import.meta.env.VITE_MT_NATIVE === "1";
 
 /** Öffentliche Website-Origin: Ziel für Server-Funktionen, Zahlungs- und Auth-Rückkehr. */
 export const PUBLIC_ORIGIN: string =
-  (import.meta.env.VITE_MT_PUBLIC_ORIGIN as string | undefined) || "https://www.mytransporter.org";
+  (import.meta.env.VITE_MT_PUBLIC_ORIGIN as string | undefined) || "https://mytransporter.org"; // kanonisch; www leitet per 307 um (bricht CORS-Preflight)
 
 export function isNativeApp(): boolean {
   if (!IS_NATIVE_BUILD || typeof window === "undefined") return false;
