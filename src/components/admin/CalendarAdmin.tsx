@@ -4,13 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   CalendarDays,
-  Cake,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   FileText,
-  Mail,
-  Phone,
   Plus,
   Trash2,
   X,

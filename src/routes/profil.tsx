@@ -44,7 +44,10 @@ interface Profile {
   email: string | null;
   phone: string | null;
   birth_date: string | null;
-  
+  address_street?: string | null;
+  address_postal_code?: string | null;
+  address_city?: string | null;
+  address_country?: string | null;
 }
 
 interface UserDoc {
@@ -71,6 +74,7 @@ function ProfilePage() {
   const [docs, setDocs] = useState<UserDoc[]>([]);
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
   const [birthDate, setBirthDate] = useState("");
+  const [addr, setAddr] = useState({ street: "", postalCode: "", city: "", country: "" });
   
   const [savingData, setSavingData] = useState(false);
   const [dataMessage, setDataMessage] = useState<string | null>(null);
@@ -91,7 +95,13 @@ function ProfilePage() {
       if (!user) return;
       const { error } = await supabase
         .from("profiles")
-        .update({ birth_date: birthDate || null })
+        .update({
+          birth_date: birthDate || null,
+          address_street: addr.street.trim().slice(0, 160) || null,
+          address_postal_code: addr.postalCode.trim().slice(0, 20) || null,
+          address_city: addr.city.trim().slice(0, 120) || null,
+          address_country: addr.country.trim().slice(0, 80) || null,
+        })
         .eq("id", user.id);
       if (error) {
         setDataMessage("Speichern fehlgeschlagen. Bitte später erneut versuchen.");
@@ -177,7 +187,7 @@ function ProfilePage() {
       const [p, b] = await Promise.all([
         supabase
           .from("profiles")
-          .select("first_name, last_name, email, phone, birth_date")
+          .select("first_name, last_name, email, phone, birth_date, address_street, address_postal_code, address_city, address_country")
           .eq("id", user.id)
           .maybeSingle(),
         supabase.from("bookings").select("*").eq("user_id", user.id).order("start_date", { ascending: false }),
@@ -187,6 +197,12 @@ function ProfilePage() {
         const row = p.data as Profile;
         setProfile(row);
         setBirthDate(row.birth_date ?? "");
+        setAddr({
+          street: row.address_street ?? "",
+          postalCode: row.address_postal_code ?? "",
+          city: row.address_city ?? "",
+          country: row.address_country ?? "",
+        });
         
       }
       if (b.data) setBookings(b.data as Booking[]);
@@ -310,6 +326,49 @@ function ProfilePage() {
                 Für eine Buchung ist ein Mindestalter von {MIN_DRIVER_AGE} Jahren nötig.
               </p>
             </div>
+
+            <fieldset className="space-y-2">
+              <legend className="block text-xs font-medium mb-1.5">Anschrift (optional)</legend>
+              <input
+                aria-label="Straße und Hausnummer"
+                placeholder="Straße und Hausnummer"
+                autoComplete="street-address"
+                maxLength={160}
+                value={addr.street}
+                onChange={(e) => setAddr({ ...addr, street: e.target.value })}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+              />
+              <div className="grid grid-cols-[7rem_1fr] gap-2">
+                <input
+                  aria-label="PLZ"
+                  placeholder="PLZ"
+                  autoComplete="postal-code"
+                  inputMode="numeric"
+                  maxLength={20}
+                  value={addr.postalCode}
+                  onChange={(e) => setAddr({ ...addr, postalCode: e.target.value })}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                />
+                <input
+                  aria-label="Ort"
+                  placeholder="Ort"
+                  autoComplete="address-level2"
+                  maxLength={120}
+                  value={addr.city}
+                  onChange={(e) => setAddr({ ...addr, city: e.target.value })}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <input
+                aria-label="Land"
+                placeholder="Land"
+                autoComplete="country-name"
+                maxLength={80}
+                value={addr.country}
+                onChange={(e) => setAddr({ ...addr, country: e.target.value })}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+              />
+            </fieldset>
 
             <p className="text-[11px] text-muted-foreground">
               Mit hinterlegtem Geburtsdatum erhältst du an deinem Geburtstag automatisch deinen
