@@ -71,3 +71,18 @@ Seit 8afd1db nur `src/routeTree.gen.ts` (automatisch generiert) geändert; keine
 Live-DB (nur lesend geprüft): Trigger `bookings_guard_customer_update_trigger` aktiv; `report_trip_return` für `anon` nicht ausführbar; Cron-Jobs: `mt-return-reminders` minütlich (neu), `mt-send-booking-reminders` */15 und `mt-process-manual-notifications` */15 unverändert. Migrationen nur additiv (Spalten nullable, Funktionen, Trigger, ein Cron-Job); keine Bestandsbuchung verändert.
 
 Weiterhin offen: kein physischer iPhone/Android-Test, kein Push-Empfangstest, kein echter Rückgabe-Durchlauf mit Live-Buchung, kein Deploy; `bookingWindowMs` kennt `week_xN` nicht (separat prüfen); Hook `send-reminders` ohne Token (vorbestehend, unverändert).
+
+## Nachtrag 05.10.2026 ~19:25 UTC: offene Punkte geschlossen
+
+1. **week_xN:** `bookingWindowMs` nutzte bereits `getPlanById`, das `week_xN` als N·7 Tage auflöst (= N·168 h wie `plan_end_at`); kein Code-Fehler. Neue Regressionstests `src/lib/booking-window-plans.test.ts` gleichen `bookingWindowMs` für alle Plan-IDs (3h…24h-Varianten, multi_2d–7d, week_x1/2/4/12, km, unbekannt = 24 h) an drei Startzeiten inkl. Zeitumstellung gegen `resolveTripWindow` ab.
+2. **send-reminders:** Hook verlangt jetzt `NOTIFY_HOOK_TOKEN` (Query `token` oder `x-hook-token`), gleiches Muster wie return-reminders. Migration: neue Funktion `private.run_send_reminders_hook()` (Kopie der bestehenden Vorlage, Token/URL aus `private.app_config`, für PUBLIC/anon/authenticated entzogen); Job `mt-send-booking-reminders` bleibt `*/15 * * * *`, ruft nur noch diese Funktion. Mail-Logik unverändert. Reihenfolge sicher: Der aktuell veröffentlichte alte Code ignoriert den Token, der neue verlangt ihn – Cron funktioniert vor und nach Veröffentlichung.
+
+| Befehl | Exitcode | Ergebnis |
+|---|---|---|
+| `bunx vitest run` booking-window-plans, booking-window, return-reminder, trip-return-sql | 0 | 87 Tests |
+| `bunx vitest run` (gesamt) | 0 | 40 Dateien, 482 Tests |
+| `bunx tsgo --noEmit` | 0 | – |
+| `bun run build` | 0 | – |
+| `POST /api/public/hooks/send-reminders` ohne bzw. mit falschem Token (lokal) | – | 401, 401 (keine Verarbeitung, keine Mail) |
+
+Kein Aufruf mit gültigem Token, keine Mail, kein Push, kein Deploy. Offen: physische Gerätetests, Push-Empfangstest.

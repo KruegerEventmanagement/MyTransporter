@@ -272,7 +272,12 @@ async function processManualBatch(kind: ReminderKind) {
 export const Route = createFileRoute("/api/public/hooks/send-reminders")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        // Gleiches Schutzmuster wie return-reminders: Cron ruft über private.run_send_reminders_hook() mit Token.
+        const token = process.env.NOTIFY_HOOK_TOKEN;
+        const provided =
+          new URL(request.url).searchParams.get("token") ?? request.headers.get("x-hook-token") ?? "";
+        if (!token || provided !== token) return new Response("Unauthorized", { status: 401 });
         try {
           const r24 = await processBatch("24h");
           const r30 = await processBatch("30min");
