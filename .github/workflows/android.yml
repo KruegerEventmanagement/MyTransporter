@@ -40,7 +40,7 @@ jobs:
       - run: npx cap sync android
       - name: Gradle assembleDebug + lintDebug
         working-directory: android
-        run: ./gradlew assembleDebug lintDebug --no-daemon --stacktrace
+        run: chmod +x gradlew && ./gradlew assembleDebug lintDebug --no-daemon --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: android-debug-apk
@@ -118,7 +118,7 @@ jobs:
         run: |
           export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
           printf '%s' "$KS" | base64 -d > "$ANDROID_KEYSTORE_PATH"
-          cd android && ./gradlew bundleRelease --no-daemon
+          cd android && chmod +x gradlew && ./gradlew bundleRelease --no-daemon
           rm -f "$ANDROID_KEYSTORE_PATH"
       - if: steps.cfg.outputs.configured == 'true'
         name: Upload zu Google Play
