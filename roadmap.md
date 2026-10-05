@@ -26,3 +26,4 @@
 - [x] Individuelles Kilometerpaket in normaler Buchung (UI, Checkout, Webhook, Rückgabe, Storno, QA)
 - [x] 0,45 € wiederhergestellt, Paket-Tests angepasst, Rechnung (Mock) geprüft
 - [x] Review 3a996fdf-Lücken behoben
+- [x] Awin-Ausbau: 16 verifizierte Angebote exakt 8/8 ausschließlich in Desktop-Seitenleisten, ohne Inline-/Mobile-Platzierung oder Vorab-Anfragen

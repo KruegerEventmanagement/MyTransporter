@@ -3,7 +3,7 @@ import { isSlotReady } from "@/lib/adsense";
 import { useAdsSuppressed } from "@/lib/ad-visibility";
 import { AdSlot } from "./AdSlot";
 import { useAdCmpBootstrap, useAdConsentGranted } from "./useAdCmp";
-import { AffiliateRailCard } from "./AffiliateOffers";
+import { AffiliateRail } from "./AffiliateOffers";
 import { activeAffiliateOffers } from "@/lib/affiliate";
 
 interface AdRailsProps {
@@ -17,7 +17,7 @@ interface AdRailsTreeArgs {
   suppressed: boolean;
   left: boolean;
   right: boolean;
-  /** Awin-Partnerkarten als Fallback, wenn kein AdSense-Slot aktiv ist. */
+  /** Awin-Partnerkarten unabhängig von den AdSense-Slots. */
   affiliate?: boolean;
   children: ReactNode;
 }
@@ -42,7 +42,7 @@ export function buildAdRailsTree({
   const showLeft = !suppressed && (left || affiliate);
   const showRight = !suppressed && (right || affiliate);
   const railsActive = showLeft || showRight;
-  const asideClass = "hidden xl:block xl:w-[160px] xl:shrink-0 xl:sticky xl:top-20";
+  const asideClass = "hidden min-w-0 xl:block xl:w-[160px] xl:shrink-0";
 
   return (
     <div
@@ -51,7 +51,8 @@ export function buildAdRailsTree({
     >
       {showLeft ? (
         <aside key="ad-rails-left" aria-label="Anzeige" className={asideClass}>
-          {left ? <AdSlot slot="railLeft" minHeight={600} /> : <AffiliateRailCard index={0} />}
+          {left ? <AdSlot slot="railLeft" minHeight={600} /> : null}
+          {affiliate ? <AffiliateRail rail="left" /> : null}
         </aside>
       ) : null}
       <div
@@ -62,7 +63,8 @@ export function buildAdRailsTree({
       </div>
       {showRight ? (
         <aside key="ad-rails-right" aria-label="Anzeige" className={asideClass}>
-          {right ? <AdSlot slot="railRight" minHeight={600} /> : <AffiliateRailCard index={1} />}
+          {right ? <AdSlot slot="railRight" minHeight={600} /> : null}
+          {affiliate ? <AffiliateRail rail="right" /> : null}
         </aside>
       ) : null}
     </div>

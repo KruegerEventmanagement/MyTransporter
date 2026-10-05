@@ -1,81 +1,92 @@
-import { ArrowUpRight, CircleDot, Sofa } from "lucide-react";
+import {
+  ArrowUpRight,
+  Bike,
+  Box,
+  BriefcaseBusiness,
+  Camera,
+  CarFront,
+  CircleDot,
+  Flame,
+  Gem,
+  Gift,
+  House,
+  ShoppingBag,
+  Sofa,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import {
   AFFILIATE_DISCLOSURE,
   AFFILIATE_LABEL,
   AFFILIATE_REL,
-  activeAffiliateOffers,
+  affiliateOffersForRail,
+  affiliateTrackingUrl,
   type AffiliateOffer,
+  type AffiliateRail,
 } from "@/lib/affiliate";
-import { useAdsSuppressed } from "@/lib/ad-visibility";
 
 function OfferIcon({ offer }: { offer: AffiliateOffer }) {
-  const Icon = offer.icon === "tyre" ? CircleDot : Sofa;
-  return <Icon className="h-5 w-5 shrink-0 text-foreground" aria-hidden="true" />;
+  const icons: Record<AffiliateOffer["icon"], LucideIcon> = {
+    bike: Bike,
+    box: Box,
+    briefcase: BriefcaseBusiness,
+    camera: Camera,
+    car: CarFront,
+    flame: Flame,
+    gem: Gem,
+    gift: Gift,
+    house: House,
+    "shopping-bag": ShoppingBag,
+    sofa: Sofa,
+    tyre: CircleDot,
+    zap: Zap,
+  };
+  const Icon = icons[offer.icon];
+  return <Icon className="h-4 w-4 shrink-0 text-foreground" aria-hidden="true" />;
 }
 
-function OfferCard({ offer, compact }: { offer: AffiliateOffer; compact?: boolean }) {
+function OfferCard({ offer, rail }: { offer: AffiliateOffer; rail: AffiliateRail }) {
   return (
     <a
-      href={offer.trackingUrl}
+      href={affiliateTrackingUrl(offer, rail)}
       target="_blank"
       rel={AFFILIATE_REL}
       data-affiliate={offer.id}
-      className="group flex min-w-0 flex-col gap-3 rounded-2xl border border-border bg-card p-4 transition-colors hover:border-foreground/40"
+      className="group flex min-w-0 flex-col gap-2 rounded-md border border-border bg-card p-3 transition-colors hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="break-words text-[10px] font-semibold uppercase text-muted-foreground">
         {AFFILIATE_LABEL}
       </span>
-      <span className={`flex min-w-0 ${compact ? "flex-col gap-2" : "items-center gap-3"}`}>
+      <span className="flex min-w-0 items-start gap-2">
         <OfferIcon offer={offer} />
         <span className="min-w-0">
-          <span className="block break-words font-bold text-foreground">{offer.brand}</span>
-          <span className="block break-words text-xs text-muted-foreground">{offer.category}</span>
+          <span className="block break-words [overflow-wrap:anywhere] text-sm font-bold leading-tight text-foreground">
+            {offer.brand}
+          </span>
+          <span className="mt-1 block break-words text-[11px] leading-snug text-muted-foreground">
+            {offer.category}
+          </span>
         </span>
       </span>
-      <span className="inline-flex w-fit items-center gap-1 rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background">
-        Zum Shop <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+      <span className="inline-flex items-center gap-1 text-xs font-semibold text-foreground underline underline-offset-2">
+        Zum Anbieter <ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      </span>
+      <span className="block break-words border-t border-border pt-2 text-[10px] leading-snug text-muted-foreground">
+        {AFFILIATE_DISCLOSURE}
       </span>
     </a>
   );
 }
 
-/** Schmale Partnerkarte für die Desktop-Seitenleiste (Fallback ohne AdSense). */
-export function AffiliateRailCard({ index }: { index: number }) {
-  const offer = activeAffiliateOffers()[index];
-  if (!offer) return null;
+/** Acht Partnerkarten für eine der beiden reinen Desktop-Seitenleisten. */
+export function AffiliateRail({ rail }: { rail: AffiliateRail }) {
+  const offers = affiliateOffersForRail(rail);
+  if (offers.length === 0) return null;
   return (
-    <div data-testid="affiliate-rail" className="xl:pt-16">
-      <OfferCard offer={offer} compact />
-      <p className="mt-2 text-[10px] leading-snug text-muted-foreground">{AFFILIATE_DISCLOSURE}</p>
+    <div data-testid={`affiliate-rail-${rail}`} data-rail={rail} className="flex min-w-0 flex-col gap-3 py-8">
+      {offers.map((offer) => (
+        <OfferCard key={offer.id} offer={offer} rail={rail} />
+      ))}
     </div>
-  );
-}
-
-/** Sichtbarer Abschnitt unterhalb des Hauptinhalts. Während transaktionaler Schritte ausgeblendet. */
-export function AffiliateOffersSection() {
-  const suppressed = useAdsSuppressed();
-  const offers = activeAffiliateOffers();
-  if (suppressed || offers.length === 0) return null;
-  return (
-    <section
-      data-testid="affiliate-section"
-      aria-labelledby="affiliate-heading"
-      className="border-t border-border px-4 py-10 sm:px-6"
-    >
-      <div className="mx-auto max-w-3xl">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          {AFFILIATE_LABEL}
-        </p>
-        <h2 id="affiliate-heading" className="mt-1 text-xl font-bold text-foreground">
-          Partnerangebote für unterwegs und zu Hause
-        </h2>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          {offers.map((o) => (
-            <OfferCard key={o.id} offer={o} />
-          ))}
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">{AFFILIATE_DISCLOSURE}</p>
-      </div>
-    </section>
   );
 }
