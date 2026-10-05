@@ -665,7 +665,7 @@ function BookingRow({ booking: b, onCancelled }: { booking: Booking; onCancelled
         );
       })()}
 
-      {(b.status === "active" || b.status === "returning") && (
+      {(b.status === "active" || b.status === "returning") && !isLegacyOpenTrip(b) && (
         <Link
           to="/trip/$bookingId"
           params={{ bookingId: b.id }}
@@ -737,6 +737,7 @@ function StatusBadge({ status }: { status: string }) {
     paid: { label: "Bezahlt", cls: "bg-secondary text-foreground" },
     active: { label: "Unterwegs", cls: "bg-foreground text-background" },
     returning: { label: "Rückgabe", cls: "bg-secondary text-foreground border border-foreground" },
+    expired: { label: "Abgelaufen", cls: "bg-secondary text-muted-foreground" },
     completed: { label: "Abgeschlossen", cls: "bg-secondary text-muted-foreground" },
     cancelled: { label: "Storniert", cls: "bg-secondary text-muted-foreground line-through" },
   };
