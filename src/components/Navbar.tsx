@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { trackCompleteRegistration } from "@/lib/analytics";
 import { consumeLoginRequest, takeLoginRedirect } from "@/lib/login-redirect";
 import { useSuppressAds } from "@/lib/ad-visibility";
+import { BrandHomeLink } from "@/components/BrandHomeLink";
 import {
   ageOnIsoDate,
   isValidIsoDate,
@@ -218,12 +219,13 @@ export function Navbar() {
     <>
       <nav className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50">
         <div className="max-w-5xl mx-auto px-3 sm:px-4 h-12 flex items-center justify-end gap-2 sm:gap-3">
+          <BrandHomeLink className="mr-1 sm:mr-3" imageClassName="h-6 w-auto sm:h-7" />
           <button
             type="button"
             onClick={() => setShowMobileMenu((v) => !v)}
             aria-label={showMobileMenu ? "Menü schließen" : "Menü öffnen"}
             aria-expanded={showMobileMenu}
-            className="sm:hidden mr-auto -ml-1 h-10 w-10 shrink-0 flex items-center justify-center rounded-full text-foreground hover:bg-secondary transition-colors"
+            className="sm:hidden mr-auto h-10 w-10 shrink-0 flex items-center justify-center rounded-full text-foreground hover:bg-secondary transition-colors"
           >
             {showMobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>

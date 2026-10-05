@@ -12,7 +12,7 @@ import { requireLogin } from "@/lib/login-redirect";
 import { resolveTripWindow } from "@/lib/trip-time";
 import { isReturningStatus, phaseFor } from "@/lib/active-trip";
 import { loadReturnDraft, saveReturnDraft, clearReturnDraft } from "@/lib/return-draft";
-import logoImage from "@/assets/logo.png";
+import { BrandHomeLink } from "@/components/BrandHomeLink";
 
 export const Route = createFileRoute("/trip/$bookingId")({
   head: () => privateHead("MyTransporter · Fahrt"),
@@ -60,9 +60,7 @@ function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T> {
 function TripLogoBar() {
   return (
     <div className="px-4 pb-2" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}>
-      <Link to="/" aria-label="MyTransporter Startseite" className="inline-flex min-h-11 items-center">
-        <img src={logoImage} alt="MyTransporter" className="h-8 w-auto" />
-      </Link>
+      <BrandHomeLink imageClassName="h-8 w-auto" />
     </div>
   );
 }
@@ -332,6 +330,7 @@ function TripPage() {
             freeKm={booking.free_km ?? null}
             kmPriceCents={booking.km_price_cents ?? null}
             addons={booking.addons ?? undefined}
+            onBookingRefresh={() => load(true)}
             onComplete={() => {
               if (userId) clearReturnDraft(userId, bookingId);
               setPhase("done");

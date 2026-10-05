@@ -8,6 +8,7 @@ import {
   loadTripPhotos,
   saveTripPhoto,
   TripPhotoError,
+  BookingUpdateError,
   updateBookingChecked,
   type StoredTripPhoto,
 } from "@/lib/trip-photo-store";
@@ -62,6 +63,8 @@ interface ReturnFlowProps {
   userId?: string | null;
   /** Serverseitig bereits gespeicherter Rückgabecode (Status returning). */
   serverReturnCode?: string | null;
+  /** Lädt den aktuellen Serverstand, falls ein Entwurfs-Update bereits überholt ist. */
+  onBookingRefresh?: () => Promise<void>;
 }
 
 type CaptureTarget =
@@ -119,6 +122,7 @@ export function ReturnFlow({
   onComplete,
   userId,
   serverReturnCode,
+  onBookingRefresh,
 }: ReturnFlowProps) {
   // Kilometerpaket ist kein physisches Zubehör und wird nicht "zurückgegeben".
   const addons = allAddons?.filter(isPhysicalAddon);
@@ -603,6 +607,9 @@ export function ReturnFlow({
         ...(endFuelPercent !== "" ? { ai_end_fuel_percent: parseInt(endFuelPercent) } : {}),
       });
     } catch (err) {
+      if (err instanceof BookingUpdateError && err.kind === "locked" && onBookingRefresh) {
+        await onBookingRefresh();
+      }
       setActionError(err instanceof Error ? `Kilometerstand nicht gespeichert. ${err.message}` : "Kilometerstand nicht gespeichert.");
       setSaving(false);
       return;
