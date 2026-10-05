@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Calendar, Clock, Car, Key, Lock, ChevronLeft, Package } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { BrandHomeLink } from "@/components/BrandHomeLink";
 
 interface ScheduledTripViewProps {
   startDate: Date;
@@ -51,6 +52,7 @@ export function ScheduledTripView({
     <main className="min-h-screen bg-background pb-12 px-4">
       <header className="sticky top-0 z-10 bg-background/90 backdrop-blur -mx-4 mb-6 border-b border-border">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+          <BrandHomeLink className="mr-1" imageClassName="h-7 w-auto" />
           <Link
             to="/profil"
             className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-medium hover:bg-secondary/80"
