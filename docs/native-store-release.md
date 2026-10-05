@@ -134,6 +134,7 @@ Preflight `OPTIONS` auf `/_serverFn/*`, `/api/*` → 204 nur für App-Origins; C
 - **IARC-Nutzungsbedingungen** noch **nicht** akzeptiert; danach ist der Fragebogen offen.
 - **Prüferzugang fehlt**; dadurch sind Zielgruppe und fertig ausgefüllte Datensicherheit (als Entwurf) noch blockiert.
 - Kein Produktionszugang vor **12 Testern / 14 Tage** im geschlossenen Test.
+- Achtung: die CI-Formel `1000 + run_number*100 + run_attempt` erzeugt deutlich höhere Codes als 1002 – nach einem CI-Upload sind manuelle Codes darunter nicht mehr möglich.
 - GitHub-Actions-Run **37375920823** (Commit `3b673a0`): Job `check` erfolgreich (Typecheck, 501 Tests, Native-Build, `assembleDebug`, `lintDebug`); Job `release` hat Signierung + Upload wegen fehlender Secrets übersprungen. **Automatische Play-Updates sind somit NICHT aktiv** – 1002 wurde manuell hochgeladen.
 
 ## Offene Credentials / Blocker
