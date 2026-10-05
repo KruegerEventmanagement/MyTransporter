@@ -37,7 +37,8 @@ jobs:
       - run: bun install --frozen-lockfile || bun install
       - run: bun run build:native
       - run: npx cap sync ios
+      - run: cd ios/App && pod install
       - run: >
-          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug
+          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Debug
           -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
           CODE_SIGNING_ALLOWED=NO build
