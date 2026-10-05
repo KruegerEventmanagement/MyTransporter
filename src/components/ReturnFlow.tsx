@@ -608,7 +608,11 @@ export function ReturnFlow({
       });
     } catch (err) {
       if (err instanceof BookingUpdateError && err.kind === "locked" && onBookingRefresh) {
-        await onBookingRefresh();
+        try {
+          await onBookingRefresh();
+        } catch {
+          // Die sichere Fehlermeldung unten bleibt bedienbar, auch wenn das Neuladen scheitert.
+        }
       }
       setActionError(err instanceof Error ? `Kilometerstand nicht gespeichert. ${err.message}` : "Kilometerstand nicht gespeichert.");
       setSaving(false);
