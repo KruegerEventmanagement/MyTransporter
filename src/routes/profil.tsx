@@ -16,6 +16,7 @@ import { computePlanReturn, type PlanId } from "@/lib/booking-rules";
 import { DocumentScanner, SCAN_DOC_LABELS, type ScanDocType } from "@/components/DocumentScanner";
 import { ageOn, MIN_DRIVER_AGE } from "@/lib/birthday";
 import { BrandHomeLink } from "@/components/BrandHomeLink";
+import { isLegacyOpenTrip } from "@/lib/active-trip";
 
 export const Route = createFileRoute("/profil")({
   head: () => privateHead("MyTransporter · Profil"),
@@ -233,10 +234,10 @@ function ProfilePage() {
       if (b.start_km !== null && b.end_km !== null) return sum + Math.max(0, b.end_km - b.start_km);
       return sum;
     }, 0);
-    const active = bookings.find((b) => b.status === "active" || b.status === "returning");
+    const active = bookings.find((b) => (b.status === "active" || b.status === "returning") && !isLegacyOpenTrip(b));
     const vehicles = new Set(bookings.map((b) => b.vehicle_plate));
     const upcoming = bookings
-      .filter((b) => b.status === "paid" && b.start_km === null)
+      .filter((b) => b.status === "paid" && b.start_km === null && !isLegacyOpenTrip(b))
       .sort((a, b) => {
         const da = new Date(`${a.start_date}T${String(a.start_hour).padStart(2, "0")}:00:00`).getTime();
         const db = new Date(`${b.start_date}T${String(b.start_hour).padStart(2, "0")}:00:00`).getTime();
@@ -246,6 +247,7 @@ function ProfilePage() {
     const past = bookings
       .filter((b) => {
         if (b.status === "completed" || b.status === "cancelled") return true;
+        if (isLegacyOpenTrip(b)) return true;
         if (b.status === "active" || b.status === "returning") return false;
         return bookingEnd(b).getTime() < now;
       })
@@ -609,7 +611,7 @@ function BookingRow({ booking: b, onCancelled }: { booking: Booking; onCancelled
           <p className="font-bold text-foreground">{b.vehicle_name}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{b.vehicle_plate}</p>
         </div>
-        <StatusBadge status={b.status} />
+        <StatusBadge status={isLegacyOpenTrip(b) && b.status !== "paid" ? "expired" : b.status} />
       </Link>
 
       <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
