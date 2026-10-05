@@ -1,15 +1,37 @@
 /// <reference types="google.maps" />
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Clock, Gauge, Locate, ChevronUp, ChevronDown, AlertTriangle, Navigation, Search, X, Route as RouteIcon, Flag } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import {
+  MapPin,
+  Clock,
+  Gauge,
+  Locate,
+  ChevronUp,
+  ChevronDown,
+  AlertTriangle,
+  Navigation,
+  Search,
+  X,
+  Route as RouteIcon,
+  Flag,
+  Bell,
+  ListChecks,
+  RotateCcw,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { de } from "date-fns/locale";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
-import { computePlanReturn } from "@/lib/booking-rules";
+import { formatBerlin, formatDuration, returnTimeState, type ReturnTimeState } from "@/lib/trip-time";
+import { rankRoutes, createRequestGate, type RouteAlt } from "@/lib/trip-routes";
+import { loadTripNav, saveTripNav } from "@/lib/return-draft";
+import { enablePushOnThisDevice, getPushStatus, isSubscribedOnThisDevice } from "@/lib/push-client";
+import logoImage from "@/assets/logo.png";
 
 const GOOGLE_MAPS_API_KEY =
   (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined) ||
   "AIzaSyAidsYmswSyYosN9yKXswFF3RtJxk8pclc";
+
+/** Abholort laut Projektvorgabe; dient nur als Kartenmitte/Routenstart, nie als "dein Standort". */
+export const DEFAULT_PICKUP_ADDRESS = "Poststraße 60, 71229 Leonberg";
 
 // Monochromer Karten-Style passend zur Marke
 const MONOCHROME_STYLE: google.maps.MapTypeStyle[] = [
@@ -27,46 +49,73 @@ const MONOCHROME_STYLE: google.maps.MapTypeStyle[] = [
   { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
 ];
 
+const CHECKLIST = [
+  "8 Außenfotos (vorne, vorne rechts, rechts, hinten rechts, hinten, hinten links, links, vorne links)",
+  "Innenraum-Foto",
+  "Kilometerstand (Tacho-Foto)",
+  "Tankstand (Foto der Tankanzeige)",
+  "Tankbeleg",
+  "Gebuchtes Zubehör zurücklegen",
+  "Schlüssel mit Rückgabecode abgeben",
+];
+
+type LatLng = { lat: number; lng: number };
+type Dest = LatLng & { label: string };
+
 interface Props {
   bookingId: string;
-  startDate: Date;
-  startHour: number;
+  userId?: string | null;
+  /** Bestätigter Mietbeginn / Mietende (zentraler Resolver, Europe/Berlin). */
+  startAtMs: number;
+  endAtMs: number;
   startKm: number;
   vehicleName: string;
   vehiclePlate: string;
   planLabel: string;
-  planId?: string;
+  addons?: Array<{ id: string; label: string }>;
+  pickupAddress?: string | null;
   onReturn: () => void;
 }
 
 export function ActiveTripDashboard({
   bookingId,
-  startDate,
-  startHour,
+  userId,
+  startAtMs,
+  endAtMs,
   startKm,
   vehicleName,
   vehiclePlate,
   planLabel,
-  planId,
+  addons,
+  pickupAddress,
   onReturn,
 }: Props) {
-  const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
-  const [elapsedStr, setElapsedStr] = useState("00:00:00");
-  const [sheetExpanded, setSheetExpanded] = useState(true);
+  const nav0 = useRef(userId ? loadTripNav(userId, bookingId) : null).current;
+  const [position, setPosition] = useState<LatLng | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const [sheetExpanded, setSheetExpanded] = useState(!nav0?.navMode);
   const [confirmEnd, setConfirmEnd] = useState(false);
-  const [gpsDenied, setGpsDenied] = useState(false);
-  const [gpsAsked, setGpsAsked] = useState(false);
-  const [destinationQuery, setDestinationQuery] = useState("");
-  const [destination, setDestination] = useState<{ lat: number; lng: number; label: string } | null>(null);
+  const [gpsChoice, setGpsChoice] = useState<"granted" | "declined" | null>(nav0?.gpsChoice ?? null);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [destinationQuery, setDestinationQuery] = useState(nav0?.destination?.label ?? "");
+  const [destination, setDestination] = useState<Dest | null>(nav0?.destination ?? null);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [mapAttempt, setMapAttempt] = useState(0);
+  const [mapReady, setMapReady] = useState(false);
   const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
-  const [routeAlternatives, setRouteAlternatives] = useState<Array<{ distance: string; duration: string; durationValue: number; distanceValue: number }>>([]);
-  const [selectedRouteIdx, setSelectedRouteIdx] = useState(0);
-  const [navMode, setNavMode] = useState(false);
+  const [routeAlternatives, setRouteAlternatives] = useState<RouteAlt[]>([]);
+  const [selectedRouteIdx, setSelectedRouteIdx] = useState(nav0?.routeIndex ?? 0);
+  const [navMode, setNavMode] = useState(nav0?.navMode ?? false);
   const [arrivalTime, setArrivalTime] = useState<Date | null>(null);
+  const [routeFromPickup, setRouteFromPickup] = useState(false);
+  const [showChecklist, setShowChecklist] = useState(false);
+  const [pushState, setPushState] = useState<"unknown" | "on" | "off" | "denied" | "unsupported" | "busy" | "iframe">("unknown");
   const lastDirectionsResult = useRef<google.maps.DirectionsResult | null>(null);
-  const positionRef = useRef<{ lat: number; lng: number } | null>(null);
-  const destinationRef = useRef<{ lat: number; lng: number; label: string } | null>(null);
+  const positionRef = useRef<LatLng | null>(null);
+  const pickupRef = useRef<LatLng | null>(null);
+  const destinationRef = useRef<Dest | null>(nav0?.destination ?? null);
+  const preferredRouteIdx = useRef(nav0?.routeIndex ?? 0);
   const inputRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
@@ -76,278 +125,300 @@ export function ActiveTripDashboard({
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const trackInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const gate = useRef(createRequestGate()).current;
 
-  const startDateTime = (() => {
-    const d = new Date(startDate.getTime());
-    d.setHours(startHour, 0, 0, 0);
-    return d;
-  })();
-  // Rückgabezeit anhand der zentralen Buchungsregeln berechnen
-  const effectivePlanId: string = (() => {
-    if (planId) return planId;
-    const src = planLabel || "";
-    if (/Kilometer/i.test(src)) return "km";
-    if (/24/.test(src) || /Tag/i.test(src)) return "24h";
-    if (/6/.test(src)) return "6h";
-    return "6h";
-  })();
-  const returnDateTime = computePlanReturn(effectivePlanId, startDate, startHour);
-  const planDurationHours = Math.round((returnDateTime.getTime() - startDateTime.getTime()) / 3600000);
-
-  // Timer
+  // Persistenz pro Nutzer + Buchung
   useEffect(() => {
-    // Tatsächlicher Fahrtstart: erste Mal, wenn dieses Panel geöffnet wird
-    const key = `mt_trip_started_${bookingId}`;
-    let startedAtMs = parseInt(localStorage.getItem(key) || "0", 10);
-    if (!startedAtMs) {
-      startedAtMs = Date.now();
-      localStorage.setItem(key, String(startedAtMs));
-    }
-    const tick = () => {
-      const diff = Math.max(0, Date.now() - startedAtMs);
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      setElapsedStr(
-        `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
-      );
-    };
-    tick();
-    const i = setInterval(tick, 1000);
-    return () => clearInterval(i);
-  }, [bookingId]);
+    if (!userId) return;
+    saveTripNav(userId, bookingId, { destination, routeIndex: selectedRouteIdx, navMode, gpsChoice });
+  }, [userId, bookingId, destination, selectedRouteIdx, navMode, gpsChoice]);
 
-  // GPS
+  // Uhr: Laufzeit ab bestätigtem Mietbeginn; Fokus/Resume/Online sofort aktualisieren.
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const i = setInterval(tick, 1000);
+    window.addEventListener("focus", tick);
+    window.addEventListener("online", tick);
+    window.addEventListener("pageshow", tick);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(i);
+      window.removeEventListener("focus", tick);
+      window.removeEventListener("online", tick);
+      window.removeEventListener("pageshow", tick);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      if (typeof window !== "undefined" && window.top !== window.self) {
+        if (alive) setPushState("iframe");
+        return;
+      }
+      const s = await getPushStatus();
+      if (!alive) return;
+      if (s === "unsupported") setPushState("unsupported");
+      else if (s === "denied") setPushState("denied");
+      else setPushState((await isSubscribedOnThisDevice()) ? "on" : "off");
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const elapsed = Math.max(0, now - startAtMs);
+  const timeState: ReturnTimeState = returnTimeState(now, endAtMs);
+  const remaining = endAtMs - now;
+  const planDurationHours = Math.round((endAtMs - startAtMs) / 3600000);
+
+  // GPS (freiwillig; nur nach ausdrücklicher Zustimmung)
   const recordPosition = useCallback(
     async (lat: number, lng: number) => {
       if (bookingId.startsWith("demo-")) return;
       try {
-        await supabase.from("gps_tracks").insert({
-          booking_id: bookingId,
-          latitude: lat,
-          longitude: lng,
-        });
+        await supabase.from("gps_tracks").insert({ booking_id: bookingId, latitude: lat, longitude: lng });
       } catch (e) {
         console.error("GPS track:", e);
       }
     },
-    [bookingId]
+    [bookingId],
   );
 
   useEffect(() => {
-    if (!gpsAsked) return;
-    if (!navigator.geolocation) {
-      setGpsDenied(true);
+    if (gpsChoice !== "granted") return;
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGpsError("Dieses Gerät stellt keinen Standort bereit. Die Karte funktioniert trotzdem.");
       return;
     }
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setGpsDenied(false);
+        setGpsError(null);
       },
       (err) => {
-        console.error("Geo:", err);
-        if (err.code === err.PERMISSION_DENIED) setGpsDenied(true);
+        if (err.code === err.PERMISSION_DENIED) {
+          setGpsError("Standortzugriff wurde abgelehnt. Du kannst ihn in den Browser-Einstellungen erlauben.");
+          setGpsChoice("declined");
+        } else {
+          setGpsError("Standort gerade nicht verfügbar. Wir versuchen es weiter.");
+        }
       },
-      { enableHighAccuracy: true, maximumAge: 5000 }
+      { enableHighAccuracy: true, maximumAge: 5000 },
     );
-
     trackInterval.current = setInterval(() => {
-      navigator.geolocation.getCurrentPosition((pos) => {
-        recordPosition(pos.coords.latitude, pos.coords.longitude);
-      });
+      navigator.geolocation.getCurrentPosition(
+        (pos) => void recordPosition(pos.coords.latitude, pos.coords.longitude),
+        () => {},
+      );
     }, 30000);
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => recordPosition(pos.coords.latitude, pos.coords.longitude),
-      () => {}
-    );
-
     return () => {
       navigator.geolocation.clearWatch(watchId);
       if (trackInterval.current) clearInterval(trackInterval.current);
     };
-  }, [recordPosition, gpsAsked]);
+  }, [recordPosition, gpsChoice]);
 
-  // Google Maps init
-  useEffect(() => {
-    if (!mapRef.current || mapInstance.current) return;
-    const init = async () => {
-      try {
-        setOptions({ key: GOOGLE_MAPS_API_KEY, v: "weekly" });
-        await Promise.all([
-          importLibrary("maps"),
-          importLibrary("places"),
-          importLibrary("routes"),
-          importLibrary("marker"),
-        ]);
-
-        const map = new google.maps.Map(mapRef.current!, {
-          center: { lat: 52.52, lng: 13.405 },
-          zoom: 14,
-          disableDefaultUI: true,
-          gestureHandling: "greedy",
-          styles: MONOCHROME_STYLE,
-          clickableIcons: false,
-        });
-
-        markerRef.current = new google.maps.Marker({
-          position: { lat: 52.52, lng: 13.405 },
-          map,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
-            fillColor: "#000",
-            fillOpacity: 1,
-            strokeColor: "#fff",
-            strokeWeight: 3,
-          },
-        });
-
-        directionsServiceRef.current = new google.maps.DirectionsService();
-        geocoderRef.current = new google.maps.Geocoder();
-        directionsRendererRef.current = new google.maps.DirectionsRenderer({
-          map,
-          suppressMarkers: false,
-          routeIndex: 0,
-          polylineOptions: { strokeColor: "#000", strokeWeight: 5, strokeOpacity: 0.8 },
-        });
-
-        // Autocomplete an Eingabefeld binden
-        if (inputRef.current) {
-          autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
-            fields: ["geometry", "formatted_address", "name"],
-            componentRestrictions: { country: ["de", "at", "ch"] },
-          });
-          autocompleteRef.current.addListener("place_changed", () => {
-            const place = autocompleteRef.current?.getPlace();
-            if (!place?.geometry?.location) {
-              setSearchError("Ort konnte nicht gefunden werden.");
-              return;
-            }
-            const lat = place.geometry.location.lat();
-            const lng = place.geometry.location.lng();
-            const label = place.formatted_address || place.name || "";
-            applyDestination({ lat, lng, label });
-          });
-        }
-
-        mapInstance.current = map;
-      } catch (err) {
-        console.error("Google Maps load error:", err);
-        setSearchError("Karte konnte nicht geladen werden.");
-      }
-    };
-    init();
-    // Google Maps wird vom Browser entsorgt, kein remove() nötig
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const showLegs = useCallback((result: google.maps.DirectionsResult, idx: number) => {
+    const leg = result.routes[idx]?.legs[0];
+    if (leg) {
+      setRouteInfo({ distance: leg.distance?.text || "", duration: leg.duration?.text || "" });
+      setArrivalTime(new Date(Date.now() + (leg.duration?.value || 0) * 1000));
+    }
   }, []);
 
-  // Update marker
-  useEffect(() => {
-    if (!position || !mapInstance.current || !markerRef.current) return;
-    positionRef.current = position;
-    markerRef.current.setPosition({ lat: position.lat, lng: position.lng });
-    if (!destination) {
-      mapInstance.current.panTo({ lat: position.lat, lng: position.lng });
-    }
-    // Wenn Ziel gesetzt aber noch keine Route -> jetzt berechnen
-    if (destinationRef.current && !lastDirectionsResult.current) {
-      computeRoute(destinationRef.current);
-    }
-  }, [position]);
-
-  const recenter = () => {
-    if (position && mapInstance.current) {
-      mapInstance.current.panTo({ lat: position.lat, lng: position.lng });
-      mapInstance.current.setZoom(16);
-    }
-  };
-
-  // Ziel setzen + Route zeichnen via Google Directions API
-  const computeRoute = (dest: { lat: number; lng: number; label: string }) => {
-    if (
-      !directionsServiceRef.current ||
-      !directionsRendererRef.current ||
-      !mapInstance.current
-    )
-      return;
-    const pos = positionRef.current;
-    if (!pos) {
-      mapInstance.current.panTo({ lat: dest.lat, lng: dest.lng });
-      mapInstance.current.setZoom(14);
-      return;
-    }
-    directionsServiceRef.current.route(
+  // Route berechnen; veraltete Antworten werden verworfen.
+  const computeRoute = useCallback(
+    (dest: Dest) => {
+      const svc = directionsServiceRef.current;
+      const renderer = directionsRendererRef.current;
+      const map = mapInstance.current;
+      if (!svc || !renderer || !map) return;
+      const origin = positionRef.current ?? pickupRef.current;
+      if (!origin) {
+        map.panTo({ lat: dest.lat, lng: dest.lng });
+        map.setZoom(14);
+        return;
+      }
+      setRouteFromPickup(!positionRef.current);
+      const token = gate.next();
+      svc.route(
         {
-          origin: new google.maps.LatLng(pos.lat, pos.lng),
+          origin: new google.maps.LatLng(origin.lat, origin.lng),
           destination: new google.maps.LatLng(dest.lat, dest.lng),
           travelMode: google.maps.TravelMode.DRIVING,
           provideRouteAlternatives: true,
         },
         (result, status) => {
+          if (!gate.isCurrent(token) || !mapInstance.current) return;
           if (status === google.maps.DirectionsStatus.OK && result) {
             lastDirectionsResult.current = result;
-            directionsRendererRef.current!.setDirections(result);
-            directionsRendererRef.current!.setRouteIndex(0);
-            setSelectedRouteIdx(0);
-            const alts = result.routes.map((r) => {
-              const l = r.legs[0];
-              return {
-                distance: l?.distance?.text || "",
-                duration: l?.duration?.text || "",
-                durationValue: l?.duration?.value || 0,
-                distanceValue: l?.distance?.value || 0,
-              };
-            });
-            alts.sort((a, b) => a.durationValue - b.durationValue);
+            const alts = rankRoutes(result.routes as never);
+            const wanted = preferredRouteIdx.current;
+            const idx = wanted < result.routes.length ? wanted : (alts[0]?.originalIndex ?? 0);
+            renderer.setDirections(result);
+            renderer.setRouteIndex(idx);
+            setSelectedRouteIdx(idx);
             setRouteAlternatives(alts);
-            const leg = result.routes[0]?.legs[0];
-            if (leg) {
-              setRouteInfo({
-                distance: leg.distance?.text || "",
-                duration: leg.duration?.text || "",
-              });
-              setArrivalTime(new Date(Date.now() + (leg.duration?.value || 0) * 1000));
-            }
+            showLegs(result, idx);
+            setSearchError(null);
           } else {
-            setSearchError("Route konnte nicht berechnet werden.");
+            setSearchError("Route konnte nicht berechnet werden. Bitte erneut versuchen.");
           }
-        }
+        },
       );
-  };
+    },
+    [gate, showLegs],
+  );
 
-  const applyDestination = (dest: { lat: number; lng: number; label: string }) => {
-    setDestination(dest);
-    destinationRef.current = dest;
-    setDestinationQuery(dest.label);
-    setSearchError(null);
-    lastDirectionsResult.current = null;
-    setRouteInfo(null);
-    setRouteAlternatives([]);
-    setArrivalTime(null);
-    computeRoute(dest);
-  };
+  const applyDestination = useCallback(
+    (dest: Dest) => {
+      setDestination(dest);
+      destinationRef.current = dest;
+      preferredRouteIdx.current = 0;
+      setDestinationQuery(dest.label);
+      setSearchError(null);
+      lastDirectionsResult.current = null;
+      setRouteInfo(null);
+      setRouteAlternatives([]);
+      setArrivalTime(null);
+      computeRoute(dest);
+    },
+    [computeRoute],
+  );
+  const applyDestinationRef = useRef(applyDestination);
+  applyDestinationRef.current = applyDestination;
 
-  const selectRoute = (idx: number) => {
-    if (!directionsRendererRef.current || !lastDirectionsResult.current) return;
-    setSelectedRouteIdx(idx);
-    directionsRendererRef.current.setRouteIndex(idx);
-    const leg = lastDirectionsResult.current.routes[idx]?.legs[0];
-    if (leg) {
-      setRouteInfo({
-        distance: leg.distance?.text || "",
-        duration: leg.duration?.text || "",
+  // Google Maps init – mit Abbruch bei Unmount und Aufräumen aller Objekte.
+  useEffect(() => {
+    if (!mapRef.current) return;
+    let cancelled = false;
+    const listeners: google.maps.MapsEventListener[] = [];
+    setMapError(null);
+    setMapReady(false);
+    (async () => {
+      try {
+        setOptions({ key: GOOGLE_MAPS_API_KEY, v: "weekly" });
+        await Promise.all([importLibrary("maps"), importLibrary("places"), importLibrary("routes"), importLibrary("marker")]);
+        if (cancelled || !mapRef.current) return;
+        const map = new google.maps.Map(mapRef.current, {
+          center: { lat: 48.8, lng: 9.01 },
+          zoom: 13,
+          disableDefaultUI: true,
+          gestureHandling: "greedy",
+          styles: MONOCHROME_STYLE,
+          clickableIcons: false,
+        });
+        directionsServiceRef.current = new google.maps.DirectionsService();
+        geocoderRef.current = new google.maps.Geocoder();
+        directionsRendererRef.current = new google.maps.DirectionsRenderer({
+          map,
+          suppressMarkers: false,
+          polylineOptions: { strokeColor: "#000", strokeWeight: 5, strokeOpacity: 0.8 },
+        });
+        if (inputRef.current) {
+          autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
+            fields: ["geometry", "formatted_address", "name"],
+            componentRestrictions: { country: ["de", "at", "ch"] },
+          });
+          listeners.push(
+            autocompleteRef.current.addListener("place_changed", () => {
+              const place = autocompleteRef.current?.getPlace();
+              if (!place?.geometry?.location) {
+                setSearchError("Ort konnte nicht gefunden werden.");
+                return;
+              }
+              applyDestinationRef.current({
+                lat: place.geometry.location.lat(),
+                lng: place.geometry.location.lng(),
+                label: place.formatted_address || place.name || "",
+              });
+            }),
+          );
+        }
+        mapInstance.current = map;
+        setMapReady(true);
+        // Abholort als neutraler Ausgangsort (keine Standortbehauptung).
+        geocoderRef.current.geocode({ address: pickupAddress || DEFAULT_PICKUP_ADDRESS }, (res, status) => {
+          if (cancelled || status !== "OK" || !res?.[0]) return;
+          pickupRef.current = { lat: res[0].geometry.location.lat(), lng: res[0].geometry.location.lng() };
+          if (!positionRef.current && !destinationRef.current) map.panTo(pickupRef.current);
+          if (destinationRef.current && !lastDirectionsResult.current) computeRoute(destinationRef.current);
+        });
+        if (destinationRef.current) computeRoute(destinationRef.current);
+      } catch (err) {
+        if (cancelled) return;
+        console.error("Google Maps load error:", err);
+        setMapError("Karte konnte nicht geladen werden. Die Rückgabe funktioniert trotzdem.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+      gate.invalidate();
+      listeners.forEach((l) => l.remove());
+      directionsRendererRef.current?.setMap(null);
+      markerRef.current?.setMap(null);
+      directionsRendererRef.current = null;
+      directionsServiceRef.current = null;
+      markerRef.current = null;
+      autocompleteRef.current = null;
+      geocoderRef.current = null;
+      mapInstance.current = null;
+      lastDirectionsResult.current = null;
+    };
+  }, [mapAttempt, pickupAddress, computeRoute, gate]);
+
+  // Karte nach Reconnect erneut laden, falls sie fehlgeschlagen war.
+  useEffect(() => {
+    if (!mapError) return;
+    const retry = () => setMapAttempt((n) => n + 1);
+    window.addEventListener("online", retry);
+    return () => window.removeEventListener("online", retry);
+  }, [mapError]);
+
+  // Echter Standort-Marker nur bei echter Position
+  useEffect(() => {
+    positionRef.current = position;
+    const map = mapInstance.current;
+    if (!position || !map) return;
+    if (!markerRef.current) {
+      markerRef.current = new google.maps.Marker({
+        position,
+        map,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: "#000",
+          fillOpacity: 1,
+          strokeColor: "#fff",
+          strokeWeight: 3,
+        },
       });
-      setArrivalTime(new Date(Date.now() + (leg.duration?.value || 0) * 1000));
+    } else markerRef.current.setPosition(position);
+    if (!destinationRef.current) map.panTo(position);
+    if (destinationRef.current && (!lastDirectionsResult.current || routeFromPickup)) computeRoute(destinationRef.current);
+  }, [position, mapReady, computeRoute, routeFromPickup]);
+
+  const recenter = () => {
+    if (position && mapInstance.current) {
+      mapInstance.current.panTo(position);
+      mapInstance.current.setZoom(16);
     }
+  };
+
+  const selectRoute = (originalIndex: number) => {
+    if (!directionsRendererRef.current || !lastDirectionsResult.current) return;
+    preferredRouteIdx.current = originalIndex;
+    setSelectedRouteIdx(originalIndex);
+    directionsRendererRef.current.setRouteIndex(originalIndex);
+    showLegs(lastDirectionsResult.current, originalIndex);
   };
 
   const startNavigation = () => {
     setNavMode(true);
     setSheetExpanded(false);
     if (mapInstance.current && position) {
-      mapInstance.current.panTo({ lat: position.lat, lng: position.lng });
+      mapInstance.current.panTo(position);
       mapInstance.current.setZoom(16);
     }
   };
@@ -358,8 +429,11 @@ export function ActiveTripDashboard({
   };
 
   const clearDestination = () => {
+    gate.invalidate();
     setDestination(null);
     destinationRef.current = null;
+    preferredRouteIdx.current = 0;
+    setSelectedRouteIdx(0);
     setDestinationQuery("");
     setRouteInfo(null);
     setSearchError(null);
@@ -367,37 +441,67 @@ export function ActiveTripDashboard({
     setArrivalTime(null);
     setNavMode(false);
     lastDirectionsResult.current = null;
-    if (directionsRendererRef.current) {
-      directionsRendererRef.current.set("directions", null);
-    }
+    directionsRendererRef.current?.set("directions", null);
   };
+
+  const enablePush = async () => {
+    setPushState("busy");
+    const r = await enablePushOnThisDevice().catch(() => ({ ok: false as const, reason: "" }));
+    setPushState(r.ok ? "on" : (await getPushStatus()) === "denied" ? "denied" : "off");
+  };
+
+  const reminderBanner =
+    timeState !== "running" ? (
+      <div
+        role="status"
+        className="mt-3 pointer-events-auto rounded-2xl bg-foreground text-background px-4 py-3 shadow-lg"
+        data-testid="return-reminder"
+      >
+        <p className="text-sm font-semibold">
+          {timeState === "reminder"
+            ? `Noch ${Math.max(1, Math.ceil(remaining / 60000))} Min. bis zur Rückgabe (${formatBerlin(endAtMs)} Uhr)`
+            : `Rückgabezeit überschritten (${formatBerlin(endAtMs)} Uhr)`}
+        </p>
+        <p className="text-xs opacity-80">Sobald du sicher geparkt hast, starte die Rückgabe. Bitte nicht während der Fahrt bedienen.</p>
+      </div>
+    ) : null;
 
   return (
     <div className="fixed inset-0 bg-background overflow-hidden">
-      {/* Vollbild-Karte */}
-      <div ref={mapRef} className="absolute inset-0 z-0" />
+      <div ref={mapRef} className="absolute inset-0 z-0" aria-label="Karte" />
 
-      {/* GPS-Berechtigungs-Dialog */}
-      {!gpsAsked && (
-        <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+      {mapError && (
+        <div className="absolute inset-0 z-[1] flex items-center justify-center p-6">
+          <div className="rounded-2xl bg-background p-4 text-center shadow-lg max-w-xs">
+            <p className="text-sm text-foreground mb-3">{mapError}</p>
+            <button
+              onClick={() => setMapAttempt((n) => n + 1)}
+              className="min-h-11 rounded-full bg-foreground px-5 text-sm font-semibold text-background inline-flex items-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" /> Karte neu laden
+            </button>
+          </div>
+        </div>
+      )}
+
+      {gpsChoice === null && (
+        <div className="absolute inset-0 z-40 bg-foreground/60 backdrop-blur-sm flex items-center justify-center p-6">
           <div className="bg-background rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl">
             <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
               <Navigation className="w-8 h-8 text-foreground" />
             </div>
             <h2 className="text-xl font-bold mb-2">Standort verwenden?</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Darf MyTransporter dein GPS verwenden, um deinen Standort auf der Karte anzuzeigen und die Fahrt aufzuzeichnen?
+              Freiwillig: Mit deinem Standort zeigen wir dich auf der Karte und berechnen Routen ab deiner Position, solange diese Seite geöffnet ist.
+              Ohne Standort starten Routen am Abholort.
             </p>
             <div className="space-y-2">
-              <button
-                onClick={() => setGpsAsked(true)}
-                className="w-full rounded-full bg-accent py-3 text-accent-foreground font-semibold"
-              >
+              <button onClick={() => setGpsChoice("granted")} className="w-full min-h-12 rounded-full bg-accent py-3 text-accent-foreground font-semibold">
                 Ja, Standort erlauben
               </button>
               <button
-                onClick={() => { setGpsAsked(true); setGpsDenied(true); }}
-                className="w-full rounded-full bg-secondary py-3 text-foreground font-medium text-sm"
+                onClick={() => setGpsChoice("declined")}
+                className="w-full min-h-12 rounded-full bg-secondary py-3 text-foreground font-medium text-sm"
               >
                 Nicht jetzt
               </button>
@@ -406,37 +510,40 @@ export function ActiveTripDashboard({
         </div>
       )}
 
-      {/* Top-Statusbar */}
-      <div className="absolute top-0 left-0 right-0 z-20 p-4 pt-safe pointer-events-none">
+      {/* Top-Leiste mit Logo → Startseite */}
+      <div className="absolute top-0 left-0 right-0 z-20 p-4 pointer-events-none" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
         <div className="flex items-center justify-between gap-3">
-          <div className="pointer-events-auto inline-flex items-center gap-2 bg-foreground text-background rounded-full px-4 py-2 shadow-lg">
+          <Link
+            to="/"
+            aria-label="MyTransporter Startseite"
+            className="pointer-events-auto inline-flex min-h-11 items-center rounded-full bg-background/95 px-3 shadow-lg"
+          >
+            <img src={logoImage} alt="MyTransporter" className="h-7 w-auto" />
+          </Link>
+          <div className="pointer-events-auto inline-flex min-h-11 items-center gap-2 bg-foreground text-background rounded-full px-4 shadow-lg">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-background opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-background" />
             </span>
-            <span className="text-sm font-semibold">Fahrt läuft</span>
-          </div>
-          <div className="pointer-events-auto bg-background/95 backdrop-blur rounded-full px-4 py-2 shadow-lg">
-            <p className="text-sm font-mono font-bold tabular-nums">{elapsedStr}</p>
+            <span className="text-sm font-semibold font-mono tabular-nums">{formatDuration(elapsed)}</span>
           </div>
         </div>
 
-        {gpsDenied && (
+        {reminderBanner}
+
+        {gpsError && (
           <div className="mt-3 pointer-events-auto bg-background/95 backdrop-blur rounded-2xl px-4 py-3 shadow-lg flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-foreground">
-              GPS-Zugriff wurde abgelehnt. Bitte in den Browser-Einstellungen erlauben, damit deine Fahrt aufgezeichnet werden kann.
-            </p>
+            <p className="text-xs text-foreground">{gpsError}</p>
           </div>
         )}
       </div>
 
-      {/* Recenter-Button */}
       {position && (
         <button
           onClick={recenter}
           className="absolute right-4 z-20 bg-background rounded-full p-3 shadow-lg hover:scale-105 transition-all"
-          style={{ bottom: sheetExpanded ? "calc(60vh + 16px)" : "180px" }}
+          style={{ bottom: sheetExpanded ? "calc(60vh + 16px)" : "200px" }}
           aria-label="Auf meine Position zentrieren"
         >
           <Locate className="w-5 h-5 text-foreground" />
@@ -445,32 +552,26 @@ export function ActiveTripDashboard({
 
       {/* Bottom-Sheet */}
       <div
-        className={`absolute left-0 right-0 bottom-0 z-10 bg-background rounded-t-3xl shadow-2xl transition-all duration-300 ease-out`}
-        style={{ maxHeight: sheetExpanded ? "60vh" : navMode ? "200px" : "150px" }}
+        className="absolute left-0 right-0 bottom-0 z-10 bg-background rounded-t-3xl shadow-2xl transition-all duration-300 ease-out"
+        style={{ maxHeight: sheetExpanded ? "60vh" : navMode ? "210px" : "170px", paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        {/* Drag-Handle */}
         <button
           onClick={() => setSheetExpanded((v) => !v)}
           className="w-full pt-3 pb-2 flex flex-col items-center gap-1 cursor-pointer"
           aria-label={sheetExpanded ? "Einklappen" : "Ausklappen"}
         >
           <div className="w-10 h-1 rounded-full bg-border" />
-          {sheetExpanded ? (
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-          ) : (
-            <ChevronUp className="w-4 h-4 text-muted-foreground" />
-          )}
+          {sheetExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronUp className="w-4 h-4 text-muted-foreground" />}
         </button>
 
         <div className="px-5 pb-6 overflow-y-auto" style={{ maxHeight: "calc(60vh - 50px)" }}>
-          {/* Kompakter Navi-Modus */}
           {navMode && !sheetExpanded && destination && (
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-2">
                 <div className="p-2.5 rounded-2xl bg-secondary text-center">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Ankunft</p>
                   <p className="text-sm font-bold tabular-nums">
-                    {arrivalTime ? format(arrivalTime, "HH:mm") : "--:--"}
+                    {arrivalTime ? arrivalTime.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }) : "--:--"}
                   </p>
                 </div>
                 <div className="p-2.5 rounded-2xl bg-secondary text-center">
@@ -483,226 +584,248 @@ export function ActiveTripDashboard({
                 </div>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={stopNavigation}
-                  className="flex-1 rounded-full bg-secondary py-3 text-foreground font-medium text-sm"
-                >
+                <button onClick={stopNavigation} className="flex-1 min-h-12 rounded-full bg-secondary py-3 text-foreground font-medium text-sm">
                   Navigation beenden
                 </button>
-                <button
-                  onClick={onReturn}
-                  className="flex-1 rounded-full bg-accent py-3 text-accent-foreground font-semibold text-sm"
-                >
-                  Fahrt beenden
+                <button onClick={onReturn} className="flex-1 min-h-12 rounded-full bg-accent py-3 text-accent-foreground font-semibold text-sm">
+                  Rückgabe starten
                 </button>
               </div>
             </div>
           )}
 
-          {!navMode && (
-          <>
-          {/* Fahrzeug-Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-xs text-muted-foreground">{planLabel}</p>
-              <h2 className="text-lg font-bold text-foreground">{vehicleName}</h2>
-              <p className="text-xs text-muted-foreground font-mono">{vehiclePlate}</p>
-            </div>
-          </div>
-
-          {sheetExpanded && (
+          {!(navMode && !sheetExpanded && destination) && (
             <>
-              {/* Trip-Stats */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="p-3 rounded-2xl bg-secondary">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Fahrtzeit</span>
-                  </div>
-                  <p className="text-lg font-mono font-bold tabular-nums">{elapsedStr}</p>
-                </div>
-                <div className="p-3 rounded-2xl bg-secondary">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Gauge className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Start-KM</span>
-                  </div>
-                  <p className="text-lg font-bold">{startKm.toLocaleString("de-DE")}</p>
-                </div>
-                <div className="p-3 rounded-2xl bg-secondary">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Start</span>
-                  </div>
-                  <p className="text-sm font-semibold">{startHour}:00 Uhr</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {format(startDate, "EEE, dd.MM.", { locale: de })}
-                  </p>
-                </div>
-                <div className="p-3 rounded-2xl bg-foreground text-background">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Clock className="w-3.5 h-3.5 opacity-70" />
-                    <span className="text-xs opacity-70">Rückgabe bis</span>
-                  </div>
-                  <p className="text-sm font-semibold">
-                    {format(returnDateTime, "HH:mm", { locale: de })} Uhr
-                  </p>
-                  <p className="text-[11px] opacity-70">
-                    {format(returnDateTime, "EEE, dd.MM.", { locale: de })} · {planDurationHours}h
-                  </p>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">{planLabel}</p>
+                  <h2 className="text-lg font-bold text-foreground">{vehicleName}</h2>
+                  <p className="text-xs text-muted-foreground font-mono">{vehiclePlate}</p>
                 </div>
               </div>
 
-              {/* Navigation */}
-              <div className="mb-4">
-                <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
-                  <Navigation className="w-3.5 h-3.5" /> Navigation
-                </p>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const q = destinationQuery.trim();
-                    if (!q || !geocoderRef.current) return;
-                    geocoderRef.current.geocode({ address: q }, (results, status) => {
-                      if (status === "OK" && results && results[0]) {
-                        const r = results[0];
-                        applyDestination({
-                          lat: r.geometry.location.lat(),
-                          lng: r.geometry.location.lng(),
-                          label: r.formatted_address,
-                        });
-                      } else {
-                        setSearchError("Adresse nicht gefunden.");
-                      }
-                    });
-                  }}
-                  className="flex gap-2"
-                >
-                  <div className="relative flex-1">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={destinationQuery}
-                      onChange={(e) => setDestinationQuery(e.target.value)}
-                      placeholder="Zieladresse eingeben..."
-                      className="w-full rounded-full bg-secondary pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="rounded-full bg-foreground text-background px-4 text-sm font-semibold"
-                  >
-                    Suchen
-                  </button>
-                </form>
-                {searchError && (
-                  <p className="text-xs text-muted-foreground mt-2">{searchError}</p>
-                )}
-                {destination && (
-                  <div className="mt-2 p-3 rounded-2xl bg-secondary">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Ziel</p>
-                        <p className="text-sm font-medium truncate">{destination.label}</p>
+              {sheetExpanded && (
+                <>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="p-3 rounded-2xl bg-secondary">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Mietdauer bisher</span>
                       </div>
-                      <button
-                        onClick={clearDestination}
-                        aria-label="Ziel entfernen"
-                        className="w-6 h-6 rounded-full bg-background flex items-center justify-center flex-shrink-0"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                      <p className="text-lg font-mono font-bold tabular-nums">{formatDuration(elapsed)}</p>
                     </div>
-                    {routeInfo && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="p-2 rounded-xl bg-background text-center">
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Distanz</p>
-                          <p className="text-sm font-bold">{routeInfo.distance}</p>
-                        </div>
-                        <div className="p-2 rounded-xl bg-background text-center">
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fahrzeit</p>
-                          <p className="text-sm font-bold">{routeInfo.duration}</p>
-                        </div>
+                    <div className="p-3 rounded-2xl bg-secondary">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Gauge className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Start-KM</span>
                       </div>
-                    )}
-                    {routeAlternatives.length > 1 && (
-                      <div className="mt-2 space-y-1.5">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Routen</p>
-                        {routeAlternatives.map((alt, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => selectRoute(idx)}
-                            className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left transition-all ${
-                              selectedRouteIdx === idx
-                                ? "bg-foreground text-background"
-                                : "bg-background text-foreground"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <RouteIcon className="w-3.5 h-3.5" />
-                              <span className="text-xs font-medium">
-                                {idx === 0 ? "Schnellste" : `Alternative ${idx}`}
-                              </span>
-                            </div>
-                            <span className="text-xs font-bold tabular-nums">
-                              {alt.duration} · {alt.distance}
-                            </span>
-                          </button>
-                        ))}
+                      <p className="text-lg font-bold">{startKm.toLocaleString("de-DE")}</p>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-secondary">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Mietbeginn</span>
                       </div>
-                    )}
-                    <button
-                      onClick={startNavigation}
-                      disabled={!routeInfo}
-                      className="mt-3 w-full rounded-full bg-foreground text-background py-3 font-semibold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100"
+                      <p className="text-sm font-semibold">{formatBerlin(startAtMs)} Uhr</p>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-foreground text-background">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Clock className="w-3.5 h-3.5 opacity-70" />
+                        <span className="text-xs opacity-70">Rückgabe bis</span>
+                      </div>
+                      <p className="text-sm font-semibold" data-testid="return-deadline">{formatBerlin(endAtMs)} Uhr</p>
+                      <p className="text-[11px] opacity-70">
+                        {planDurationHours} h · {remaining > 0 ? `noch ${formatDuration(remaining)}` : "überschritten"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                      <Navigation className="w-3.5 h-3.5" /> Navigation
+                    </p>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const q = destinationQuery.trim();
+                        if (!q) return;
+                        if (!geocoderRef.current) {
+                          setSearchError("Karte ist noch nicht bereit. Bitte gleich erneut versuchen.");
+                          return;
+                        }
+                        geocoderRef.current.geocode({ address: q }, (results, status) => {
+                          if (status === "OK" && results && results[0]) {
+                            const r = results[0];
+                            applyDestination({ lat: r.geometry.location.lat(), lng: r.geometry.location.lng(), label: r.formatted_address });
+                          } else setSearchError("Adresse nicht gefunden.");
+                        });
+                      }}
+                      className="flex gap-2"
                     >
-                      <Flag className="w-4 h-4" />
-                      {routeInfo ? "Route starten" : "Route wird berechnet…"}
+                      <div className="relative flex-1">
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={destinationQuery}
+                          onChange={(e) => setDestinationQuery(e.target.value)}
+                          placeholder="Zieladresse eingeben..."
+                          className="w-full min-h-11 rounded-full bg-secondary pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+                        />
+                      </div>
+                      <button type="submit" className="min-h-11 rounded-full bg-foreground text-background px-4 text-sm font-semibold">
+                        Suchen
+                      </button>
+                    </form>
+                    {searchError && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground flex-1">{searchError}</p>
+                        {destination && (
+                          <button onClick={() => computeRoute(destination)} className="min-h-11 text-xs font-semibold underline">
+                            Erneut versuchen
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {gpsChoice === "declined" && (
+                      <button onClick={() => setGpsChoice("granted")} className="mt-2 min-h-11 text-xs font-medium underline">
+                        Standort jetzt verwenden
+                      </button>
+                    )}
+                    {destination && (
+                      <div className="mt-2 p-3 rounded-2xl bg-secondary">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-muted-foreground">Ziel</p>
+                            <p className="text-sm font-medium break-words">{destination.label}</p>
+                            {routeFromPickup && routeInfo && (
+                              <p className="text-[11px] text-muted-foreground">Route ab Abholort – nicht ab deinem Standort.</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={clearDestination}
+                            aria-label="Ziel entfernen"
+                            className="w-11 h-11 rounded-full bg-background flex items-center justify-center flex-shrink-0"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        {routeInfo && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="p-2 rounded-xl bg-background text-center">
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Distanz</p>
+                              <p className="text-sm font-bold">{routeInfo.distance}</p>
+                            </div>
+                            <div className="p-2 rounded-xl bg-background text-center">
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fahrzeit</p>
+                              <p className="text-sm font-bold">{routeInfo.duration}</p>
+                            </div>
+                          </div>
+                        )}
+                        {routeAlternatives.length > 1 && (
+                          <div className="mt-2 space-y-1.5">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Routen</p>
+                            {routeAlternatives.map((alt, rank) => (
+                              <button
+                                key={alt.originalIndex}
+                                onClick={() => selectRoute(alt.originalIndex)}
+                                className={`w-full min-h-11 flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left transition-all ${
+                                  selectedRouteIdx === alt.originalIndex ? "bg-foreground text-background" : "bg-background text-foreground"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <RouteIcon className="w-3.5 h-3.5" />
+                                  <span className="text-xs font-medium">{rank === 0 ? "Schnellste" : `Alternative ${rank}`}</span>
+                                </div>
+                                <span className="text-xs font-bold tabular-nums">
+                                  {alt.duration} · {alt.distance}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <button
+                          onClick={startNavigation}
+                          disabled={!routeInfo}
+                          className="mt-3 w-full min-h-12 rounded-full bg-foreground text-background py-3 font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          <Flag className="w-4 h-4" />
+                          {routeInfo ? "Route starten" : "Route wird berechnet…"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mb-4 rounded-2xl border border-border p-3">
+                    <button
+                      onClick={() => setShowChecklist((v) => !v)}
+                      aria-expanded={showChecklist}
+                      className="w-full min-h-11 flex items-center justify-between text-sm font-medium"
+                    >
+                      <span className="flex items-center gap-2">
+                        <ListChecks className="w-4 h-4" /> Rückgabe-Checkliste
+                      </span>
+                      {showChecklist ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                    {showChecklist && (
+                      <ul className="mt-2 space-y-1 text-xs text-muted-foreground" data-testid="return-checklist">
+                        {CHECKLIST.map((c) => (
+                          <li key={c}>• {c}</li>
+                        ))}
+                        {(addons ?? []).map((a) => (
+                          <li key={a.id}>• Zubehör: {a.label}</li>
+                        ))}
+                        <li className="pt-1">Sobald du sicher geparkt hast, starte die Rückgabe.</li>
+                      </ul>
+                    )}
+                  </div>
+
+                  {pushState !== "unknown" && pushState !== "unsupported" && (
+                    <div className="mb-4 rounded-2xl bg-secondary p-3 text-xs text-muted-foreground">
+                      {pushState === "on" ? (
+                        <p className="flex items-center gap-2">
+                          <Bell className="w-4 h-4" /> Erinnerung aufs Gerät ist aktiv.
+                        </p>
+                      ) : pushState === "denied" ? (
+                        <p>Benachrichtigungen sind blockiert. Du kannst sie in den Browser-Einstellungen erlauben. Die Erinnerung auf dieser Seite bleibt.</p>
+                      ) : pushState === "iframe" ? (
+                        <p>Für Erinnerungen aufs Gerät öffne die App in einem eigenen Tab.</p>
+                      ) : (
+                        <button onClick={enablePush} disabled={pushState === "busy"} className="min-h-11 inline-flex items-center gap-2 font-medium text-foreground underline">
+                          <Bell className="w-4 h-4" /> Rückgabe-Erinnerung aufs Gerät erhalten (freiwillig)
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="p-3 rounded-xl bg-secondary mb-4 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Nicht rauchen · Vollgetankt zurückgeben · Rückgabe pünktlich</p>
+                  </div>
+                </>
+              )}
+
+              {!confirmEnd ? (
+                <button
+                  onClick={() => setConfirmEnd(true)}
+                  className="w-full min-h-12 rounded-full bg-accent py-4 text-accent-foreground font-semibold text-base shadow-lg"
+                >
+                  Rückgabe starten
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-center text-sm text-muted-foreground">Hast du sicher geparkt? Dann starte jetzt die Rückgabe.</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => setConfirmEnd(false)} className="min-h-12 rounded-full bg-secondary py-3 text-foreground font-medium text-sm">
+                      Abbrechen
+                    </button>
+                    <button onClick={onReturn} className="min-h-12 rounded-full bg-accent py-3 text-accent-foreground font-semibold text-sm">
+                      Ja, Rückgabe starten
                     </button>
                   </div>
-                )}
-              </div>
-
-              {/* Hinweise */}
-              <div className="p-3 rounded-xl bg-secondary mb-4 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
-                <p className="text-xs text-muted-foreground">
-                  Nicht rauchen · Vollgetankt zurückgeben · Rückgabe pünktlich
-                </p>
-              </div>
+                </div>
+              )}
             </>
-          )}
-
-          {/* Beenden-Button */}
-          {!confirmEnd ? (
-            <button
-              onClick={() => setConfirmEnd(true)}
-              className="w-full rounded-full bg-accent py-4 text-accent-foreground font-semibold text-base hover:scale-[1.02] transition-all shadow-lg"
-            >
-              Fahrt beenden
-            </button>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-center text-sm text-muted-foreground">
-                Fahrt wirklich beenden?
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setConfirmEnd(false)}
-                  className="rounded-full bg-secondary py-3 text-foreground font-medium text-sm hover:bg-secondary/80 transition-all"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  onClick={onReturn}
-                  className="rounded-full bg-accent py-3 text-accent-foreground font-semibold text-sm hover:scale-[1.02] transition-all"
-                >
-                  Ja, beenden
-                </button>
-              </div>
-            </div>
-          )}
-          </>
           )}
         </div>
       </div>
