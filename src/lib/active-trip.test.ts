@@ -8,7 +8,7 @@ const row = (o: Partial<ActiveTripRow>): ActiveTripRow => ({
   id: "b1",
   user_id: "u1",
   status: "active",
-  start_date: "2026-10-05",
+  start_date: "2026-10-08",
   start_hour: 10,
   plan_id: "24h",
   ...o,
@@ -17,7 +17,7 @@ const row = (o: Partial<ActiveTripRow>): ActiveTripRow => ({
 describe("Zeit-Resolver (Europe/Berlin, Spiegel von plan_end_at)", () => {
   it("24h im Sommer: Start 10:00 Berlin = 08:00 UTC", () => {
     const w = resolveTripWindow(row({}));
-    expect(new Date(w.startMs).toISOString()).toBe("2026-10-05T08:00:00.000Z");
+    expect(new Date(w.startMs).toISOString()).toBe("2026-10-08T08:00:00.000Z");
     expect(w.endMs - w.startMs).toBe(24 * 3600_000);
   });
   it("Zeitumstellung 25.10.: +24h echte Stunden (wie timestamptz + interval)", () => {
@@ -56,7 +56,7 @@ describe("Aktive Miete", () => {
     expect(pickActiveTrip([row({})], null)).toBeNull();
   });
   it("mehrere: geöffnete ID hat Vorrang, sonst früheres Ende", () => {
-    const rows = [row({ id: "late", start_date: "2026-10-06" }), row({ id: "early" }), row({ id: "ret", status: "returning", start_date: "2026-10-07" })];
+    const rows = [row({ id: "late", start_date: "2026-10-09" }), row({ id: "early" }), row({ id: "ret", status: "returning", start_date: "2026-10-10" })];
     expect(pickActiveTrip(rows, "u1")?.id).toBe("early");
     expect(pickActiveTrip(rows, "u1", "ret")?.returning).toBe(true);
     expect(pickActiveTrip(rows, "u1", "unbekannt")?.id).toBe("early");
@@ -75,7 +75,7 @@ describe("Aktive Miete", () => {
 });
 
 describe("Push-Erinnerung (Cron 15 min)", () => {
-  const r = { id: "b1", user_id: "u1", status: "active", start_date: "2026-10-05", start_hour: 10, plan_id: "6h", return_reminder_10min_for: null };
+  const r = { id: "b1", user_id: "u1", status: "active", start_date: "2026-10-08", start_hour: 10, plan_id: "6h", return_reminder_10min_for: null };
   const end = resolveTripWindow(r).endMs;
   it("zu früh nicht, im Fenster ja, schon erinnert nein, Endzeit geändert erneut", () => {
     expect(dueReturnReminders([r], end - 11 * 60_000)).toHaveLength(0);
@@ -108,5 +108,33 @@ describe("Routen", () => {
     expect(g.isCurrent(b)).toBe(true);
     g.invalidate();
     expect(g.isCurrent(b)).toBe(false);
+  });
+});
+
+describe("Stichtag für Pflicht-Abschluss", async () => {
+  const { isLegacyOpenTrip, pickActiveTrip: pick, TRIP_COMPLETION_REQUIRED_FROM } = await import("./active-trip");
+  const { dueReturnReminders } = await import("./return-reminder");
+  const base = { user_id: "u1", start_hour: 10, plan_id: "24h" };
+  it("offene Altbuchungen vor dem Stichtag verfallen, ab Stichtag nicht", () => {
+    expect(TRIP_COMPLETION_REQUIRED_FROM).toBe("2026-10-06");
+    expect(isLegacyOpenTrip({ status: "active", start_date: "2026-05-20" })).toBe(true);
+    expect(isLegacyOpenTrip({ status: "returning", start_date: "2026-10-05" })).toBe(true);
+    expect(isLegacyOpenTrip({ status: "active", start_date: "2026-10-06" })).toBe(false);
+    expect(isLegacyOpenTrip({ status: "completed", start_date: "2026-05-20" })).toBe(false);
+    expect(isLegacyOpenTrip({ status: "cancelled", start_date: "2026-05-20" })).toBe(false);
+  });
+  it("Banner-Auswahl ignoriert Altbuchungen", () => {
+    const rows = [
+      { ...base, id: "mai", status: "active", start_date: "2026-05-20" },
+      { ...base, id: "mai-r", status: "returning", start_date: "2026-05-26" },
+    ];
+    expect(pick(rows, "u1")).toBeNull();
+    expect(pick(rows, "u1", "mai")).toBeNull();
+    expect(pick([...rows, { ...base, id: "neu", status: "active", start_date: "2026-10-06" }], "u1")?.id).toBe("neu");
+  });
+  it("keine Rückgabe-Erinnerung für Altbuchungen", () => {
+    const r = { ...base, id: "mai", status: "active", start_date: "2026-05-20", return_reminder_10min_for: null };
+    const end = Date.parse("2026-05-21T08:00:00Z");
+    expect(dueReturnReminders([r], end - 5 * 60_000)).toHaveLength(0);
   });
 });

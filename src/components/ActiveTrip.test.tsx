@@ -47,7 +47,7 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
-const activeRow = { id: "b1", user_id: "u1", status: "active", start_date: "2026-10-05", start_hour: 10, plan_id: "24h" };
+const activeRow = { id: "b1", user_id: "u1", status: "active", start_date: "2026-10-08", start_hour: 10, plan_id: "24h" };
 
 describe("Globale Leiste 'Sofort zurückkehren'", () => {
   it("erscheint außerhalb der Fahrt und führt exakt zur laufenden Fahrt", async () => {
