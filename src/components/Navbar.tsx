@@ -2,7 +2,7 @@ import { publicOrigin } from "@/lib/native/platform";
 import { AddressFields } from "@/components/AddressFields";
 import { EMPTY_ADDRESS, addressSignUpMetadata } from "@/lib/address";
 import { useEffect, useState } from "react";
-import { User, X, ChevronRight, Eye, EyeOff, Route as RouteIcon, Shield } from "lucide-react";
+import { Menu, User, X, ChevronRight, Eye, EyeOff, Route as RouteIcon, Shield } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { trackCompleteRegistration } from "@/lib/analytics";
@@ -25,6 +25,7 @@ export function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -306,6 +307,15 @@ export function Navbar() {
             </div>
           )}
         </div>
+        {showMobileMenu && (
+          <div className="sm:hidden border-t border-border/50 bg-background px-3 py-2">
+            {([["/preise","Preise"],["/langzeitmiete","Langzeitmiete"],["/werbung","Werbefläche"]] as const).map(([to,label]) => (
+              <Link key={to} to={to} onClick={() => setShowMobileMenu(false)} className="flex min-h-11 items-center rounded-lg px-2 text-base font-medium text-foreground hover:bg-secondary">
+                {label}
+              </Link>
+            ))}
+          </div>
+        )}
       </nav>
 
       {showModal && (
