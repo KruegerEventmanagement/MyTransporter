@@ -40,7 +40,7 @@ npx cap doctor
 ## Universal Links / App Links
 
 **Android (Stand 05.10.2026):** `public/.well-known/assetlinks.json` enthält `delegate_permission/common.handle_all_urls`, `android_app`, `de.mytransporter.app` und ausschließlich den SHA-256 der Google-Play-**App-Signatur** (`78:19:B9:…:81:E8`), keinen Upload- oder Debug-Key. Manifest: `autoVerify="true"` für `https://mytransporter.org` und `https://www.mytransporter.org`.
-- `https://mytransporter.org/.well-known/assetlinks.json` ist der verifizierte Host (Auslieferung siehe Prüfprotokoll unten).
+- `https://mytransporter.org/.well-known/assetlinks.json` liefert live HTTP 200 mit `application/json`; Googles Digital-Asset-Links-API liest für `https://mytransporter.org` genau diese Verknüpfung (geprüft 05.10.2026, 21:30 UTC).
 - `www.mytransporter.org` antwortet mit 302-Weiterleitung auf die Root-Domain. Android folgt bei der Verifizierung keinen Weiterleitungen, daher wird www **nicht** verifiziert; www-Links öffnen ggf. den Browser, der dann auf die Root-Domain umleitet. Root-Links sind davon unabhängig. Für www-Verifizierung müsste www die Datei direkt mit 200 ausliefern (Hosting-Einstellung) – keine neue App-Version nötig.
 - Ein lokaler Debug-Build (anderer Schlüssel) wird bewusst nicht verifiziert.
 
