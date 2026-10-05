@@ -292,7 +292,6 @@ export const Route = createFileRoute("/api/public/hooks/send-reminders")({
               reminders_30min: r30,
               manual_24h: m24,
               manual_30min: m30,
-              return_10min: ret,
             }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );
