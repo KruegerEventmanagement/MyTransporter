@@ -1,3 +1,4 @@
+import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 import { AddressFields } from "@/components/AddressFields";
 import { EMPTY_ADDRESS } from "@/lib/address";
 import { addressFromRow, loadOwnProfile, saveOwnProfileData, type ProfileLoadStatus } from "@/lib/profile-data";
