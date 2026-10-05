@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "de.mytransporter.app",
+      "sha256_cert_fingerprints": [
+        "78:19:B9:E8:4F:C9:D3:E9:B3:4F:08:84:94:0D:DB:FB:49:F6:0C:05:7A:D1:0D:41:51:04:48:FB:66:CE:81:E8"
+      ]
+    }
+  }
+]
