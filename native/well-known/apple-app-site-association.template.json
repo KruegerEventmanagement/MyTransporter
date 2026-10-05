@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["APPLE_TEAM_ID.de.mytransporter.app"],
+        "components": [
+          { "/": "/trip/*" },
+          { "/": "/buchung/*" },
+          { "/": "/checkout/return" },
+          { "/": "/auth/confirm" }
+        ]
+      }
+    ]
+  }
+}

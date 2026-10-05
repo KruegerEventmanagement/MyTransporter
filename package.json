@@ -12,7 +12,13 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p .",
+    "build:native": "node scripts/build-native.mjs",
+    "cap:sync": "node scripts/build-native.mjs && cap sync",
+    "cap:android": "node scripts/build-native.mjs && cap sync android && cap open android",
+    "cap:ios": "node scripts/build-native.mjs && cap sync ios && cap open ios",
+    "cap:doctor": "cap doctor",
+    "android:debug": "node scripts/build-native.mjs && cap sync android && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.48",
