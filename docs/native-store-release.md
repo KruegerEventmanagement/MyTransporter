@@ -1,6 +1,6 @@
 # MyTransporter – Native App (iOS/Android) Build & Release
 
-Stand: 05.10.2026. Kein Store-Upload aus Lovable. Keine Secrets im Repository.
+Stand: 05.10.2026, 21:32 UTC (23:30 Europe/Berlin). Kein Store-Upload aus Lovable. Keine Secrets im Repository.
 
 ## Architektur
 
@@ -48,7 +48,7 @@ npx cap doctor
 
 ## Android / Google Play
 
-Stand 05.10.2026: Das Google-Play-Entwicklerkonto „Krueger Eventmanagement“ besteht bereits (vier Apps). Ob `de.mytransporter.app` dort angelegt ist, ist noch ungeprüft.
+Stand 05.10.2026: Das Google-Play-Entwicklerkonto „Krueger Eventmanagement“ besteht bereits (vier Apps); die App `de.mytransporter.app` ist in der Play Console angelegt.
 
 1. In der Play Console App `de.mytransporter.app` anlegen bzw. prüfen; Play App Signing aktivieren.
 2. Upload-Keystore lokal erzeugen (`keytool -genkey -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000`) – **nicht committen**.
@@ -126,17 +126,24 @@ Preflight `OPTIONS` auf `/_serverFn/*`, `/api/*` → 204 nur für App-Origins; C
 | `npx cap sync android` | 0 |
 | Gradle `assembleDebug`/`lintDebug`/`bundleRelease` | **nicht lokal ausführbar** – läuft erst im GitHub-Workflow |
 
-## Release-Stand Android (05.10.2026)
+## Release-Stand Android (05.10.2026, 23:30 Europe/Berlin)
 
-- Play Console: App `de.mytransporter.app` angelegt; **interner Test** mit 1.0.0 / versionCode **1001** veröffentlicht. Kein offener oder Produktions-Release.
-- Nächster Build: **1.0.1 / versionCode 1002** mit den Mobile-Darstellungsfixes (Handy-Menü, Schrittanzeige, Kalenderbreite); wird lokal gebaut und manuell hochgeladen, bis die CI-Signierung eingerichtet ist. Achtung: die CI-Formel `1000 + run_number*100 + run_attempt` erzeugt deutlich höhere Codes – nach einem CI-Upload sind manuelle Codes darunter nicht mehr möglich.
-- Vor Produktionszugang (neues persönliches/Organisationskonto-Regel von Google Play): mindestens **12 echte Tester** müssen **14 Tage durchgehend** im geschlossenen Test angemeldet sein.
-- Die **fünf GitHub-Secrets** (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`) fehlen noch; bis dahin lädt CI nichts hoch.
+- Play Console: App `de.mytransporter.app` angelegt; **interner Test** mit 1.0.1 / versionCode **1002** am 05.10.2026 23:30 Europe/Berlin veröffentlicht. 1.0.0 / 1001 ist damit ersetzt. Kein offener oder Produktions-Release.
+- **Store-Eintrag** (Deutsch) mit Icon, Featuregrafik und 2 Screenshots ist „Bereit für die Überprüfung“. Der App-Name ist noch temporär und nicht reviewt.
+- **Testerliste** mit `info@mytransporter.org` und `superkruger5@gmail.com` ist nur vorbereitet, **nicht gespeichert** – die automatische Freigabeprüfung verlangt eine konkrete Zustimmung.
+- **IARC-Nutzungsbedingungen** noch **nicht** akzeptiert; danach ist der Fragebogen offen.
+- **Prüferzugang fehlt**; dadurch sind Zielgruppe und fertig ausgefüllte Datensicherheit (als Entwurf) noch blockiert.
+- Kein Produktionszugang vor **12 Testern / 14 Tage** im geschlossenen Test.
+- Achtung: die CI-Formel `1000 + run_number*100 + run_attempt` erzeugt deutlich höhere Codes als 1002 – nach einem CI-Upload sind manuelle Codes darunter nicht mehr möglich.
+- GitHub-Actions-Run **37375920823** (Commit `3b673a0`): Job `check` erfolgreich (Typecheck, 501 Tests, Native-Build, `assembleDebug`, `lintDebug`); Job `release` hat Signierung + Upload wegen fehlender Secrets übersprungen. **Automatische Play-Updates sind somit NICHT aktiv** – 1002 wurde manuell hochgeladen.
 
 ## Offene Credentials / Blocker
 
-- App angelegt, interner Release 1001 erfolgt; 5 GitHub-Secrets fehlen; 12 Tester / 14 Tage vor Produktion
-- Gradle-Lauf (SDK 36, JDK 21) läuft extern, Ergebnis offen
+- App angelegt; interner Release 1002 veröffentlicht (1001 ersetzt); 5 GitHub-Secrets fehlen → CI-Signierung/Upload inaktiv, automatische Play-Updates nicht aktiv
+- Store-Eintrag: „Bereit für die Überprüfung“; App-Name temporär/unreviewed; IARC-Nutzungsbedingungen nicht akzeptiert, Fragebogen offen
+- Prüferzugang fehlt; Zielgruppe + Datensicherheits-Entwurf dadurch blockiert; Testerliste vorbereitet, nicht gespeichert
+- 12 Tester / 14 Tage vor Produktion
+- Gradle-Lauf im CI bestätigt (Run 37375920823: assembleDebug + lintDebug grün)
 - www-App-Link nicht verifizierbar, solange www per 302 umleitet
 - Firebase (`google-services.json`) und serverseitiger FCM-Versand (nicht gebaut)
 - 1024×1024-App-Icon nur für iOS (später); Android nutzt das 512er-Icon
