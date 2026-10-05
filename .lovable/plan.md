@@ -1,50 +1,37 @@
-# Laufende Fahrt: stabile Fahrtansicht, Rückkehr-Leiste, Rückgabeentwurf
+# Kilometerstand speichern und Startseiten-Logo vereinheitlichen
 
-Ausgang: e1841ee. Keine Änderungen an Preisen, Stripe, Kalender, Awin, echten Kunden/Buchungen/Mails. Kein Deployment.
+## Ziel
+- Der eingegebene End-Kilometerstand lässt sich während einer aktiven Fahrt wieder zuverlässig speichern.
+- Auf jeder sichtbaren Seite steht oben links das kleine offizielle MyTransporter-Logo als Link zur Startseite.
+- Buchungs-, Preis-, Zahlungs-, Mail-, Push- und Kalenderlogik bleiben unverändert.
 
-Der Auftrag ist sehr groß und betrifft kritische Abläufe. Darum wird er in vier Pakete geteilt. Jedes Paket endet mit grünen Tests, Typecheck und Build, dann folgt das nächste.
+## Bestätigte Ursache des Speicherfehlers
+Die Rückgabeansicht schreibt aktuell den Kilometer- und Tankstand als erlaubten Entwurf in die eigene Buchung. Die aktive Datenbankrichtlinie prüft dabei die Schutzfunktion `bookings_locked_fields_unchanged`, aber deren Ausführungsrecht wurde der angemeldeten Rolle später entzogen. Dadurch scheitert auch ein erlaubtes Kunden-Update, bevor der bereits vorhandene Feldschutz greifen kann. Der sichtbare allgemeine Hinweis „Speichern fehlgeschlagen“ passt genau zu diesem Pfad.
 
-## Paket 1 – Aktive Miete und Rückkehr-Leiste
-- `src/lib/active-trip.ts` (rein, testbar): Auswahl der aktiven Miete (`active`, `returning` plus bestehende Fahrtstatus aus `BLOCKING_BOOKING_STATUSES` ab Abholung). Bei mehreren Mieten gewinnt die gerade geöffnete ID, danach die frühere Startzeit. Schlüssel immer nach Nutzer und Buchung.
-- `src/hooks/useActiveTrip.ts`: liest nur eigene Buchungen (RLS + `user_id`). Neu laden bei Seitenwechsel, Fokus, Online und pageshow. Realtime-Kanal mit 60-s-Polling als Rückfall. Bei Netzfehler bleibt der letzte Stand erhalten. Abmelden oder Kontowechsel leert den Stand sofort. Keine Supabase-Aufrufe im Auth-Callback.
-- `ActiveTripBanner` in `__root.tsx`: schwarze, voll klickbare Leiste mit weißem Text „Sofort zurückkehren“. Beachtet die Safe Area und erscheint nicht in `/trip/*`.
-- Logo-Link zur Startseite in einer schlanken Fahrt-Kopfzeile. Diese ist auch in Vollbildkarte und Rückgabe sichtbar.
-- `trip.$bookingId.tsx`: Zeitlimit beim Laden mit Fehlermeldung und Retry, kein Endlos-Spinner. `start_km` 0 bleibt gültig. Phase kommt aus dem Serverstatus. `onReturn` bleibt bei Reload erhalten. Nach dem Login führt die Rückkehr zur angeforderten Fahrt.
+Der fiktive Admin-Testmodus ersetzt nur die Pflichtfotos durch TEST-Platzhalter; beim Kilometerstand läuft er weiterhin über denselben echten, geschützten Speicherweg. Deshalb kann der Fehler auch im Testmodus auftreten.
 
-## Paket 2 – Zeiten und Karte
-- `src/lib/trip-time.ts`: Start und Ende aus gespeicherten Feldern (`start_date`, `start_hour`, `plan_id` über `plan_end_at`/`local_start_at`, Berlin-Zeit). Langzeit und Verlängerungen werden berücksichtigt, soweit die Felder existieren; das Schema wird vorher gelesen. Der Laufzeitzähler beginnt nie neu. Erinnerung ab `endAt − 10 min`, wird bei Fokus oder Online nachgeholt. Eine frühere Rückgabe ist immer möglich.
-- Fehler in `ActiveTripDashboard.tsx`, die behoben werden:
-  - „Nicht jetzt“ startet keine Standortabfrage mehr und fragt danach nicht erneut automatisch.
-  - Es gibt keinen erfundenen Standort.
-  - Die Karte räumt beim Verlassen auf. Veraltete Routenantworten werden verworfen.
-  - Die Routenwahl nutzt den richtigen Index nach dem Sortieren.
-  - Ziel, Route und Navigationsansicht werden pro Nutzer und Buchung gespeichert.
-  - Bei Karten- oder Routenfehlern gibt es Text und Retry; die Rückgabe bleibt nutzbar.
-- Die Rückgabe-Checkliste ist während der Fahrt sichtbar, mit dem Hinweis „Sobald du sicher geparkt hast“.
+## Umsetzung
 
-## Paket 3 – Rückgabeentwurf und Foto-Warteschlange
-- `src/lib/return-draft.ts`: Entwurf nach Nutzer und Buchung in localStorage, mit Zeitstempel. Neuere Stände werden nie überschrieben. Gesichert werden Schritt, Kilometer, Tank, Ausnahmegründe und Code.
-- `src/lib/photo-queue.ts`: Fotos liegen als Blobs in IndexedDB mit stabiler Upload-ID. Vorhandene Speicherpfade werden über `saveTripPhoto({uploadedPath})` weiterverwendet. Wiederholung bei Online und per Knopf, sicher bei mehreren Aufrufen. Ist IndexedDB nicht verfügbar, sagt die App das ehrlich und lädt direkt online hoch.
-- `ReturnFlow.tsx`: neue Aufnahme `post_fuel`. Die acht Außenansichten und der Innenraum bleiben. Anzeige pro Foto: „Auf diesem Gerät gespeichert“, „Wird übertragen“ oder „Übertragen“ mit Retry. Bestätigte Fotos vom Server werden zusammengeführt. Dazu kommt der vorgegebene Dokumentationstext und ein konsistenter Hinweis vor Fahrtbeginn.
+### 1. Sicheren Kilometer-Speicherweg reparieren
+- Eine additive Datenbankmigration anlegen und über den normalen autorisierten Migrationsprozess anwenden.
+- Die bestehende Buchungsrichtlinie so korrigieren, dass Eigentum und unveränderliche Zahlungs-/Buchungsfelder weiterhin geschützt bleiben, erlaubte Fahrtfelder aber gespeichert werden können.
+- Die Schutzfunktion nicht als frei nutzbares Daten-Orakel öffnen. Stattdessen den vorhandenen serverseitigen Update-Trigger um alle bisher von der Richtlinie geschützten sensiblen Felder ergänzen und die Kundenrichtlinie auf die eigene Buchung begrenzen.
+- `anon` erhält weiterhin keinen Buchungszugriff; Admin- und Service-Abläufe bleiben unverändert.
+- Den Fehlertext im Client nur soweit verbessern, dass ein echter Verbindungsfehler von einer abgelehnten Speicherung unterscheidbar bleibt; keine internen Datenbankdetails anzeigen.
 
-## Paket 4 – Rückgabemeldung auf dem Server und Push
-- `createServerFn reportReturn` (mit `requireSupabaseAuth`):
-  - Prüft Eigentum und Status.
-  - Prüft die bestätigten Fotokategorien oder einen begründeten Ausnahmefall.
-  - Verwendet einen vorhandenen `return_code` wieder.
-  - Funktioniert idempotent bei Doppelklick oder verlorener Antwort.
-  - Endstand 0 ist erlaubt. Ein kleinerer Endstand als der Start wird zur manuellen Prüfung markiert und nicht mit 0 berechnet.
-  - Keine automatische Kautionsabbuchung. Ein Ausnahmegrund meldet sich über die bestehenden `admin_notifications`.
-- Migration nur, wenn nötig. Dann additiv und mit nullable Spalten: `return_reported_at`, `return_review_reason`, `end_km_manual`, `return_reminder_10min_sent_for`. Die letzte Spalte speichert die Endzeit, damit nach einer Endzeitänderung erneut erinnert wird.
-- Erinnerung per Push: Ein neuer Abschnitt im bestehenden `send-reminders`-Hook wählt nach dem aktuellen Ende aus und nutzt die vorhandenen `push_subscriptions`. Authentifizierung und Cron bleiben unverändert, es gibt keine Testsendungen. Kunden aktivieren Push nur per Klick.
-- `public/sw.js`: Ein Klick auf die Benachrichtigung öffnet exakt `/trip/<UUID>` auf derselben Domain; Admin-URLs funktionieren weiter. Es gibt keine Zwischenspeicherung privater Seiten oder API-Antworten. Höchstens eine statische Offline-Hinweisseite für Navigationen ohne Netz.
+### 2. Kleines MyTransporter-Logo auf allen Seiten
+- Aus dem bereits verwendeten offiziellen Logo-Link der Fahrtansicht eine kleine gemeinsame Logo-Komponente erstellen.
+- Das Logo oben links in die bestehende Hauptnavigation integrieren, sodass Startseite, Preise, Langzeitmiete, Werbung und weitere Seiten mit dieser Navigation automatisch abgedeckt sind.
+- Bei Profil, Buchungsdetails, Admin sowie Rechtliches/FAQ/Kontakt das Logo in den vorhandenen Kopfbereich einsetzen. Bestehende „Zurück“-Navigation, etwa von Buchungsdetails zum Profil, bleibt zusätzlich erhalten.
+- Fahrt-, Lade-, Fehler-, Bestätigungs- und Zahlungsansichten ebenfalls mit demselben Startseiten-Link versehen, ohne doppelte Logos in der aktiven Fahrtansicht zu erzeugen.
+- Auf kleinen Displays Safe-Area, Tippfläche und Abstände prüfen; Desktopansichten bleiben in Aufbau und Funktion erhalten.
 
-## Validierung
-- Gezielte Tests zu Auswahl, Fremdkonto, Kontowechsel, cancelled und completed, Zeit-Resolver (Berlin, Sommerzeit, früh, spät, geänderte Endzeit), Routenindex, abgelehntem GPS, Karten-Unmount, Entwurf, Warteschlange (offline, Reload, doppelt), `reportReturn` (Idempotenz, Code-Wiederverwendung, 399999-Fall) und Service-Worker-URL.
-- Bestehende Kameratests bleiben.
-- Gesamte Testsuite, `tsgo` und `bun run build` mit einzeln geprüften Exitcodes.
-- Playwright bei 390 px und 1280 px mit Mock-Daten.
-- Belege in `docs/qa-active-trip-2026-10-05.md`. Keine Behauptung physischer iPhone-Tests.
+## Prüfung
+- Datenbanktests: eigene aktive Buchung darf nur die vorgesehenen Fahrtfelder ändern; fremde Buchung, Status, Preis, Zeitraum, Kaution, Stripe-Felder, Kilometerpreis, Codes und Abrechnungswerte bleiben gesperrt.
+- Rückgabe-Komponententest: Kilometerstand-Fehler bleibt im Schritt, erfolgreicher Versuch führt weiter; serverseitige Mehrkilometerberechnung bleibt unverändert.
+- Logo-Tests: Linkziel `/`, keine Doppelanzeige und keine Überlagerung in 320/360/390 px sowie Desktop.
+- Relevante Tests, vollständige Testsuite, Typecheck und Produktionsbuild ausführen.
+- Ausschließlich sichere Testdaten/Mocks verwenden: keine echte Buchung, Zahlung, Mail, Push-Nachricht oder Rückgabemeldung auslösen.
 
-## Annahme
-Die Pakete werden nacheinander in mehreren Durchläufen umgesetzt. Nach jedem Paket kommt ein kurzer Zwischenbericht, damit der Diff prüfbar bleibt.
+## Veröffentlichung
+Die Korrektur wird vorbereitet und geprüft, aber nicht veröffentlicht, solange keine ausdrückliche Freigabe zum Veröffentlichen vorliegt.
