@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
-import { createRequire } from "node:module";
+import "../../public/sw-target.js";
 import { clearReturnDraft, loadReturnDraft, loadTripNav, saveReturnDraft, saveTripNav } from "./return-draft";
 
 beforeEach(() => localStorage.clear());
@@ -34,9 +34,7 @@ describe("Rückgabeentwurf", () => {
 });
 
 describe("Service-Worker-Ziel", () => {
-  const { mtResolveTarget } = createRequire(import.meta.url)("../../public/sw-target.js") as {
-    mtResolveTarget: (u: unknown, o: string) => string;
-  };
+  const { mtResolveTarget } = globalThis as unknown as { mtResolveTarget: (u: unknown, o: string) => string };
   const O = "https://www.mytransporter.org";
   const T = "/trip/11111111-2222-3333-4444-555555555555";
   it("öffnet exakt /trip/ID same-origin, nie fremde Hosts", () => {
