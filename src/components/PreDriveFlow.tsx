@@ -300,8 +300,12 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
         <>
           {/* Step 2: Vehicle Photos */}
           <h3 className="text-xl font-bold text-foreground mb-2">Fahrzeug dokumentieren</h3>
-          <p className="text-sm text-muted-foreground mb-6">
+          <p className="text-sm text-muted-foreground mb-3">
             Fotografiere das Fahrzeug von allen 4 Seiten, bevor du losfährst.
+          </p>
+          <p className="text-xs text-muted-foreground mb-6 rounded-2xl border border-border p-3 leading-relaxed">
+            Bitte dokumentiere den Zustand vor Fahrtbeginn vollständig, vorhandene Schäden eingeschlossen. Diese Fotos dienen bei der
+            Rückgabe als Vergleich; bei fehlenden oder unleserlichen Nachweisen kann eine zusätzliche Prüfung erforderlich sein.
           </p>
 
           {isTestAdmin && (
