@@ -56,7 +56,7 @@ export function isReturningStatus(s: string | null | undefined): boolean {
 export const TRIP_COMPLETION_REQUIRED_FROM = "2026-10-06";
 
 /** Offene Altbuchung (Start vor Stichtag, Status noch nicht abgeschlossen/storniert). */
-export function isLegacyOpenTrip(row: { status: string | null | undefined; start_date: string | null | undefined }): boolean {
+export function isLegacyOpenTrip(row: { status?: string | null; start_date?: string | null }): boolean {
   if (!row.start_date || row.start_date >= TRIP_COMPLETION_REQUIRED_FROM) return false;
   return row.status !== "completed" && row.status !== "cancelled";
 }
