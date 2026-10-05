@@ -18,7 +18,7 @@ Stand: 05.10.2026. Kein Store-Upload aus Lovable. Keine Secrets im Repository.
 | App-ID / Name | `de.mytransporter.app` / MyTransporter (kein vorhandener Identifier gefunden) |
 | Lifecycle | `src/lib/native/bootstrap.ts`: `resume` → `focus`+`visibilitychange`, Netzwerkwechsel → `online`/`offline` (Fahrtansicht, Rückgabeentwurf, Fotoqueue hören darauf) |
 | StatusBar/Safe Area | Overlay + `viewport-fit=cover` (bestehende `env(safe-area-inset-*)`) |
-| Splash/Icon | Splash via Plugin (weiß), Icons aus `public/icons/icon-512.png` erzeugt. Für Store-Qualität ein 1024×1024-Original liefern und `npx @capacitor/assets generate` ausführen |
+| Splash/Icon | Splash via Plugin (weiß), Icons aus `public/icons/icon-512.png`. Für Google Play reicht das 512×512-Icon (Play-Format), sofern es den Qualitätscheck besteht; 1024×1024 nur für iOS später nötig |
 | Deep Links | `src/lib/native/deep-links.ts` (Whitelist: `/trip/:id`, `/buchung/:id`, `/checkout/return`, `/auth/confirm`, öffentliche Seiten); Schema `mytransporter://` |
 | Kamera/Fotos | Bestehende Browser-Aufnahme (getUserMedia/Datei-Input) läuft im WebView; Berechtigungstexte gesetzt. `@capacitor/camera` installiert für spätere native Auswahl |
 | Push | Getrennte Tabelle `native_push_tokens` (RLS: nur eigene Zeilen), Registrierung nur per Nutzeraktion (`enableNativePush`). **Kein Versand implementiert** |
@@ -47,15 +47,17 @@ Vorlagen in `native/well-known/`. Nach Erhalt der Werte als
 
 ## Android / Google Play
 
-1. Play-Console-Konto, App `de.mytransporter.app` anlegen.
+Stand 05.10.2026: Das Google-Play-Entwicklerkonto „Krueger Eventmanagement“ besteht bereits (vier Apps). Ob `de.mytransporter.app` dort angelegt ist, ist noch ungeprüft.
+
+1. In der Play Console App `de.mytransporter.app` anlegen bzw. prüfen; Play App Signing aktivieren.
 2. Upload-Keystore lokal erzeugen (`keytool -genkey -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000`) – **nicht committen**.
-3. Signierung in Android Studio (Build → Generate Signed Bundle) oder Appflow (Signing Credentials hochladen).
-4. `versionCode`/`versionName` in `android/app/build.gradle` erhöhen.
-5. `./gradlew bundleRelease` → `.aab` in Internen Test hochladen.
-6. Datenschutz-Formular (Datensicherheit), Kontolöschungs-URL angeben (`https://www.mytransporter.org/profil#konto-loeschen` bzw. Kontakt info@mytransporter.org).
+3. GitHub-Secrets setzen: `ANDROID_KEYSTORE_BASE64` (base64 von upload.jks), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`.
+4. Version nicht manuell erhöhen: CI setzt `versionCode = 1000 + run_number*100 + run_attempt`, `versionName = 1.0.<run>-<sha7>`.
+5. Erster Upload manuell: Artefakt `mytransporter-release-<versionCode>` (AAB) aus dem Workflow-Lauf laden und in „Interner Test“ hochladen; danach lädt jeder main-Push automatisch hoch (Track `internal`).
+6. Datenschutz-Formular (Datensicherheit), Kontolöschungs-URL: `https://mytransporter.org/konto-loeschen`.
 7. Push: Firebase-Projekt, `google-services.json` nach `android/app/` (gitignored), Versandweg serverseitig mit FCM-Service-Account als Secret.
 
-## iOS / App Store
+## iOS / App Store (später, CI deaktiviert)
 
 1. Apple Developer Program, App-ID `de.mytransporter.app` mit Capabilities **Associated Domains** und **Push Notifications**.
 2. macOS: `cd ios/App && pod install`, `open App.xcworkspace`, Team setzen.
@@ -125,10 +127,11 @@ Preflight `OPTIONS` auf `/_serverFn/*`, `/api/*` → 204 nur für App-Origins; C
 
 ## Offene Credentials / Blocker
 
-- Play-Console-Konto, App anlegen, erster manueller Upload, Upload-Keystore + 5 GitHub-Secrets
+- Play-Konto vorhanden; App de.mytransporter.app prüfen/anlegen, erster manueller Upload, Upload-Keystore + 5 GitHub-Secrets
+- Gradle-Lauf (SDK 36, JDK 21) läuft extern, Ergebnis offen
 - `PLAY_APP_SIGNING_SHA256_FINGERPRINT` für `assetlinks.json`
 - Firebase (`google-services.json`) und serverseitiger FCM-Versand (nicht gebaut)
-- 1024×1024-App-Icon-Original
-- Web-Veröffentlichung (CORS + stabile ServerFn-IDs), bevor die App Server-Funktionen nutzt
+- 1024×1024-App-Icon nur für iOS (später); Android nutzt das 512er-Icon
+- (erledigt) Web mit CORS und /konto-loeschen veröffentlicht; per curl verifiziert: OPTIONS 204 mit ACAO https://localhost, /konto-loeschen 200
 - Apple/iOS: später (Team-ID, Zertifikate, APNs); iOS-CI deaktiviert
 - Keine physischen Gerätetests
