@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { renderEmail } from "@/lib/email-template";
-import { dueReturnReminders, REMINDER_STATUSES, type ReminderRow } from "@/lib/return-reminder";
-import { formatBerlin } from "@/lib/trip-time";
 
 type ReminderKind = "24h" | "30min";
 
@@ -271,40 +269,6 @@ async function processManualBatch(kind: ReminderKind) {
   return { processed };
 }
 
-/** 10-Minuten-Rückgabeerinnerung per Web-Push an Kunden mit freiwilligem Push-Abo. */
-async function processReturnReminders() {
-  const { data, error } = await supabaseAdmin
-    .from("bookings")
-    .select("id, user_id, status, start_date, start_hour, plan_id, return_reminder_10min_for")
-    .in("status", [...REMINDER_STATUSES]);
-  if (error) return { processed: 0, error: error.message };
-  const due = dueReturnReminders((data ?? []) as ReminderRow[], Date.now());
-  let processed = 0;
-  let pushed = 0;
-  for (const b of due) {
-    // Claim vor Versand: nur wer das Ende als erster markiert, sendet.
-    let claim = supabaseAdmin
-      .from("bookings")
-      .update({ return_reminder_10min_for: b.endIso })
-      .eq("id", b.id);
-    claim = b.return_reminder_10min_for
-      ? claim.eq("return_reminder_10min_for", b.return_reminder_10min_for)
-      : claim.is("return_reminder_10min_for", null);
-    const { data: won } = await claim.select("id");
-    if (!won || won.length === 0) continue;
-    processed++;
-    const { pushToUser } = await import("@/lib/customer-push.server");
-    const r = await pushToUser(b.user_id, {
-      title: "Rückgabe in Kürze",
-      body: `Deine Miete endet ${formatBerlin(b.endMs)} Uhr. Sobald du sicher geparkt hast, starte die Rückgabe.`,
-      url: `/trip/${b.id}`,
-      tag: `mt-return-${b.id}`,
-    });
-    pushed += r.sent;
-  }
-  return { processed, pushed };
-}
-
 export const Route = createFileRoute("/api/public/hooks/send-reminders")({
   server: {
     handlers: {
@@ -314,12 +278,6 @@ export const Route = createFileRoute("/api/public/hooks/send-reminders")({
           const r30 = await processBatch("30min");
           const m24 = await processManualBatch("24h");
           const m30 = await processManualBatch("30min");
-          let ret: unknown;
-          try {
-            ret = await processReturnReminders();
-          } catch (e) {
-            ret = { processed: 0, error: String(e) };
-          }
 
           // Hinweis: Die Wiederholung der Owner-Benachrichtigungen läuft
           // bewusst NICHT hier, sondern ausschließlich hinter dem
