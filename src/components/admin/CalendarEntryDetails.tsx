@@ -42,7 +42,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function DocPreview({ side, doc }: { side: string; doc: DetailDoc | null }) {
+function DocPreview({ side, doc, onRetry }: { side: string; doc: DetailDoc | null; onRetry: () => void }) {
   const [broken, setBroken] = useState(false);
   if (!doc) {
     return (
@@ -54,15 +54,28 @@ function DocPreview({ side, doc }: { side: string; doc: DetailDoc | null }) {
   }
   return (
     <figure className="rounded-xl border border-border p-2 min-w-0">
-      <figcaption className="text-xs font-medium flex items-center justify-between gap-2 mb-1.5">
-        <span>{side}</span>
+      <figcaption className="text-xs font-medium flex items-start justify-between gap-2 mb-1.5 min-w-0">
+        <span className="min-w-0 break-words [overflow-wrap:anywhere]">{side}</span>
         {doc.removedByUser && (
-          <span className="text-[10px] rounded bg-secondary px-1.5 py-0.5">Vom Nutzer entfernt</span>
+          <span className="shrink-0 text-[10px] rounded bg-secondary px-1.5 py-0.5">Vom Nutzer entfernt</span>
         )}
       </figcaption>
-      {!doc.signedUrl ? (
-        <p className="text-xs text-muted-foreground">Datei nicht abrufbar (fehlt im Speicher).</p>
-      ) : doc.isPdf || broken ? (
+      {doc.fileState === "path_rejected" ? (
+        <p className="text-xs text-muted-foreground">
+          Datei wird nicht angezeigt: Der gespeicherte Ablageort gehört nicht zu diesem Kunden bzw. Termin.
+        </p>
+      ) : !doc.signedUrl || broken ? (
+        <div className="space-y-1.5">
+          <p className="text-xs text-muted-foreground">Datei konnte nicht geladen werden.</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+          >
+            <RotateCw className="w-3 h-3" /> Erneut laden
+          </button>
+        </div>
+      ) : doc.isPdf ? (
         <a
           href={doc.signedUrl}
           target="_blank"
@@ -70,7 +83,7 @@ function DocPreview({ side, doc }: { side: string; doc: DetailDoc | null }) {
           className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
         >
           <FileText className="w-3.5 h-3.5" />
-          {doc.isPdf ? "PDF öffnen" : "Vorschau nicht möglich – Datei öffnen"}
+          PDF öffnen
         </a>
       ) : (
         <a
@@ -99,9 +112,11 @@ function DocPreview({ side, doc }: { side: string; doc: DetailDoc | null }) {
 function DocDisclosure({
   title,
   pair,
+  onRetry,
 }: {
   title: string;
   pair: { front: DetailDoc | null; back: DetailDoc | null };
+  onRetry: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -122,15 +137,15 @@ function DocDisclosure({
       </button>
       {open && (
         <div id={panelId} className="grid gap-2 p-2 sm:grid-cols-2">
-          <DocPreview side={`${title} · Vorderseite`} doc={pair.front} />
-          <DocPreview side={`${title} · Rückseite`} doc={pair.back} />
+          <DocPreview side={`${title} · Vorderseite`} doc={pair.front} onRetry={onRetry} />
+          <DocPreview side={`${title} · Rückseite`} doc={pair.back} onRetry={onRetry} />
         </div>
       )}
     </div>
   );
 }
 
-export function DetailsBody({ d }: { d: CalendarEntryDetails }) {
+export function DetailsBody({ d, onRetry }: { d: CalendarEntryDetails; onRetry: () => void }) {
   const ba = birthAndAge(d.customer.birthDate);
   return (
     <div className="space-y-3">
@@ -218,12 +233,12 @@ export function DetailsBody({ d }: { d: CalendarEntryDetails }) {
 
       <Section title="Führerschein & Ausweis">
         <div className="space-y-2 pt-1">
-          <DocDisclosure title="Führerschein" pair={d.documents.license} />
-          <DocDisclosure title="Ausweis" pair={d.documents.id} />
+          <DocDisclosure title="Führerschein" pair={d.documents.license} onRetry={onRetry} />
+          <DocDisclosure title="Ausweis" pair={d.documents.id} onRetry={onRetry} />
           {d.documents.others.length > 0 && (
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2 min-w-0">
               {d.documents.others.map((o) => (
-                <DocPreview key={o.id} side={o.originalName ? `Weiteres Dokument · ${o.originalName}` : "Weiteres Dokument"} doc={o} />
+                <DocPreview key={o.id} onRetry={onRetry} side={o.originalName ? `Weiteres Dokument · ${o.originalName}` : "Weiteres Dokument"} doc={o} />
               ))}
             </div>
           )}
@@ -260,7 +275,9 @@ export function CalendarEntryDetailsPanel({ kind, id }: { kind: "booking" | "man
           s: "error",
           msg: /forbidden|unauthorized/i.test(raw)
             ? "Keine Berechtigung – bitte als Admin anmelden."
-            : "Details konnten nicht geladen werden.",
+            : /Kundendaten/.test(raw)
+              ? "Kundendaten konnten nicht geladen werden."
+              : "Details konnten nicht geladen werden.",
         });
       });
   }, [fetchDetails, kind, id]);
@@ -291,7 +308,7 @@ export function CalendarEntryDetailsPanel({ kind, id }: { kind: "booking" | "man
   }
   return (
     <div>
-      <DetailsBody d={state.d} />
+      <DetailsBody d={state.d} onRetry={load} />
       <button
         type="button"
         onClick={load}

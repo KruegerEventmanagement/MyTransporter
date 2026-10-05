@@ -5,6 +5,7 @@ import {
   joinAddress,
   overlapsBerlinDay,
   pickDocuments,
+  isSafeOwnedPath,
 } from "@/lib/calendar-details";
 import { loadCalendarEntryDetails } from "@/lib/calendar-details.server";
 import { bookingWindowMs } from "@/lib/booking-window";
@@ -171,5 +172,54 @@ describe("loadCalendarEntryDetails", () => {
     await expect(loadCalendarEntryDetails(db, "admin", "booking", B1)).rejects.toThrow(
       "Dokumente konnten nicht geladen werden",
     );
+  });
+
+  it("Kundeneigene Zeile mit fremdem Pfad wird nie signiert", async () => {
+    const rows = baseRows();
+    rows.user_documents.push({
+      id: "evil", user_id: U1, doc_type: "id_front", photo_url: `${U2}/foreign.jpg`, created_at: "2026-09-01",
+    });
+    const { db, signed } = fakeDb(rows);
+    const d = await loadCalendarEntryDetails(db, "admin", "booking", B1);
+    expect(d.documents.id.front?.id).toBe("evil");
+    expect(d.documents.id.front?.fileState).toBe("path_rejected");
+    expect(d.documents.id.front?.signedUrl).toBeNull();
+    expect(signed.some((p) => p.includes(U2))).toBe(false);
+  });
+
+  it("Profil-Abfragefehler ist ein Ladefehler, kein fehlendes Profil", async () => {
+    const { db } = fakeDb(baseRows(), { failTable: "profiles" });
+    await expect(loadCalendarEntryDetails(db, "admin", "booking", B1)).rejects.toThrow(
+      "Kundendaten konnten nicht geladen werden",
+    );
+  });
+
+  it("manuelle Datei außerhalb des eigenen Termin-Ordners wird nicht signiert", async () => {
+    const rows = baseRows();
+    rows.manual_reservation_documents = [
+      { id: "m2", reservation_id: M1, doc_type: "id_back", file_path: "admin/manual/other-id/x.jpg", created_at: "2026-01-02" },
+    ];
+    const { db, signed } = fakeDb(rows);
+    const d = await loadCalendarEntryDetails(db, "admin", "manual", M1);
+    expect(d.documents.id.back?.fileState).toBe("path_rejected");
+    expect(signed).toEqual([]);
+  });
+
+  it("Signierfehler → neutraler Zustand unavailable", async () => {
+    const { db } = fakeDb(baseRows());
+    const d = await loadCalendarEntryDetails(db, "admin", "booking", B1);
+    expect(d.documents.id.back?.fileState).toBe("unavailable");
+  });
+});
+
+describe("isSafeOwnedPath", () => {
+  it("akzeptiert nur relative Pfade unter dem Eigentümer", () => {
+    expect(isSafeOwnedPath(`${U1}/a.jpg`, `${U1}/`)).toBe(true);
+    expect(isSafeOwnedPath(`${U2}/a.jpg`, `${U1}/`)).toBe(false);
+    expect(isSafeOwnedPath(`${U1}/../${U2}/a.jpg`, `${U1}/`)).toBe(false);
+    expect(isSafeOwnedPath(`/${U1}/a.jpg`, `${U1}/`)).toBe(false);
+    expect(isSafeOwnedPath(`https://x.test/${U1}/a.jpg`, `${U1}/`)).toBe(false);
+    expect(isSafeOwnedPath(`${U1}/%2e%2e/a.jpg`, `${U1}/`)).toBe(false);
+    expect(isSafeOwnedPath(null, `${U1}/`)).toBe(false);
   });
 });

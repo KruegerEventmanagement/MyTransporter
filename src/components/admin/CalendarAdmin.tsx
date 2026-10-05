@@ -220,18 +220,25 @@ function notifyLabel(state?: ManualNotificationState): string {
   return "Benachrichtigung ausstehend";
 }
 
+/** Heutiger Berliner Kalendertag als Zellen-Datum (unabhängig von der Browser-Zeitzone). */
+function berlinToday(): Date {
+  const [y, m, d] = todayIsoBerlin().split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 export function CalendarAdmin() {
   const [month, setMonth] = useState(() => {
-    const now = new Date();
+    const now = berlinToday();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [selectedDay, setSelectedDay] = useState<Date>(() => new Date());
+  const [selectedDay, setSelectedDay] = useState<Date>(() => berlinToday());
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [bookingSlots, setBookingSlots] = useState<BookingSlot[]>([]);
   const [manuals, setManuals] = useState<ManualReservation[]>([]);
   const [notifyStates, setNotifyStates] = useState<Record<string, ManualNotificationState>>({});
   const [loading, setLoading] = useState(true);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [namesError, setNamesError] = useState(false);
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -342,11 +349,13 @@ export function CalendarAdmin() {
       // Kundenname nur über die gespeicherte user_id (Admin-RLS), kein Namensabgleich.
       const userIds = [...new Set((bookingRows ?? []).map((b) => b.user_id).filter(Boolean))];
       const names: Record<string, string> = {};
+      if (userIds.length === 0) setNamesError(false);
       if (userIds.length > 0) {
-        const { data: profs } = await supabase
+        const { data: profs, error: profErr } = await supabase
           .from("profiles")
           .select("id, first_name, last_name")
           .in("id", userIds);
+        setNamesError(!!profErr);
         for (const p of profs ?? []) {
           const n = [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
           if (n) names[p.id] = n;
@@ -451,6 +460,8 @@ export function CalendarAdmin() {
   };
 
   const openEdit = (m: ManualReservation) => {
+    // Detailansicht schließen: Bearbeiten/Dokumentlöschen kann sie sofort veralten lassen.
+    setExpandedKey(null);
     const s = toLocalInput(new Date(m.start_at));
     const e = toLocalInput(new Date(m.end_at));
     const vehicle = vehicles.find((v) => v.plate === m.vehicle_plate);
@@ -633,7 +644,7 @@ export function CalendarAdmin() {
             const manualCount = dayList.filter((e) => e.kind === "manual").length;
             const bookingCount = dayList.length - manualCount;
             const isSelected = sameDay(day, selectedDay);
-            const isToday = sameDay(day, new Date());
+            const isToday = sameDay(day, berlinToday());
             return (
               <button
                 key={ymd(day)}
@@ -700,7 +711,12 @@ export function CalendarAdmin() {
                         ? `${e.booking.vehicleName} · ${e.booking.vehiclePlate}`
                         : `${e.manual.vehicle_name || "Transporter"} · ${e.manual.vehicle_plate}`}
                     </p>
-                    <p className="text-sm break-words">{name || "Kundenname nicht hinterlegt"}</p>
+                    <p className="text-sm break-words">
+                      {name ||
+                        (e.kind === "booking" && namesError
+                          ? "Namen konnten nicht geladen werden"
+                          : "Kundenname nicht hinterlegt")}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {e.kind === "booking" ? `Online-Buchung · ${e.booking.label}` : "Manueller Termin"}
                     </p>
@@ -768,7 +784,7 @@ export function CalendarAdmin() {
                 Von: {fmtDateTime(e.start)} · Bis: {fmtDateTime(e.end)} ·{" "}
                 {e.kind === "manual"
                   ? `${e.manual.vehicle_plate} · ${e.manual.customer_name}`
-                  : `${e.booking.vehiclePlate} · ${e.booking.customerName ?? "Online-Buchung"}`}
+                  : `${e.booking.vehiclePlate} · ${e.booking.customerName ?? (namesError ? "Namen konnten nicht geladen werden" : "Online-Buchung")}`}
               </span>
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
                 {e.kind === "manual" ? "Manuell" : "Buchung"}

@@ -4,7 +4,7 @@
  * manueller Termin → reservation_id → eigene Dokumente. Kein Namensabgleich.
  * Dokument-Links werden kurzfristig signiert und nie protokolliert.
  */
-import { clean, joinAddress, pickDocuments, isPdfPath, DOC_TYPE_MAP, type RawDoc } from "@/lib/calendar-details";
+import { clean, joinAddress, pickDocuments, isPdfPath, isSafeOwnedPath, type RawDoc } from "@/lib/calendar-details";
 
 export const SIGNED_URL_SECONDS = 600;
 
@@ -13,6 +13,8 @@ export type DetailDoc = {
   docType: string;
   label: string;
   signedUrl: string | null;
+  /** "ok" | "unavailable" (Signieren fehlgeschlagen) | "path_rejected" (Pfad gehört nicht zum Kunden/Termin) */
+  fileState: "ok" | "unavailable" | "path_rejected";
   isPdf: boolean;
   removedByUser: boolean;
   originalName: string | null;
@@ -77,20 +79,27 @@ async function sign(db: Db, path: string): Promise<string | null> {
   }
 }
 
-async function toDetailDocs(db: Db, rows: RawDoc[]): Promise<CalendarEntryDetails["documents"]> {
+async function toDetailDocs(
+  db: Db,
+  rows: RawDoc[],
+  owns: (path: string) => boolean,
+): Promise<CalendarEntryDetails["documents"]> {
   const { slots, others } = pickDocuments(rows);
-  const conv = async (r: RawDoc | undefined): Promise<DetailDoc | null> =>
-    r
-      ? {
+  const conv = async (r: RawDoc | undefined): Promise<DetailDoc | null> => {
+    if (!r) return null;
+    const allowed = owns(r.path);
+    const signedUrl = allowed ? await sign(db, r.path) : null;
+    return {
           id: r.id,
           docType: r.doc_type,
           label: LABELS[r.doc_type] ?? "Weiteres Dokument",
-          signedUrl: await sign(db, r.path),
+          signedUrl,
+          fileState: !allowed ? "path_rejected" : signedUrl ? "ok" : "unavailable",
           isPdf: isPdfPath(r.path) || isPdfPath(r.original_name),
           removedByUser: !!r.deleted,
           originalName: r.original_name ?? null,
-        }
-      : null;
+    };
+  };
   const [lf, lb, idf, idb, ...rest] = await Promise.all([
     conv(slots.license_front),
     conv(slots.license_back),
@@ -173,7 +182,8 @@ export async function loadCalendarEntryDetails(
         profileLinked: false,
       },
       notes: clean(m.note),
-      documents: await toDetailDocs(db, raw),
+      // Manuelle Dateien liegen unter <admin>/manual/<reservation_id>/ (adminverwaltet).
+      documents: await toDetailDocs(db, raw, (path) => isSafeOwnedPath(path, path.split("/")[0] + "/", `/manual/${m.id}/`)),
     };
   }
 
@@ -191,7 +201,7 @@ export async function loadCalendarEntryDetails(
   const w = bookingWindowMs(b.plan_id, b.start_date, b.start_hour);
 
   // Profil und Dokumente nur über die in der Buchung gespeicherte user_id.
-  const [{ data: p }, { data: docs, error: docErr }] = await Promise.all([
+  const [{ data: p, error: profErr }, { data: docs, error: docErr }] = await Promise.all([
     db
       .from("profiles")
       .select(
@@ -204,9 +214,10 @@ export async function loadCalendarEntryDetails(
       .select("id, doc_type, photo_url, created_at, deleted_by_user_at")
       .eq("user_id", b.user_id),
   ]);
+  // Abfragefehler ≠ fehlendes Profil: Fehler wird retrybar gemeldet.
+  if (profErr) throw new Error("Kundendaten konnten nicht geladen werden");
   if (docErr) throw new Error("Dokumente konnten nicht geladen werden");
   const raw: RawDoc[] = (docs ?? [])
-    .filter((d: any) => DOC_TYPE_MAP[d.doc_type] || d.doc_type)
     .map((d: any) => ({
       id: d.id,
       doc_type: d.doc_type,
@@ -255,6 +266,6 @@ export async function loadCalendarEntryDetails(
       profileLinked: !!p,
     },
     notes: clean(b.remarks),
-    documents: await toDetailDocs(db, raw),
+    documents: await toDetailDocs(db, raw, (path) => isSafeOwnedPath(path, `${b.user_id}/`)),
   };
 }

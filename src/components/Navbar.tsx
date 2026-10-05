@@ -1,3 +1,5 @@
+import { AddressFields } from "@/components/AddressFields";
+import { EMPTY_ADDRESS, addressSignUpMetadata } from "@/lib/address";
 import { useEffect, useState } from "react";
 import { User, X, ChevronRight, Eye, EyeOff, Route as RouteIcon, Shield } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -94,8 +96,11 @@ export function Navbar() {
     if (consumeLoginRequest()) setShowModal("login");
   }, []);
 
+  const [address, setAddress] = useState(EMPTY_ADDRESS);
+
   const closeModal = () => {
     setShowModal(null);
+    setAddress(EMPTY_ADDRESS);
     setError(null);
     setInfo(null);
     setForm({ firstName: "", lastName: "", email: "", phone: "", birthDate: "", password: "", accountType: "private", companyName: "", vatId: "" });
@@ -152,6 +157,7 @@ export function Navbar() {
           account_type: form.accountType,
           company_name: form.accountType === "business" ? form.companyName : "",
           vat_id: form.accountType === "business" ? form.vatId : "",
+          ...addressSignUpMetadata(address),
         },
       },
     });
@@ -300,7 +306,7 @@ export function Navbar() {
           <form
             onSubmit={(e) => { e.preventDefault(); (showModal === "login" ? handleLogin : handleRegister)(); }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-card rounded-3xl border border-border shadow-2xl w-full max-w-sm p-6 animate-fade-in-up relative"
+            className="bg-card rounded-3xl border border-border shadow-2xl w-full max-w-sm p-6 animate-fade-in-up relative max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain"
           >
             <button
               type="button"
@@ -413,6 +419,9 @@ export function Navbar() {
                     className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   />
                 </label>
+              )}
+              {showModal === "register" && (
+                <AddressFields idPrefix="nav-reg" value={address} onChange={setAddress} inputClassName="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent" />
               )}
               <div className="relative">
                 <input
