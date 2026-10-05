@@ -9,50 +9,94 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WerbungRouteImport } from './routes/werbung'
-import { Route as UmzugstransporterMietenRouteImport } from './routes/umzugstransporter-mieten'
-import { Route as UeberUnsRouteImport } from './routes/ueber-uns'
-import { Route as TransporterMietenPforzheimCalwRouteImport } from './routes/transporter-mieten-pforzheim-calw'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as QaCalendarPreviewRouteImport } from './routes/qa-calendar-preview'
-import { Route as ProfilRouteImport } from './routes/profil'
-import { Route as PreiseRouteImport } from './routes/preise'
-import { Route as PartnerRouteImport } from './routes/partner'
-import { Route as LangzeitmieteRouteImport } from './routes/langzeitmiete'
-import { Route as KontaktRouteImport } from './routes/kontakt'
-import { Route as ImpressumRouteImport } from './routes/impressum'
-import { Route as FaqRouteImport } from './routes/faq'
-import { Route as DatenschutzRouteImport } from './routes/datenschutz'
-import { Route as AgbRouteImport } from './routes/agb'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TripBookingIdRouteImport } from './routes/trip.$bookingId'
-import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
-import { Route as BuchungBookingIdRouteImport } from './routes/buchung.$bookingId'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AgbRouteImport } from './routes/agb'
+import { Route as DatenschutzRouteImport } from './routes/datenschutz'
+import { Route as FaqRouteImport } from './routes/faq'
+import { Route as ImpressumRouteImport } from './routes/impressum'
+import { Route as KontaktRouteImport } from './routes/kontakt'
+import { Route as LangzeitmieteRouteImport } from './routes/langzeitmiete'
+import { Route as PartnerRouteImport } from './routes/partner'
+import { Route as PreiseRouteImport } from './routes/preise'
+import { Route as ProfilRouteImport } from './routes/profil'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TransporterMietenPforzheimCalwRouteImport } from './routes/transporter-mieten-pforzheim-calw'
+import { Route as UeberUnsRouteImport } from './routes/ueber-uns'
+import { Route as UmzugstransporterMietenRouteImport } from './routes/umzugstransporter-mieten'
+import { Route as WerbungRouteImport } from './routes/werbung'
 import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
-import { Route as ApiPublicSendTestInvoiceRouteImport } from './routes/api/public/send-test-invoice'
+import { Route as BuchungBookingIdRouteImport } from './routes/buchung.$bookingId'
+import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as TripBookingIdRouteImport } from './routes/trip.$bookingId'
 import { Route as ApiPublicResendBookingMailsRouteImport } from './routes/api/public/resend-booking-mails'
-import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
-import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
-import { Route as ApiPublicHooksSendBirthdayEmailsRouteImport } from './routes/api/public/hooks/send-birthday-emails'
-import { Route as ApiPublicHooksProcessManualNotificationsRouteImport } from './routes/api/public/hooks/process-manual-notifications'
-import { Route as ApiPublicHooksProcessCalendarSyncRouteImport } from './routes/api/public/hooks/process-calendar-sync'
-import { Route as ApiPublicHooksNotifyAdminRouteImport } from './routes/api/public/hooks/notify-admin'
+import { Route as ApiPublicSendTestInvoiceRouteImport } from './routes/api/public/send-test-invoice'
 import { Route as ApiPublicHealthAutomationsRouteImport } from './routes/api/public/health/automations'
+import { Route as ApiPublicHooksNotifyAdminRouteImport } from './routes/api/public/hooks/notify-admin'
+import { Route as ApiPublicHooksProcessCalendarSyncRouteImport } from './routes/api/public/hooks/process-calendar-sync'
+import { Route as ApiPublicHooksProcessManualNotificationsRouteImport } from './routes/api/public/hooks/process-manual-notifications'
+import { Route as ApiPublicHooksSendBirthdayEmailsRouteImport } from './routes/api/public/hooks/send-birthday-emails'
+import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
-const WerbungRoute = WerbungRouteImport.update({
-  id: '/werbung',
-  path: '/werbung',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UmzugstransporterMietenRoute = UmzugstransporterMietenRouteImport.update({
-  id: '/umzugstransporter-mieten',
-  path: '/umzugstransporter-mieten',
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UeberUnsRoute = UeberUnsRouteImport.update({
-  id: '/ueber-uns',
-  path: '/ueber-uns',
+const AgbRoute = AgbRouteImport.update({
+  id: '/agb',
+  path: '/agb',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DatenschutzRoute = DatenschutzRouteImport.update({
+  id: '/datenschutz',
+  path: '/datenschutz',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImpressumRoute = ImpressumRouteImport.update({
+  id: '/impressum',
+  path: '/impressum',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KontaktRoute = KontaktRouteImport.update({
+  id: '/kontakt',
+  path: '/kontakt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LangzeitmieteRoute = LangzeitmieteRouteImport.update({
+  id: '/langzeitmiete',
+  path: '/langzeitmiete',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnerRoute = PartnerRouteImport.update({
+  id: '/partner',
+  path: '/partner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PreiseRoute = PreiseRouteImport.update({
+  id: '/preise',
+  path: '/preise',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfilRoute = ProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TransporterMietenPforzheimCalwRoute =
@@ -61,84 +105,19 @@ const TransporterMietenPforzheimCalwRoute =
     path: '/transporter-mieten-pforzheim-calw',
     getParentRoute: () => rootRouteImport,
   } as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
+const UeberUnsRoute = UeberUnsRouteImport.update({
+  id: '/ueber-uns',
+  path: '/ueber-uns',
   getParentRoute: () => rootRouteImport,
 } as any)
-const QaCalendarPreviewRoute = QaCalendarPreviewRouteImport.update({
-  id: '/qa-calendar-preview',
-  path: '/qa-calendar-preview',
+const UmzugstransporterMietenRoute = UmzugstransporterMietenRouteImport.update({
+  id: '/umzugstransporter-mieten',
+  path: '/umzugstransporter-mieten',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfilRoute = ProfilRouteImport.update({
-  id: '/profil',
-  path: '/profil',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PreiseRoute = PreiseRouteImport.update({
-  id: '/preise',
-  path: '/preise',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PartnerRoute = PartnerRouteImport.update({
-  id: '/partner',
-  path: '/partner',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LangzeitmieteRoute = LangzeitmieteRouteImport.update({
-  id: '/langzeitmiete',
-  path: '/langzeitmiete',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KontaktRoute = KontaktRouteImport.update({
-  id: '/kontakt',
-  path: '/kontakt',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ImpressumRoute = ImpressumRouteImport.update({
-  id: '/impressum',
-  path: '/impressum',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FaqRoute = FaqRouteImport.update({
-  id: '/faq',
-  path: '/faq',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DatenschutzRoute = DatenschutzRouteImport.update({
-  id: '/datenschutz',
-  path: '/datenschutz',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AgbRoute = AgbRouteImport.update({
-  id: '/agb',
-  path: '/agb',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TripBookingIdRoute = TripBookingIdRouteImport.update({
-  id: '/trip/$bookingId',
-  path: '/trip/$bookingId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
-  id: '/checkout/return',
-  path: '/checkout/return',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BuchungBookingIdRoute = BuchungBookingIdRouteImport.update({
-  id: '/buchung/$bookingId',
-  path: '/buchung/$bookingId',
+const WerbungRoute = WerbungRouteImport.update({
+  id: '/werbung',
+  path: '/werbung',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthConfirmRoute = AuthConfirmRouteImport.update({
@@ -146,46 +125,37 @@ const AuthConfirmRoute = AuthConfirmRouteImport.update({
   path: '/auth/confirm',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicSendTestInvoiceRoute =
-  ApiPublicSendTestInvoiceRouteImport.update({
-    id: '/api/public/send-test-invoice',
-    path: '/api/public/send-test-invoice',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const BuchungBookingIdRoute = BuchungBookingIdRouteImport.update({
+  id: '/buchung/$bookingId',
+  path: '/buchung/$bookingId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
+  id: '/checkout/return',
+  path: '/checkout/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TripBookingIdRoute = TripBookingIdRouteImport.update({
+  id: '/trip/$bookingId',
+  path: '/trip/$bookingId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicResendBookingMailsRoute =
   ApiPublicResendBookingMailsRouteImport.update({
     id: '/api/public/resend-booking-mails',
     path: '/api/public/resend-booking-mails',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicPaymentsWebhookRoute =
-  ApiPublicPaymentsWebhookRouteImport.update({
-    id: '/api/public/payments/webhook',
-    path: '/api/public/payments/webhook',
+const ApiPublicSendTestInvoiceRoute =
+  ApiPublicSendTestInvoiceRouteImport.update({
+    id: '/api/public/send-test-invoice',
+    path: '/api/public/send-test-invoice',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicHooksSendRemindersRoute =
-  ApiPublicHooksSendRemindersRouteImport.update({
-    id: '/api/public/hooks/send-reminders',
-    path: '/api/public/hooks/send-reminders',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksSendBirthdayEmailsRoute =
-  ApiPublicHooksSendBirthdayEmailsRouteImport.update({
-    id: '/api/public/hooks/send-birthday-emails',
-    path: '/api/public/hooks/send-birthday-emails',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksProcessManualNotificationsRoute =
-  ApiPublicHooksProcessManualNotificationsRouteImport.update({
-    id: '/api/public/hooks/process-manual-notifications',
-    path: '/api/public/hooks/process-manual-notifications',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksProcessCalendarSyncRoute =
-  ApiPublicHooksProcessCalendarSyncRouteImport.update({
-    id: '/api/public/hooks/process-calendar-sync',
-    path: '/api/public/hooks/process-calendar-sync',
+const ApiPublicHealthAutomationsRoute =
+  ApiPublicHealthAutomationsRouteImport.update({
+    id: '/api/public/health/automations',
+    path: '/api/public/health/automations',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksNotifyAdminRoute =
@@ -194,10 +164,34 @@ const ApiPublicHooksNotifyAdminRoute =
     path: '/api/public/hooks/notify-admin',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicHealthAutomationsRoute =
-  ApiPublicHealthAutomationsRouteImport.update({
-    id: '/api/public/health/automations',
-    path: '/api/public/health/automations',
+const ApiPublicHooksProcessCalendarSyncRoute =
+  ApiPublicHooksProcessCalendarSyncRouteImport.update({
+    id: '/api/public/hooks/process-calendar-sync',
+    path: '/api/public/hooks/process-calendar-sync',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksProcessManualNotificationsRoute =
+  ApiPublicHooksProcessManualNotificationsRouteImport.update({
+    id: '/api/public/hooks/process-manual-notifications',
+    path: '/api/public/hooks/process-manual-notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksSendBirthdayEmailsRoute =
+  ApiPublicHooksSendBirthdayEmailsRouteImport.update({
+    id: '/api/public/hooks/send-birthday-emails',
+    path: '/api/public/hooks/send-birthday-emails',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksSendRemindersRoute =
+  ApiPublicHooksSendRemindersRouteImport.update({
+    id: '/api/public/hooks/send-reminders',
+    path: '/api/public/hooks/send-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -213,7 +207,6 @@ export interface FileRoutesByFullPath {
   '/partner': typeof PartnerRoute
   '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
-  '/qa-calendar-preview': typeof QaCalendarPreviewRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -245,7 +238,6 @@ export interface FileRoutesByTo {
   '/partner': typeof PartnerRoute
   '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
-  '/qa-calendar-preview': typeof QaCalendarPreviewRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -278,7 +270,6 @@ export interface FileRoutesById {
   '/partner': typeof PartnerRoute
   '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
-  '/qa-calendar-preview': typeof QaCalendarPreviewRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -312,7 +303,6 @@ export interface FileRouteTypes {
     | '/partner'
     | '/preise'
     | '/profil'
-    | '/qa-calendar-preview'
     | '/sitemap.xml'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
@@ -344,7 +334,6 @@ export interface FileRouteTypes {
     | '/partner'
     | '/preise'
     | '/profil'
-    | '/qa-calendar-preview'
     | '/sitemap.xml'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
@@ -376,7 +365,6 @@ export interface FileRouteTypes {
     | '/partner'
     | '/preise'
     | '/profil'
-    | '/qa-calendar-preview'
     | '/sitemap.xml'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
@@ -409,7 +397,6 @@ export interface RootRouteChildren {
   PartnerRoute: typeof PartnerRoute
   PreiseRoute: typeof PreiseRoute
   ProfilRoute: typeof ProfilRoute
-  QaCalendarPreviewRoute: typeof QaCalendarPreviewRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TransporterMietenPforzheimCalwRoute: typeof TransporterMietenPforzheimCalwRoute
   UeberUnsRoute: typeof UeberUnsRoute
@@ -432,109 +419,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/werbung': {
-      id: '/werbung'
-      path: '/werbung'
-      fullPath: '/werbung'
-      preLoaderRoute: typeof WerbungRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/umzugstransporter-mieten': {
-      id: '/umzugstransporter-mieten'
-      path: '/umzugstransporter-mieten'
-      fullPath: '/umzugstransporter-mieten'
-      preLoaderRoute: typeof UmzugstransporterMietenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ueber-uns': {
-      id: '/ueber-uns'
-      path: '/ueber-uns'
-      fullPath: '/ueber-uns'
-      preLoaderRoute: typeof UeberUnsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/transporter-mieten-pforzheim-calw': {
-      id: '/transporter-mieten-pforzheim-calw'
-      path: '/transporter-mieten-pforzheim-calw'
-      fullPath: '/transporter-mieten-pforzheim-calw'
-      preLoaderRoute: typeof TransporterMietenPforzheimCalwRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/qa-calendar-preview': {
-      id: '/qa-calendar-preview'
-      path: '/qa-calendar-preview'
-      fullPath: '/qa-calendar-preview'
-      preLoaderRoute: typeof QaCalendarPreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profil': {
-      id: '/profil'
-      path: '/profil'
-      fullPath: '/profil'
-      preLoaderRoute: typeof ProfilRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/preise': {
-      id: '/preise'
-      path: '/preise'
-      fullPath: '/preise'
-      preLoaderRoute: typeof PreiseRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/partner': {
-      id: '/partner'
-      path: '/partner'
-      fullPath: '/partner'
-      preLoaderRoute: typeof PartnerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/langzeitmiete': {
-      id: '/langzeitmiete'
-      path: '/langzeitmiete'
-      fullPath: '/langzeitmiete'
-      preLoaderRoute: typeof LangzeitmieteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kontakt': {
-      id: '/kontakt'
-      path: '/kontakt'
-      fullPath: '/kontakt'
-      preLoaderRoute: typeof KontaktRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/impressum': {
-      id: '/impressum'
-      path: '/impressum'
-      fullPath: '/impressum'
-      preLoaderRoute: typeof ImpressumRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/faq': {
-      id: '/faq'
-      path: '/faq'
-      fullPath: '/faq'
-      preLoaderRoute: typeof FaqRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/datenschutz': {
-      id: '/datenschutz'
-      path: '/datenschutz'
-      fullPath: '/datenschutz'
-      preLoaderRoute: typeof DatenschutzRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agb': {
-      id: '/agb'
-      path: '/agb'
-      fullPath: '/agb'
-      preLoaderRoute: typeof AgbRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -544,32 +433,102 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/agb': {
+      id: '/agb'
+      path: '/agb'
+      fullPath: '/agb'
+      preLoaderRoute: typeof AgbRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/trip/$bookingId': {
-      id: '/trip/$bookingId'
-      path: '/trip/$bookingId'
-      fullPath: '/trip/$bookingId'
-      preLoaderRoute: typeof TripBookingIdRouteImport
+    '/datenschutz': {
+      id: '/datenschutz'
+      path: '/datenschutz'
+      fullPath: '/datenschutz'
+      preLoaderRoute: typeof DatenschutzRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/checkout/return': {
-      id: '/checkout/return'
-      path: '/checkout/return'
-      fullPath: '/checkout/return'
-      preLoaderRoute: typeof CheckoutReturnRouteImport
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/buchung/$bookingId': {
-      id: '/buchung/$bookingId'
-      path: '/buchung/$bookingId'
-      fullPath: '/buchung/$bookingId'
-      preLoaderRoute: typeof BuchungBookingIdRouteImport
+    '/impressum': {
+      id: '/impressum'
+      path: '/impressum'
+      fullPath: '/impressum'
+      preLoaderRoute: typeof ImpressumRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kontakt': {
+      id: '/kontakt'
+      path: '/kontakt'
+      fullPath: '/kontakt'
+      preLoaderRoute: typeof KontaktRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/langzeitmiete': {
+      id: '/langzeitmiete'
+      path: '/langzeitmiete'
+      fullPath: '/langzeitmiete'
+      preLoaderRoute: typeof LangzeitmieteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partner': {
+      id: '/partner'
+      path: '/partner'
+      fullPath: '/partner'
+      preLoaderRoute: typeof PartnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/preise': {
+      id: '/preise'
+      path: '/preise'
+      fullPath: '/preise'
+      preLoaderRoute: typeof PreiseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profil': {
+      id: '/profil'
+      path: '/profil'
+      fullPath: '/profil'
+      preLoaderRoute: typeof ProfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/transporter-mieten-pforzheim-calw': {
+      id: '/transporter-mieten-pforzheim-calw'
+      path: '/transporter-mieten-pforzheim-calw'
+      fullPath: '/transporter-mieten-pforzheim-calw'
+      preLoaderRoute: typeof TransporterMietenPforzheimCalwRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ueber-uns': {
+      id: '/ueber-uns'
+      path: '/ueber-uns'
+      fullPath: '/ueber-uns'
+      preLoaderRoute: typeof UeberUnsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/umzugstransporter-mieten': {
+      id: '/umzugstransporter-mieten'
+      path: '/umzugstransporter-mieten'
+      fullPath: '/umzugstransporter-mieten'
+      preLoaderRoute: typeof UmzugstransporterMietenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/werbung': {
+      id: '/werbung'
+      path: '/werbung'
+      fullPath: '/werbung'
+      preLoaderRoute: typeof WerbungRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/confirm': {
@@ -579,11 +538,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthConfirmRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/send-test-invoice': {
-      id: '/api/public/send-test-invoice'
-      path: '/api/public/send-test-invoice'
-      fullPath: '/api/public/send-test-invoice'
-      preLoaderRoute: typeof ApiPublicSendTestInvoiceRouteImport
+    '/buchung/$bookingId': {
+      id: '/buchung/$bookingId'
+      path: '/buchung/$bookingId'
+      fullPath: '/buchung/$bookingId'
+      preLoaderRoute: typeof BuchungBookingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/return': {
+      id: '/checkout/return'
+      path: '/checkout/return'
+      fullPath: '/checkout/return'
+      preLoaderRoute: typeof CheckoutReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trip/$bookingId': {
+      id: '/trip/$bookingId'
+      path: '/trip/$bookingId'
+      fullPath: '/trip/$bookingId'
+      preLoaderRoute: typeof TripBookingIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/resend-booking-mails': {
@@ -593,39 +566,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicResendBookingMailsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/payments/webhook': {
-      id: '/api/public/payments/webhook'
-      path: '/api/public/payments/webhook'
-      fullPath: '/api/public/payments/webhook'
-      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+    '/api/public/send-test-invoice': {
+      id: '/api/public/send-test-invoice'
+      path: '/api/public/send-test-invoice'
+      fullPath: '/api/public/send-test-invoice'
+      preLoaderRoute: typeof ApiPublicSendTestInvoiceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/send-reminders': {
-      id: '/api/public/hooks/send-reminders'
-      path: '/api/public/hooks/send-reminders'
-      fullPath: '/api/public/hooks/send-reminders'
-      preLoaderRoute: typeof ApiPublicHooksSendRemindersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/send-birthday-emails': {
-      id: '/api/public/hooks/send-birthday-emails'
-      path: '/api/public/hooks/send-birthday-emails'
-      fullPath: '/api/public/hooks/send-birthday-emails'
-      preLoaderRoute: typeof ApiPublicHooksSendBirthdayEmailsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/process-manual-notifications': {
-      id: '/api/public/hooks/process-manual-notifications'
-      path: '/api/public/hooks/process-manual-notifications'
-      fullPath: '/api/public/hooks/process-manual-notifications'
-      preLoaderRoute: typeof ApiPublicHooksProcessManualNotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/process-calendar-sync': {
-      id: '/api/public/hooks/process-calendar-sync'
-      path: '/api/public/hooks/process-calendar-sync'
-      fullPath: '/api/public/hooks/process-calendar-sync'
-      preLoaderRoute: typeof ApiPublicHooksProcessCalendarSyncRouteImport
+    '/api/public/health/automations': {
+      id: '/api/public/health/automations'
+      path: '/api/public/health/automations'
+      fullPath: '/api/public/health/automations'
+      preLoaderRoute: typeof ApiPublicHealthAutomationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/notify-admin': {
@@ -635,11 +587,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksNotifyAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/health/automations': {
-      id: '/api/public/health/automations'
-      path: '/api/public/health/automations'
-      fullPath: '/api/public/health/automations'
-      preLoaderRoute: typeof ApiPublicHealthAutomationsRouteImport
+    '/api/public/hooks/process-calendar-sync': {
+      id: '/api/public/hooks/process-calendar-sync'
+      path: '/api/public/hooks/process-calendar-sync'
+      fullPath: '/api/public/hooks/process-calendar-sync'
+      preLoaderRoute: typeof ApiPublicHooksProcessCalendarSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/process-manual-notifications': {
+      id: '/api/public/hooks/process-manual-notifications'
+      path: '/api/public/hooks/process-manual-notifications'
+      fullPath: '/api/public/hooks/process-manual-notifications'
+      preLoaderRoute: typeof ApiPublicHooksProcessManualNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/send-birthday-emails': {
+      id: '/api/public/hooks/send-birthday-emails'
+      path: '/api/public/hooks/send-birthday-emails'
+      fullPath: '/api/public/hooks/send-birthday-emails'
+      preLoaderRoute: typeof ApiPublicHooksSendBirthdayEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/send-reminders': {
+      id: '/api/public/hooks/send-reminders'
+      path: '/api/public/hooks/send-reminders'
+      fullPath: '/api/public/hooks/send-reminders'
+      preLoaderRoute: typeof ApiPublicHooksSendRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -657,7 +637,6 @@ const rootRouteChildren: RootRouteChildren = {
   PartnerRoute: PartnerRoute,
   PreiseRoute: PreiseRoute,
   ProfilRoute: ProfilRoute,
-  QaCalendarPreviewRoute: QaCalendarPreviewRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TransporterMietenPforzheimCalwRoute: TransporterMietenPforzheimCalwRoute,
   UeberUnsRoute: UeberUnsRoute,
