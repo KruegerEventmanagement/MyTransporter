@@ -24,7 +24,7 @@ import { formatBerlin, formatDuration, returnTimeState, type ReturnTimeState } f
 import { rankRoutes, createRequestGate, type RouteAlt } from "@/lib/trip-routes";
 import { loadTripNav, saveTripNav } from "@/lib/return-draft";
 import { enablePushOnThisDevice, getPushStatus, isSubscribedOnThisDevice } from "@/lib/push-client";
-import logoImage from "@/assets/logo.png";
+import { BrandHomeLink } from "@/components/BrandHomeLink";
 
 const GOOGLE_MAPS_API_KEY =
   (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined) ||
@@ -513,13 +513,7 @@ export function ActiveTripDashboard({
       {/* Top-Leiste mit Logo → Startseite */}
       <div className="absolute top-0 left-0 right-0 z-20 p-4 pointer-events-none" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
         <div className="flex items-center justify-between gap-3">
-          <Link
-            to="/"
-            aria-label="MyTransporter Startseite"
-            className="pointer-events-auto inline-flex min-h-11 items-center rounded-full bg-background/95 px-3 shadow-lg"
-          >
-            <img src={logoImage} alt="MyTransporter" className="h-7 w-auto" />
-          </Link>
+          <BrandHomeLink className="pointer-events-auto rounded-full bg-background/95 px-3 shadow-lg" />
           <div className="pointer-events-auto inline-flex min-h-11 items-center gap-2 bg-foreground text-background rounded-full px-4 shadow-lg">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-background opacity-75" />

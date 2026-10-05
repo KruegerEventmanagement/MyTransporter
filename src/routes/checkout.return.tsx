@@ -5,6 +5,7 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { getBookingBySessionId } from "@/lib/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { trackPurchase } from "@/lib/analytics";
+import { BrandHomeLink } from "@/components/BrandHomeLink";
 
 export const Route = createFileRoute("/checkout/return")({
   head: () => privateHead("Zahlung wird bestätigt, MyTransporter"),
@@ -74,7 +75,8 @@ function CheckoutReturn() {
   }, [sessionId, navigate]);
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center px-4">
+    <main className="relative min-h-screen bg-background flex items-center justify-center px-4">
+      <BrandHomeLink className="absolute left-4 top-3" imageClassName="h-7 w-auto" />
       <div className="max-w-md w-full text-center">
         {error ? (
           <>

@@ -24,10 +24,28 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  IF NEW.start_date IS DISTINCT FROM OLD.start_date
+  IF NEW.user_id IS DISTINCT FROM OLD.user_id
+     OR NEW.start_date IS DISTINCT FROM OLD.start_date
      OR NEW.start_hour IS DISTINCT FROM OLD.start_hour
      OR NEW.plan_id IS DISTINCT FROM OLD.plan_id
      OR NEW.plan_label IS DISTINCT FROM OLD.plan_label
+     OR NEW.plan_price IS DISTINCT FROM OLD.plan_price
+     OR NEW.deposit IS DISTINCT FROM OLD.deposit
+     OR NEW.deposit_status IS DISTINCT FROM OLD.deposit_status
+     OR NEW.deposit_released_at IS DISTINCT FROM OLD.deposit_released_at
+     OR NEW.deposit_released_by IS DISTINCT FROM OLD.deposit_released_by
+     OR NEW.deposit_deducted_cents IS DISTINCT FROM OLD.deposit_deducted_cents
+     OR NEW.deposit_refund_id IS DISTINCT FROM OLD.deposit_refund_id
+     OR NEW.stripe_customer_id IS DISTINCT FROM OLD.stripe_customer_id
+     OR NEW.stripe_payment_intent_id IS DISTINCT FROM OLD.stripe_payment_intent_id
+     OR NEW.stripe_payment_method_id IS DISTINCT FROM OLD.stripe_payment_method_id
+     OR NEW.extra_charge_intent_id IS DISTINCT FROM OLD.extra_charge_intent_id
+     OR NEW.extra_charge_status IS DISTINCT FROM OLD.extra_charge_status
+     OR NEW.extra_charge_cents IS DISTINCT FROM OLD.extra_charge_cents
+     OR NEW.free_km IS DISTINCT FROM OLD.free_km
+     OR NEW.km_price_cents IS DISTINCT FROM OLD.km_price_cents
+     OR NEW.addons IS DISTINCT FROM OLD.addons
+     OR NEW.addons_total_cents IS DISTINCT FROM OLD.addons_total_cents
      OR NEW.vehicle_name IS DISTINCT FROM OLD.vehicle_name
      OR NEW.vehicle_plate IS DISTINCT FROM OLD.vehicle_plate
      OR NEW.pickup_code IS DISTINCT FROM OLD.pickup_code

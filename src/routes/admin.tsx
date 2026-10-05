@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { privateHead } from "@/lib/seo";
+import { BrandHomeLink } from "@/components/BrandHomeLink";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -485,13 +486,7 @@ function AdminDashboard() {
       <header className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <Link
-              to="/"
-              className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center shrink-0"
-              aria-label="Zurück zur Startseite"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </Link>
+            <BrandHomeLink imageClassName="h-7 w-auto" />
             <div className="min-w-0">
               <h1 className="text-xl font-bold truncate">MyTransporter · Admin</h1>
               <p className="text-xs text-muted-foreground truncate">
@@ -888,6 +883,7 @@ function CustomerDetail({
     <main className="min-h-screen bg-background">
       <header className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-3">
+          <BrandHomeLink className="mr-1" imageClassName="h-7 w-auto" />
           <button
             onClick={onBack}
             className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center"

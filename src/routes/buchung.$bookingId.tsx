@@ -8,6 +8,7 @@ import { de } from "date-fns/locale";
 import { resolveTripPhotoUrls } from "@/lib/trip-photos";
 import { computePlanReturn } from "@/lib/booking-rules";
 import { requireLogin } from "@/lib/login-redirect";
+import { BrandHomeLink } from "@/components/BrandHomeLink";
 
 export const Route = createFileRoute("/buchung/$bookingId")({
   head: () => privateHead("MyTransporter · Buchungsdetails"),
@@ -209,10 +210,11 @@ function BookingDetailPage() {
     <main className="min-h-screen bg-background pb-12">
       <header className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b border-border">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
+          <BrandHomeLink className="mr-1" imageClassName="h-7 w-auto" />
           <Link
             to="/profil"
             className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80"
-            aria-label="Zurück"
+            aria-label="Zurück zu meinen Buchungen"
           >
             <ChevronLeft className="w-4 h-4" />
           </Link>

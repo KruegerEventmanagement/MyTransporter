@@ -15,10 +15,12 @@ import { CookieConsent } from "@/components/CookieConsent";
 import { Toaster } from "@/components/ui/sonner";
 import { ActiveTripBanner } from "@/components/ActiveTripBanner";
 import { safeJsonLd, siteJsonLd } from "@/lib/seo";
+import { BrandHomeLink } from "@/components/BrandHomeLink";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-background px-4">
+      <BrandHomeLink className="absolute left-4 top-3" imageClassName="h-7 w-auto" />
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Seite nicht gefunden</h2>
@@ -43,7 +45,8 @@ function ErrorComponent({ error, reset }: { error: unknown; reset: () => void })
   const router = useRouter();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-background px-4">
+      <BrandHomeLink className="absolute left-4 top-3" imageClassName="h-7 w-auto" />
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           This page didn't load

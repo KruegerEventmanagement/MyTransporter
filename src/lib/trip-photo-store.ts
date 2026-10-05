@@ -127,6 +127,22 @@ export interface TripPhotoRow {
   photo_url: string;
 }
 
+export class BookingUpdateError extends Error {
+  readonly kind: "locked" | "network" | "rejected";
+
+  constructor(kind: "locked" | "network" | "rejected") {
+    super(
+      kind === "network"
+        ? "Keine Verbindung. Bitte Internetverbindung prüfen und erneut versuchen."
+        : kind === "locked"
+          ? "Der aktuelle Stand der Rückgabe wird neu geladen."
+          : "Speichern wurde abgelehnt. Bitte erneut versuchen.",
+    );
+    this.name = "BookingUpdateError";
+    this.kind = kind;
+  }
+}
+
 export async function loadTripPhotos(
   client: Client,
   bookingId: string,
@@ -152,19 +168,23 @@ export async function updateBookingChecked(
   bookingId: string,
   values: Record<string, unknown>,
 ): Promise<void> {
-  let ok = false;
   try {
     const { data, error } = await client
       .from("bookings")
       .update(values)
       .eq("id", bookingId)
       .select("id");
-    ok = !error && Array.isArray(data) && data.length > 0;
-  } catch {
-    ok = false;
+    if (error) {
+      const detail = String((error as { code?: string; message?: string }).message ?? "");
+      const code = String((error as { code?: string }).code ?? "");
+      if (code === "42501" || detail.includes("TRIP_FIELD_LOCKED") || detail.includes("TRIP_STATUS_LOCKED")) {
+        throw new BookingUpdateError("locked");
+      }
+      throw new BookingUpdateError("rejected");
+    }
+    if (!Array.isArray(data) || data.length === 0) throw new BookingUpdateError("rejected");
+  } catch (error) {
+    if (error instanceof BookingUpdateError) throw error;
+    throw new BookingUpdateError("network");
   }
-  if (!ok)
-    throw new Error(
-      "Speichern fehlgeschlagen. Bitte Internetverbindung prüfen und erneut versuchen.",
-    );
 }
