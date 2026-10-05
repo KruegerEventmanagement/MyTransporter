@@ -1,3 +1,4 @@
+import { publicOrigin } from "@/lib/native/platform";
 import { AddressFields } from "@/components/AddressFields";
 import { EMPTY_ADDRESS, addressSignUpMetadata } from "@/lib/address";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
