@@ -28,7 +28,11 @@ CREATE TABLE public.bookings (
   return_code text, coupon_code text, discount_cents int NOT NULL DEFAULT 0, tank_level_end text,
   ai_end_fuel_percent int, end_km_manual boolean, return_reported_at timestamptz, return_review_reason text,
   return_exceptions jsonb, return_reminder_10min_for timestamptz, reminder_24h_sent_at timestamptz,
-  reminder_30min_sent_at timestamptz, remarks text);
+  reminder_30min_sent_at timestamptz, remarks text, plan_price numeric DEFAULT 99, deposit numeric DEFAULT 200,
+  deposit_status text DEFAULT 'held', deposit_released_at timestamptz, deposit_released_by uuid,
+  deposit_deducted_cents int, deposit_refund_id text, stripe_customer_id text,
+  stripe_payment_intent_id text, stripe_payment_method_id text, extra_charge_intent_id text,
+  extra_charge_status text, extra_charge_cents int, addons jsonb, addons_total_cents int DEFAULT 0);
 CREATE TABLE public.trip_photos (booking_id uuid, photo_url text, photo_type text);
 CREATE TABLE public.admin_notifications (type text, title text, body text, booking_id uuid, user_id uuid);
 `;
