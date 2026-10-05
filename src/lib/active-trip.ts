@@ -84,3 +84,15 @@ export function pickActiveTrip(
 export function isTripPath(pathname: string): boolean {
   return /^\/trip\//.test(pathname);
 }
+
+export type TripPhase = "pre" | "active" | "return" | "done";
+
+/** Serverstatus → Phase. Ein lokal gestarteter Rückgabeentwurf hält "return" über Reloads. */
+export function phaseFor(status: string | null | undefined, returnStarted: boolean): TripPhase {
+  if (status === "completed" || status === "cancelled") return "done";
+  if (isReturningStatus(status)) return "return";
+  if (status === "active" || status === "started" || status === "running" || status === "in_progress" || status === "picked_up")
+    return returnStarted ? "return" : "active";
+  return "pre";
+}
+

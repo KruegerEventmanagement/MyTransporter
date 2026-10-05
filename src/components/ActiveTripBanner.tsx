@@ -36,7 +36,9 @@ export function ActiveTripBanner() {
     const root = document.documentElement;
     if (visible) root.style.setProperty("--mt-trip-bar", `calc(${BAR_PX}px + env(safe-area-inset-bottom))`);
     else root.style.removeProperty("--mt-trip-bar");
-    return () => root.style.removeProperty("--mt-trip-bar");
+    return () => {
+      root.style.removeProperty("--mt-trip-bar");
+    };
   }, [visible]);
 
   if (!visible || !trip) return null;

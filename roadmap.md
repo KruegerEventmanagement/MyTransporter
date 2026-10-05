@@ -28,3 +28,5 @@
 - [x] Review 3a996fdf-Lücken behoben
 - [x] Awin-Ausbau: 16 verifizierte Angebote exakt 8/8 ausschließlich in Desktop-Seitenleisten, ohne Inline-/Mobile-Platzierung oder Vorab-Anfragen
 - [x] Awin-Erweiterung tesa (117567): Original-Textlink „tesa“ als 9. linke Karte, 17 Marken 9/8, clickref befüllt statt angehängt
+
+- [x] Aktive Fahrtansicht: globale Leiste "Sofort zurückkehren", wiederherstellbare Fahrt/Rückgabe, Kartenfixes, Fotoqueue, serverseitige idempotente Rückgabemeldung, 10-Minuten-Erinnerung (QA: docs/qa-active-trip-2026-10-05.md)
