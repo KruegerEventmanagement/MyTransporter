@@ -216,3 +216,31 @@ describe("ReturnFlow (Rückgabe)", () => {
     expect(screen.queryByText("Dein Rückgabecode")).toBeNull();
   });
 });
+
+describe("ReturnFlow Wiederherstellung", () => {
+  beforeEach(() => localStorage.clear());
+  it("Reload: Schritt, Kilometer, Tank und Ausnahme aus Entwurf; nur für denselben Nutzer", async () => {
+    localStorage.setItem(
+      "mt_return_draft_v1:u1:b1",
+      JSON.stringify({ v: 1, updatedAt: 1, started: true, step: "km", endKm: "0", endKmManual: true, endFuelPercent: "55", exceptions: { fuel: "Anzeige ist dunkel und unlesbar" } }),
+    );
+    render(<ReturnFlow bookingId="b1" planId="km" startKm={0} userId="u1" onComplete={vi.fn()} />);
+    expect((screen.getByPlaceholderText("z.B. 42920") as HTMLInputElement).value).toBe("0");
+    expect((screen.getByPlaceholderText("z.B. 75") as HTMLInputElement).value).toBe("55");
+    expect((screen.getByLabelText(/Tankanzeige lässt sich nicht/) as HTMLTextAreaElement).value).toMatch(/dunkel/);
+    cleanup();
+    render(<ReturnFlow bookingId="b1" planId="km" startKm={0} userId="u2" onComplete={vi.fn()} />);
+    expect(screen.getByText("Fahrzeug-Rückgabe dokumentieren")).toBeTruthy();
+  });
+  it("returning mit gespeichertem Code zeigt genau diesen Code, ohne neue Meldung", async () => {
+    render(<ReturnFlow bookingId="b1" planId="km" startKm={0} userId="u1" serverReturnCode="ABC234" onComplete={vi.fn()} />);
+    expect(screen.getByText("ABC234")).toBeTruthy();
+    expect(screen.getByText(/Rückgabe gemeldet/)).toBeTruthy();
+    expect(fake.calls.some((c) => c.table === "bookings" && c.op === "update")).toBe(false);
+  });
+  it("ohne Gerätespeicher ehrlicher Hinweis; Dokumentationstext sichtbar", async () => {
+    render(<ReturnFlow bookingId="b1" planId="km" startKm={0} userId="u1" onComplete={vi.fn()} />);
+    expect(await screen.findByText(/nicht zwischengespeichert werden/)).toBeTruthy();
+    expect(screen.getByTestId("return-notice").textContent).toMatch(/mit deiner Kaution verrechnet/);
+  });
+});
