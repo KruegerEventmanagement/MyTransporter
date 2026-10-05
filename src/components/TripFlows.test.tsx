@@ -218,6 +218,22 @@ describe("ReturnFlow (Rückgabe)", () => {
     expect(await screen.findByText(/Rückgabe nicht gespeichert/)).toBeTruthy();
     expect(screen.queryByText("Dein Rückgabecode")).toBeNull();
   });
+
+  it("lädt bei serverseitig bereits gesperrter Rückgabe den aktuellen Stand neu", async () => {
+    fake.on("trip_photos", "select", {
+      data: rows("post", ["post_interior", "post_odometer", "post_fuel", "tank_receipt"]),
+      error: null,
+    });
+    fake.on("bookings", "update", { data: null, error: { code: "42501", message: "TRIP_FIELD_LOCKED" } });
+    const refresh = vi.fn(async () => {});
+    render(<ReturnFlow bookingId="b1" planId="km" startKm={100} onBookingRefresh={refresh} onComplete={vi.fn()} />);
+    await waitFor(() => expect(savedChecks()).toHaveLength(9));
+    fireEvent.click(screen.getByText(/^Weiter/));
+    fireEvent.change(screen.getByPlaceholderText("z.B. 42920"), { target: { value: "150" } });
+    fireEvent.click(screen.getByText(/^Weiter/));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+    expect(screen.getByText(/aktuelle Stand der Rückgabe wird neu geladen/)).toBeTruthy();
+  });
 });
 
 describe("ReturnFlow Wiederherstellung", () => {

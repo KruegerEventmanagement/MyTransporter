@@ -3,6 +3,7 @@ import { privateHead } from "@/lib/seo";
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { BrandHomeLink } from "@/components/BrandHomeLink";
 
 const PROFILE_URL = "/profil";
 const FALLBACK_URL = "/?email_confirmed=1#booking";
@@ -65,7 +66,8 @@ function AuthConfirmPage() {
   }, []);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4">
+    <main className="relative flex min-h-screen items-center justify-center bg-background px-4">
+      <BrandHomeLink className="absolute left-4 top-3" imageClassName="h-7 w-auto" />
       <section className="w-full max-w-sm text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
           {message.startsWith("E-Mail bestätigt") ? (

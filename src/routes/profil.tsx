@@ -15,6 +15,7 @@ import { getStripeEnvironment } from "@/lib/stripe";
 import { computePlanReturn, type PlanId } from "@/lib/booking-rules";
 import { DocumentScanner, SCAN_DOC_LABELS, type ScanDocType } from "@/components/DocumentScanner";
 import { ageOn, MIN_DRIVER_AGE } from "@/lib/birthday";
+import { BrandHomeLink } from "@/components/BrandHomeLink";
 
 export const Route = createFileRoute("/profil")({
   head: () => privateHead("MyTransporter · Profil"),
@@ -276,13 +277,7 @@ function ProfilePage() {
     <main className="min-h-screen bg-background pb-12">
       <header className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b border-border">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Link
-            to="/"
-            className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80"
-            aria-label="Zurück"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Link>
+          <BrandHomeLink imageClassName="h-7 w-auto" />
           <div className="min-w-0">
             <h1 className="text-base font-bold truncate">{displayName}</h1>
             <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>

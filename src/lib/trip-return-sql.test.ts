@@ -154,6 +154,7 @@ describe("bookings_guard_customer_update (SQL)", () => {
     for (const set of [
       "status='completed'",
       "status='returning'",
+      `user_id='${U2}'`,
       "extra_km=0",
       "extra_km_charge_cents=0",
       "plan_id='week_x9'",

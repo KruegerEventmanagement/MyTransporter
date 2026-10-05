@@ -24,7 +24,8 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  IF NEW.start_date IS DISTINCT FROM OLD.start_date
+  IF NEW.user_id IS DISTINCT FROM OLD.user_id
+     OR NEW.start_date IS DISTINCT FROM OLD.start_date
      OR NEW.start_hour IS DISTINCT FROM OLD.start_hour
      OR NEW.plan_id IS DISTINCT FROM OLD.plan_id
      OR NEW.plan_label IS DISTINCT FROM OLD.plan_label
