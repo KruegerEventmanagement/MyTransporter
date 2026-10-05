@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ACTIVE_TRIP_STATUSES,
+  TRIP_COMPLETION_REQUIRED_FROM,
   pickActiveTrip,
   type ActiveTrip,
   type ActiveTripRow,
@@ -48,7 +49,8 @@ export function useActiveTrip(preferredId?: string | null) {
         .from("bookings")
         .select("id, user_id, status, start_date, start_hour, plan_id, vehicle_name, vehicle_plate")
         .eq("user_id", uid)
-        .in("status", [...ACTIVE_TRIP_STATUSES]);
+        .in("status", [...ACTIVE_TRIP_STATUSES])
+        .gte("start_date", TRIP_COMPLETION_REQUIRED_FROM);
       if (error) throw error;
       // Antwort verwerfen, wenn inzwischen Konto gewechselt oder neuer Lauf gestartet.
       if (my !== seq.current || userRef.current !== uid) return;

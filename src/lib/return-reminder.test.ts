@@ -3,7 +3,7 @@ import { createFakeSupabase } from "@/test/fake-supabase";
 import { processReturnReminders } from "./return-reminder";
 import { resolveTripWindow } from "./trip-time";
 
-const row = { id: "b1", user_id: "u1", status: "picked_up", start_date: "2026-10-05", start_hour: 10, plan_id: "6h", return_reminder_10min_for: null };
+const row = { id: "b1", user_id: "u1", status: "picked_up", start_date: "2026-10-08", start_hour: 10, plan_id: "6h", return_reminder_10min_for: null };
 const end = resolveTripWindow(row).endMs;
 
 describe("processReturnReminders (minütlicher Job)", () => {

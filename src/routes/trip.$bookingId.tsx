@@ -10,7 +10,7 @@ import { ScheduledTripView } from "@/components/ScheduledTripView";
 import { Loader2, Check, RotateCcw } from "lucide-react";
 import { requireLogin } from "@/lib/login-redirect";
 import { resolveTripWindow } from "@/lib/trip-time";
-import { isReturningStatus, phaseFor } from "@/lib/active-trip";
+import { isLegacyOpenTrip, isReturningStatus, phaseFor } from "@/lib/active-trip";
 import { loadReturnDraft, saveReturnDraft, clearReturnDraft } from "@/lib/return-draft";
 import { BrandHomeLink } from "@/components/BrandHomeLink";
 
@@ -248,6 +248,34 @@ function TripPage() {
           <Link to="/profil" className="underline">
             Zu meinen Buchungen
           </Link>
+        </div>
+      </main>
+    );
+  }
+
+  // Offene Altbuchung vor dem Stichtag: verfallen, kein Rückgabeablauf mehr.
+  if (!bookingId.startsWith("demo-") && isLegacyOpenTrip(booking)) {
+    return (
+      <main className="min-h-screen bg-background flex flex-col">
+        <TripLogoBar />
+        <div className="flex-1 flex items-center justify-center px-4 text-center">
+          <div className="max-w-sm" data-testid="trip-expired">
+            <h1 className="text-2xl font-bold mb-2">Diese Buchung ist abgelaufen</h1>
+            <p className="text-sm text-muted-foreground mb-6">
+              Die Fahrt liegt in der Vergangenheit und muss nicht mehr abgeschlossen werden. Du kannst jederzeit neu buchen.
+            </p>
+            <div className="flex flex-col items-center gap-3">
+              <Link
+                to="/"
+                className="inline-flex min-h-12 items-center rounded-full bg-foreground px-8 text-background font-semibold"
+              >
+                Neu buchen
+              </Link>
+              <Link to="/profil" className="underline text-sm">
+                Zu meinen Buchungen
+              </Link>
+            </div>
+          </div>
         </div>
       </main>
     );
