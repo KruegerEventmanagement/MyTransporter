@@ -48,7 +48,7 @@ export const deleteMyAccount = createServerFn({ method: "POST" })
     }
     await supabaseAdmin.from("push_subscriptions").delete().eq("user_id", uid);
     await supabaseAdmin.from("native_push_tokens").delete().eq("user_id", uid);
-    await supabaseAdmin.from("profiles").delete().eq("user_id", uid);
+    await supabaseAdmin.from("profiles").delete().eq("id", uid);
     const { error } = await supabaseAdmin.auth.admin.deleteUser(uid);
     if (error) throw new Error("Konto konnte nicht gelöscht werden. Bitte kontaktiere uns.");
     return { ok: true as const };
