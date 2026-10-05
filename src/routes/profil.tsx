@@ -531,6 +531,8 @@ function ProfilePage() {
             </ul>
           )}
         </section>
+
+        <DeleteAccountSection />
       </div>
     </main>
   );
