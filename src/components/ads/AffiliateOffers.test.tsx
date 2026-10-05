@@ -49,7 +49,7 @@ describe("Affiliate-Konfiguration", () => {
       expect(u.searchParams.get("awinaffid")).toBe("3102390");
       expect(u.searchParams.get("ued")).toBe(o.destination);
       expect(u.searchParams.get("clickref")).toBeNull();
-      expect(new URL(o.destination).protocol).toBe("https:");
+      expect(new URL(o.destination ?? "").protocol).toBe("https:");
 
       const clicked = new URL(affiliateTrackingUrl(o, o.rail));
       expect(clicked.searchParams.get("ued")).toBe(o.destination);

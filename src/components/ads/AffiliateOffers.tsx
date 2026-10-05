@@ -21,12 +21,13 @@ import {
   AFFILIATE_REL,
   affiliateOffersForRail,
   affiliateTrackingUrl,
+  type AffiliateIcon,
   type AffiliateOffer,
   type AffiliateRail,
 } from "@/lib/affiliate";
 
 function OfferIcon({ offer }: { offer: AffiliateOffer }) {
-  const icons: Record<AffiliateOffer["icon"], LucideIcon> = {
+  const icons: Record<AffiliateIcon, LucideIcon> = {
     bike: Bike,
     box: Box,
     briefcase: BriefcaseBusiness,
