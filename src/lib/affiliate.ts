@@ -30,12 +30,16 @@ export type AffiliateRail = "left" | "right";
 export interface AffiliateOffer {
   id: string;
   brand: string;
-  category: string;
+  /** Fehlt bei Original-Textlinks des Advertisers (keine erfundene Beschreibung). */
+  category?: string;
   advertiserId: string;
-  destination: string;
+  /** Fehlt, wenn der Advertiser das Ziel dynamisch verwaltet (awclick.php-Werbemittel). */
+  destination?: string;
   trackingUrl: string;
-  icon: AffiliateIcon;
+  icon?: AffiliateIcon;
   rail: AffiliateRail;
+  /** Unveränderter, vom Advertiser bereitgestellter Linktext; Karte zeigt nur diesen Text im Link. */
+  originalText?: string;
 }
 
 export const AFFILIATE_CONFIG: { enabled: boolean; offers: readonly AffiliateOffer[] } = {
@@ -128,6 +132,15 @@ export const AFFILIATE_CONFIG: { enabled: boolean; offers: readonly AffiliateOff
         "https://www.awin1.com/cread.php?awinmid=130403&awinaffid=3102390&ued=https%3A%2F%2Fmindebox.de%2F",
       icon: "camera",
       rail: "left",
+    },
+    {
+      id: "tesa",
+      brand: "tesa",
+      advertiserId: "117567",
+      trackingUrl:
+        "https://www.awin1.com/awclick.php?gid=583198&mid=117567&awinaffid=3102390&linkid=4535956&clickref=",
+      rail: "left",
+      originalText: "tesa",
     },
     {
       id: "finebuy",
@@ -230,5 +243,8 @@ export function affiliateOffersForRail(rail: AffiliateRail): readonly AffiliateO
 
 /** Ergänzt ausschließlich einen festen, nicht personenbezogenen Platzierungswert. */
 export function affiliateTrackingUrl(offer: AffiliateOffer, rail: AffiliateRail): string {
-  return `${offer.trackingUrl}&clickref=mytransporter_${rail}`;
+  const ref = `mytransporter_${rail}`;
+  // Original-Werbemittel enthalten bereits einen leeren clickref: befüllen statt doppelt anhängen.
+  if (offer.trackingUrl.endsWith("&clickref=")) return `${offer.trackingUrl}${ref}`;
+  return `${offer.trackingUrl}&clickref=${ref}`;
 }
