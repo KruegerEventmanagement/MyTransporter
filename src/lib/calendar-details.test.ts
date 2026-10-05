@@ -83,7 +83,7 @@ const baseRows = (): Rows => ({
       customer_city: "99999 Ort", note: "Bitte Gurte", customer_birth_date: "2030-01-01" },
   ],
   manual_reservation_documents: [
-    { id: "m1", reservation_id: M1, doc_type: "id_front", file_path: "admin/manual/x/id.pdf", created_at: "2026-01-01" },
+    { id: "m1", reservation_id: M1, doc_type: "id_front", file_path: `admin/manual/${M1}/id.pdf`, created_at: "2026-01-01" },
   ],
 });
 
@@ -164,7 +164,7 @@ describe("loadCalendarEntryDetails", () => {
     expect(d.customer.address).toBe("Weg 2, 99999 Ort");
     expect(d.notes).toBe("Bitte Gurte");
     expect(d.documents.id.front?.isPdf).toBe(true);
-    expect(signed).toEqual(["admin/manual/x/id.pdf"]);
+    expect(signed).toEqual([`admin/manual/${M1}/id.pdf`]);
   });
 
   it("Ladefehler wird gemeldet statt leer angezeigt", async () => {
