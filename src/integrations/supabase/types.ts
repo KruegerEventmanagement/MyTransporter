@@ -683,6 +683,10 @@ export type Database = {
       profiles: {
         Row: {
           account_type: string
+          address_city: string | null
+          address_country: string | null
+          address_postal_code: string | null
+          address_street: string | null
           birth_date: string | null
           birthday_consent_at: string | null
           birthday_marketing_consent: boolean
@@ -697,6 +701,10 @@ export type Database = {
         }
         Insert: {
           account_type?: string
+          address_city?: string | null
+          address_country?: string | null
+          address_postal_code?: string | null
+          address_street?: string | null
           birth_date?: string | null
           birthday_consent_at?: string | null
           birthday_marketing_consent?: boolean
@@ -711,6 +719,10 @@ export type Database = {
         }
         Update: {
           account_type?: string
+          address_city?: string | null
+          address_country?: string | null
+          address_postal_code?: string | null
+          address_street?: string | null
           birth_date?: string | null
           birthday_consent_at?: string | null
           birthday_marketing_consent?: boolean
