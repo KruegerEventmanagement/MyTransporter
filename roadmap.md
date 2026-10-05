@@ -30,3 +30,9 @@
 - [x] Awin-Erweiterung tesa (117567): Original-Textlink „tesa“ als 9. linke Karte, 17 Marken 9/8, clickref befüllt statt angehängt
 
 - [x] Aktive Fahrtansicht: globale Leiste "Sofort zurückkehren", wiederherstellbare Fahrt/Rückgabe, Kartenfixes, Fotoqueue, serverseitige idempotente Rückgabemeldung, 10-Minuten-Erinnerung (QA: docs/qa-active-trip-2026-10-05.md)
+
+## Android/Play (05.10.2026)
+- [x] Build-Shell, SDK 36/AGP 8.10.1, Versionierung, Env-Signierung, Android-CI + Play-Upload-Job, Berechtigungen, robuster Start, stabile ServerFn-IDs, öffentliche Kontolöschung
+- [ ] Gradle-Lauf in GitHub (wartet auf ersten Workflow-Lauf)
+- [ ] Play-Secrets/erster manueller Upload (wartet auf Nutzer)
+- [ ] Nativer Push-Versand (wartet auf Firebase)

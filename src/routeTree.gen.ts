@@ -16,6 +16,7 @@ import { Route as DatenschutzRouteImport } from './routes/datenschutz'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as ImpressumRouteImport } from './routes/impressum'
 import { Route as KontaktRouteImport } from './routes/kontakt'
+import { Route as KontoLoeschenRouteImport } from './routes/konto-loeschen'
 import { Route as LangzeitmieteRouteImport } from './routes/langzeitmiete'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as PreiseRouteImport } from './routes/preise'
@@ -73,6 +74,11 @@ const ImpressumRoute = ImpressumRouteImport.update({
 const KontaktRoute = KontaktRouteImport.update({
   id: '/kontakt',
   path: '/kontakt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KontoLoeschenRoute = KontoLoeschenRouteImport.update({
+  id: '/konto-loeschen',
+  path: '/konto-loeschen',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LangzeitmieteRoute = LangzeitmieteRouteImport.update({
@@ -210,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
+  '/konto-loeschen': typeof KontoLoeschenRoute
   '/langzeitmiete': typeof LangzeitmieteRoute
   '/partner': typeof PartnerRoute
   '/preise': typeof PreiseRoute
@@ -242,6 +249,7 @@ export interface FileRoutesByTo {
   '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
+  '/konto-loeschen': typeof KontoLoeschenRoute
   '/langzeitmiete': typeof LangzeitmieteRoute
   '/partner': typeof PartnerRoute
   '/preise': typeof PreiseRoute
@@ -275,6 +283,7 @@ export interface FileRoutesById {
   '/faq': typeof FaqRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
+  '/konto-loeschen': typeof KontoLoeschenRoute
   '/langzeitmiete': typeof LangzeitmieteRoute
   '/partner': typeof PartnerRoute
   '/preise': typeof PreiseRoute
@@ -309,6 +318,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/impressum'
     | '/kontakt'
+    | '/konto-loeschen'
     | '/langzeitmiete'
     | '/partner'
     | '/preise'
@@ -341,6 +351,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/impressum'
     | '/kontakt'
+    | '/konto-loeschen'
     | '/langzeitmiete'
     | '/partner'
     | '/preise'
@@ -373,6 +384,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/impressum'
     | '/kontakt'
+    | '/konto-loeschen'
     | '/langzeitmiete'
     | '/partner'
     | '/preise'
@@ -406,6 +418,7 @@ export interface RootRouteChildren {
   FaqRoute: typeof FaqRoute
   ImpressumRoute: typeof ImpressumRoute
   KontaktRoute: typeof KontaktRoute
+  KontoLoeschenRoute: typeof KontoLoeschenRoute
   LangzeitmieteRoute: typeof LangzeitmieteRoute
   PartnerRoute: typeof PartnerRoute
   PreiseRoute: typeof PreiseRoute
@@ -480,6 +493,13 @@ declare module '@tanstack/react-router' {
       path: '/kontakt'
       fullPath: '/kontakt'
       preLoaderRoute: typeof KontaktRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/konto-loeschen': {
+      id: '/konto-loeschen'
+      path: '/konto-loeschen'
+      fullPath: '/konto-loeschen'
+      preLoaderRoute: typeof KontoLoeschenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/langzeitmiete': {
@@ -654,6 +674,7 @@ const rootRouteChildren: RootRouteChildren = {
   FaqRoute: FaqRoute,
   ImpressumRoute: ImpressumRoute,
   KontaktRoute: KontaktRoute,
+  KontoLoeschenRoute: KontoLoeschenRoute,
   LangzeitmieteRoute: LangzeitmieteRoute,
   PartnerRoute: PartnerRoute,
   PreiseRoute: PreiseRoute,

@@ -5,6 +5,15 @@
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { fileURLToPath } from "node:url";
+import { stableServerFnId } from "./src/lib/native/server-fn-id";
+
+const ROOT = fileURLToPath(new URL(".", import.meta.url));
+// Gleiche Server-Funktions-IDs für Web-Worker und native Builds (CI, andere Pfade).
+const serverFns = {
+  generateFunctionId: ({ filename, functionName }: { filename: string; functionName: string }) =>
+    stableServerFnId(filename, functionName, ROOT),
+};
 
 // Native-Build (Capacitor): `MT_NATIVE=1 vite build` erzeugt zusätzlich eine
 // lokal bündelbare SPA-Shell (_shell.html). Server-Funktionen laufen weiter auf
@@ -18,10 +27,12 @@ export default defineConfig({
   tanstackStart: NATIVE
     ? {
         server: { entry: "server" },
+        serverFns,
         spa: { enabled: true, prerender: { outputPath: "/_shell.html", crawlLinks: false } },
       }
     : {
         server: { entry: "server" },
+        serverFns,
       },
   vite: NATIVE ? { define: { "import.meta.env.VITE_MT_NATIVE": JSON.stringify("1") } } : {},
 });

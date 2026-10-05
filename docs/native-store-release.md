@@ -71,30 +71,61 @@ Vorlagen in `native/well-known/`. Nach Erhalt der Werte als
 3. Signing Credentials (iOS-Zertifikat + Provisioning Profile, Android-Keystore) in Appflow hochladen.
 4. Native Builds: iOS „App Store“, Android „Release (aab)“; Deploy-Ziele App Store Connect / Play erst nach Prüfung.
 
-## GitHub Actions
+## Android-CI & automatische Play-Updates (Stand 05.10.2026, 20:30 UTC)
 
-`.github/workflows/native-ci.yml` (ohne Secrets): Tests, Native-Shell, Android-Debug-APK, unsignierter iOS-Simulator-Build.
+Workflow `.github/workflows/android.yml` (iOS-CI deaktiviert, `ios/` bleibt im Repo; `native-ci.yml` entfernt).
 
-## Offene Credentials / Blocker
+- **check** (push `main` + PR): `bun install --frozen-lockfile` (kein Fallback), `bun run typecheck`, `bunx vitest run`, `bun run build:native`, `npx cap sync android`, `./gradlew assembleDebug lintDebug`, Artefakt `android-debug-apk` (+ Lint-Bericht).
+- **release** (nur `push` auf `main` bzw. manuell im Repo `KruegerEventmanagement/MyTransporter`, erst nach grünem check): signiertes AAB (`bundleRelease`) + Upload per Play Developer API (`r0adkll/upload-google-play`).
+  - Secrets (GitHub → Settings → Secrets → Actions): `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`. Fehlt eines, meldet der Job „NICHT eingerichtet“ (Warnung + Summary) und lädt nichts hoch. Keine Secret-Ausgabe.
+  - Track: Variable `PLAY_TRACK` (Standard `internal`) bzw. Eingabe bei manuellem Start. `production` läuft über die GitHub-Umgebung `play-production` (dort Reviewer als Freigabe eintragen); sonst `play-internal`.
+  - `PLAY_RELEASE_STATUS` (Standard `completed`). Solange die App in Play noch Entwurf ist, auf `draft` setzen.
+  - **Erster Upload muss manuell** in der Play Console erfolgen (App anlegen, Play App Signing); erst danach akzeptiert die API Uploads.
+- **Updates** kommen ausschließlich über Google Play. Kein `server.url`, kein Fremd-OTA.
 
-- Apple Developer Team-ID, Zertifikate, Provisioning Profiles, APNs-Key
-- Google Play Konto, Upload-Keystore, App-Signing-Fingerprint
-- Firebase-Projekt (`google-services.json`, `GoogleService-Info.plist`) und Versand-Service-Account
-- Serverseitiger nativer Push-Versand (bewusst noch nicht gebaut)
-- 1024×1024-App-Icon-Original für Store-Qualität
-- Veröffentlichung des Web-Stands mit CORS, bevor die App Server-Funktionen nutzt
-- Keine physischen Gerätetests durchgeführt
+### Version
+`scripts/android-version.mjs`: `versionCode = 1000 + run_number·10 + min(run_attempt, 9)` (Offset 1000; geprüft 1…2 100 000 000), `versionName = 1.0.<run_number>-<sha7>`. Gradle liest `MT_VERSION_CODE`/`MT_VERSION_NAME`; lokal `1`/`1.0-local` (nicht hochladen).
 
-## Validierung 05.10.2026 (Sandbox, Linux)
+### Signierung
+Nur über `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. Unvollständig → `bundleRelease`/`assembleRelease` bricht mit klarer Meldung ab; nie Debug-Signierung. Unsigniertes Prüf-Bundle nur explizit: `./gradlew bundleRelease -PmtUnsignedRelease=true`.
+
+### SDK
+compile/targetSdk 36, minSdk 23, AGP 8.10.1, Gradle 8.11.1, Java 21.
+
+### Berechtigungen
+INTERNET, NETWORK_STATE, CAMERA, POST_NOTIFICATIONS, Vordergrund-Standort. `READ_MEDIA_IMAGES`/`READ_EXTERNAL_STORAGE` entfernt (Fotoauswahl über System-Picker). Kamera/GPS als `uses-feature required=false`.
+
+### Build-Shell
+`scripts/build-native.mjs` löscht vorher `.output`, `dist`, `dist-native.tmp`, erkennt `.output/public` (Nitro, z. B. GitHub-CI) oder `dist/client`, kopiert nur Client-Dateien (ohne `sw.js`, `server/`, Source-Maps), ersetzt `dist-native` atomar. Ursache des fehlgeschlagenen Laufs 37366862397: Script suchte nur `dist`.
+
+### Server-Funktions-IDs
+TanStack hashte bisher den absoluten Dateipfad → in CI gebaute Apps hätten andere IDs als der Web-Worker. Jetzt `stableServerFnId` (projektrelativer Pfad + Exportname) für Web und Native. Geprüft: Build in zweitem Verzeichnis liefert identische ID. **Hinweis:** Mit der nächsten Web-Veröffentlichung ändern sich die IDs einmalig; geöffnete alte Tabs müssen neu laden.
+
+### Native Start / Push
+`bootstrap.ts`: jeder Schritt isoliert mit Timeout, Splash wird immer ausgeblendet, nur einmal initialisiert. Web-Push/Service Worker werden im nativen Build nicht registriert. **Nativer Push-Versand fehlt vollständig** (nur Token-Speicherung und Tipp-Navigation).
+
+### Kontolöschung
+Öffentlich ohne Login: `https://www.mytransporter.org/konto-loeschen` (für Play-Datensicherheitsformular).
+
+## Validierung 05.10.2026, 20:30 UTC (Sandbox, Linux, ohne JDK/Android SDK)
 
 | Befehl | Exit |
 |---|---|
-| `bunx vitest run src/lib/native` (9 Tests) | 0 |
-| `bunx vitest run` (41 Dateien, 491 Tests) | 0 |
+| `bunx vitest run src/lib/native` (19 Tests) | 0 |
+| `bunx vitest run` (42 Dateien, 501 Tests) | 0 |
 | `tsgo -p .` | 0 |
-| `npx vite build` (Web, SSR) | 0 |
-| `node scripts/build-native.mjs` (dist-native) | 0 |
-| `npx cap add android` / `npx cap add ios` / `npx cap sync` | 0 |
-| `npx cap doctor` | 1 – Android ok, „Xcode is not installed“ |
+| `npx vite build` (Web) | 0 |
+| `node scripts/build-native.mjs` (Quelle `dist/client`, kein `sw.js`) | 0 |
+| ServerFn-ID-Vergleich zweites Build-Verzeichnis | identisch |
+| `npx cap sync android` | 0 |
+| Gradle `assembleDebug`/`lintDebug`/`bundleRelease` | **nicht lokal ausführbar** – läuft erst im GitHub-Workflow |
 
-Nicht möglich hier: Gradle-Build (kein JDK/Android SDK), `pod install`/Xcode (kein macOS), Gerätetests, Push-Empfang. Diese laufen im GitHub-Workflow bzw. Appflow.
+## Offene Credentials / Blocker
+
+- Play-Console-Konto, App anlegen, erster manueller Upload, Upload-Keystore + 5 GitHub-Secrets
+- `PLAY_APP_SIGNING_SHA256_FINGERPRINT` für `assetlinks.json`
+- Firebase (`google-services.json`) und serverseitiger FCM-Versand (nicht gebaut)
+- 1024×1024-App-Icon-Original
+- Web-Veröffentlichung (CORS + stabile ServerFn-IDs), bevor die App Server-Funktionen nutzt
+- Apple/iOS: später (Team-ID, Zertifikate, APNs); iOS-CI deaktiviert
+- Keine physischen Gerätetests

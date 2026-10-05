@@ -1,1 +1,0 @@
-import{s as a}from"./index-BYFXUenv.js";async function s(r){if(!r||/^https?:\/\//.test(r))return r;const{data:t}=await a.storage.from("trip-photos").createSignedUrl(r,3600);return t?.signedUrl??""}async function n(r){return Promise.all(r.map(s))}export{n as a,s as r};

@@ -1,5 +1,22 @@
 apply plugin: 'com.android.application'
 
+// Version: CI setzt MT_VERSION_CODE/MT_VERSION_NAME (scripts/android-version.mjs).
+// Lokal: versionCode 1 / "1.0-local" (nie in den Store hochladen).
+def mtVersionCode = (System.getenv("MT_VERSION_CODE") ?: "1").toInteger()
+if (mtVersionCode <= 0 || mtVersionCode > 2100000000) {
+    throw new GradleException("MT_VERSION_CODE ${mtVersionCode} außerhalb 1..2100000000")
+}
+def mtVersionName = System.getenv("MT_VERSION_NAME") ?: "1.0-local"
+
+// Release-Signierung ausschließlich über Umgebungsvariablen. Nie Debug-Signierung für Release.
+def mtKsPath = System.getenv("ANDROID_KEYSTORE_PATH")
+def mtKsPass = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+def mtKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+def mtKeyPass = System.getenv("ANDROID_KEY_PASSWORD")
+def signingComplete = [mtKsPath, mtKsPass, mtKeyAlias, mtKeyPass].every { it != null && !it.isEmpty() } && file(mtKsPath).exists()
+// Explizit unsigniertes Bundle (nur CI-Prüfung, nicht hochladbar): -PmtUnsignedRelease=true
+def unsignedRelease = project.hasProperty("mtUnsignedRelease") && project.property("mtUnsignedRelease") == "true"
+
 android {
     namespace "de.mytransporter.app"
     compileSdk rootProject.ext.compileSdkVersion
@@ -7,8 +24,8 @@ android {
         applicationId "de.mytransporter.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode mtVersionCode
+        versionName mtVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,11 +33,39 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (signingComplete) {
+            release {
+                storeFile file(mtKsPath)
+                storePassword mtKsPass
+                keyAlias mtKeyAlias
+                keyPassword mtKeyPass
+            }
+        }
+    }
     buildTypes {
         release {
+            signingConfig signingComplete ? signingConfigs.release : null
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+    lint {
+        abortOnError true
+        warningsAsErrors false
+        checkReleaseBuilds false
+    }
+}
+
+gradle.taskGraph.whenReady { graph ->
+    def wantsRelease = graph.allTasks.any { t ->
+        t.project == project && (t.name ==~ /(bundle|assemble|package)Release.*/)
+    }
+    if (wantsRelease && !signingComplete && !unsignedRelease) {
+        throw new GradleException(
+            "Release-Signierung unvollständig: ANDROID_KEYSTORE_PATH (existierende Datei), " +
+            "ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD setzen " +
+            "oder explizit -PmtUnsignedRelease=true für ein unsigniertes Prüf-Bundle.")
     }
 }
 
