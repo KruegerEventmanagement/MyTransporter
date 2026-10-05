@@ -37,3 +37,21 @@ Migration `supabase/migrations/20261005180935_31a66dbd-ce17-4149-92b0-5c7ce5b82f
 - Hintergrund-Push erreicht nur Geräte mit eigener Opt-in-Subscription; ohne Subscription bleibt die Erinnerung on-screen beim Öffnen/Fokus.
 - Google-Maps-Nutzung bleibt online; kein Offline-Kartenversprechen, kein Hintergrund-GPS.
 - Deployment bewusst nicht ausgeführt.
+
+## Nachtrag: Root-Befunde (1)–(6), 05.10.2026 ~18:50 UTC
+
+| Befehl | Exitcode | Ergebnis |
+|---|---|---|
+| `bunx vitest run src/lib/trip-return-sql.test.ts` | 0 | 10 Tests, echtes SQL in PGlite (In-Memory-Postgres) |
+| `bunx tsgo --noEmit` | 0 | keine Typfehler |
+| `bunx vitest run` (gesamt) | 0 | 39 Dateien, 420 Tests |
+| `bun run build` | 0 | Produktionsbuild erfolgreich |
+
+1. **Endzeit:** Keine Endzeit-Spalte vorhanden. `src/lib/trip-time.ts` spiegelt `plan_end_at(local_start_at(start_date,start_hour),plan_id)` inkl. `week_xN` (= N·168 h wie SQL). Hinweis: `bookingWindowMs` in `booking-window.ts` kennt `week_xN` nicht über `getPlanById` und fiele dort auf 24 h; unverändert gelassen (Verfügbarkeit nicht Teil dieses Auftrags), bitte separat prüfen. Keine Verlängerungen versprochen.
+2. **Feldschutz:** Migration `20261005184717_…sql`: Trigger `bookings_guard_customer_update`. Kunden können Status (außer paid/confirmed→active), Zeitraum, Tarif, Fahrzeug, Codes, Mehrkilometer/Preis, Rabatt, Erinnerungs- und Rückgabeprüffelder nicht mehr direkt ändern; `start_km` nur bei Abholung; Rückgabe-Entwurf (end_km, Tank) nur während aktiver Miete. Service-Rolle (Webhook/Cron), Admins und `report_trip_return` bleiben frei. Getestet: Manipulationen abgewiesen, PreDrive-Abholung, Entwurf, Admin, Service-Rolle.
+3. **Fotonachweis:** `trip_confirmed_photo_types` zählt nur Zeilen im eigenen Buchungsordner mit echtem, nicht leerem `image/*`-Objekt in `trip-photos`; fremde Ordner, URLs, Traversal, leere/Nicht-Bild-Objekte zählen nicht (getestet). Queue: Kandidatenpfad vs. bestätigter Upload-Pfad getrennt; „existiert bereits“ zählt nur, wenn das Objekt unter genau diesem Pfad lesbar ist (kein Upsert).
+4. **Status-Aliase:** started/running/in_progress/picked_up aktiv, returning/return_pending Rückgabe – in TS und SQL; kein Rücksprung zur Abholung.
+5. **Erinnerung:** Rückgabe-Push aus `send-reminders` entfernt (Datei wieder identisch mit e1841ee). Neuer token-geschützter Hook `/api/public/hooks/return-reminders`, Job `mt-return-reminders` jede Minute (1.440 Läufe/Tag; DB läuft durch den bestehenden Minuten-Kalenderjob ohnehin). Claim prüft Status, Tarif, Startdatum/-stunde und vorheriges Ende erneut; Versand nur nach gewonnenem Claim. Migration `20261005184838_…sql`. Keine Testsendung ausgelöst.
+6. **Preis:** Mehrkilometer/Preis werden nur noch in `report_trip_return` aus `start_km`, `free_km`, `km_price_cents`, `plan_id` der Buchung berechnet; der Browser schreibt keine `extra_km`/`extra_km_charge_cents` mehr. Endstand < Start → Prüfungsfall ohne Berechnung.
+
+Linter: neuer Hinweis „SECURITY DEFINER durch angemeldete Nutzer ausführbar“ für `report_trip_return` ist beabsichtigt (Funktion prüft `auth.uid()` + Eigentum + Status). Vorbestehend: Extension im public-Schema, Leaked-Password-Schutz aus. Vorbestehend und nicht geändert: Hook `send-reminders` prüft kein Token.
