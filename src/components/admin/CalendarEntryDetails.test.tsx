@@ -21,7 +21,7 @@ const details = (over: object = {}) => ({
     companyName: null, idNumber: null, licenseNumber: null, profileLinked: false },
   notes: null,
   documents: {
-    license: { front: { id: "a", docType: "license_front", label: "", signedUrl: "https://signed.test/a.jpg",
+    license: { front: { id: "a", docType: "license_front", label: "", signedUrl: "https://signed.test/a.jpg", fileState: "ok",
       isPdf: false, removedByUser: false, originalName: null }, back: null },
     id: { front: null, back: null },
     others: [],
@@ -63,5 +63,26 @@ describe("CalendarEntryDetailsPanel", () => {
     render(<CalendarEntryDetailsPanel kind="manual" id={ID} />);
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     expect(screen.queryByText("Max Test")).toBeNull();
+  });
+
+  it("nicht ladbare Datei: neutraler Hinweis + Erneut laden holt neue Links", async () => {
+    const broken = details({
+      documents: {
+        license: { front: { id: "a", docType: "license_front", label: "", signedUrl: null, fileState: "unavailable",
+          isPdf: false, removedByUser: false, originalName: null }, back: null },
+        id: { front: null, back: null },
+        others: [{ id: "o", docType: "x", label: "", signedUrl: "https://signed.test/o.pdf", fileState: "ok",
+          isPdf: true, removedByUser: false, originalName: "sehr-langer-dateiname-".repeat(8) + ".pdf" }],
+      },
+    });
+    fetchMock.mockResolvedValueOnce(broken).mockResolvedValueOnce(details());
+    render(<CalendarEntryDetailsPanel kind="manual" id={ID} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Führerschein/ }));
+    expect(screen.getByText("Datei konnte nicht geladen werden.")).toBeTruthy();
+    expect(screen.queryByText(/fehlt im Speicher/)).toBeNull();
+    expect(screen.getByRole("link", { name: /PDF öffnen/ })).toBeTruthy();
+    const retries = screen.getAllByRole("button", { name: /Erneut laden/ });
+    fireEvent.click(retries[0]);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 });

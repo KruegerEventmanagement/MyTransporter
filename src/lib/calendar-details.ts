@@ -126,6 +126,21 @@ export function pickDocuments(rows: RawDoc[]): {
   return { slots, others };
 }
 
+/**
+ * Relativer Storage-Pfad ohne URL/Traversal, der mit dem erwarteten Präfix
+ * beginnt (z. B. "<user_id>/"). Schützt davor, dass eine Kundenzeile einen
+ * fremden Pfad enthält, der dann mit Adminrechten signiert würde.
+ */
+export function isSafeOwnedPath(path: string | null | undefined, prefix: string, mustContain?: string): boolean {
+  if (typeof path !== "string" || !path || !prefix) return false;
+  if (path.startsWith("/") || path.includes("\\") || /^[a-z][a-z0-9+.-]*:/i.test(path)) return false;
+  const segs = path.split("/");
+  if (segs.some((s) => s === "" || s === "." || s === ".." || /%2e|%2f/i.test(s))) return false;
+  if (!path.startsWith(prefix)) return false;
+  if (mustContain && !path.includes(mustContain)) return false;
+  return true;
+}
+
 export function isPdfPath(path: string | null | undefined): boolean {
   return !!path && /\.pdf($|\?)/i.test(path);
 }

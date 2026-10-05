@@ -1,3 +1,5 @@
+import { AddressFields } from "@/components/AddressFields";
+import { EMPTY_ADDRESS, addressSignUpMetadata } from "@/lib/address";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useServerFn } from "@tanstack/react-start";
@@ -153,6 +155,7 @@ export function BookingSection() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authUser, setAuthUser] = useState<{ id: string; email?: string } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [regAddress, setRegAddress] = useState(EMPTY_ADDRESS);
   const [regForm, setRegForm] = useState({
     firstName: "",
     lastName: "",
@@ -718,6 +721,7 @@ export function BookingSection() {
               account_type: regForm.accountType,
               company_name: regForm.accountType === "business" ? regForm.companyName : "",
               vat_id: regForm.accountType === "business" ? regForm.vatId : "",
+              ...addressSignUpMetadata(regAddress),
             },
           },
         }),
@@ -1866,6 +1870,12 @@ export function BookingSection() {
                           Mindestalter für eine Buchung: {MIN_DRIVER_AGE} Jahre.
                         </p>
                       </div>
+                      <AddressFields
+                        idPrefix="booking-reg"
+                        value={regAddress}
+                        onChange={setRegAddress}
+                        inputClassName="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                      />
                       <div>
                         <label className="text-sm font-medium text-foreground">Passwort</label>
                         <div className="relative mt-1">

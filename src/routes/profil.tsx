@@ -1,3 +1,6 @@
+import { AddressFields } from "@/components/AddressFields";
+import { EMPTY_ADDRESS } from "@/lib/address";
+import { addressFromRow, loadOwnProfile, saveOwnProfileData, type ProfileLoadStatus } from "@/lib/profile-data";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { privateHead } from "@/lib/seo";
 import { useEffect, useMemo, useState } from "react";
@@ -74,13 +77,18 @@ function ProfilePage() {
   const [docs, setDocs] = useState<UserDoc[]>([]);
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
   const [birthDate, setBirthDate] = useState("");
-  const [addr, setAddr] = useState({ street: "", postalCode: "", city: "", country: "" });
+  const [addr, setAddr] = useState(EMPTY_ADDRESS);
+  const [profileStatus, setProfileStatus] = useState<ProfileLoadStatus>("loading");
   
   const [savingData, setSavingData] = useState(false);
   const [dataMessage, setDataMessage] = useState<string | null>(null);
 
   const saveMyData = async () => {
     setDataMessage(null);
+    if (profileStatus !== "ok") {
+      setDataMessage("Deine Daten wurden nicht geladen. Bitte erst erneut laden – es wurde nichts gespeichert.");
+      return;
+    }
     if (birthDate) {
       const age = ageOn(birthDate);
       if (age === null || age < MIN_DRIVER_AGE) {
@@ -91,26 +99,39 @@ function ProfilePage() {
     setSavingData(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
-      if (!user) return;
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          birth_date: birthDate || null,
-          address_street: addr.street.trim().slice(0, 160) || null,
-          address_postal_code: addr.postalCode.trim().slice(0, 20) || null,
-          address_city: addr.city.trim().slice(0, 120) || null,
-          address_country: addr.country.trim().slice(0, 80) || null,
-        })
-        .eq("id", user.id);
-      if (error) {
-        setDataMessage("Speichern fehlgeschlagen. Bitte später erneut versuchen.");
+      const res = await saveOwnProfileData(supabase, session?.user?.id, profileStatus, birthDate, addr);
+      if (!res.ok) {
+        setDataMessage(res.message);
         return;
       }
-      setProfile((prev) => (prev ? { ...prev, birth_date: birthDate || null } : prev));
+      setProfile((prev) => (prev ? { ...prev, ...res.patch } : prev));
+      setBirthDate((res.patch.birth_date as string | null) ?? "");
+      setAddr(addressFromRow(res.patch));
       setDataMessage("Gespeichert.");
     } finally {
       setSavingData(false);
+    }
+  };
+
+  const reloadProfile = async () => {
+    setProfileStatus("loading");
+    setDataMessage(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) {
+      setProfileStatus("error");
+      return;
+    }
+    const r = await loadOwnProfile(supabase, uid);
+    applyProfile(r.status, r.row);
+  };
+
+  const applyProfile = (status: ProfileLoadStatus, row: Profile | null) => {
+    setProfileStatus(status);
+    if (status === "ok" && row) {
+      setProfile(row);
+      setBirthDate(row.birth_date ?? "");
+      setAddr(addressFromRow(row));
     }
   };
 
@@ -185,26 +206,11 @@ function ProfilePage() {
         return;
       }
       const [p, b] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("first_name, last_name, email, phone, birth_date, address_street, address_postal_code, address_city, address_country")
-          .eq("id", user.id)
-          .maybeSingle(),
+        loadOwnProfile(supabase, user.id),
         supabase.from("bookings").select("*").eq("user_id", user.id).order("start_date", { ascending: false }),
       ]);
       if (!mounted) return;
-      if (p.data) {
-        const row = p.data as Profile;
-        setProfile(row);
-        setBirthDate(row.birth_date ?? "");
-        setAddr({
-          street: row.address_street ?? "",
-          postalCode: row.address_postal_code ?? "",
-          city: row.address_city ?? "",
-          country: row.address_country ?? "",
-        });
-        
-      }
+      applyProfile(p.status, p.row as Profile | null);
       if (b.data) setBookings(b.data as Booking[]);
       const { data: roles } = await supabase
         .from("user_roles")
@@ -311,6 +317,21 @@ function ProfilePage() {
             Meine Daten
           </h2>
           <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
+            {profileStatus === "loading" && (
+              <p role="status" className="text-xs text-muted-foreground">Deine Daten werden geladen …</p>
+            )}
+            {(profileStatus === "error" || profileStatus === "missing") && (
+              <div role="alert" className="rounded-xl border border-foreground p-3 text-xs space-y-2">
+                <p>
+                  {profileStatus === "error"
+                    ? "Deine Daten konnten nicht geladen werden. Bearbeiten ist gesperrt, damit nichts überschrieben wird."
+                    : "Zu deinem Konto wurde kein Profil gefunden. Bearbeiten ist gesperrt."}
+                </p>
+                <button type="button" onClick={reloadProfile} className="rounded-full bg-foreground text-background px-3 py-1.5 font-semibold">
+                  Erneut laden
+                </button>
+              </div>
+            )}
             <div>
               <label htmlFor="profile-birth-date" className="block text-xs font-medium mb-1.5">
                 Geburtsdatum
@@ -319,6 +340,7 @@ function ProfilePage() {
                 id="profile-birth-date"
                 type="date"
                 value={birthDate}
+                disabled={profileStatus !== "ok"}
                 onChange={(e) => setBirthDate(e.target.value)}
                 className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
               />
@@ -327,48 +349,13 @@ function ProfilePage() {
               </p>
             </div>
 
-            <fieldset className="space-y-2">
-              <legend className="block text-xs font-medium mb-1.5">Anschrift (optional)</legend>
-              <input
-                aria-label="Straße und Hausnummer"
-                placeholder="Straße und Hausnummer"
-                autoComplete="street-address"
-                maxLength={160}
-                value={addr.street}
-                onChange={(e) => setAddr({ ...addr, street: e.target.value })}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
-              />
-              <div className="grid grid-cols-[7rem_1fr] gap-2">
-                <input
-                  aria-label="PLZ"
-                  placeholder="PLZ"
-                  autoComplete="postal-code"
-                  inputMode="numeric"
-                  maxLength={20}
-                  value={addr.postalCode}
-                  onChange={(e) => setAddr({ ...addr, postalCode: e.target.value })}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
-                />
-                <input
-                  aria-label="Ort"
-                  placeholder="Ort"
-                  autoComplete="address-level2"
-                  maxLength={120}
-                  value={addr.city}
-                  onChange={(e) => setAddr({ ...addr, city: e.target.value })}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
-                />
-              </div>
-              <input
-                aria-label="Land"
-                placeholder="Land"
-                autoComplete="country-name"
-                maxLength={80}
-                value={addr.country}
-                onChange={(e) => setAddr({ ...addr, country: e.target.value })}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
-              />
-            </fieldset>
+            <AddressFields
+              idPrefix="profile-address"
+              value={addr}
+              onChange={setAddr}
+              disabled={profileStatus !== "ok"}
+              inputClassName="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+            />
 
             <p className="text-[11px] text-muted-foreground">
               Mit hinterlegtem Geburtsdatum erhältst du an deinem Geburtstag automatisch deinen
@@ -379,7 +366,7 @@ function ProfilePage() {
               <button
                 type="button"
                 onClick={saveMyData}
-                disabled={savingData}
+                disabled={savingData || profileStatus !== "ok"}
                 className="rounded-full bg-foreground text-background px-4 py-2 text-xs font-semibold disabled:opacity-60"
               >
                 {savingData ? "Speichern…" : "Speichern"}
