@@ -51,7 +51,7 @@ async function photo(tag: string, opts: { path?: string; object?: boolean; size?
   if (opts.object !== false)
     await db.query(`INSERT INTO storage.objects VALUES ('trip-photos',$1,$2)`, [path, JSON.stringify({ size: opts.size ?? 1200, mimetype: opts.mime ?? "image/jpeg" })]);
 }
-async function report(endKm: number, ex: Record<string, string> = {}, fuel: number | null = 70) {
+async function report(endKm: number, ex: Record<string, unknown> = {}, fuel: number | null = 70) {
   const r = await db.query<{ r: Record<string, unknown> }>(`SELECT public.report_trip_return($1,$2,true,$3,$4::jsonb) AS r`, [B, endKm, fuel, JSON.stringify(ex)]);
   return r.rows[0]!.r;
 }
@@ -216,5 +216,53 @@ describe("bookings_guard_customer_update (SQL)", () => {
     await as(ADMIN);
     await upd("status='completed', extra_km=3");
     expect(await booking()).toMatchObject({ status: "completed", extra_km: 3 });
+  });
+
+  describe("v2 geführter Wizard", () => {
+    const V2 = ["post_front", "post_back", "post_left", "post_right", "post_interior", "post_dashboard"];
+    it("6 Kernfotos ohne Tanken genügen; ohne flow=v2 gilt weiter die Altliste", async () => {
+      await as(null);
+      await seed();
+      for (const t of V2) await photo(t);
+      await as(U1);
+      const legacy = await report(1100);
+      expect(legacy.ok).toBe(false);
+      expect(legacy.missing).toContain("post_front_right");
+      const r = await report(1100, { flow: "v2", refueled: false });
+      expect(r).toMatchObject({ ok: true, reviewReason: null });
+      expect((await booking()).return_exceptions).toEqual({ flow: "v2", refueled: false });
+    });
+    it("getankt → Tankbeleg Pflicht; Ausnahme deckt ihn mit Prüfvermerk", async () => {
+      await as(null);
+      await seed();
+      for (const t of V2) await photo(t);
+      await as(U1);
+      const miss = await report(1100, { flow: "v2", refueled: true });
+      expect(miss).toMatchObject({ ok: false, missing: ["tank_receipt"] });
+      const r = await report(1100, { flow: "v2", refueled: true, receipt: "[Technisches Problem] Kamera friert ein" });
+      expect(r.ok).toBe(true);
+      expect(String(r.reviewReason)).toMatch(/Tankbeleg fehlt: \[Technisches Problem\]/);
+    });
+    it("fehlendes Kernfoto blockiert; Altbuchung mit getrennten Tacho- und Tankfotos zählt als Instrumentenfoto", async () => {
+      await as(null);
+      await seed();
+      for (const t of ["post_front", "post_back", "post_left", "post_right", "post_interior"]) await photo(t);
+      await as(U1);
+      expect(await report(1100, { flow: "v2", refueled: false })).toMatchObject({ ok: false, missing: ["post_dashboard"] });
+      await as(null);
+      await photo("post_odometer");
+      await photo("post_fuel");
+      await as(U1);
+      expect((await report(1100, { flow: "v2", refueled: false })).ok).toBe(true);
+    });
+    it("HEIC-Fotos zählen; Ausnahme für Instrumentenfoto ergibt eigenen Prüfvermerk", async () => {
+      await as(null);
+      await seed();
+      for (const t of V2.slice(0, 5)) await photo(t, { mime: "image/heic" });
+      await as(U1);
+      const r = await report(1100, { flow: "v2", refueled: false, fuel: "[Nachweis nicht bereitgestellt] Display defekt" });
+      expect(r.ok).toBe(true);
+      expect(String(r.reviewReason)).toMatch(/Instrumentenfoto \(Kilometer\+Tank\) fehlt/);
+    });
   });
 });
