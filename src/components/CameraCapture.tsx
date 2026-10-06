@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { NativePhotoInputs } from "./NativePhotoInputs";
 import { createPortal } from "react-dom";
 import { X, Camera as CameraIcon, RefreshCw, Image as ImageIcon, Loader2 } from "lucide-react";
 import { useTapFocus } from "@/hooks/useTapFocus";
 import {
+  blobToImageFile,
   blobToJpegFile,
   canvasToJpegBlob,
   classifyCameraError,
@@ -97,7 +99,9 @@ export function CameraCapture({
   frameTimeoutMs = 6000,
 }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uid = useId();
+  const cameraInputId = `cam-native-${uid}`;
+  const galleryInputId = `cam-gallery-${uid}`;
   const streamRef = useRef<MediaStream | null>(null);
   const busyRef = useRef(false);
   const mountedRef = useRef(true);
@@ -282,7 +286,7 @@ export function CameraCapture({
     try {
       const blob = await normalizeImageFile(file);
       if (gen !== genRef.current || !mountedRef.current) return;
-      await deliver(blobToJpegFile(blob, "photo"));
+      await deliver(blobToImageFile(blob, "photo"));
     } catch (err) {
       if (mountedRef.current) {
         setShotError(err instanceof Error ? err.message : "Foto konnte nicht gelesen werden.");
@@ -293,15 +297,18 @@ export function CameraCapture({
     }
   };
 
-  /** Bewusster Wechsel zur nativen Kamera: Live-Stream und laufende Starts beenden, dann synchron öffnen. */
-  const openFilePicker = () => {
+  /**
+   * Bewusster Wechsel zum nativen Weg: Live-Stream synchron beenden (iOS gibt die Kamera
+   * sonst nicht frei). Das Öffnen selbst übernimmt das <label htmlFor> im selben Klick –
+   * kein await davor, damit die User-Activation erhalten bleibt.
+   */
+  const prepareNativePicker = () => {
     genRef.current += 1;
     stopStream(streamRef.current);
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setStatus("native");
     setShotError(null);
-    fileInputRef.current?.click();
   };
 
   if (!open || typeof document === "undefined") return null;
@@ -315,15 +322,14 @@ export function CameraCapture({
       aria-label={title}
       className="fixed inset-x-0 top-0 z-50 h-[100dvh] max-h-[100dvh] overflow-hidden bg-black flex flex-col"
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        data-testid="camera-file-input"
+      <NativePhotoInputs
+        cameraId={cameraInputId}
+        galleryId={galleryInputId}
         onChange={handleFile}
+        cameraTestId="camera-file-input"
+        galleryTestId="camera-gallery-input"
       />
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white">
         <button
@@ -401,7 +407,7 @@ export function CameraCapture({
         {status === "native" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 p-6 text-white text-center">
             <CameraIcon className="w-14 h-14 opacity-70" />
-            <p className="text-sm opacity-90 max-w-sm">Nimm das Foto mit der Geräte-Kamera auf oder wähle ein Foto aus.</p>
+            <p className="text-sm opacity-90 max-w-sm">Nimm das Foto mit der Geräte-Kamera auf oder wähle eines aus der Galerie.</p>
             <button
               onClick={() => setAttempt((a) => a + 1)}
               className="rounded-full bg-white/15 px-6 py-3 text-sm font-medium flex items-center gap-2"
@@ -459,17 +465,26 @@ export function CameraCapture({
             </span>
           </button>
         )}
-        <button
-          onClick={openFilePicker}
-          disabled={busy}
-          className={
-            status === "live"
-              ? "text-xs text-white/80 underline underline-offset-2 flex items-center gap-1.5 disabled:opacity-50"
-              : "rounded-full bg-white text-black px-8 py-3 font-medium flex items-center gap-2 disabled:opacity-50"
-          }
-        >
-          <ImageIcon className="w-4 h-4" /> Foto mit Geräte-Kamera / aus Galerie
-        </button>
+        <div className="flex w-full max-w-sm gap-2 px-4">
+          <label
+            htmlFor={cameraInputId}
+            role="button"
+            aria-disabled={busy || undefined}
+            onClick={(e) => (busy ? e.preventDefault() : prepareNativePicker())}
+            className="flex-1 cursor-pointer select-none rounded-full bg-white text-black px-4 py-3 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <CameraIcon className="w-4 h-4" /> Mit Geräte-Kamera
+          </label>
+          <label
+            htmlFor={galleryInputId}
+            role="button"
+            aria-disabled={busy || undefined}
+            onClick={(e) => (busy ? e.preventDefault() : prepareNativePicker())}
+            className="flex-1 cursor-pointer select-none rounded-full bg-white/15 text-white px-4 py-3 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <ImageIcon className="w-4 h-4" /> Aus Galerie auswählen
+          </label>
+        </div>
       </div>
     </div>
   );

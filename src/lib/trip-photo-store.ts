@@ -65,7 +65,10 @@ export async function saveTripPhoto(
     try {
       const res = await client.storage
         .from(TRIP_PHOTO_BUCKET)
-        .upload(candidate, args.file, { contentType: "image/jpeg", upsert: false });
+        .upload(candidate, args.file, {
+          contentType: /^image\//.test(args.file.type) ? args.file.type : "image/jpeg",
+          upsert: false,
+        });
       upErr = res.error;
     } catch (e) {
       upErr = e;
