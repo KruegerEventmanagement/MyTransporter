@@ -57,6 +57,7 @@ export function DocumentBuilder() {
     { label: "Kaution", amount: 200, mode: "gross", vat: false },
   ]);
   const [note, setNote] = useState("");
+  const [bookingId, setBookingId] = useState("");
 
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -112,6 +113,7 @@ export function DocumentBuilder() {
       },
       items: cleanedItems,
       note: note.trim() || undefined,
+      bookingId: bookingId.trim() || undefined,
     };
   }
 
@@ -134,7 +136,7 @@ export function DocumentBuilder() {
       a.download = res.filename;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("PDF erstellt");
+      toast.success("PDF erstellt und archiviert");
     } catch (e) {
       toast.error(
         friendlyError(e, "PDF konnte nicht erstellt werden – bitte Eingaben prüfen."),
@@ -195,7 +197,12 @@ export function DocumentBuilder() {
             <label className={labelCls}>Datum</label>
             <input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
+          <div className="sm:col-span-2">
+            <label className={labelCls}>Buchungs-ID (optional, für Zuordnung im Belegarchiv)</label>
+            <input className={inputCls} value={bookingId} onChange={(e) => setBookingId(e.target.value)} placeholder="z. B. 3f2a…" />
+          </div>
         </div>
+        <p className="text-xs text-muted-foreground">Jedes erstellte oder versendete PDF wird automatisch im Belegarchiv gespeichert.</p>
       </section>
 
       <section className="p-4 rounded-2xl bg-card border border-border space-y-3">

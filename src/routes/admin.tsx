@@ -31,6 +31,7 @@ import { AdminLogin } from "@/components/admin/AdminLogin";
 import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
 import { CalendarAdmin } from "@/components/admin/CalendarAdmin";
 import { DocumentBuilder } from "@/components/admin/DocumentBuilder";
+import { IssuedDocumentsArchive } from "@/components/admin/IssuedDocumentsArchive";
 import { BirthdayAdmin } from "@/components/admin/BirthdayAdmin";
 import { useServerFn } from "@tanstack/react-start";
 import { chargeBookingExtra, settleDeposit } from "@/lib/payments.functions";
@@ -700,7 +701,12 @@ function AdminDashboard() {
 
         {tab === "vehicles" && <VehiclesAdmin />}
 
-        {tab === "documents" && <DocumentBuilder />}
+        {tab === "documents" && (
+          <div className="space-y-8">
+            <IssuedDocumentsArchive />
+            <DocumentBuilder />
+          </div>
+        )}
 
         {tab === "birthdays" && <BirthdayAdmin />}
       </div>

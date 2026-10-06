@@ -514,6 +514,104 @@ export type Database = {
           },
         ]
       }
+      issued_documents: {
+        Row: {
+          billing_address: Json | null
+          booking_id: string | null
+          content_hash: string
+          created_at: string
+          created_by: string | null
+          customer_company: string | null
+          customer_email: string | null
+          customer_name: string | null
+          document_date: string
+          document_number: string
+          gross_cents: number
+          id: string
+          items: Json
+          kind: string
+          net_cents: number
+          non_taxable_cents: number
+          payment_status: string | null
+          pdf_filename: string
+          pdf_path: string
+          pdf_size_bytes: number | null
+          revision: number
+          snapshot: Json
+          source: string
+          total_cents: number
+          user_id: string | null
+          vat_cents: number
+          vat_rate: number
+        }
+        Insert: {
+          billing_address?: Json | null
+          booking_id?: string | null
+          content_hash: string
+          created_at?: string
+          created_by?: string | null
+          customer_company?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          document_date: string
+          document_number: string
+          gross_cents: number
+          id?: string
+          items?: Json
+          kind: string
+          net_cents: number
+          non_taxable_cents?: number
+          payment_status?: string | null
+          pdf_filename: string
+          pdf_path: string
+          pdf_size_bytes?: number | null
+          revision?: number
+          snapshot: Json
+          source: string
+          total_cents: number
+          user_id?: string | null
+          vat_cents: number
+          vat_rate?: number
+        }
+        Update: {
+          billing_address?: Json | null
+          booking_id?: string | null
+          content_hash?: string
+          created_at?: string
+          created_by?: string | null
+          customer_company?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          document_date?: string
+          document_number?: string
+          gross_cents?: number
+          id?: string
+          items?: Json
+          kind?: string
+          net_cents?: number
+          non_taxable_cents?: number
+          payment_status?: string | null
+          pdf_filename?: string
+          pdf_path?: string
+          pdf_size_bytes?: number | null
+          revision?: number
+          snapshot?: Json
+          source?: string
+          total_cents?: number
+          user_id?: string | null
+          vat_cents?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issued_documents_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manual_reservation_documents: {
         Row: {
           created_at: string
