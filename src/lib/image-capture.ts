@@ -274,3 +274,11 @@ async function decodeToJpeg(file: File, maxDimension: number, decodeTimeoutMs: n
 export function blobToJpegFile(blob: Blob, baseName: string): File {
   return new File([blob], `${baseName}_${Date.now()}.jpg`, { type: "image/jpeg" });
 }
+
+/** Wie blobToJpegFile, behält aber unverändert durchgereichte HEIC/HEIF-Originale korrekt typisiert. */
+export function blobToImageFile(blob: Blob, baseName: string): File {
+  if (/hei[cf]/i.test(blob.type)) {
+    return new File([blob], `${baseName}_${Date.now()}.${imageExtension(blob.type)}`, { type: blob.type });
+  }
+  return blobToJpegFile(blob, baseName);
+}

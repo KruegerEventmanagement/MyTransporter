@@ -282,7 +282,7 @@ export function CameraCapture({
     try {
       const blob = await normalizeImageFile(file);
       if (gen !== genRef.current || !mountedRef.current) return;
-      await deliver(blobToJpegFile(blob, "photo"));
+      await deliver(blobToImageFile(blob, "photo"));
     } catch (err) {
       if (mountedRef.current) {
         setShotError(err instanceof Error ? err.message : "Foto konnte nicht gelesen werden.");
@@ -293,15 +293,18 @@ export function CameraCapture({
     }
   };
 
-  /** Bewusster Wechsel zur nativen Kamera: Live-Stream und laufende Starts beenden, dann synchron öffnen. */
-  const openFilePicker = () => {
+  /**
+   * Bewusster Wechsel zum nativen Weg: Live-Stream synchron beenden (iOS gibt die Kamera
+   * sonst nicht frei). Das Öffnen selbst übernimmt das <label htmlFor> im selben Klick –
+   * kein await davor, damit die User-Activation erhalten bleibt.
+   */
+  const prepareNativePicker = () => {
     genRef.current += 1;
     stopStream(streamRef.current);
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setStatus("native");
     setShotError(null);
-    fileInputRef.current?.click();
   };
 
   if (!open || typeof document === "undefined") return null;
@@ -315,15 +318,14 @@ export function CameraCapture({
       aria-label={title}
       className="fixed inset-x-0 top-0 z-50 h-[100dvh] max-h-[100dvh] overflow-hidden bg-black flex flex-col"
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        data-testid="camera-file-input"
+      <NativePhotoInputs
+        cameraId={cameraInputId}
+        galleryId={galleryInputId}
         onChange={handleFile}
+        cameraTestId="camera-file-input"
+        galleryTestId="camera-gallery-input"
       />
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white">
         <button
