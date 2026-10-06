@@ -27,7 +27,11 @@ describe("AdSense-Konfiguration", () => {
     expect(isValidPublisherId(ADSENSE_CONFIG.publisherId)).toBe(true);
     expect(ADSENSE_CONFIG.slots.railLeft).toBe("4238348588");
     expect(ADSENSE_CONFIG.slots.railRight).toBe("6950298526");
-    expect(ADSENSE_CONFIG.slots.inlineTop).toBeUndefined();
+    expect(ADSENSE_CONFIG.slots.railLeftLower).toBe("6851085973");
+    expect(ADSENSE_CONFIG.slots.railRightLower).toBe("7070577825");
+    expect(ADSENSE_CONFIG.slots.inlineTop).toBe("7518309544");
+    expect(ADSENSE_CONFIG.slots.inlineBottom).toBe("5757496157");
+    expect(ADSENSE_CONFIG.slots.mobileBottom).toBe("5757496157");
     expect(ADSENSE_CONFIG.autoAds).toBe(false);
     expect(ADSENSE_CONFIG.siteApproved).toBe(false);
     expect(ADSENSE_CONFIG.certifiedCmpConfigured).toBe(false);
@@ -35,7 +39,7 @@ describe("AdSense-Konfiguration", () => {
     expect(isAdSenseConfigured()).toBe(false);
     expect(isSlotReady("railLeft")).toBe(false);
     expect(getSlotId("railLeft")).toBe("4238348588");
-    expect(getSlotId("inlineTop")).toBeNull();
+    expect(getSlotId("inlineTop")).toBe("7518309544");
   });
 
   it("meldet alle fehlenden Voraussetzungen", () => {

@@ -56,8 +56,18 @@ export const ADSENSE_CONFIG: AdSenseConfig = {
     railRight: "6950298526",
     // mobileTop = "MyTransporter - Mobil oberhalb Logo" (erstellt 06.10.2026)
     mobileTop: "7518309544",
-    // railLeftLower, railRightLower, inlineTop, inlineBottom, mobileBottom:
-    // noch keine echten Einheiten – NICHT erfinden, Platzierungen bleiben gesperrt.
+    // Erstellt 06.10.2026 im echten AdSense-Konto:
+    // railLeftLower  = "MyTransporter - Seitenleiste links 2"
+    // railRightLower = "MyTransporter - Seitenleiste rechts 2"
+    // inlineBottom   = "MyTransporter - Inhalt unten"
+    railLeftLower: "6851085973",
+    railRightLower: "7070577825",
+    inlineBottom: "5757496157",
+    // Erste In-Flow-Position nutzt die responsive Einheit "Mobil oberhalb Logo"
+    // (Viewports disjunkt, max. 1 Rendering je Viewport); "Inhalt unten" deckt
+    // die zweite In-Flow-Position auf breiten und schmalen Viewports ab.
+    inlineTop: "7518309544",
+    mobileBottom: "5757496157",
   },
   autoAds: false,
   siteApproved: false,
