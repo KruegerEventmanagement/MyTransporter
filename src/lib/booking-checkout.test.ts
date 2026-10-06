@@ -27,6 +27,7 @@ function query(rows: any[]) {
   const b: any = {
     select: () => b,
     eq: (k: string, v: unknown) => ((r = r.filter((x) => x[k] === undefined || x[k] === v)), b),
+    is: (k: string, v: unknown) => ((r = r.filter((x) => x[k] === undefined || x[k] === v)), b),
     gt: () => b,
     limit: (n: number) => ((r = r.slice(0, n)), b),
     maybeSingle: async () => ({ data: r[0] ?? null, error: null }),
