@@ -98,11 +98,17 @@ export async function sendEmail(
   if (!res.ok) {
     const errText = await res.text();
     console.error("Resend send failed", res.status, errText);
+    // 401/403 = Zugang ungültig: kein Kundenfehler, Retries helfen erst nach
+    // Austausch des Schlüssels. Klarer Hinweis für den Betreiber (ohne Secret).
+    const authHint =
+      res.status === 401 || res.status === 403 || /api key is invalid/i.test(errText)
+        ? "Mail-Zugang ungültig – RESEND_API_KEY in den Projekt-Secrets ersetzen · "
+        : "";
     try {
       await supabaseAdmin.from("admin_notifications").insert({
         type: "email_failed",
         title: "E-Mail-Versand fehlgeschlagen",
-        body: `${subject} → ${safeTo} · ${res.status} · ${errText.slice(0, 400)}`,
+        body: `${authHint}${subject} → ${safeTo} · ${res.status} · ${errText.slice(0, 400)}`,
       });
     } catch {
       /* Protokollierung ist optional */
