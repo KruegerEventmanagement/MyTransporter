@@ -7,10 +7,25 @@ import {
   withExceptionKind,
   type ExceptionKind,
 } from "@/lib/documentation-fee";
-import { useState, useCallback, useEffect, useRef } from "react";
-import { Camera, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine, Fuel, CloudOff, Loader2 } from "lucide-react";
+import { useState, useCallback, useEffect, useId, useRef } from "react";
+import {
+  Camera,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  Key,
+  Pencil,
+  Image as ImageIcon,
+  CloudOff,
+  Loader2,
+  ScanLine,
+  AlertTriangle,
+  Plus,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraCapture, type SilhouetteVariant } from "./CameraCapture";
+import { NativePhotoInputs } from "./NativePhotoInputs";
+import { ReturnSlotOutline, type OutlineKind } from "./ReturnSlotOutline";
 import { TripErrorBanner, TripPhotoThumb } from "./TripPhotoParts";
 import {
   loadTripPhotos,
@@ -27,6 +42,7 @@ import {
   evaluateReturnKm,
   validReason,
   MIN_REASON_LENGTH,
+  RETURN_DASHBOARD_TAG,
   RETURN_FUEL_TAG,
   RETURN_INTERIOR_TAG,
   RETURN_ODOMETER_TAG,
@@ -34,7 +50,7 @@ import {
   type ExceptionKey,
   type ReturnExceptions,
 } from "@/lib/trip-return";
-import { loadReturnDraft, saveReturnDraft, type DraftStep } from "@/lib/return-draft";
+import { loadReturnDraft, saveReturnDraft } from "@/lib/return-draft";
 import {
   enqueuePhoto,
   openIdbQueueStore,
@@ -42,22 +58,51 @@ import {
   transferQueuedPhoto,
   type QueueStore,
 } from "@/lib/photo-queue";
+import { blobToImageFile, normalizeImageFile } from "@/lib/image-capture";
 
 const TEST_MODE_ADMIN_EMAIL = "krueger.christian96@gmx.de";
 
 export const RETURN_DOCUMENTATION_NOTICE =
   "Bitte dokumentiere die Rückgabe vollständig. Bei fehlenden oder unleserlichen Nachweisen kann eine zusätzliche Prüfung erforderlich sein. Nachvollziehbar belegte und rechtlich berechtigte Forderungen aus dem Mietvertrag können nach Prüfung mit deiner Kaution verrechnet werden.";
 
-const PHOTO_SIDES = [
-  { id: "post_front", label: "Vorne", icon: "⬆️", variant: "front" as SilhouetteVariant },
-  { id: "post_front_right", label: "Vorne rechts", icon: "↗️", variant: "three-quarter-front-right" as SilhouetteVariant },
-  { id: "post_right", label: "Rechte Seite", icon: "➡️", variant: "side-right" as SilhouetteVariant },
-  { id: "post_back_right", label: "Hinten rechts", icon: "↘️", variant: "three-quarter-back-right" as SilhouetteVariant },
-  { id: "post_back", label: "Hinten", icon: "⬇️", variant: "back" as SilhouetteVariant },
-  { id: "post_back_left", label: "Hinten links", icon: "↙️", variant: "three-quarter-back-left" as SilhouetteVariant },
-  { id: "post_left", label: "Linke Seite", icon: "⬅️", variant: "side-left" as SilhouetteVariant },
-  { id: "post_front_left", label: "Vorne links", icon: "↖️", variant: "three-quarter-front-left" as SilhouetteVariant },
-] as const;
+export const DASHBOARD_HINT =
+  "Zündung einschalten. Kilometerstand und Tankstand müssen auf demselben Foto vollständig und gut erkennbar sein.";
+
+export const RETURN_DONE_TITLE = "Die Buchung ist jetzt abgeschlossen.";
+export const KEY_RETURN_HINT =
+  "Bitte geben Sie den Schlüssel persönlich ab oder legen Sie ihn in die vereinbarte Schlüsselbox zurück.";
+
+export interface ReturnSlot {
+  tag: string;
+  title: string;
+  hint: string;
+  outline: OutlineKind;
+  camera: SilhouetteVariant;
+  exKey: ExceptionKey;
+}
+
+/** Genau 6 Kernfotos; der Tankbeleg folgt nur, wenn der Kunde getankt hat. */
+export const RETURN_CORE_SLOTS: readonly ReturnSlot[] = [
+  { tag: "post_front", title: "Fahrzeug vorne", hint: "Stelle dich mittig vor das Fahrzeug. Die ganze Front muss im Bild sein.", outline: "front", camera: "front", exKey: "photos" },
+  { tag: "post_back", title: "Fahrzeug hinten", hint: "Stelle dich mittig hinter das Fahrzeug. Das ganze Heck muss im Bild sein.", outline: "back", camera: "back", exKey: "photos" },
+  { tag: "post_left", title: "Fahrzeug linke Seite", hint: "Die komplette linke Fahrzeugseite von vorne bis hinten aufnehmen.", outline: "left", camera: "side-left", exKey: "photos" },
+  { tag: "post_right", title: "Fahrzeug rechte Seite", hint: "Die komplette rechte Fahrzeugseite von vorne bis hinten aufnehmen.", outline: "right", camera: "side-right", exKey: "photos" },
+  { tag: RETURN_INTERIOR_TAG, title: "Innenraum", hint: "Fahrer- und Laderaum so aufnehmen, dass Sauberkeit und Zustand erkennbar sind.", outline: "interior", camera: "interior", exKey: "photos" },
+  { tag: RETURN_DASHBOARD_TAG, title: "Kilometerstand und Tankstand", hint: DASHBOARD_HINT, outline: "dashboard", camera: "damage", exKey: "fuel" },
+];
+
+export const RETURN_RECEIPT_SLOT: ReturnSlot = {
+  tag: RETURN_RECEIPT_TAG,
+  title: "Tankbeleg",
+  hint: "Den Tankbeleg flach und vollständig lesbar fotografieren.",
+  outline: "receipt",
+  camera: "receipt",
+  exKey: "receipt",
+};
+
+export function returnSlots(refueled: boolean | null): ReturnSlot[] {
+  return refueled ? [...RETURN_CORE_SLOTS, RETURN_RECEIPT_SLOT] : [...RETURN_CORE_SLOTS];
+}
 
 interface ReturnFlowProps {
   bookingId: string;
@@ -75,43 +120,10 @@ interface ReturnFlowProps {
   onBookingRefresh?: () => Promise<void>;
 }
 
-type CaptureTarget =
-  | { kind: "side"; id: string }
-  | { kind: "interior" }
-  | { kind: "damage" }
-  | { kind: "odometer" }
-  | { kind: "fuel" }
-  | { kind: "receipt" };
-
-type ReturnStep = DraftStep | "done";
+type Step = "intro" | "wizard" | "overview" | "code";
 /** Nur Aufnahmen, deren IndexedDB-Transaktion abgeschlossen ist, erscheinen hier (dauerhaft lokal gesichert). */
-type PendingState = { id: string; tag: string; status: "local" | "uploading" | "error"; preview: string | null; message?: string };
-
-const tagOf = (t: CaptureTarget) =>
-  t.kind === "side"
-    ? t.id
-    : t.kind === "interior"
-      ? RETURN_INTERIOR_TAG
-      : t.kind === "damage"
-        ? "post_damage"
-        : t.kind === "odometer"
-          ? RETURN_ODOMETER_TAG
-          : t.kind === "fuel"
-            ? RETURN_FUEL_TAG
-            : RETURN_RECEIPT_TAG;
-
-const targetOfTag = (tag: string): CaptureTarget =>
-  tag === RETURN_INTERIOR_TAG
-    ? { kind: "interior" }
-    : tag === "post_damage"
-      ? { kind: "damage" }
-      : tag === RETURN_ODOMETER_TAG
-        ? { kind: "odometer" }
-        : tag === RETURN_FUEL_TAG
-          ? { kind: "fuel" }
-          : tag === RETURN_RECEIPT_TAG
-            ? { kind: "receipt" }
-            : { kind: "side", id: tag };
+type PendingState = { id: string; tag: string; status: "local" | "uploading" | "error"; preview: string | null; createdAt: number; message?: string };
+type Candidate = { file: File; url: string | null; source: "camera" | "gallery" | "live" };
 
 function makePreview(blob: Blob): string | null {
   try {
@@ -119,6 +131,13 @@ function makePreview(blob: Blob): string | null {
   } catch {
     return null;
   }
+}
+
+function initialStep(code: string | null, step: string | undefined): Step {
+  if (code) return "code";
+  if (step === "overview") return "overview";
+  if (step === "wizard" || step === "photos" || step === "km" || step === "receipt") return "wizard";
+  return "intro";
 }
 
 export function ReturnFlow({
@@ -137,24 +156,24 @@ export function ReturnFlow({
   const addons = allAddons?.filter(isPhysicalAddon);
   const draft0 = useRef(userId ? loadReturnDraft(userId, bookingId) : null).current;
   const initialCode = serverReturnCode ?? draft0?.returnCode ?? null;
-  const [returnStep, setReturnStep] = useState<ReturnStep>(initialCode ? "code" : (draft0?.step ?? "photos"));
+  const [step, setStep] = useState<Step>(initialStep(initialCode, draft0?.step));
+  const [refueled, setRefueled] = useState<boolean | null>(draft0?.refueled ?? null);
+  const slots = returnSlots(refueled);
+  const [slide, setSlide] = useState(() => Math.max(0, Math.min(draft0?.slide ?? 0, 6)));
+  const [dir, setDir] = useState<"next" | "prev">("next");
+  /** Aus der Übersicht bearbeitetes Foto: nach Bestätigung zurück zur Übersicht. */
+  const [editingTag, setEditingTag] = useState<string | null>(null);
+  const [candidate, setCandidate] = useState<Candidate | null>(null);
+  const [pickError, setPickError] = useState<string | null>(null);
+  const [liveOpen, setLiveOpen] = useState(false);
+  const [damageOpen, setDamageOpen] = useState(false);
   const [photos, setPhotos] = useState<Record<string, StoredTripPhoto>>({});
-  const [interiorPhoto, setInteriorPhoto] = useState<StoredTripPhoto | null>(null);
   const [damagePhotos, setDamagePhotos] = useState<StoredTripPhoto[]>([]);
-  const [odometerPhoto, setOdometerPhoto] = useState<StoredTripPhoto | null>(null);
-  const [fuelPhoto, setFuelPhoto] = useState<StoredTripPhoto | null>(null);
   const [endKm, setEndKm] = useState(draft0?.endKm ?? "");
   const [endKmManual, setEndKmManual] = useState(draft0?.endKmManual ?? false);
-  const [receiptPhoto, setReceiptPhoto] = useState<StoredTripPhoto | null>(null);
   const [exceptions, setExceptions] = useState<ReturnExceptions>(draft0?.exceptions ?? {});
   const [openException, setOpenException] = useState<ExceptionKey | null>(null);
-  const [photoError, setPhotoError] = useState<{
-    message: string;
-    target: CaptureTarget;
-    file: Blob;
-    uploadedPath: string | null;
-    queueId?: string;
-  } | null>(null);
+  const [photoError, setPhotoError] = useState<{ message: string; tag: string; file: Blob; uploadedPath: string | null } | null>(null);
   const [pending, setPending] = useState<Record<string, PendingState>>({});
   const [queueNotice, setQueueNotice] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -177,20 +196,23 @@ export function ReturnFlow({
   const [addonsReturned, setAddonsReturned] = useState(draft0?.addonsReturned ?? false);
   const recognize = useServerFn(recognizeOdometer);
   const report = useServerFn(reportReturn);
-  const [kmSummary, setKmSummary] = useState<ReturnType<typeof evaluateReturnKm> | null>(null);
-  const [currentTarget, setCurrentTarget] = useState<CaptureTarget | null>(null);
   const storeRef = useRef<QueueStore | null>(null);
   const endKmManualRef = useRef(endKmManual);
   endKmManualRef.current = endKmManual;
   const fuelManualRef = useRef(fuelManual);
   fuelManualRef.current = fuelManual;
+  const uid = useId();
+  const cameraInputId = `ret-cam-${uid}`;
+  const galleryInputId = `ret-gal-${uid}`;
 
   // Entwurf fortlaufend sichern (nicht erst beim Verlassen).
   useEffect(() => {
-    if (!userId || returnStep === "done") return;
+    if (!userId || step === "code") return;
     saveReturnDraft(userId, bookingId, {
       started: true,
-      step: returnStep,
+      step,
+      slide,
+      refueled,
       endKm,
       endKmManual,
       endFuelPercent,
@@ -199,7 +221,7 @@ export function ReturnFlow({
       returnCode,
       reportPending,
     });
-  }, [userId, bookingId, returnStep, endKm, endKmManual, endFuelPercent, exceptions, addonsReturned, returnCode, reportPending]);
+  }, [userId, bookingId, step, slide, refueled, endKm, endKmManual, endFuelPercent, exceptions, addonsReturned, returnCode, reportPending]);
 
   // Server-Code hat Vorrang (z. B. nach verlorener Antwort).
   useEffect(() => {
@@ -207,21 +229,16 @@ export function ReturnFlow({
       setReturnCode(serverReturnCode);
       setReportPending(false);
       setAwaitingAdmin(true);
-      setReturnStep("code");
+      setStep("code");
     }
   }, [serverReturnCode, returnCode]);
 
   const applySaved = useCallback((tag: string, saved: StoredTripPhoto) => {
-    const t = targetOfTag(tag);
-    if (t.kind === "side") setPhotos((prev) => ({ ...prev, [t.id]: saved }));
-    else if (t.kind === "interior") setInteriorPhoto(saved);
-    else if (t.kind === "damage") setDamagePhotos((prev) => (prev.some((p) => p.path === saved.path) ? prev : [...prev, saved]));
-    else if (t.kind === "odometer") setOdometerPhoto(saved);
-    else if (t.kind === "fuel") setFuelPhoto(saved);
-    else setReceiptPhoto(saved);
+    if (tag === "post_damage") setDamagePhotos((prev) => (prev.some((p) => p.path === saved.path) ? prev : [...prev, saved]));
+    else setPhotos((prev) => ({ ...prev, [tag]: saved }));
   }, []);
 
-  // Bereits bestätigte Rückgabe-Fotos (inkl. Tacho, Tank, Beleg) wiederherstellen
+  // Bereits bestätigte Rückgabe-Fotos wiederherstellen (neueste je Typ gewinnt; alte bleiben erhalten).
   useEffect(() => {
     let mounted = true;
     setLoadError(null);
@@ -229,26 +246,14 @@ export function ReturnFlow({
       try {
         const rows = await loadTripPhotos(supabase, bookingId, ["post_", "tank_receipt"]);
         if (!mounted) return;
-        const sides: Record<string, StoredTripPhoto> = {};
+        const byTag: Record<string, StoredTripPhoto> = {};
         const damages: StoredTripPhoto[] = [];
-        let interior: StoredTripPhoto | null = null;
-        let odometer: StoredTripPhoto | null = null;
-        let fuel: StoredTripPhoto | null = null;
-        let receipt: StoredTripPhoto | null = null;
         for (const row of rows) {
           const photo = { path: row.photo_url, url: row.url };
-          if (row.photo_type === RETURN_INTERIOR_TAG) interior = photo;
-          else if (row.photo_type === RETURN_ODOMETER_TAG) odometer = photo;
-          else if (row.photo_type === RETURN_FUEL_TAG) fuel = photo;
-          else if (row.photo_type === RETURN_RECEIPT_TAG) receipt = photo;
-          else if (row.photo_type === "post_damage") damages.push(photo);
-          else sides[row.photo_type] = photo;
+          if (row.photo_type === "post_damage") damages.push(photo);
+          else byTag[row.photo_type] = photo;
         }
-        if (Object.keys(sides).length) setPhotos((prev) => ({ ...sides, ...prev }));
-        if (interior) setInteriorPhoto((prev) => prev ?? interior);
-        if (odometer) setOdometerPhoto((prev) => prev ?? odometer);
-        if (fuel) setFuelPhoto((prev) => prev ?? fuel);
-        if (receipt) setReceiptPhoto((prev) => prev ?? receipt);
+        if (Object.keys(byTag).length) setPhotos((prev) => ({ ...byTag, ...prev }));
         if (damages.length) setDamagePhotos((prev) => (prev.length ? prev : damages.slice(-4)));
       } catch (err) {
         if (mounted) setLoadError(err instanceof Error ? err.message : "Gespeicherte Fotos konnten nicht geladen werden.");
@@ -304,7 +309,7 @@ export function ReturnFlow({
       const next: Record<string, PendingState> = {};
       for (const it of items) {
         pendingTags.current[it.id] = it.tag;
-        next[it.id] = { id: it.id, tag: it.tag, status: "local", preview: makePreview(it.blob) };
+        next[it.id] = { id: it.id, tag: it.tag, status: "local", preview: makePreview(it.blob), createdAt: it.createdAt };
       }
       setPending((p) => ({ ...next, ...p }));
       await transferAll();
@@ -368,38 +373,22 @@ export function ReturnFlow({
     };
   }, [awaitingAdmin, returnCode, bookingId, onComplete]);
 
-  // Lokal DAUERHAFT gesicherte Aufnahmen erlauben das Weitergehen im Entwurf.
-  // Serverseitig zählen weiterhin nur bestätigte Storage+DB-Fotos (report_trip_return).
-  const localTags = new Set(Object.values(pending).map((p) => p.tag));
-  const allSidesTaken = PHOTO_SIDES.every((s) => photos[s.id] || localTags.has(s.id));
-  const interiorTaken = !!interiorPhoto || localTags.has(RETURN_INTERIOR_TAG);
-  const photosException = validReason(exceptions.photos);
-  const photosReady = (allSidesTaken && interiorTaken) || photosException;
-  const pendingCount = Object.keys(pending).length;
-
-  const fillTestPhotos = () => {
-    const placeholder =
-      "data:image/svg+xml;utf8," +
-      encodeURIComponent(
-        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='#e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#333'>TEST</text></svg>`,
-      );
-    const test = { path: "admin-test", url: placeholder };
-    const next: Record<string, StoredTripPhoto> = {};
-    PHOTO_SIDES.forEach((s) => (next[s.id] = test));
-    setPhotos(next);
-    setInteriorPhoto(test);
-  };
-
-  const fillTestKm = () => {
-    const placeholder =
-      "data:image/svg+xml;utf8," +
-      encodeURIComponent(
-        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='#e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#333'>TEST</text></svg>`,
-      );
-    setOdometerPhoto({ path: "admin-test", url: placeholder });
-    setFuelPhoto({ path: "admin-test", url: placeholder });
-    if (!endKm) setEndKm("42920");
-  };
+  // ---------- Status je Foto ----------
+  const pendingList = Object.values(pending);
+  const pendingCount = pendingList.length;
+  const localTags = new Set(pendingList.map((p) => p.tag));
+  const hasPhoto = (tag: string) =>
+    !!photos[tag] ||
+    localTags.has(tag) ||
+    (tag === RETURN_DASHBOARD_TAG && !!photos[RETURN_ODOMETER_TAG] && !!photos[RETURN_FUEL_TAG]);
+  /** Ausnahme zählt nur mit Einordnung (technisch / nicht bereitgestellt) und Begründung. */
+  const exceptionValid = (key: ExceptionKey) => validReason(exceptions[key]) && exceptionKind(exceptions[key]) !== null;
+  const slotDone = (s: ReturnSlot) => hasPhoto(s.tag) || exceptionValid(s.exKey);
+  /** Neueste Ansicht je Foto: noch nicht übertragene, neuere lokale Aufnahme vor Serverfoto. */
+  const latestLocal = (tag: string) =>
+    pendingList.filter((p) => p.tag === tag).sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
+  const kmValid = endKm.trim() !== "" && Number.isInteger(Number(endKm)) && Number(endKm) >= 0;
+  const allDone = slots.every(slotDone) && kmValid && refueled !== null;
 
   const runOdometerAi = useCallback(
     async (path: string) => {
@@ -421,38 +410,42 @@ export function ReturnFlow({
     [bookingId, recognize],
   );
 
+  /** Speichert ein BESTÄTIGTES Foto: erst dauerhaft lokal (IndexedDB-Commit), dann Übertragung. */
   const savePhoto = useCallback(
-    async (file: Blob, target: CaptureTarget, uploadedPath: string | null = null) => {
+    async (file: Blob, tag: string, uploadedPath: string | null = null): Promise<boolean> => {
       setUploading(true);
       setPhotoError(null);
-      const tag = tagOf(target);
       const store = storeRef.current;
-      // Mit Warteschlange: erst sicher auf dem Gerät ablegen, dann übertragen.
       if (store && userId && !uploadedPath) {
         try {
           const item = await enqueuePhoto(store, { userId, bookingId, tag, blob: file });
           pendingTags.current[item.id] = tag;
-          setPending((p) => ({ ...p, [item.id]: { id: item.id, tag, status: "local", preview: makePreview(file) } }));
-          setCurrentTarget(null);
+          setPending((p) => ({ ...p, [item.id]: { id: item.id, tag, status: "local", preview: makePreview(file), createdAt: item.createdAt } }));
           setUploading(false);
-          try {
-            const saved = await transferQueuedPhoto(supabase, store, item.id);
-            delete pendingTags.current[item.id];
-            setPending((p) => {
-              const { [item.id]: done, ...rest } = p;
-              if (done?.preview) URL.revokeObjectURL?.(done.preview);
-              return rest;
-            });
-            applySaved(tag, saved);
-            if (target.kind === "odometer") void runOdometerAi(saved.path);
-          } catch (err) {
-            const message = err instanceof Error ? err.message : "Übertragung fehlgeschlagen.";
-            setPending((p) => (p[item.id] ? { ...p, [item.id]: { ...p[item.id]!, status: "error", message } } : p));
-          }
-          setSyncTick((n) => n + 1);
-          return;
+          void (async () => {
+            try {
+              const saved = await transferQueuedPhoto(supabase, store, item.id);
+              delete pendingTags.current[item.id];
+              setPending((p) => {
+                const { [item.id]: done, ...rest } = p;
+                if (done?.preview) URL.revokeObjectURL?.(done.preview);
+                return rest;
+              });
+              applySaved(tag, saved);
+              if (tag === RETURN_DASHBOARD_TAG) void runOdometerAi(saved.path);
+            } catch (err) {
+              const message = err instanceof Error ? err.message : "Übertragung fehlgeschlagen.";
+              setPending((p) => (p[item.id] ? { ...p, [item.id]: { ...p[item.id]!, status: "error", message } } : p));
+            }
+            setSyncTick((n) => n + 1);
+          })();
+          return true;
         } catch (err) {
-          if (!(err instanceof QueueUnavailableError)) throw err;
+          if (!(err instanceof QueueUnavailableError)) {
+            setUploading(false);
+            setPhotoError({ message: "Das Foto konnte auf diesem Gerät nicht gespeichert werden. Bitte erneut versuchen.", tag, file, uploadedPath: null });
+            return false;
+          }
           setQueueNotice(err.message);
           // ehrlich: kein Gerätespeicher → direkter Online-Upload
         }
@@ -460,18 +453,18 @@ export function ReturnFlow({
       try {
         // Erfolg erst nach Storage-Upload UND bestätigtem Datenbankeintrag.
         const saved = await saveTripPhoto(supabase, { bookingId, tag, file, uploadedPath });
-        setCurrentTarget(null);
         applySaved(tag, saved);
-        if (target.kind === "odometer") void runOdometerAi(saved.path);
+        if (tag === RETURN_DASHBOARD_TAG) void runOdometerAi(saved.path);
+        return true;
       } catch (err) {
         console.error("Upload error:", err);
-        setCurrentTarget(null);
         setPhotoError({
           message: err instanceof Error ? err.message : "Das Foto konnte nicht gespeichert werden.",
-          target,
+          tag,
           file,
           uploadedPath: err instanceof TripPhotoError ? err.uploadedPath : uploadedPath,
         });
+        return false;
       } finally {
         setUploading(false);
       }
@@ -479,38 +472,247 @@ export function ReturnFlow({
     [bookingId, userId, applySaved, runOdometerAi],
   );
 
-  const handleCapture = useCallback(
-    async (file: File) => {
-      if (!file || !currentTarget) return;
-      await savePhoto(file, currentTarget);
-    },
-    [currentTarget, savePhoto],
-  );
+  // ---------- Kandidat (Vorschau vor Bestätigung, nur im Arbeitsspeicher) ----------
+  // Jede Auswahl/Freigabe erhöht den Zähler: eine verspätet fertig gewordene Konvertierung
+  // (z. B. HEIC) darf einen bereits bestätigten oder verworfenen Slot nie wieder überschreiben.
+  const pickSeq = useRef(0);
+  const clearCandidate = useCallback(() => {
+    pickSeq.current += 1;
+    setCandidate((c) => {
+      if (c?.url) URL.revokeObjectURL?.(c.url);
+      return null;
+    });
+  }, []);
 
-  const openCamera = (target: CaptureTarget) => {
-    setPhotoError(null);
-    setCurrentTarget(target);
+  const acceptFile = useCallback(async (file: File, source: Candidate["source"]) => {
+    setPickError(null);
+    const seq = ++pickSeq.current;
+    try {
+      const blob = await normalizeImageFile(file);
+      const out = blobToImageFile(blob, "photo");
+      if (seq !== pickSeq.current) return;
+      setCandidate((c) => {
+        if (c?.url) URL.revokeObjectURL?.(c.url);
+        return { file: out, url: makePreview(out), source };
+      });
+    } catch (err) {
+      setPickError(err instanceof Error ? err.message : "Foto konnte nicht gelesen werden. Bitte erneut versuchen.");
+    }
+  }, []);
+
+  const onPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const source = e.target.id === cameraInputId ? "camera" : "gallery";
+    e.target.value = ""; // gleiche Datei erneut wählbar
+    if (file) void acceptFile(file, source);
   };
 
-  const pendingList = Object.values(pending);
+  const goTo = (index: number, direction: "next" | "prev") => {
+    clearCandidate();
+    setPickError(null);
+    setPhotoError(null);
+    setOpenException(null);
+    setActionError(null);
+    setDir(direction);
+    setSlide(index);
+  };
+
+  const current = slots[Math.min(slide, slots.length - 1)]!;
+
+  const confirmCandidate = async () => {
+    if (!candidate || uploading) return;
+    const ok = await savePhoto(candidate.file, current.tag);
+    if (!ok) return;
+    clearCandidate();
+    if (editingTag === current.tag) {
+      setEditingTag(null);
+      setStep("overview");
+    }
+  };
+
+  /** Kilometer-/Tankwerte als Entwurf am Server sichern (offline: lokal, später mit der Meldung). */
+  const saveKmDraft = async (): Promise<boolean> => {
+    const end = Number(endKm);
+    if (!kmValid) {
+      setActionError("Bitte einen gültigen Kilometerstand eintragen.");
+      return false;
+    }
+    setSaving(true);
+    setActionError(null);
+    try {
+      await updateBookingChecked(supabase, bookingId, {
+        end_km: end,
+        end_km_manual: endKmManual,
+        ...(endFuelPercent !== "" ? { ai_end_fuel_percent: parseInt(endFuelPercent) } : {}),
+      });
+      setKmLocalOnly(false);
+      return true;
+    } catch (err) {
+      const offline =
+        (typeof navigator !== "undefined" && navigator.onLine === false) ||
+        (err instanceof BookingUpdateError && err.kind === "network");
+      if (offline) {
+        setKmLocalOnly(true);
+        return true;
+      }
+      if (err instanceof BookingUpdateError && err.kind === "locked" && onBookingRefresh) {
+        try {
+          await onBookingRefresh();
+        } catch {
+          // Die sichere Fehlermeldung unten bleibt bedienbar, auch wenn das Neuladen scheitert.
+        }
+      }
+      setActionError(err instanceof Error ? `Kilometerstand nicht gespeichert. ${err.message}` : "Kilometerstand nicht gespeichert.");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const next = async () => {
+    if (!slotDone(current)) return;
+    if (current.tag === RETURN_DASHBOARD_TAG) {
+      if (refueled === null) return;
+      if (!(await saveKmDraft())) return;
+    }
+    if (editingTag) {
+      setEditingTag(null);
+      clearCandidate();
+      setStep("overview");
+      return;
+    }
+    if (slide + 1 >= slots.length) {
+      clearCandidate();
+      setStep("overview");
+      return;
+    }
+    goTo(slide + 1, "next");
+  };
+
+  const back = () => {
+    if (editingTag) {
+      setEditingTag(null);
+      clearCandidate();
+      setStep("overview");
+      return;
+    }
+    if (slide === 0) {
+      clearCandidate();
+      setStep("intro");
+      return;
+    }
+    goTo(slide - 1, "prev");
+  };
+
+  const editSlot = (tag: string) => {
+    const idx = slots.findIndex((s) => s.tag === tag);
+    if (idx < 0) return;
+    setEditingTag(tag);
+    goTo(idx, "next");
+    setStep("wizard");
+  };
+
+  const fillTestPhotos = () => {
+    const placeholder =
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(
+        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><rect width='200' height='120' fill='#e5e5e5'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#333'>TEST</text></svg>`,
+      );
+    const test = { path: "admin-test", url: placeholder };
+    const next: Record<string, StoredTripPhoto> = {};
+    returnSlots(true).forEach((s) => (next[s.tag] = test));
+    setPhotos((p) => ({ ...p, ...next }));
+    if (!endKm) setEndKm("42920");
+    if (refueled === null) setRefueled(false);
+  };
+
+  // ---------- Rückgabemeldung ----------
+  const submittingRef = useRef(false);
+  const pendingCountRef = useRef(pendingCount);
+  pendingCountRef.current = pendingCount;
+
+  /** Nur nach Nutzeraktion „Buchung abschließen“ (setzt reportPending) bzw. deren automatischer Wiederholung. */
+  const submitReport = useCallback(async () => {
+    if (submittingRef.current) return; // Doppelklick/parallele Auslöser im selben Tab
+    setActionError(null);
+    setReportPending(true);
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setActionError("Keine Verbindung. Die Buchung ist noch NICHT abgeschlossen und wird automatisch gesendet, sobald du wieder online bist.");
+      return;
+    }
+    if (pendingCountRef.current > 0) {
+      // Erst Fotos übertragen; danach wiederholt der Sync-Effekt die Meldung automatisch.
+      setActionError("Fotos werden zuerst übertragen. Die Buchung wird danach automatisch abgeschlossen – noch NICHT bestätigt.");
+      void transferAll().then(() => setSyncTick((n) => n + 1));
+      return;
+    }
+    submittingRef.current = true;
+    setSaving(true);
+    try {
+      const fuel = endFuelPercent === "" ? null : parseInt(endFuelPercent);
+      const res = await report({
+        data: {
+          bookingId,
+          endKm: Number(endKm),
+          endFuelPercent: fuel,
+          endKmManual,
+          exceptions,
+          mode: { flow: "v2", refueled: refueled === true },
+        },
+      });
+      if (!res || (res as { ok?: boolean }).ok !== true) {
+        const r = res as { error?: string } | null;
+        // Serverseitige Ablehnung (z. B. fehlende bestätigte Nachweise): Auftrag beenden, kein Endlos-Retry.
+        setReportPending(false);
+        setActionError(`Buchung nicht abgeschlossen. ${r?.error ?? ""}`.trim());
+        return;
+      }
+      const ok = res as { returnCode: string; reviewReason: string | null };
+      setReportPending(false);
+      setReviewNote(ok.reviewReason);
+      setReturnCode(ok.returnCode);
+      setAwaitingAdmin(true);
+      setStep("code");
+    } catch (err) {
+      // Netz-/Serverfehler: Auftrag bleibt bestehen und wird beim nächsten Sync wiederholt.
+      setActionError(
+        err instanceof Error
+          ? `Buchung noch NICHT abgeschlossen. ${err.message} Wir versuchen es automatisch erneut.`
+          : "Buchung noch NICHT abgeschlossen. Wir versuchen es automatisch erneut.",
+      );
+    } finally {
+      submittingRef.current = false;
+      setSaving(false);
+    }
+  }, [report, bookingId, endKm, endFuelPercent, endKmManual, exceptions, refueled, transferAll]);
+
+  // Beauftragte Meldung nach abgeschlossenem Warteschlangen-Durchlauf automatisch wiederholen –
+  // je Durchlauf höchstens einmal, nur wenn keine Fotos mehr offen sind.
+  const lastAutoTick = useRef(-1);
+  useEffect(() => {
+    if (!reportPending || returnCode || pendingCount > 0) return;
+    if (lastAutoTick.current === syncTick) return;
+    lastAutoTick.current = syncTick;
+    void submitReport();
+  }, [syncTick, reportPending, returnCode, pendingCount, submitReport]);
+
+  // ---------- Bausteine ----------
   const photoBanners = (
     <>
-      {loadError && (
-        <TripErrorBanner message={loadError} onRetry={() => setLoadAttempt((n) => n + 1)} retryLabel="Neu laden" />
-      )}
+      {loadError && <TripErrorBanner message={loadError} onRetry={() => setLoadAttempt((n) => n + 1)} retryLabel="Neu laden" />}
       {queueNotice && <TripErrorBanner message={queueNotice} onDismiss={() => setQueueNotice(null)} />}
       {photoError && (
         <TripErrorBanner
           message={photoError.message}
           busy={uploading}
-          onRetry={() => void savePhoto(photoError.file, photoError.target, photoError.uploadedPath)}
+          onRetry={() => void savePhoto(photoError.file, photoError.tag, photoError.uploadedPath).then((ok) => ok && clearCandidate())}
           onDismiss={() => setPhotoError(null)}
         />
       )}
-      {pendingList.length > 0 && (
+      {pendingCount > 0 && (
         <div className="mb-4 rounded-2xl border border-border bg-secondary/60 p-4" data-testid="photo-queue">
           <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-            <CloudOff className="w-4 h-4" /> {pendingList.length} Foto(s) noch nicht übertragen
+            <CloudOff className="w-4 h-4" /> {pendingCount} Foto(s) noch nicht übertragen
           </p>
           <ul className="space-y-1 text-xs text-muted-foreground">
             {pendingList.map((p) => (
@@ -520,30 +722,17 @@ export function ReturnFlow({
                   {p.status === "uploading"
                     ? "Wird übertragen"
                     : p.status === "error"
-                      ? `Auf diesem Gerät gespeichert · Übertragung fehlgeschlagen`
+                      ? "Auf diesem Gerät gespeichert · Übertragung fehlgeschlagen"
                       : "Auf diesem Gerät gespeichert"}
                 </span>
               </li>
             ))}
           </ul>
-          <button
-            type="button"
-            onClick={transferAll}
-            className="mt-3 min-h-11 rounded-full bg-foreground px-4 text-xs font-semibold text-background"
-          >
+          <button type="button" onClick={transferAll} className="mt-3 min-h-11 rounded-full bg-foreground px-4 text-xs font-semibold text-background">
             Jetzt übertragen
           </button>
         </div>
       )}
-    </>
-  );
-
-  const notice = (
-    <>
-    <p className="mb-4 rounded-2xl border border-border p-3 text-xs leading-relaxed text-muted-foreground" data-testid="return-notice">
-      {RETURN_DOCUMENTATION_NOTICE}
-    </p>
-    <DocumentationFeeNotice />
     </>
   );
 
@@ -560,6 +749,9 @@ export function ReturnFlow({
         ) : (
           <div className="rounded-2xl border border-border p-3" data-testid={`exception-${key}`}>
             <p className="text-xs font-medium text-foreground">{label} – was trifft zu?</p>
+            {key === "photos" && (
+              <p className="mt-1 text-[11px] text-muted-foreground">Gilt für alle Fahrzeug- und Innenraumfotos.</p>
+            )}
             <div className="mt-2 flex flex-col gap-1.5" role="radiogroup" aria-label={`${label}: Einordnung`}>
               {(["technical", "not_provided"] as ExceptionKind[]).map((k) => (
                 <label key={k} className="flex min-h-11 items-center gap-2 text-xs text-foreground">
@@ -604,498 +796,173 @@ export function ReturnFlow({
     );
   };
 
-  const cameraOpen = currentTarget !== null;
-  const cameraVariant: SilhouetteVariant = (() => {
-    if (!currentTarget) return "front";
-    if (currentTarget.kind === "interior") return "interior";
-    if (currentTarget.kind === "damage") return "damage";
-    if (currentTarget.kind === "odometer" || currentTarget.kind === "fuel") return "damage";
-    if (currentTarget.kind === "receipt") return "receipt";
-    const side = PHOTO_SIDES.find((s) => s.id === currentTarget.id);
-    return side?.variant ?? "front";
-  })();
-  const cameraTitle: string = (() => {
-    if (!currentTarget) return "";
-    if (currentTarget.kind === "interior") return "Innenraum aufnehmen";
-    if (currentTarget.kind === "damage") return "Schaden aufnehmen";
-    if (currentTarget.kind === "odometer") return "Tacho / Kilometerstand fotografieren";
-    if (currentTarget.kind === "fuel") return "Tankanzeige fotografieren";
-    if (currentTarget.kind === "receipt") return "Tankbeleg scannen";
-    const side = PHOTO_SIDES.find((s) => s.id === currentTarget.id);
-    return side?.label ?? "Foto aufnehmen";
-  })();
-  const cameraHint =
-    currentTarget?.kind === "receipt"
-      ? "Beleg in den Rahmen legen, wird automatisch gescannt"
-      : currentTarget?.kind === "fuel"
-        ? "Tankanzeige gut lesbar mittig aufnehmen"
-        : "Richte das Fahrzeug an der Vorlage aus";
+  const exceptionLabel = (s: ReturnSlot) =>
+    s.exKey === "receipt"
+      ? "Kein Tankbeleg vorhanden?"
+      : s.exKey === "fuel"
+        ? "Foto der Anzeige nicht möglich?"
+        : "Foto nicht möglich?";
 
-  const camera = (
-    <CameraCapture
-      open={cameraOpen}
-      title={cameraTitle}
-      hint={cameraHint}
-      variant={cameraVariant}
-      scanMode={currentTarget?.kind === "receipt"}
-      onClose={() => setCurrentTarget(null)}
-      onCapture={(file) => handleCapture(file)}
-    />
-  );
-
-  const handleSubmitKm = async () => {
-    if (saving) return;
-    const end = Number(endKm);
-    if (endKm.trim() === "" || !Number.isInteger(end) || end < 0) {
-      setActionError("Bitte einen gültigen Kilometerstand eintragen.");
-      return;
-    }
-    const km = evaluateReturnKm({ planId, startKm, endKm: end, freeKm, kmPriceCents });
-    setSaving(true);
-    setActionError(null);
-    try {
-      // Nur Entwurfsfelder, die der DB-Schutz während der Miete erlaubt.
-      // Mehrkilometer/Preis werden ausschließlich serverseitig bei der Rückgabemeldung
-      // aus den unveränderten Buchungs-Snapshots gesetzt.
-      await updateBookingChecked(supabase, bookingId, {
-        end_km: end,
-        end_km_manual: endKmManual,
-        ...(endFuelPercent !== "" ? { ai_end_fuel_percent: parseInt(endFuelPercent) } : {}),
-      });
-    } catch (err) {
-      const offline =
-        (typeof navigator !== "undefined" && navigator.onLine === false) ||
-        (err instanceof BookingUpdateError && err.kind === "network");
-      if (offline) {
-        // Wert liegt im lokalen Entwurf; die Rückgabemeldung überträgt den Endstand ohnehin.
-        setKmLocalOnly(true);
-        setSaving(false);
-        setKmSummary(km);
-        setReturnStep("receipt");
-        return;
-      }
-      if (err instanceof BookingUpdateError && err.kind === "locked" && onBookingRefresh) {
-        try {
-          await onBookingRefresh();
-        } catch {
-          // Die sichere Fehlermeldung unten bleibt bedienbar, auch wenn das Neuladen scheitert.
-        }
-      }
-      setActionError(err instanceof Error ? `Kilometerstand nicht gespeichert. ${err.message}` : "Kilometerstand nicht gespeichert.");
-      setSaving(false);
-      return;
-    }
-    setSaving(false);
-    setKmLocalOnly(false);
-    setKmSummary(km);
-    setReturnStep("receipt");
+  const thumbFor = (tag: string, alt: string, cls: string) => {
+    const local = latestLocal(tag);
+    if (local?.preview) return <img src={local.preview} alt={alt} className={`${cls} object-cover rounded-xl`} />;
+    if (local) return <div className={`${cls} rounded-xl bg-secondary flex items-center justify-center text-[11px] text-muted-foreground`}>Auf diesem Gerät gespeichert</div>;
+    const p = photos[tag] ?? (tag === RETURN_DASHBOARD_TAG ? photos[RETURN_ODOMETER_TAG] : undefined);
+    if (p) return <TripPhotoThumb photo={p} alt={alt} className={cls} />;
+    return null;
   };
 
-  const submittingRef = useRef(false);
-  const pendingCountRef = useRef(pendingCount);
-  pendingCountRef.current = pendingCount;
+  // ---------- Erfolgsansicht ----------
+  if (step === "code") {
+    return (
+      <div className="max-w-lg mx-auto animate-fade-in-up text-center" data-testid="return-done">
+        <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6">
+          <Check className="w-10 h-10 text-foreground" />
+        </div>
+        <p className="inline-block mb-3 rounded-full border border-foreground px-3 py-1 text-xs font-semibold">Rückgabe gemeldet</p>
+        <h3 className="text-2xl font-bold text-foreground mb-3">{RETURN_DONE_TITLE}</h3>
+        <p className="text-muted-foreground mb-2" data-testid="key-return-hint">
+          {KEY_RETURN_HINT}
+        </p>
 
-  /** Nur nach Nutzeraktion „Schlüssel zurückgeben“ (setzt reportPending) bzw. deren automatischer Wiederholung. */
-  const submitReport = useCallback(async () => {
-    if (submittingRef.current) return; // Doppelklick/parallele Auslöser im selben Tab
-    setActionError(null);
-    setReportPending(true);
-    if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      setActionError("Keine Verbindung. Die Rückgabe ist noch NICHT gemeldet und wird automatisch gesendet, sobald du wieder online bist.");
-      return;
-    }
-    if (pendingCountRef.current > 0) {
-      // Erst Fotos übertragen; danach wiederholt der Sync-Effekt die Meldung automatisch.
-      setActionError("Fotos werden zuerst übertragen. Die Rückgabe wird danach automatisch gemeldet – noch NICHT bestätigt.");
-      void transferAll().then(() => setSyncTick((n) => n + 1));
-      return;
-    }
-    submittingRef.current = true;
-    setSaving(true);
-    try {
-      const fuel = endFuelPercent === "" ? null : parseInt(endFuelPercent);
-      const res = await report({
-        data: { bookingId, endKm: Number(endKm), endFuelPercent: fuel, endKmManual, exceptions },
-      });
-      if (!res || (res as { ok?: boolean }).ok !== true) {
-        const r = res as { error?: string } | null;
-        // Serverseitige Ablehnung (z. B. fehlende bestätigte Nachweise): Auftrag beenden, kein Endlos-Retry.
-        setReportPending(false);
-        setActionError(`Rückgabe nicht gespeichert. ${r?.error ?? ""}`.trim());
-        return;
-      }
-      const ok = res as { returnCode: string; reviewReason: string | null };
-      setReportPending(false);
-      setReviewNote(ok.reviewReason);
-      setReturnCode(ok.returnCode);
-      setAwaitingAdmin(true);
-      setReturnStep("code");
-    } catch (err) {
-      // Netz-/Serverfehler: Auftrag bleibt bestehen und wird beim nächsten Sync wiederholt.
-      setActionError(
-        err instanceof Error
-          ? `Rückgabe noch NICHT gemeldet. ${err.message} Wir versuchen es automatisch erneut.`
-          : "Rückgabe noch NICHT gemeldet. Wir versuchen es automatisch erneut.",
-      );
-    } finally {
-      submittingRef.current = false;
-      setSaving(false);
-    }
-  }, [report, bookingId, endKm, endFuelPercent, endKmManual, exceptions, transferAll]);
+        <div className="my-8 p-6 rounded-2xl bg-primary text-primary-foreground">
+          <p className="text-xs opacity-70 mb-2">Dein Rückgabecode</p>
+          <p className="text-4xl font-mono font-bold tracking-[0.3em]">{returnCode}</p>
+        </div>
+        <p className="text-xs text-muted-foreground mb-6">Bei persönlicher Abgabe nenne diesen Code.</p>
 
-  // Beauftragte Meldung nach abgeschlossenem Warteschlangen-Durchlauf automatisch wiederholen –
-  // je Durchlauf höchstens einmal, nur wenn keine Fotos mehr offen sind.
-  const lastAutoTick = useRef(-1);
-  useEffect(() => {
-    if (!reportPending || returnCode || pendingCount > 0) return;
-    if (lastAutoTick.current === syncTick) return;
-    lastAutoTick.current = syncTick;
-    void submitReport();
-  }, [syncTick, reportPending, returnCode, pendingCount, submitReport]);
+        {reviewNote && <p className="mb-6 text-xs text-muted-foreground">Hinweis: Deine Rückgabe wird zusätzlich geprüft ({reviewNote}).</p>}
 
-  if (returnStep === "photos") {
+        <p className="text-xs text-muted-foreground mt-4 flex items-center justify-center gap-2">
+          <Key className="w-3.5 h-3.5" /> Sobald MyTransporter den Schlüssel bestätigt, wird die Fahrt automatisch beendet und diese Seite aktualisiert.
+        </p>
+      </div>
+    );
+  }
+
+  // ---------- Start ----------
+  if (step === "intro") {
     return (
       <div className="max-w-lg mx-auto animate-fade-in-up">
-        {camera}
         <h3 className="text-xl font-bold text-foreground mb-2">Fahrzeug-Rückgabe dokumentieren</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Fotografiere das Fahrzeug von allen 8 Seiten und den Innenraum, bevor du den Schlüssel abgibst.
+          Du wirst Schritt für Schritt durch {RETURN_CORE_SLOTS.length} kurze Fotos geführt: vorne, hinten, links, rechts, Innenraum sowie Kilometer- und Tankstand.
         </p>
-        {notice}
-
-        {isAdmin && (
-          <button
-            onClick={fillTestPhotos}
-            className="w-full mb-4 rounded-full border border-dashed border-foreground py-2 text-xs font-medium text-foreground hover:bg-secondary"
-          >
-            🧪 Admin-Testmodus: alle Fotos überspringen
-          </button>
-        )}
-
+        <p className="mb-4 rounded-2xl border border-border p-3 text-xs leading-relaxed text-muted-foreground" data-testid="return-notice">
+          {RETURN_DOCUMENTATION_NOTICE}
+        </p>
+        <DocumentationFeeNotice />
         {photoBanners}
+        <button
+          type="button"
+          onClick={() => {
+            setStep("wizard");
+            goTo(0, "next");
+          }}
+          className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
+        >
+          <Camera className="w-5 h-5 inline mr-1" /> Jetzt Fotos hochladen
+        </button>
+        <p className="mt-3 text-center text-xs text-muted-foreground">„Buchung abschließen“ ist erst nach der Fotodokumentation möglich.</p>
+      </div>
+    );
+  }
 
+  // ---------- Übersicht ----------
+  if (step === "overview") {
+    const km = kmValid ? evaluateReturnKm({ planId, startKm, endKm: Number(endKm), freeKm, kmPriceCents }) : null;
+    const addonsOk = !addons || addons.length === 0 || addonsReturned;
+    return (
+      <div className="max-w-lg mx-auto animate-fade-in-up" data-testid="return-overview">
+        <CameraCapture
+          open={damageOpen}
+          title="Schaden aufnehmen"
+          hint="Schaden gut erkennbar aufnehmen"
+          variant="damage"
+          onClose={() => setDamageOpen(false)}
+          onCapture={async (file) => {
+            setDamageOpen(false);
+            await savePhoto(file, "post_damage");
+          }}
+        />
+        <h3 className="text-xl font-bold text-foreground mb-2">Übersicht</h3>
+        <p className="text-sm text-muted-foreground mb-4">Prüfe deine Fotos. Über den Stift kannst du ein Foto ersetzen.</p>
+        {photoBanners}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          {PHOTO_SIDES.map((side) => (
-            <button
-              key={side.id}
-              onClick={() => openCamera({ kind: "side", id: side.id })}
-              disabled={!!photos[side.id] || localTags.has(side.id) || uploading}
-              className={`p-4 rounded-2xl border-2 text-center transition-all ${
-                photos[side.id] ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
-              }`}
-            >
-              {photos[side.id] ? (
-                <div className="mb-2">
-                  <TripPhotoThumb photo={photos[side.id]} alt={side.label} className="w-full h-20" />
-                </div>
-              ) : (
-                <div className="h-20 flex items-center justify-center mb-2">
-                  <Camera className="w-8 h-8 text-muted-foreground" />
-                </div>
-              )}
-              <p className="text-sm font-medium text-foreground">
-                {side.icon} {side.label}
-              </p>
-              {photos[side.id] && <p className="text-[10px] text-muted-foreground">Übertragen</p>}
-              {!photos[side.id] && localTags.has(side.id) && (
-                <p className="text-[10px] text-muted-foreground" data-testid={`local-${side.id}`}>Auf diesem Gerät gespeichert</p>
-              )}
-            </button>
-          ))}
-        </div>
-
-        <div className="mb-6">
-          <p className="text-sm font-medium text-foreground mb-2">Innenraum & Sauberkeit</p>
-          <button
-            onClick={() => openCamera({ kind: "interior" })}
-            disabled={uploading}
-            className={`w-full p-4 rounded-2xl border-2 text-center transition-all ${
-              interiorPhoto ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
-            }`}
-          >
-            {interiorPhoto ? (
-              <div className="mb-2">
-                <TripPhotoThumb photo={interiorPhoto} alt="Innenraum" className="w-full h-32" />
-              </div>
-            ) : (
-              <div className="h-24 flex flex-col items-center justify-center gap-1">
-                <Camera className="w-8 h-8 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Foto vom Innenraum aufnehmen</span>
-              </div>
-            )}
-          </button>
-        </div>
-
-        <div className="mb-6">
-          <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" /> Schäden?
-          </p>
-          <p className="text-xs text-muted-foreground mb-3">Optional, bis zu 4 Fotos von neuen Schäden</p>
-          <div className="grid grid-cols-4 gap-2">
-            {Array.from({ length: 4 }).map((_, idx) => {
-              const photo = damagePhotos[idx];
-              if (photo) {
-                return (
-                  <div key={idx} className="relative">
-                    <TripPhotoThumb photo={photo} alt={`Schaden ${idx + 1}`} className="w-full h-20 border border-border" />
-                    <button
-                      onClick={() => setDamagePhotos((prev) => prev.filter((_, i) => i !== idx))}
-                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center"
-                      aria-label="Foto entfernen"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                );
-              }
-              return (
-                <button
-                  key={idx}
-                  onClick={() => openCamera({ kind: "damage" })}
-                  disabled={uploading || idx > damagePhotos.length}
-                  className="h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center text-muted-foreground hover:border-accent/50 transition-all disabled:opacity-40"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {!(allSidesTaken && interiorTaken) && exceptionBox("photos", "Foto oder Kamera funktioniert nicht?")}
-
-        <button
-          disabled={!photosReady}
-          onClick={() => setReturnStep("km")}
-          className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Weiter <ChevronRight className="w-5 h-5 inline" />
-        </button>
-
-        {!photosReady && (
-          <p className="text-xs text-muted-foreground text-center mt-3">
-            Bitte alle 8 Außenfotos und das Innenraum-Foto aufnehmen
-            {pendingCount > 0 ? " – noch nicht übertragene Fotos zählen erst nach der Übertragung" : ""}
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  if (returnStep === "km") {
-    const kmReady = endKm.trim() !== "" && (!!odometerPhoto || localTags.has(RETURN_ODOMETER_TAG) || photosException);
-    const fuelReady = !!fuelPhoto || localTags.has(RETURN_FUEL_TAG) || validReason(exceptions.fuel);
-    return (
-      <div className="max-w-lg mx-auto animate-fade-in-up">
-        {camera}
-        <h3 className="text-xl font-bold text-foreground mb-2">Kilometer- und Tankstand (Ende)</h3>
-        <p className="text-sm text-muted-foreground mb-6">Trage den aktuellen Kilometerstand ein.</p>
-        {photoBanners}
-        {isAdmin && (
-          <button
-            onClick={fillTestKm}
-            className="w-full mb-4 rounded-full border border-dashed border-foreground py-2 text-xs font-medium text-foreground hover:bg-secondary"
-          >
-            🧪 Admin-Testmodus: Kilometerstand & Tacho-Foto fiktiv ausfüllen
-          </button>
-        )}
-        <input
-          type="number"
-          inputMode="numeric"
-          value={endKm}
-          onChange={(e) => {
-            setEndKm(e.target.value);
-            setEndKmManual(true);
-          }}
-          placeholder="z.B. 42920"
-          className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent mb-6"
-        />
-
-        <p className="text-xs text-muted-foreground mb-2">Pflicht: Foto vom Tacho mit aktuellem Kilometerstand.</p>
-        <button
-          onClick={() => openCamera({ kind: "odometer" })}
-          disabled={uploading}
-          className={`w-full mb-6 p-4 rounded-2xl border-2 text-center transition-all ${
-            odometerPhoto ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
-          }`}
-        >
-          {odometerPhoto ? (
-            <TripPhotoThumb photo={odometerPhoto} alt="Tacho" className="w-full h-32" />
-          ) : (
-            <div className="h-20 flex flex-col items-center justify-center gap-1">
-              <Camera className="w-7 h-7 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Foto vom Tacho aufnehmen</span>
-            </div>
-          )}
-        </button>
-
-        {aiBusy && <p className="text-xs text-muted-foreground -mt-4 mb-4">🤖 KI analysiert Tacho…</p>}
-        {!aiBusy && aiRecognition && (
-          <p className="text-xs text-muted-foreground -mt-4 mb-4">
-            🤖 KI-Vorschlag:&nbsp;
-            {aiRecognition.km !== null ? `${aiRecognition.km.toLocaleString("de-DE")} km` : "Kilometerstand nicht lesbar"}
-            {aiRecognition.fuelPercent !== null ? ` · Tank ${aiRecognition.fuelPercent}%` : ""}
-            {aiRecognition.confidence === "low" ? " (unsicher – bitte prüfen)" : " – bitte prüfen"}
-            {endKmManual ? " · deine Eingabe bleibt erhalten" : ""}
-          </p>
-        )}
-
-        <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
-          <Fuel className="w-3.5 h-3.5" /> Pflicht: Foto der Tankanzeige.
-        </p>
-        <button
-          onClick={() => openCamera({ kind: "fuel" })}
-          disabled={uploading}
-          className={`w-full mb-4 p-4 rounded-2xl border-2 text-center transition-all ${
-            fuelPhoto ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
-          }`}
-        >
-          {fuelPhoto ? (
-            <TripPhotoThumb photo={fuelPhoto} alt="Tankanzeige" className="w-full h-32" />
-          ) : (
-            <div className="h-20 flex flex-col items-center justify-center gap-1">
-              <Fuel className="w-7 h-7 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Foto der Tankanzeige aufnehmen</span>
-            </div>
-          )}
-        </button>
-        {!fuelPhoto && exceptionBox("fuel", "Tankanzeige lässt sich nicht fotografieren?")}
-
-        <label className="text-sm font-medium text-foreground">Tankstand (Ende, in %)</label>
-        <input
-          type="number"
-          min={0}
-          max={100}
-          value={endFuelPercent}
-          onChange={(e) => {
-            setEndFuelPercent(e.target.value);
-            setFuelManual(true);
-          }}
-          placeholder="z.B. 75"
-          className="mt-1 mb-6 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-        />
-
-        {actionError && <TripErrorBanner message={actionError} onRetry={() => void handleSubmitKm()} busy={saving} />}
-        <button
-          disabled={!kmReady || !fuelReady || saving || uploading}
-          onClick={handleSubmitKm}
-          className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Weiter <ChevronRight className="w-5 h-5 inline" />
-        </button>
-      </div>
-    );
-  }
-
-  if (returnStep === "receipt") {
-    const receiptReady = !!receiptPhoto || localTags.has(RETURN_RECEIPT_TAG) || validReason(exceptions.receipt);
-    return (
-      <div className="max-w-lg mx-auto animate-fade-in-up">
-        {camera}
-        <h3 className="text-xl font-bold text-foreground mb-2">Tankbeleg scannen</h3>
-        <p className="text-sm text-muted-foreground mb-6">
-          Lege den Tankbeleg gut sichtbar in den Rahmen, das Foto wird automatisch wie ein Scan in S/W aufbereitet.
-        </p>
-
-        {kmSummary && (
-          <div className="mb-6 p-4 rounded-2xl border border-border bg-secondary/50">
-            <p className="text-sm font-medium text-foreground mb-2">Kilometer-Abrechnung</p>
-            {kmSummary.reviewReason ? (
-              <p className="text-sm text-muted-foreground">
-                {kmSummary.reviewReason} Es wird nichts automatisch berechnet.
-              </p>
-            ) : (
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <div className="flex justify-between">
-                  <span>Gefahren</span>
-                  <span className="text-foreground">{kmSummary.driven} km</span>
-                </div>
-                {kmSummary.free > 0 && (
-                  <div className="flex justify-between">
-                    <span>Inklusive Freikilometer</span>
-                    <span className="text-foreground">{kmSummary.free} km</span>
+          {slots.map((s) => {
+            const done = slotDone(s);
+            const thumb = thumbFor(s.tag, s.title, "w-full h-24");
+            return (
+              <div key={s.tag} className={`rounded-2xl border-2 p-2 ${done ? "border-foreground" : "border-dashed border-border"}`} data-testid={`card-${s.tag}`}>
+                {thumb ?? (
+                  <div className="w-full h-24 rounded-xl bg-secondary flex items-center justify-center text-[11px] text-muted-foreground text-center px-2">
+                    {exceptionValid(s.exKey) ? "Problem gemeldet – wird geprüft" : "Fehlt noch"}
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span>{planId === "km" ? "Berechnete Kilometer" : "Mehrkilometer"}</span>
-                  <span className="text-foreground">{kmSummary.extra} km</span>
+                <div className="mt-2 flex items-center justify-between gap-1">
+                  <p className="text-xs font-medium text-foreground leading-tight">{s.title}</p>
+                  <button
+                    type="button"
+                    onClick={() => editSlot(s.tag)}
+                    aria-label={`${s.title} bearbeiten`}
+                    className="min-h-9 min-w-9 rounded-full border border-border flex items-center justify-center"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <div className="flex justify-between font-medium pt-2 border-t border-border">
-                  <span className="text-foreground">
-                    {(kmSummary.extra ?? 0) > 0
-                      ? `Aufpreis (${(kmSummary.pricePerKmCents / 100).toFixed(2).replace(".", ",")} €/km)`
-                      : "Aufpreis"}
-                  </span>
-                  <span className="text-foreground">{((kmSummary.chargeCents ?? 0) / 100).toFixed(2)} €</span>
-                </div>
+                {!photos[s.tag] && localTags.has(s.tag) && (
+                  <p className="text-[10px] text-muted-foreground" data-testid={`local-${s.tag}`}>Auf diesem Gerät gespeichert</p>
+                )}
               </div>
-            )}
-            {(kmSummary.chargeCents ?? 0) > 0 && (
-              <p className="text-xs text-muted-foreground mt-3">
-                Der Betrag wird nach Bestätigung der Rückgabe von der Kaution einbehalten bzw. separat über deine hinterlegte Zahlungsmethode abgerechnet.
-              </p>
-            )}
-          </div>
-        )}
+            );
+          })}
+        </div>
 
-        {isAdmin && (
-          <button
-            onClick={() => {
-              const placeholder =
-                "data:image/svg+xml;utf8," +
-                encodeURIComponent(
-                  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 280'><rect width='200' height='280' fill='%23ffffff'/><text x='50%' y='40%' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='14' fill='%23000'>TEST-TANKBELEG</text><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='12' fill='%23000'>Admin-Modus</text></svg>`,
-                );
-              setReceiptPhoto({ path: "admin-test", url: placeholder });
-            }}
-            className="w-full mb-4 rounded-full border border-dashed border-foreground py-2 text-xs font-medium text-foreground hover:bg-secondary"
-          >
-            🧪 Admin-Testmodus: Tankbeleg fiktiv eingeben
-          </button>
-        )}
-
-        {photoBanners}
-        {receiptPhoto ? (
-          <div className="mb-6">
-            <div className="relative">
-              {receiptPhoto.url ? (
-                <img src={receiptPhoto.url} alt="Tankbeleg" className="w-full max-h-[60vh] object-contain rounded-2xl border border-border bg-secondary" />
+        <div className="mb-6 rounded-2xl border border-border p-4 text-sm">
+          <div className="flex justify-between"><span className="text-muted-foreground">Kilometerstand</span><span className="text-foreground">{kmValid ? `${Number(endKm).toLocaleString("de-DE")} km` : "fehlt"}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Tankstand</span><span className="text-foreground">{endFuelPercent !== "" ? `${endFuelPercent} %` : "–"}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Getankt</span><span className="text-foreground">{refueled === null ? "–" : refueled ? "Ja" : "Nein"}</span></div>
+          {km && (
+            <div className="mt-3 pt-3 border-t border-border" data-testid="km-summary">
+              {km.reviewReason ? (
+                <p className="text-xs text-muted-foreground">{km.reviewReason} Es wird nichts automatisch berechnet.</p>
               ) : (
-                <TripPhotoThumb photo={receiptPhoto} alt="Tankbeleg" className="w-full h-40" />
+                <>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Gefahren</span><span className="text-foreground">{km.driven} km</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{planId === "km" ? "Berechnete Kilometer" : "Mehrkilometer"}</span><span className="text-foreground">{km.extra} km</span></div>
+                  {(km.chargeCents ?? 0) > 0 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Voraussichtlich {((km.chargeCents ?? 0) / 100).toFixed(2).replace(".", ",")} € – endgültig nach Prüfung durch MyTransporter.
+                    </p>
+                  )}
+                </>
               )}
-              <div className="absolute top-2 right-2 px-2 py-1 rounded-full bg-foreground text-background text-[10px] font-semibold flex items-center gap-1">
-                <ScanLine className="w-3 h-3" /> Gescannt
-              </div>
             </div>
-            <button
-              onClick={() => openCamera({ kind: "receipt" })}
-              className="mt-3 w-full rounded-full border border-foreground py-2.5 text-sm font-medium hover:bg-secondary"
-            >
-              Erneut scannen
-            </button>
+          )}
+          <button type="button" onClick={() => editSlot(RETURN_DASHBOARD_TAG)} className="mt-3 min-h-11 text-xs font-medium underline">
+            Werte bearbeiten
+          </button>
+        </div>
+
+        <div className="mb-6">
+          <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> Neue Schäden? (optional)</p>
+          <div className="grid grid-cols-4 gap-2">
+            {damagePhotos.slice(0, 4).map((p, i) => (
+              <TripPhotoThumb key={p.path} photo={p} alt={`Schaden ${i + 1}`} className="w-full h-16 border border-border" />
+            ))}
+            {damagePhotos.length < 4 && (
+              <button type="button" onClick={() => setDamageOpen(true)} disabled={uploading} aria-label="Schaden fotografieren" className="h-16 rounded-lg border-2 border-dashed border-border flex items-center justify-center text-muted-foreground disabled:opacity-40">
+                <Plus className="w-5 h-5" />
+              </button>
+            )}
           </div>
-        ) : (
-          <>
-            <button
-              onClick={() => openCamera({ kind: "receipt" })}
-              disabled={uploading}
-              className="w-full p-8 rounded-2xl border-2 border-dashed border-border hover:border-accent/50 text-center mb-4 transition-all"
-            >
-              <ScanLine className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm font-medium text-foreground">Tankbeleg scannen</p>
-              <p className="text-[11px] text-muted-foreground mt-1">CamScanner-Modus aktiv</p>
-            </button>
-            {exceptionBox("receipt", "Kein Tankbeleg vorhanden?")}
-          </>
-        )}
+        </div>
 
         {addons && addons.length > 0 && (
           <div className="mb-4 rounded-2xl border border-border bg-secondary/50 p-4">
             <p className="text-sm font-medium text-foreground mb-2">Gebuchtes Zubehör zurückgeben</p>
             <ul className="text-xs text-muted-foreground space-y-1 mb-3">
-              {addons.map((a) => (
-                <li key={a.id}>• {a.label}</li>
-              ))}
+              {addons.map((a) => <li key={a.id}>• {a.label}</li>)}
             </ul>
             <label className="flex items-start gap-2 text-xs text-foreground cursor-pointer">
               <input type="checkbox" checked={addonsReturned} onChange={(e) => setAddonsReturned(e.target.checked)} className="mt-0.5" />
@@ -1104,74 +971,206 @@ export function ReturnFlow({
           </div>
         )}
 
+        <DocumentationFeeNotice />
         {pendingCount > 0 && (
-          <p className="mb-3 text-xs text-muted-foreground">
-            Es sind noch Fotos nur auf diesem Gerät. Sie zählen erst als Nachweis, wenn sie übertragen sind; die Rückgabe wird danach gemeldet.
-          </p>
+          <p className="mb-3 text-xs text-muted-foreground">Es sind noch Fotos nur auf diesem Gerät. Sie zählen erst als Nachweis, wenn sie übertragen sind; der Abschluss wird danach gesendet.</p>
         )}
         {kmLocalOnly && (
-          <p className="mb-3 text-xs text-muted-foreground" data-testid="km-local">
-            Kilometer- und Tankstand sind auf diesem Gerät gespeichert und werden mit der Rückgabemeldung übertragen.
-          </p>
+          <p className="mb-3 text-xs text-muted-foreground" data-testid="km-local">Kilometer- und Tankstand sind auf diesem Gerät gespeichert und werden mit dem Abschluss übertragen.</p>
         )}
         {reportPending && !returnCode && (
-          <p className="mb-3 rounded-2xl border border-foreground p-3 text-xs font-medium" data-testid="report-pending">
-            Rückgabe ausstehend – noch nicht serverseitig bestätigt.
-          </p>
+          <p className="mb-3 rounded-2xl border border-foreground p-3 text-xs font-medium" data-testid="report-pending">Abschluss ausstehend – noch nicht serverseitig bestätigt.</p>
         )}
         {actionError && <TripErrorBanner message={actionError} onRetry={() => void submitReport()} busy={saving} />}
         <button
-          disabled={saving || uploading || !receiptReady || (!!addons && addons.length > 0 && !addonsReturned)}
+          type="button"
+          disabled={!allDone || !addonsOk || saving || uploading}
           onClick={() => void submitReport()}
           className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Schlüssel zurückgeben <Key className="w-5 h-5 inline" />
+          Buchung abschließen
+        </button>
+        {!allDone && <p className="mt-3 text-center text-xs text-muted-foreground">Bitte zuerst alle Pflichtfotos und den Kilometerstand erfassen.</p>}
+        <button type="button" onClick={() => { setStep("wizard"); goTo(slots.length - 1, "prev"); }} className="mt-3 w-full min-h-11 text-sm font-medium flex items-center justify-center gap-1">
+          <ChevronLeft className="w-4 h-4" /> Zurück
         </button>
       </div>
     );
   }
 
-  if (returnStep === "code") {
-    return (
-      <div className="max-w-lg mx-auto animate-fade-in-up text-center">
-        <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6">
-          <Key className="w-10 h-10 text-foreground" />
-        </div>
-        <p className="inline-block mb-3 rounded-full border border-foreground px-3 py-1 text-xs font-semibold">
-          Rückgabe gemeldet · Bestätigung durch MyTransporter ausstehend
+  // ---------- Wizard (eine Aufgabe pro Folie) ----------
+  const done = slotDone(current);
+  const isDashboard = current.tag === RETURN_DASHBOARD_TAG;
+  const confirmedThumb = !candidate ? thumbFor(current.tag, current.title, "w-full h-56") : null;
+  const canNext = done && (!isDashboard || (refueled !== null && kmValid)) && !saving && !uploading;
+
+  return (
+    <div className="max-w-lg mx-auto overflow-hidden" data-testid="return-wizard">
+      <CameraCapture
+        open={liveOpen}
+        title={current.title}
+        hint={current.hint}
+        variant={current.camera}
+        scanMode={current.tag === RETURN_RECEIPT_TAG}
+        onClose={() => setLiveOpen(false)}
+        onCapture={async (file) => {
+          setLiveOpen(false);
+          setCandidate((c) => {
+            if (c?.url) URL.revokeObjectURL?.(c.url);
+            return { file, url: makePreview(file), source: "live" };
+          });
+        }}
+      />
+      <NativePhotoInputs cameraId={cameraInputId} galleryId={galleryInputId} onChange={onPicked} cameraTestId="return-camera-input" galleryTestId="return-gallery-input" />
+
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-xs font-semibold text-muted-foreground" data-testid="wizard-progress" aria-live="polite">
+          {Math.min(slide, slots.length - 1) + 1} von {slots.length}
         </p>
-        <h3 className="text-2xl font-bold text-foreground mb-2">Schlüssel abgeben</h3>
-        <p className="text-muted-foreground mb-2">
-          Gehe zur <span className="font-medium text-foreground">Römerstraße 36</span> und nenne diesen Code:
+        {isAdmin && (
+          <button type="button" onClick={fillTestPhotos} className="rounded-full border border-dashed border-foreground px-3 py-1 text-[11px] font-medium">
+            🧪 Admin-Testmodus: alle Fotos überspringen
+          </button>
+        )}
+      </div>
+      <div className="mb-4 flex gap-1" aria-hidden="true">
+        {slots.map((s, i) => (
+          <span key={s.tag} className={`h-1 flex-1 rounded-full ${i <= slide ? "bg-foreground" : "bg-border"}`} />
+        ))}
+      </div>
+
+      <div key={`${current.tag}-${slide}`} className={dir === "next" ? "animate-slide-in-right" : "animate-slide-in-left"} data-testid={`slide-${current.tag}`}>
+        <h3 className="text-xl font-bold text-foreground mb-1">{current.title}</h3>
+        <p className={`text-sm mb-4 ${isDashboard ? "font-semibold text-foreground rounded-2xl border-2 border-foreground p-3" : "text-muted-foreground"}`} data-testid="slide-hint">
+          {current.hint}
         </p>
 
-        <div className="my-8 p-6 rounded-2xl bg-primary text-primary-foreground">
-          <p className="text-xs opacity-70 mb-2">Dein Rückgabecode</p>
-          <p className="text-4xl font-mono font-bold tracking-[0.3em]">{returnCode}</p>
-        </div>
+        {photoBanners}
 
-        {reviewNote && (
-          <p className="mb-6 text-xs text-muted-foreground">Hinweis: Deine Rückgabe wird zusätzlich geprüft ({reviewNote}).</p>
+        {candidate ? (
+          <div className="mb-4" data-testid="candidate-preview">
+            {candidate.url ? (
+              <img src={candidate.url} alt={`Vorschau ${current.title}`} className="w-full max-h-[55vh] object-contain rounded-2xl border border-border bg-secondary" />
+            ) : (
+              <div className="w-full h-56 rounded-2xl border border-border bg-secondary flex items-center justify-center text-xs text-muted-foreground p-4 text-center">
+                Foto ausgewählt. Dieses Format kann hier nicht angezeigt werden, wird aber gespeichert.
+              </div>
+            )}
+            <p className="mt-2 text-xs text-muted-foreground">Noch nicht gespeichert – bitte prüfen und bestätigen.</p>
+            <div className="mt-3 flex gap-2">
+              <button type="button" onClick={() => void confirmCandidate()} disabled={uploading} className="flex-1 min-h-12 rounded-full bg-foreground text-background font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Bestätigen
+              </button>
+              {candidate.source === "gallery" ? (
+                <label htmlFor={galleryInputId} role="button" className="flex-1 min-h-12 cursor-pointer select-none rounded-full border border-foreground font-medium flex items-center justify-center gap-2 text-sm">
+                  <ImageIcon className="w-4 h-4" /> Andere auswählen
+                </label>
+              ) : (
+                <label htmlFor={cameraInputId} role="button" className="flex-1 min-h-12 cursor-pointer select-none rounded-full border border-foreground font-medium flex items-center justify-center gap-2 text-sm">
+                  <Camera className="w-4 h-4" /> Erneut aufnehmen
+                </label>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className={`mb-4 rounded-2xl border-2 p-3 ${done ? "border-foreground" : "border-dashed border-border"}`}>
+              {confirmedThumb ?? <ReturnSlotOutline kind={current.outline} className="max-h-56" />}
+              {done && (
+                <p className="mt-2 text-xs font-semibold text-foreground flex items-center gap-1" data-testid="slot-confirmed">
+                  <Check className="w-4 h-4" /> {hasPhoto(current.tag) ? (photos[current.tag] ? "Bestätigt und übertragen" : "Bestätigt – auf diesem Gerät gespeichert") : "Problem gemeldet – wird geprüft"}
+                </p>
+              )}
+            </div>
+            <div className="mb-2 grid grid-cols-2 gap-2">
+              <label htmlFor={cameraInputId} role="button" onClick={() => setPickError(null)} className="min-h-12 cursor-pointer select-none rounded-full bg-foreground text-background font-semibold flex items-center justify-center gap-2 text-sm">
+                <Camera className="w-4 h-4" /> Foto aufnehmen
+              </label>
+              <label htmlFor={galleryInputId} role="button" onClick={() => setPickError(null)} className="min-h-12 cursor-pointer select-none rounded-full border border-foreground font-semibold flex items-center justify-center gap-2 text-sm">
+                <ImageIcon className="w-4 h-4" /> Aus Galerie auswählen
+              </label>
+            </div>
+            <button type="button" onClick={() => setLiveOpen(true)} className="mb-4 w-full min-h-11 text-xs text-muted-foreground underline flex items-center justify-center gap-1">
+              {current.tag === RETURN_RECEIPT_TAG ? <ScanLine className="w-3.5 h-3.5" /> : <Camera className="w-3.5 h-3.5" />} Live-Kamera mit Rahmen verwenden
+            </button>
+          </>
+        )}
+        {pickError && <p role="alert" className="mb-4 text-xs text-foreground">{pickError}</p>}
+
+        {isDashboard && (
+          <div className="mb-4 space-y-3">
+            <div>
+              <label className="text-sm font-medium text-foreground" htmlFor="ret-endkm">Kilometerstand (Ende)</label>
+              <input
+                id="ret-endkm"
+                type="number"
+                inputMode="numeric"
+                value={endKm}
+                onChange={(e) => {
+                  setEndKm(e.target.value);
+                  setEndKmManual(true);
+                }}
+                placeholder="z.B. 42920"
+                className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground" htmlFor="ret-fuel">Tankstand (Ende, in %)</label>
+              <input
+                id="ret-fuel"
+                type="number"
+                min={0}
+                max={100}
+                value={endFuelPercent}
+                onChange={(e) => {
+                  setEndFuelPercent(e.target.value);
+                  setFuelManual(true);
+                }}
+                placeholder="z.B. 75"
+                className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+            </div>
+            {aiBusy && <p className="text-xs text-muted-foreground">🤖 KI liest Kilometer- und Tankstand…</p>}
+            {!aiBusy && aiRecognition && (
+              <p className="text-xs text-muted-foreground">
+                🤖 KI-Vorschlag: {aiRecognition.km !== null ? `${aiRecognition.km.toLocaleString("de-DE")} km` : "Kilometerstand nicht lesbar"}
+                {aiRecognition.fuelPercent !== null ? ` · Tank ${aiRecognition.fuelPercent}%` : ""}
+                {aiRecognition.confidence === "low" ? " (unsicher – bitte prüfen)" : " – bitte prüfen"}
+              </p>
+            )}
+            <fieldset className="rounded-2xl border border-border p-3">
+              <legend className="px-1 text-sm font-medium text-foreground">Hast du während der Miete getankt?</legend>
+              <div className="mt-1 flex gap-2">
+                {[true, false].map((v) => (
+                  <label key={String(v)} className={`flex-1 min-h-11 rounded-full border flex items-center justify-center gap-2 text-sm cursor-pointer ${refueled === v ? "border-foreground bg-secondary font-semibold" : "border-border"}`}>
+                    <input type="radio" name="ret-refueled" className="sr-only" checked={refueled === v} onChange={() => setRefueled(v)} />
+                    {v ? "Ja" : "Nein"}
+                  </label>
+                ))}
+              </div>
+              {refueled === true && <p className="mt-2 text-xs text-muted-foreground">Im nächsten Schritt fotografierst du den Tankbeleg.</p>}
+            </fieldset>
+          </div>
         )}
 
-        <p className="text-xs text-muted-foreground mb-8">
-          Nenne diesen Code dem Mitarbeiter. Erst wenn er die Schlüsselübergabe bestätigt, ist deine Fahrt beendet.
-        </p>
+        {!hasPhoto(current.tag) && exceptionBox(current.exKey, exceptionLabel(current))}
 
-        <button
-          disabled
-          className="w-full rounded-full bg-secondary py-4 text-muted-foreground font-medium text-lg flex items-center justify-center gap-2 cursor-not-allowed"
-        >
-          <span className="inline-block w-3 h-3 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin" />
-          Warte auf Bestätigung des Mitarbeiters…
-        </button>
-
-        <p className="text-xs text-muted-foreground mt-4">
-          Sobald MyTransporter den Schlüssel entgegennimmt und bestätigt, wird die Fahrt automatisch als abgeschlossen markiert und diese Seite aktualisiert.
-        </p>
+        {actionError && <TripErrorBanner message={actionError} onRetry={() => void next()} busy={saving} />}
       </div>
-    );
-  }
 
-  return null;
+      <div className="mt-2 flex gap-2">
+        <button type="button" onClick={back} className="min-h-12 px-5 rounded-full border border-border font-medium flex items-center gap-1">
+          <ChevronLeft className="w-4 h-4" /> Zurück
+        </button>
+        <button
+          type="button"
+          disabled={!canNext}
+          onClick={() => void next()}
+          className={`flex-1 min-h-12 rounded-full font-semibold flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed ${done ? "bg-accent text-accent-foreground shadow-lg" : "bg-secondary text-foreground"}`}
+        >
+          {editingTag ? "Zur Übersicht" : slide + 1 >= slots.length ? "Zur Übersicht" : "Weiter"} <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
 }

@@ -176,6 +176,22 @@
   animation: fade-in 1s ease-out both;
 }
 
+/* Rückgabe-Wizard: horizontale Folienübergänge */
+@keyframes mt-slide-in-right {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes mt-slide-in-left {
+  from { opacity: 0; transform: translateX(-40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in-right { animation: mt-slide-in-right 0.32s ease-out both; }
+.animate-slide-in-left { animation: mt-slide-in-left 0.32s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-in-right,
+  .animate-slide-in-left { animation: none; }
+}
+
 .animate-delay-200 { animation-delay: 200ms; }
 .animate-delay-400 { animation-delay: 400ms; }
 .animate-delay-600 { animation-delay: 600ms; }

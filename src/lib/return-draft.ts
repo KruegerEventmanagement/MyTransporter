@@ -5,7 +5,8 @@
  */
 import type { ReturnExceptions } from "./trip-return";
 
-export type DraftStep = "photos" | "km" | "receipt" | "code";
+/** "photos" | "km" | "receipt" stammen aus der alten Rückgabeansicht und werden als "wizard" fortgesetzt. */
+export type DraftStep = "intro" | "wizard" | "overview" | "photos" | "km" | "receipt" | "code";
 
 export interface ReturnDraft {
   v: 1;
@@ -21,6 +22,10 @@ export interface ReturnDraft {
   returnCode: string | null;
   /** Meldung offline angefordert, Server hat noch nicht bestätigt. */
   reportPending: boolean;
+  /** Wizard: aktuelle Folie. */
+  slide: number;
+  /** Kunde hat während der Miete getankt (→ Tankbeleg-Schritt). null = noch nicht beantwortet. */
+  refueled: boolean | null;
 }
 
 export function emptyDraft(): ReturnDraft {
@@ -36,6 +41,8 @@ export function emptyDraft(): ReturnDraft {
     addonsReturned: false,
     returnCode: null,
     reportPending: false,
+    slide: 0,
+    refueled: null,
   };
 }
 
