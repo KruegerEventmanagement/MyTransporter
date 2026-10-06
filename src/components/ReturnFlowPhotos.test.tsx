@@ -91,4 +91,3 @@ describe("ReturnFlow – native Foto-Wege", () => {
     expect(screen.getByText(/^Weiter/).closest("button")!.disabled).toBe(true);
   });
 });
-});
