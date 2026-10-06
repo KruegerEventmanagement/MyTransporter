@@ -47,6 +47,7 @@ function Index() {
           <Link to="/ueber-uns" className="hover:text-foreground transition-colors">Über uns</Link>
           <Link to="/werbung" className="hover:text-foreground transition-colors">Werbung am Transporter</Link>
           <Link to="/langzeitmiete" className="hover:text-foreground transition-colors">Langzeitmiete</Link>
+          <Link to="/umzug" className="hover:text-foreground transition-colors">Umzug</Link>
           <Link to="/umzugstransporter-mieten" className="hover:text-foreground transition-colors">Umzugstransporter</Link>
           <Link to="/transporter-mieten-pforzheim-calw" className="hover:text-foreground transition-colors">Pforzheim & Calw</Link>
         </div>

@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 
 const LINKS = [
   { to: "/preise", label: "Tarife & Preise" },
+  { to: "/umzug", label: "Umzug mit Unterstützung" },
   { to: "/langzeitmiete", label: "Langzeitmiete ab 7 Tagen" },
   { to: "/umzugstransporter-mieten", label: "Umzugstransporter auswählen" },
   { to: "/transporter-mieten-pforzheim-calw", label: "Abholung Engelsbrand-Grunbach (Pforzheim/Calw)" },
