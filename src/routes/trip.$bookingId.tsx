@@ -67,6 +67,13 @@ function TripLogoBar() {
 
 function TripPage() {
   const { bookingId } = Route.useParams();
+  // Neuer Schlüssel je Buchung: kein Zustand (Phase, Start-KM, Adresse) wandert zur nächsten Fahrt.
+  return <TripView key={bookingId} bookingId={bookingId} />;
+}
+
+type PickupState = { status: "loading" | "ok" | "missing" | "error"; address: string | null };
+
+function TripView({ bookingId }: { bookingId: string }) {
   const navigate = useNavigate();
   const [loadError, setLoadError] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -75,9 +82,31 @@ function TripPage() {
   const [loading, setLoading] = useState(true);
   const [attempt, setAttempt] = useState(0);
   const [startKm, setStartKm] = useState<number | null>(null);
-  const [pickupAddress, setPickupAddress] = useState<string | null>(null);
+  const [pickup, setPickup] = useState<PickupState>({ status: "loading", address: null });
   const [now, setNow] = useState(() => Date.now());
   const loadedOnce = useRef(false);
+  /** Request-Generation: nur die jüngste Antwort des aktuellen Kontos zählt. */
+  const gen = useRef(0);
+  const alive = useRef(true);
+  const uidRef = useRef<string | null>(null);
+
+  const resetForIdentity = useCallback(() => {
+    gen.current++;
+    loadedOnce.current = false;
+    setBooking(null);
+    setPhase("pre");
+    setStartKm(null);
+    setPickup({ status: "loading", address: null });
+    setLoadError(null);
+  }, []);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      gen.current++;
+    };
+  }, []);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30_000);
@@ -90,38 +119,76 @@ function TripPage() {
     navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
   }, []);
 
+  // Auth-Wechsel: nur synchroner State; fremde Fahrt sofort entfernen.
+  useEffect(() => {
+    if (bookingId.startsWith("demo-")) return;
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      const uid = session?.user?.id ?? null;
+      if (uid === uidRef.current) return;
+      const hadUser = uidRef.current !== null;
+      uidRef.current = uid;
+      if (!hadUser && uid === null) return;
+      resetForIdentity();
+      setUserId(uid);
+      if (!uid) {
+        setLoading(false);
+        requireLogin(navigate, `/trip/${bookingId}`);
+      } else {
+        setLoading(true);
+        setAttempt((n) => n + 1);
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [bookingId, navigate, resetForIdentity]);
+
   const load = useCallback(
     async (silent: boolean) => {
+      const my = ++gen.current;
+      const current = () => alive.current && my === gen.current;
       if (!silent) {
         setLoading(true);
         setLoadError(null);
       }
       if (bookingId.startsWith("demo-")) {
-        const raw = localStorage.getItem(`mt_demo_${bookingId}`);
-        if (raw) {
-          const d = JSON.parse(raw);
-          setBooking({
-            id: bookingId,
-            plan_id: d.planId,
-            plan_label: d.planLabel,
-            start_date: d.startDate,
-            start_hour: d.startHour,
-            pickup_code: d.pickup_code,
-            vehicle_name: d.vehicleName ?? "",
-            vehicle_plate: d.vehiclePlate ?? "",
-            start_km: typeof d.startKm === "number" ? d.startKm : null,
-          });
-          if (typeof d.startKm === "number") setStartKm(d.startKm);
+        try {
+          const raw = localStorage.getItem(`mt_demo_${bookingId}`);
+          if (raw) {
+            const d = JSON.parse(raw);
+            if (!d || typeof d !== "object") throw new Error("demo");
+            setBooking({
+              id: bookingId,
+              plan_id: d.planId,
+              plan_label: d.planLabel,
+              start_date: d.startDate,
+              start_hour: d.startHour,
+              pickup_code: d.pickup_code,
+              vehicle_name: d.vehicleName ?? "",
+              vehicle_plate: d.vehiclePlate ?? "",
+              start_km: typeof d.startKm === "number" ? d.startKm : null,
+            });
+            if (typeof d.startKm === "number") setStartKm(d.startKm);
+          }
+        } catch {
+          setBooking(null);
+          setLoadError("Die Demo-Fahrt auf diesem Gerät ist beschädigt.");
+        } finally {
+          setLoading(false);
         }
-        setLoading(false);
         return;
       }
       try {
         const {
           data: { session },
         } = await withTimeout(supabase.auth.getSession(), LOAD_TIMEOUT_MS);
+        if (!current()) return;
         const uid = session?.user?.id ?? null;
+        if (uidRef.current !== null && uidRef.current !== uid) {
+          // Ein Auth-Ereignis war schneller; dessen Stand gilt.
+          return;
+        }
+        uidRef.current = uid;
         if (!uid) {
+          setLoading(false);
           // Nach dem Login direkt zurück zu genau dieser Fahrt
           requireLogin(navigate, `/trip/${bookingId}`);
           return;
@@ -131,6 +198,7 @@ function TripPage() {
           supabase.from("bookings").select("*").eq("id", bookingId).eq("user_id", uid).maybeSingle(),
           LOAD_TIMEOUT_MS,
         );
+        if (!current() || uidRef.current !== uid) return;
         if (error) throw error;
         if (!data) {
           setBooking(null);
@@ -138,6 +206,11 @@ function TripPage() {
           return;
         }
         const b = data as unknown as Booking;
+        if (b.user_id && b.user_id !== uid) {
+          setBooking(null);
+          setLoading(false);
+          return;
+        }
         if (b.status === "completed" || b.status === "cancelled") {
           clearReturnDraft(uid, bookingId);
           if (!loadedOnce.current) {
@@ -154,10 +227,11 @@ function TripPage() {
         setPhase((prev) => (prev === "return" && !isReturningStatus(b.status) ? "return" : phaseFor(b.status, !!draft?.started)));
         setLoadError(null);
       } catch {
+        if (!current()) return;
         // Beim stillen Neuladen bleibt der letzte Stand sichtbar.
         if (!silent || !loadedOnce.current) setLoadError("Die Verbindung ist gerade zu langsam oder unterbrochen.");
       } finally {
-        if (!silent) setLoading(false);
+        if (!silent && current()) setLoading(false);
       }
     },
     [bookingId, navigate],
@@ -186,21 +260,30 @@ function TripPage() {
     };
   }, [load]);
 
+  // Bestätigter fahrzeugbezogener Abholort; kein geratener Ersatz.
+  const plate = booking?.vehicle_plate ?? null;
   useEffect(() => {
-    if (!booking?.vehicle_plate) return;
-    let alive = true;
-    supabase
-      .from("vehicles")
-      .select("pickup_address")
-      .eq("plate", booking.vehicle_plate)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (alive && data?.pickup_address) setPickupAddress(data.pickup_address);
-      });
+    if (!plate) {
+      setPickup({ status: "missing", address: null });
+      return;
+    }
+    let active = true;
+    setPickup({ status: "loading", address: null });
+    Promise.resolve(supabase.from("vehicles").select("pickup_address").eq("plate", plate).maybeSingle()).then(
+      ({ data, error }) => {
+        if (!active || !alive.current) return;
+        if (error) setPickup({ status: "error", address: null });
+        else if (data?.pickup_address?.trim()) setPickup({ status: "ok", address: data.pickup_address.trim() });
+        else setPickup({ status: "missing", address: null });
+      },
+      () => {
+        if (active && alive.current) setPickup({ status: "error", address: null });
+      },
+    );
     return () => {
-      alive = false;
+      active = false;
     };
-  }, [booking?.vehicle_plate]);
+  }, [plate]);
 
   const startReturn = () => {
     if (userId) saveReturnDraft(userId, bookingId, { started: true });
@@ -220,7 +303,7 @@ function TripPage() {
       <main className="min-h-screen bg-background flex items-center justify-center px-4 text-center">
         <div className="max-w-sm">
           <h1 className="text-2xl font-bold mb-2">Fahrt konnte nicht geladen werden</h1>
-          <p className="text-sm text-muted-foreground mb-4">{loadError} Deine Fahrt läuft unverändert weiter.</p>
+          <p className="text-sm text-muted-foreground mb-4">{loadError} Bitte versuche es gleich noch einmal.</p>
           <button
             onClick={() => setAttempt((n) => n + 1)}
             className="mb-4 inline-flex min-h-12 items-center gap-2 rounded-full bg-foreground px-6 text-background font-semibold"
@@ -307,6 +390,7 @@ function TripPage() {
         <main className="min-h-screen bg-background pb-12 px-4">
           <TripLogoBar />
           <PreDriveFlow
+            key={`${userId ?? "anon"}:${booking.id}`}
             bookingId={booking.id}
             pickupCode={booking.pickup_code}
             onComplete={(km) => {
@@ -341,7 +425,9 @@ function TripPage() {
           vehiclePlate={booking.vehicle_plate}
           planLabel={booking.plan_label}
           addons={(booking.addons ?? []).filter((a) => a.id !== "km_paket")}
-          pickupAddress={pickupAddress}
+          key={`${userId ?? "anon"}:${booking.id}`}
+          pickupAddress={pickup.address}
+          pickupStatus={pickup.status}
           onReturn={startReturn}
         />
       )}
@@ -350,6 +436,7 @@ function TripPage() {
         <main className="min-h-screen bg-background pb-12 px-4">
           <TripLogoBar />
           <ReturnFlow
+            key={`${userId ?? "anon"}:${booking.id}`}
             bookingId={booking.id}
             userId={userId}
             serverReturnCode={isReturningStatus(booking.status) ? (booking.return_code ?? null) : null}

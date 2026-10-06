@@ -97,7 +97,7 @@ export function InstallBanner() {
 
   return (
     <>
-      <div className="fixed left-3 top-14 z-40 animate-install-pop-in">
+      <div className="fixed left-3 z-40 animate-install-pop-in" style={{ top: "calc(3.5rem + var(--mt-trip-bar, 0px))" }}>
         <div className="flex items-center gap-2 rounded-2xl bg-foreground py-2 pl-2 pr-1.5 text-background animate-install-pulse">
           <button
             onClick={handleInstall}

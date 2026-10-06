@@ -17,7 +17,16 @@ let resolveMaps: () => void = () => {};
 const mapCtor = vi.fn();
 vi.mock("@googlemaps/js-api-loader", () => ({
   setOptions: vi.fn(),
-  importLibrary: vi.fn(() => new Promise<void>((r) => (resolveMaps = r))),
+  importLibrary: vi.fn(
+    () =>
+      new Promise<void>((r) => {
+        const prev = resolveMaps;
+        resolveMaps = () => {
+          prev();
+          r();
+        };
+      }),
+  ),
 }));
 vi.mock("@/lib/push-client", () => ({
   getPushStatus: vi.fn(async () => "default"),
@@ -32,6 +41,7 @@ import { enablePushOnThisDevice } from "@/lib/push-client";
 
 const authCb: Array<(e: string, s: unknown) => void> = [];
 beforeEach(() => {
+  resolveMaps = () => {};
   fake.reset();
   localStorage.clear();
   pathname = "/preise";
@@ -112,6 +122,29 @@ const dash = (over: Partial<React.ComponentProps<typeof ActiveTripDashboard>> = 
   />
 );
 
+describe("Leiste oben + Auth-Reihenfolge", () => {
+  it("Leiste sitzt oben mit Safe Area und setzt den Versatz für Navigation", async () => {
+    fake.on("bookings", "select", { data: [activeRow], error: null });
+    render(<ActiveTripBanner />);
+    const bar = await screen.findByTestId("active-trip-banner");
+    expect(bar.className).toMatch(/top-0/);
+    expect(bar.className).not.toMatch(/bottom-0/);
+    expect(document.documentElement.style.getPropertyValue("--mt-trip-bar")).toMatch(/44px/);
+    cleanup();
+    expect(document.documentElement.style.getPropertyValue("--mt-trip-bar")).toBe("");
+  });
+  it("Abmeldung vor der getSession-Antwort: alter Snapshot zeigt keine Leiste", async () => {
+    let resolve!: (v: unknown) => void;
+    (fake.client.auth as unknown as { getSession: unknown }).getSession = vi.fn(() => new Promise((r) => (resolve = r)));
+    fake.on("bookings", "select", { data: [activeRow], error: null });
+    render(<ActiveTripBanner />);
+    act(() => authCb.forEach((cb) => cb("SIGNED_OUT", null)));
+    await act(async () => resolve({ data: { session: { user: { id: "u1" } } } }));
+    expect(screen.queryByTestId("active-trip-banner")).toBeNull();
+    expect(fake.calls.filter((c) => c.table === "bookings")).toHaveLength(0);
+  });
+});
+
 describe("Fahrtansicht", () => {
   it("'Nicht jetzt' startet keine Standortabfrage und fragt nach Reload nicht erneut", async () => {
     const watch = vi.fn();
@@ -157,4 +190,80 @@ describe("Fahrtansicht", () => {
     fireEvent.click(btn);
     await waitFor(() => expect(enablePushOnThisDevice).toHaveBeenCalledTimes(1));
   });
+  it("ohne bestätigten Abholort: kein Ersatzort, ehrlicher Hinweis, Rückgabe bedienbar", async () => {
+    const g = installMapsMock();
+    for (const [status, text] of [
+      ["missing", /kein Abholort hinterlegt/],
+      ["error", /konnte gerade nicht geladen werden/],
+      ["loading", /Abholort wird geladen/],
+    ] as const) {
+      render(dash({ pickupAddress: null, pickupStatus: status }));
+      await act(async () => resolveMaps());
+      expect(screen.getByTestId("pickup-hint").textContent).toMatch(text);
+      expect(screen.getByText("Rückgabe starten")).toBeTruthy();
+      cleanup();
+    }
+    expect(g.geocodes.map((x) => x.address)).toEqual([]);
+    expect(document.body.textContent).not.toMatch(/Poststraße|Römerstraße/);
+  });
+  it("bestätigter Abholort wird genau so geocodiert", async () => {
+    const g = installMapsMock();
+    render(dash({ pickupAddress: "Fahrzeugstr. 5, Leonberg", pickupStatus: "ok" }));
+    await act(async () => resolveMaps());
+    await waitFor(() => expect(g.geocodes.map((x) => x.address)).toEqual(["Fahrzeugstr. 5, Leonberg"]));
+    expect(screen.queryByTestId("pickup-hint")).toBeNull();
+  });
+  it("verspätete Geocoder-Antwort einer älteren Suche wird verworfen", async () => {
+    const g = installMapsMock();
+    render(dash({ pickupAddress: null, pickupStatus: "missing" }));
+    await act(async () => resolveMaps());
+    const input = screen.getByPlaceholderText("Zieladresse eingeben...");
+    fireEvent.change(input, { target: { value: "Alt" } });
+    fireEvent.submit(input.closest("form")!);
+    fireEvent.change(input, { target: { value: "Neu" } });
+    fireEvent.submit(input.closest("form")!);
+    act(() => g.answer("Neu", "Neu-Adresse"));
+    act(() => g.answer("Alt", "Alt-Adresse"));
+    expect(document.body.textContent).toMatch(/Neu-Adresse/);
+    expect(document.body.textContent).not.toMatch(/Alt-Adresse/);
+    // Ohne GPS/Abholort: ehrlicher Hinweis statt Route ab fremdem Ort
+    expect(document.body.textContent).toMatch(/Noch kein Startpunkt/);
+    expect(g.routes).toBe(0);
+  });
 });
+
+function installMapsMock() {
+  const geocodes: Array<{ address: string; cb: (r: unknown, s: string) => void }> = [];
+  let routes = 0;
+  const obj = function () { return { setMap: vi.fn(), setDirections: vi.fn(), setRouteIndex: vi.fn(), addListener: () => ({ remove: vi.fn() }) }; };
+  (globalThis as unknown as { google: unknown }).google = {
+    maps: {
+      Map: vi.fn(function () {
+        return { panTo: vi.fn(), setZoom: vi.fn(), fitBounds: vi.fn() };
+      }),
+      DirectionsService: vi.fn(function () {
+        return { route: () => void routes++ };
+      }),
+      DirectionsRenderer: vi.fn(obj),
+      Geocoder: vi.fn(function () {
+        return { geocode: (req: { address: string }, cb: (r: unknown, s: string) => void) => void geocodes.push({ ...req, cb }) };
+      }),
+      Marker: vi.fn(obj),
+      LatLng: vi.fn(),
+      SymbolPath: { CIRCLE: 0 },
+      TravelMode: { DRIVING: "DRIVING" },
+      DirectionsStatus: { OK: "OK" },
+      places: { Autocomplete: vi.fn(function () { return { addListener: () => ({ remove: vi.fn() }), getPlace: vi.fn() }; }) },
+    },
+  };
+  return {
+    geocodes,
+    get routes() {
+      return routes;
+    },
+    answer(address: string, label: string) {
+      const hit = geocodes.find((x) => x.address === address)!;
+      hit.cb([{ formatted_address: label, geometry: { location: { lat: () => 48.8, lng: () => 9 } } }], "OK");
+    },
+  };
+}

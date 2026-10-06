@@ -86,3 +86,24 @@ Weiterhin offen: kein physischer iPhone/Android-Test, kein Push-Empfangstest, ke
 | `POST /api/public/hooks/send-reminders` ohne bzw. mit falschem Token (lokal) | – | 401, 401 (keine Verarbeitung, keine Mail) |
 
 Kein Aufruf mit gültigem Token, keine Mail, kein Push, kein Deploy. Offen: physische Gerätetests, Push-Empfangstest.
+
+## Nachtrag 06.10.2026 (Basis fedc221): Restfehler Fahrt-Stabilisierung
+
+1. **Leiste oben:** `ActiveTripBanner` jetzt `fixed top-0`, 44 px + `env(safe-area-inset-top)`, schwarz, weißer Text exakt „Sofort zurückkehren“. Versatz über `--mt-trip-bar` (body-padding-top, Navbar `top`, InstallBanner, Toaster-Offset, sticky Header via `top-trip-bar`). CookieConsent/HelpBubble: alte Bottom-Abstände entfernt. Leiste ist Geschwister von `<Outlet />` → kein Remount der Buchung. Auf `/trip/...` keine Leiste.
+2. **TripPage:** `key={bookingId}`; Request-Generation + Unmount-Flag + Nutzer-Ref; Auth-Callback setzt nur synchronen State; Konto-/Buchungswechsel leert sofort; Kinder mit Key `userId:bookingId`; beschädigte Demo-Daten → Fehlermeldung statt Endlos-Laden; Fehlertext ohne „läuft unverändert weiter“.
+3. **useActiveTrip:** späteres Auth-Ereignis gewinnt gegen initiales `getSession`; Identität und Generation werden synchron beim Authwechsel invalidiert; Ausgabe nur bei passender Identität; kein setState nach Unmount; Refresh bei Wechsel der geöffneten Fahrt.
+4. **Abholort:** `DEFAULT_PICKUP_ADDRESS` entfernt. Nur bestätigte `vehicles.pickup_address` (Status loading/ok/missing/error); Lookup-/Geocodefehler ehrlich angezeigt, Rückgabe bleibt bedienbar; ohne GPS und ohne bestätigten Abholort keine Route, Hinweis „Noch kein Startpunkt“. Späte GPS-/Geocoder-Callbacks nach neuer Suche/Entfernen/Unmount verworfen. Berechtigung `vehicles` unverändert.
+5. **Rückgabe-Erinnerung:** Bei Push-Fehler oder `sent: 0` wird nur der eigene, noch unveränderte Claim (`= endIso` + id/status/plan/start) auf den Vorwert zurückgesetzt → nächster Minutenlauf im Zeitfenster versucht erneut; neuere/parallele Claims bleiben. Tag `mt-return-<id>` dedupliziert. Keine neue Joboberfläche. Native App zeigt weiterhin keine Push-Erfolgsaussage (`IS_NATIVE_BUILD` → nicht unterstützt).
+
+| Befehl | Exitcode | Ergebnis |
+|---|---|---|
+| `bunx vitest run` (gesamt, 2× nacheinander) | 0 / 0 | 43 Dateien, 521 Tests |
+| `bunx tsgo --noEmit` | 0 | – |
+| `bun run build` | 0 | – |
+| `bun run build:native` | 0 | dist-native aus dist/client |
+
+Neue Tests: `src/components/TripPage.test.tsx` (A→B mit verspäteter Antwort, Logout, Logout vor getSession, Kontowechsel u1→u2 ohne Zustandsübernahme, Unmount, Fehlertext, kaputte Demo-Daten, Abholort ok/error), `ActiveTrip.test.tsx` (Leiste oben + Versatz, Logout vor getSession, kein Ersatz-Abholort, bestätigter Abholort, verspäteter Geocoder), `return-reminder.test.ts` (Fehler/0 Geräte → Freigabe + späterer Versand, kein Zurücksetzen fremder Claims, kein Doppelversand).
+
+Browser (Playwright, gemockte Sitzung + gemockte Buchungsantworten, keine Produktionsdaten): Leiste `top 0 / height 44`, Navbar `top 44 / bottom 93`, body padding-top 44 px bei 320, 390 und 1280 px; kein horizontaler Overflow. `/trip/<mock>` mit Status `returning` (390 px): ReturnFlow sichtbar, keine Leiste. Screenshots: `docs/qa-active-trip-2026-10-06/`.
+
+Offen: kein Gerätetest iPhone/Android, kein Push-Empfangstest, keine Live-Buchung, kein Deploy. Beobachtung außerhalb des Auftrags: „App installieren“-Hinweis überdeckt auf der Fahrtseite kurzzeitig die Überschrift (unverändert).

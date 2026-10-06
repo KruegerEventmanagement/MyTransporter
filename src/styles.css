@@ -147,6 +147,8 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    /* Platz für die obere Leiste „Sofort zurückkehren“ (nur gesetzt, wenn sichtbar) */
+    padding-top: var(--mt-trip-bar, 0px);
   }
 }
 
@@ -217,3 +219,7 @@
   animation: install-pulse 2.2s ease-out infinite;
 }
 
+
+@utility top-trip-bar {
+  top: var(--mt-trip-bar, 0px);
+}

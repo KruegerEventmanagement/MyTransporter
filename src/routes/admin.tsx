@@ -483,7 +483,7 @@ function AdminDashboard() {
   return (
     <>
     <main className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 bg-background border-b border-border">
+      <header className="sticky top-trip-bar z-10 bg-background border-b border-border">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <BrandHomeLink imageClassName="h-7 w-auto" />
@@ -881,7 +881,7 @@ function CustomerDetail({
 
   return (
     <main className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 bg-background border-b border-border">
+      <header className="sticky top-trip-bar z-10 bg-background border-b border-border">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-3">
           <BrandHomeLink className="mr-1" imageClassName="h-7 w-auto" />
           <button

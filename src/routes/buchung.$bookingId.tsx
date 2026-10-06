@@ -208,7 +208,7 @@ function BookingDetailPage() {
 
   return (
     <main className="min-h-screen bg-background pb-12">
-      <header className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b border-border">
+      <header className="sticky top-trip-bar z-10 bg-background/90 backdrop-blur border-b border-border">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
           <BrandHomeLink className="mr-1" imageClassName="h-7 w-auto" />
           <Link
