@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Phone, MessageCircle, Truck, Package, ShieldCheck, Hand, Link2, CalendarDays, MapPin, Building2 } from "lucide-react";
+import { Phone, MessageCircle, Truck, Package, ShieldCheck, Hand, Link2, CalendarDays, MapPin, Building2, Home, Warehouse, KeyRound } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { ORG_ID, SITE_URL, pageHead, type Crumb } from "@/lib/seo";
 
@@ -11,7 +11,7 @@ const CRUMBS: Crumb[] = [
 const UMZUG_CONTACT = {
   phone: "+491789276274",
   phoneDisplay: "0178 9276274",
-  whatsappDraft: "Hallo, ich möchte einen Umzug mit MyTransporter anfragen.",
+  whatsappDraft: "Hallo, ich möchte einen Umzug, eine Entrümpelung oder eine Haushaltsauflösung mit MyTransporter anfragen.",
 } as const;
 const TEL = `tel:${UMZUG_CONTACT.phone}`;
 const WHATSAPP = `https://wa.me/${UMZUG_CONTACT.phone.slice(1)}?text=${encodeURIComponent(UMZUG_CONTACT.whatsappDraft)}`;
@@ -20,20 +20,20 @@ export const Route = createFileRoute("/umzug")({
   head: () =>
     pageHead({
       path: PATH,
-      title: "Professionelle Umzüge – über 10 Jahre Umzugserfahrung | MyTransporter",
+      title: "Umzug, Entrümpelung & Haushaltsauflösung | MyTransporter",
       description:
-        "Professionelle Umzüge mit MyTransporter: über 10 Jahre Erfahrung im Team, eigene Transporter und passende Ausstattung. Individuelles Angebot: 0178 9276274.",
+        "Umzug, Entrümpelung und Haushaltsauflösung mit MyTransporter: erfahrene Unterstützung, eigene Transporter und ein individuelles Angebot nach persönlicher Absprache.",
       breadcrumbs: CRUMBS,
       schema: [
         {
           "@type": "Service",
           "@id": `${SITE_URL}${PATH}#service`,
-          name: "Umzug",
-          serviceType: "Professionelle Umzüge",
+          name: "Umzug, Entrümpelung und Haushaltsauflösung",
+          serviceType: "Umzüge, Entrümpelungen und Haushaltsauflösungen",
           telephone: UMZUG_CONTACT.phone,
           provider: { "@id": ORG_ID },
           description:
-            "Professionelle Umzüge mit über zehn Jahren Erfahrung im Team, eigenen Transportern, Umzugsdecken, Stretchfolie und Gurten. Individuelles Angebot nach persönlicher Absprache.",
+            "Umzüge, Entrümpelungen und Haushaltsauflösungen mit über zehn Jahren Umzugserfahrung im Team, eigenen Transportern und individueller Planung nach persönlicher Absprache.",
         },
       ],
     }),
@@ -43,7 +43,7 @@ export const Route = createFileRoute("/umzug")({
 function CallButtons({ className = "" }: { className?: string }) {
   return (
     <div className={className}>
-      <p className="mb-3 font-semibold text-foreground">Dein direkter Kontakt für Umzüge</p>
+      <p className="mb-3 font-semibold text-foreground">Dein direkter Kontakt für Umzug, Entrümpelung und Haushaltsauflösung</p>
       <div className="flex flex-col sm:flex-row gap-3">
       <a
         href={TEL}
@@ -78,7 +78,8 @@ const PREP = [
   { icon: CalendarDays, text: "Wunschtermin" },
   { icon: MapPin, text: "Start- und Zieladresse" },
   { icon: Package, text: "Ungefähre Menge an Möbeln und Kartons" },
-  { icon: Building2, text: "Etagen und ob es einen Aufzug gibt" },
+  { icon: Building2, text: "Etagen, Zugänge und ob es einen Aufzug gibt" },
+  { icon: Home, text: "Gewünschte Leistung und ungefährer Umfang" },
 ] as const;
 
 function UmzugPage() {
@@ -87,23 +88,19 @@ function UmzugPage() {
       <Navbar />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
         <header className="py-8 sm:py-14">
-          <p className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-sm font-medium text-foreground">
-            <Truck className="h-4 w-4" aria-hidden="true" />
-            Über 10 Jahre Umzugserfahrung
-          </p>
-          <h1 className="mt-6 text-4xl sm:text-5xl font-bold leading-tight text-foreground text-balance">
+          <h1 className="text-4xl sm:text-5xl font-bold leading-tight text-foreground text-balance">
             <span className="block">Dein Umzug.</span>{" "}
             <span className="block">Professionell von A nach B.</span>
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-foreground">
-            <strong>Mit über zehn Jahren Umzugserfahrung</strong> bietet dir das Team von MyTransporter
-            professionelle Umzüge von A nach B. Wir bringen Erfahrung, eigene Transporter und die
-            passende Ausstattung mit, damit dein Umzug gut vorbereitet starten kann.
+            <strong>Ob Umzug, Entrümpelung oder Haushaltsauflösung:</strong> Das Team von MyTransporter
+            unterstützt dich zuverlässig von der ersten Absprache bis zur Durchführung. Dabei bringen
+            wir über zehn Jahre Umzugserfahrung, eigene Transporter und die passende Ausstattung mit.
           </p>
           <p className="mt-4 max-w-2xl text-lg leading-relaxed text-foreground">
-            <strong>Von der ersten Absprache bis zum Transport deiner Möbel und Kartons:</strong>{" "}
-            Wir stimmen den Ablauf persönlich mit dir ab und kümmern uns um die vereinbarten
-            Leistungen. Du bekommst ein Angebot, das zu deinem Umzug passt.
+            Wir hören zu, klären den tatsächlichen Umfang und stimmen die vereinbarten Leistungen
+            persönlich mit dir ab. So bekommst du Unterstützung, die zu deiner Situation passt – klar
+            geplant und ohne unübersichtliche Pauschalangebote.
           </p>
           <CallButtons className="mt-8" />
         </header>
@@ -129,18 +126,53 @@ function UmzugPage() {
           </ul>
         </section>
 
-        <section className="mt-14" aria-labelledby="angebot">
-          <h2 id="angebot" className="text-2xl sm:text-3xl font-bold text-foreground">
-            Ein Angebot, das zu deinem Umzug passt.
+
+        <section className="mt-14" aria-labelledby="weitere-leistungen">
+          <h2 id="weitere-leistungen" className="text-2xl sm:text-3xl font-bold text-foreground">
+            Platz schaffen. Veränderungen gut organisieren.
           </h2>
           <p className="mt-3 max-w-2xl text-muted-foreground leading-relaxed">
-            Ein guter Umzug beginnt mit einer klaren Absprache. Im persönlichen Gespräch besprechen
-            wir deinen Wunschtermin, die Strecke, die Menge an Möbeln und Kartons sowie Etagen und
-            Zugänge. Nach Einschätzung des Aufwands erhältst du ein individuelles Angebot.
-            Leistungen und Preis stimmen wir vor der Beauftragung mit dir ab.
+            Nicht jede Veränderung ist ein klassischer Umzug. Manchmal müssen einzelne Räume geleert,
+            ein kompletter Haushalt aufgelöst oder Flächen für einen neuen Anfang vorbereitet werden.
+            Wir besprechen mit dir, was ansteht, und planen die passende Unterstützung.
+          </p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <article className="rounded-2xl border border-border bg-card p-6">
+              <Warehouse className="h-7 w-7 text-foreground" aria-hidden="true" />
+              <h3 className="mt-4 text-xl font-bold text-foreground">Entrümpelung</h3>
+              <p className="mt-2 text-muted-foreground leading-relaxed">
+                Wenn Keller, Dachboden, Garage, Wohnung, Haus oder gewerblich genutzte Räume wieder
+                übersichtlich werden sollen, unterstützen wir dich bei der Entrümpelung. Das kann vor
+                einem Umzug, einer Übergabe, einer Renovierung oder einfach dann sinnvoll sein, wenn
+                du dauerhaft Platz schaffen möchtest.
+              </p>
+            </article>
+            <article className="rounded-2xl border border-border bg-card p-6">
+              <KeyRound className="h-7 w-7 text-foreground" aria-hidden="true" />
+              <h3 className="mt-4 text-xl font-bold text-foreground">Haushaltsauflösung</h3>
+              <p className="mt-2 text-muted-foreground leading-relaxed">
+                Beim Zusammenziehen, nach einer Trennung, vor dem Umzug ins Ausland, beim Wechsel in
+                eine kleinere Wohnung oder in anderen persönlichen Lebenssituationen kann ein Haushalt
+                ganz oder teilweise aufgelöst werden. Wir gehen respektvoll vor und stimmen Umfang,
+                Ablauf und gewünschte Unterstützung persönlich mit dir ab.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section className="mt-14" aria-labelledby="angebot">
+          <h2 id="angebot" className="text-2xl sm:text-3xl font-bold text-foreground">
+            Ein Angebot, das zu deinem Vorhaben passt.
+          </h2>
+          <p className="mt-3 max-w-2xl text-muted-foreground leading-relaxed">
+            Gute Unterstützung beginnt mit einer klaren Absprache. Im persönlichen Gespräch klären wir,
+            ob es um einen Umzug, eine Entrümpelung oder eine Haushaltsauflösung geht. Wir besprechen
+            Wunschtermin, Räume, Umfang, Strecke, Etagen, Zugänge und die Unterstützung, die du brauchst.
+            Nach Einschätzung des Aufwands erhältst du ein individuelles Angebot. Leistungen und Preis
+            stimmen wir vor der Beauftragung mit dir ab.
           </p>
           <ol className="mt-6 grid gap-4 sm:grid-cols-3">
-            {["Umzug besprechen", "Umfang und Preis abstimmen", "Termin und Durchführung vereinbaren"].map(
+            {["Vorhaben besprechen", "Umfang und Preis abstimmen", "Termin und Durchführung vereinbaren"].map(
               (step, i) => (
                 <li key={step} className="rounded-2xl bg-secondary p-5">
                   <span className="text-sm font-semibold text-muted-foreground">Schritt {i + 1}</span>
@@ -153,11 +185,11 @@ function UmzugPage() {
 
         <section className="mt-14 rounded-3xl border border-border bg-card p-6 sm:p-10" aria-labelledby="anrufen">
           <h2 id="anrufen" className="text-2xl sm:text-3xl font-bold text-foreground">
-            Lass uns deinen Umzug planen.
+            Lass uns dein Vorhaben planen.
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Ruf uns an oder schreib uns auf WhatsApp. Gemeinsam besprechen wir, was du brauchst.
-            Halte dafür am besten diese Angaben bereit:
+            Ruf uns an oder schreib uns auf WhatsApp. Gemeinsam besprechen wir deinen Umzug, deine
+            Entrümpelung oder deine Haushaltsauflösung. Halte dafür am besten diese Angaben bereit:
           </p>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
             {PREP.map(({ icon: Icon, text }) => (
