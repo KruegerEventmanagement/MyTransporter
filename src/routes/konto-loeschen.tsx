@@ -33,11 +33,14 @@ function KontoLoeschenPage() {
           <section>
             <h2 className="font-bold text-lg mb-2">Ohne Anmeldung</h2>
             <p>Schreib uns von der hinterlegten E-Mail-Adresse an info@mytransporter.org mit dem Betreff „Konto löschen“.</p>
+            <p className="mt-2">Passwort vergessen? Über „Passwort vergessen?“ im Login-Fenster bekommst du einen Link, mit dem du ein neues Passwort setzt und dich danach anmelden kannst.</p>
           </section>
           <section>
             <h2 className="font-bold text-lg mb-2">Was gelöscht wird</h2>
-            <p>Anmeldekonto, Profildaten, hochgeladene Ausweis-/Führerscheindokumente und Mitteilungs-Registrierungen.</p>
-            <p className="mt-2">Während einer laufenden oder bevorstehenden Miete ist die Löschung gesperrt. Buchungen und Rechnungen bewahren wir wegen gesetzlicher Aufbewahrungspflichten (bis zu 10 Jahre) auf.</p>
+            <p>Endgültig gelöscht werden dein Anmeldekonto samt aller Sitzungen, deine Profildaten, Mitteilungs-Registrierungen und Geburtstagsaktionen. Das Konto wird nicht nur gesperrt.</p>
+            <p className="mt-2">Ausweis- und Führerscheinkopien löschen wir sofort, sofern sie zu keinem Mietvertrag gehören. Gehören sie zu einem Mietvertrag, bleibt eine gesperrte Kopie nur für unser Team bis 90 Tage nach Vertragsende erhalten und wird danach automatisch gelöscht.</p>
+            <p className="mt-2">Buchungen und Rechnungen bewahren wir getrennt wegen gesetzlicher Aufbewahrungspflichten (bis zu 10 Jahre) auf.</p>
+            <p className="mt-2">Während einer laufenden oder bevorstehenden Miete nehmen wir deinen Löschantrag mit Zeitpunkt entgegen und löschen das Konto nach Abschluss der Miete. Es wird nichts heimlich storniert.</p>
           </section>
         </div>
       </div>
