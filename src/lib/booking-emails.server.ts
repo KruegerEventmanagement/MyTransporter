@@ -67,6 +67,51 @@ function cancellationTable(): string {
 
 type Attachment = { filename: string; content: string };
 
+export type ResendErrorKind =
+  | "invalid_key"
+  | "restricted_key"
+  | "sender_domain"
+  | "transient"
+  | "other";
+
+/** Ordnet einen Resend-Fehler anhand von name/message ein – nicht pauschal nach Status. */
+export function classifyResendError(
+  status: number,
+  bodyText: string,
+): { kind: ResendErrorKind; hint: string | null } {
+  let name = "";
+  let message = "";
+  try {
+    const j = JSON.parse(bodyText) as { name?: unknown; message?: unknown };
+    name = typeof j.name === "string" ? j.name.toLowerCase() : "";
+    message = typeof j.message === "string" ? j.message.toLowerCase() : "";
+  } catch {
+    message = bodyText.toLowerCase();
+  }
+  if (name === "invalid_api_key" || /api key is invalid/.test(message)) {
+    return { kind: "invalid_key", hint: "Mail-Zugang abgelehnt (Schlüssel ungültig) – RESEND_API_KEY prüfen/ersetzen" };
+  }
+  if (name === "restricted_api_key" || /restricted to only send|restricted api key/.test(message)) {
+    return { kind: "restricted_key", hint: "Mail-Schlüssel ohne nötige Berechtigung – Schlüsselrechte in Resend prüfen" };
+  }
+  if (
+    /domain is not verified|not verified|verify a domain|testing emails|own email address|invalid_from_address/.test(
+      `${name} ${message}`,
+    )
+  ) {
+    return { kind: "sender_domain", hint: "Absender/Domain in Resend nicht freigegeben – Domain-Verifizierung prüfen (kein Schlüsselproblem)" };
+  }
+  if (status === 429 || status >= 500) {
+    return { kind: "transient", hint: "Vorübergehender Fehler beim Mailanbieter – wird später erneut versucht" };
+  }
+  return { kind: "other", hint: null };
+}
+
+/** Entfernt mögliche Schlüssel (re_…/Bearer …) aus Fehlertexten. */
+export function redactSecrets(s: string): string {
+  return s.replace(/re_[A-Za-z0-9_]{8,}/g, "re_***").replace(/Bearer\s+\S+/gi, "Bearer ***");
+}
+
 export async function sendEmail(
   to: string,
   subject: string,
@@ -97,18 +142,13 @@ export async function sendEmail(
   });
   if (!res.ok) {
     const errText = await res.text();
-    console.error("Resend send failed", res.status, errText);
-    // 401/403 = Zugang ungültig: kein Kundenfehler, Retries helfen erst nach
-    // Austausch des Schlüssels. Klarer Hinweis für den Betreiber (ohne Secret).
-    const authHint =
-      res.status === 401 || res.status === 403 || /api key is invalid/i.test(errText)
-        ? "Mail-Zugang ungültig – RESEND_API_KEY in den Projekt-Secrets ersetzen · "
-        : "";
+    console.error("Resend send failed", res.status, errText.slice(0, 400));
+    const cls = classifyResendError(res.status, errText);
     try {
       await supabaseAdmin.from("admin_notifications").insert({
         type: "email_failed",
         title: "E-Mail-Versand fehlgeschlagen",
-        body: `${authHint}${subject} → ${safeTo} · ${res.status} · ${errText.slice(0, 400)}`,
+        body: `${cls.hint ? `${cls.hint} · ` : ""}${subject} → ${safeTo} · ${res.status} · ${redactSecrets(errText).slice(0, 400)}`,
       });
     } catch {
       /* Protokollierung ist optional */
