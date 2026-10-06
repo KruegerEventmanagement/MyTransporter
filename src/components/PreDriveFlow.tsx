@@ -1,3 +1,4 @@
+import { DocumentationFeeNotice } from "./DocumentationFeeNotice";
 import { useState, useCallback, useEffect } from "react";
 import { Camera, ChevronRight, MessageSquare, Key, Plus, X, AlertTriangle, ChevronLeft } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -307,6 +308,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
             Bitte dokumentiere den Zustand vor Fahrtbeginn vollständig, vorhandene Schäden eingeschlossen. Diese Fotos dienen bei der
             Rückgabe als Vergleich; bei fehlenden oder unleserlichen Nachweisen kann eine zusätzliche Prüfung erforderlich sein.
           </p>
+          <DocumentationFeeNotice />
 
           {isTestAdmin && (
             <button
