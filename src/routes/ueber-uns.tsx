@@ -40,7 +40,7 @@ function UeberUnsPage() {
         <TariffSection />
         <AddonPackagesSection />
         <AdvantagesSection />
-        <InFlowAd placement="inFlowBottom" />
+        <InFlowAd placement="inFlowTop" />
         <CompareSection />
         <BookingInfoSection />
       </AdRails>
