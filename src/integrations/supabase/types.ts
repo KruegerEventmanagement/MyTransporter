@@ -24,6 +24,7 @@ export type Database = {
           former_user_id: string
           id: string
           last_error: string | null
+          lease_token: string | null
           locked_until: string | null
           request_reason: string | null
           requested_at: string
@@ -39,6 +40,7 @@ export type Database = {
           former_user_id: string
           id?: string
           last_error?: string | null
+          lease_token?: string | null
           locked_until?: string | null
           request_reason?: string | null
           requested_at?: string
@@ -54,6 +56,7 @@ export type Database = {
           former_user_id?: string
           id?: string
           last_error?: string | null
+          lease_token?: string | null
           locked_until?: string | null
           request_reason?: string | null
           requested_at?: string
@@ -1372,13 +1375,14 @@ export type Database = {
         Args: { _source_id: string; _source_type: string }
         Returns: Json
       }
-      claim_account_deletion: {
+      claim_account_deletion_lease: {
         Args: {
           _account_created_at: string
-          _lease_seconds?: number
+          _create: boolean
+          _lease_seconds: number
           _uid: string
         }
-        Returns: string
+        Returns: Json
       }
       claim_booking_action: {
         Args: {
@@ -1475,8 +1479,8 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      complete_account_deletion: {
-        Args: { _booking_count: number; _uid: string }
+      complete_account_deletion_lease: {
+        Args: { _booking_count: number; _token: string; _uid: string }
         Returns: string
       }
       complete_booking_action: {
@@ -1530,9 +1534,9 @@ export type Database = {
         }
         Returns: undefined
       }
-      fail_account_deletion: {
-        Args: { _error: string; _uid: string }
-        Returns: undefined
+      fail_account_deletion_lease: {
+        Args: { _error: string; _token: string; _uid: string }
+        Returns: boolean
       }
       fail_booking_action: {
         Args: {
@@ -1625,6 +1629,10 @@ export type Database = {
       plan_end_at: {
         Args: { _plan_id: string; _start: string }
         Returns: string
+      }
+      renew_account_deletion_lease: {
+        Args: { _lease_seconds: number; _token: string; _uid: string }
+        Returns: boolean
       }
       report_trip_return: {
         Args: {

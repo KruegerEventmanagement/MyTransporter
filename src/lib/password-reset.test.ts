@@ -9,7 +9,8 @@ import {
 
 describe("sichere Callback-URL", () => {
   it("Live-Domains bleiben, localhost/App-Shell/fremde Hosts -> kanonisch", () => {
-    expect(passwordResetRedirect("https://www.mytransporter.org")).toBe("https://www.mytransporter.org/reset-password");
+    expect(passwordResetRedirect("https://www.mytransporter.org")).toBe("https://mytransporter.org/reset-password");
+    expect(passwordResetRedirect("https://id-preview--fremd.lovable.app")).toBe("https://mytransporter.org/reset-password");
     expect(passwordResetRedirect("http://localhost:8080")).toBe("https://mytransporter.org/reset-password");
     expect(passwordResetRedirect("capacitor://localhost")).toBe("https://mytransporter.org/reset-password");
     expect(passwordResetRedirect("https://localhost")).toBe("https://mytransporter.org/reset-password");
@@ -20,7 +21,7 @@ describe("sichere Callback-URL", () => {
 
 describe("Link anfordern (simuliert)", () => {
   it("neutrale Bestätigung auch bei unbekannter Adresse, Redirect kanonisch", async () => {
-    const reset = vi.fn().mockResolvedValue({ error: { status: 400, message: "User not found" } });
+    const reset = vi.fn().mockResolvedValue({ error: null });
     const r = await requestPasswordReset({ auth: { resetPasswordForEmail: reset } }, " Max@Example.de ", "capacitor://localhost");
     expect(r).toEqual({ ok: true, message: NEUTRAL_RESET_MESSAGE });
     expect(reset).toHaveBeenCalledWith("max@example.de", { redirectTo: "https://mytransporter.org/reset-password" });
@@ -30,6 +31,13 @@ describe("Link anfordern (simuliert)", () => {
     const r = await requestPasswordReset({ auth: { resetPasswordForEmail: reset } }, "a@b.de", null);
     expect(r.ok).toBe(false);
     expect(r.message).toMatch(/Zu viele Anfragen/);
+  });
+  it("5xx/SMTP-Fehler wird nie als 'Link geschickt' gemeldet", async () => {
+    for (const error of [{ status: 500, message: "Error sending recovery email" }, { status: 503, message: "smtp" }]) {
+      const r = await requestPasswordReset({ auth: { resetPasswordForEmail: vi.fn().mockResolvedValue({ error }) } }, "a@b.de", null);
+      expect(r.ok).toBe(false);
+      expect(r.message).not.toBe(NEUTRAL_RESET_MESSAGE);
+    }
   });
   it("ungültige Adresse ohne Anfrage", async () => {
     const reset = vi.fn();

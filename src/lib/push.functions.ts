@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveAccount } from "@/lib/active-account";
 import { VAPID_PUBLIC_KEY } from "@/lib/push-config";
 
 // Interne Push-Logik: kann direkt aus anderen Server-Funktionen aufgerufen werden,
@@ -122,7 +122,7 @@ export const sendAdminPush = createServerFn({ method: "POST" })
   .handler(async ({ data }) => pushToAdmins(data));
 
 export const sendTestAdminPush = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .handler(async ({ context }) => {
     const { data: roleRow } = await context.supabase
       .rpc("has_role", { _user_id: context.userId, _role: "admin" });

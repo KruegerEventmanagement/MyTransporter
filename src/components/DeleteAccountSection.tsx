@@ -1,29 +1,23 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteMyAccount, getMyDeletionStatus } from "@/lib/account.functions";
 import { formatBerlinDateTime } from "@/lib/privacy-format";
 
-/** Lokale Daten dieses Geräts nach erfolgreicher Löschung entfernen. */
-async function clearLocalData() {
-  try {
-    const { disablePushOnThisDevice } = await import("@/lib/push-client");
-    await disablePushOnThisDevice();
-  } catch {
-    /* Push evtl. nicht unterstützt */
-  }
-  try {
-    for (const store of [localStorage, sessionStorage]) {
-      for (const k of Object.keys(store)) if (k.startsWith("mt_") || k.startsWith("sb-")) store.removeItem(k);
-    }
-    indexedDB?.deleteDatabase?.("mt_pending_documents");
-  } catch {
-    /* Speicher blockiert */
-  }
-  await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+/** Lokale Daten dieses Geräts nach erfolgreicher Löschung entfernen (awaited). */
+async function clearLocalData(clearQueries: () => void) {
+  const { clearLocalAccountData } = await import("@/lib/account-local-cleanup");
+  await clearLocalAccountData({
+    signOut: () => supabase.auth.signOut({ scope: "local" }),
+    clearQueries,
+    disablePush: async () => (await import("@/lib/push-client")).disablePushOnThisDevice(),
+    projectId: import.meta.env.VITE_SUPABASE_PROJECT_ID,
+  });
 }
 
 export function DeleteAccountSection() {
+  const queryClient = useQueryClient();
   const del = useServerFn(deleteMyAccount);
   const status = useServerFn(getMyDeletionStatus);
   const [open, setOpen] = useState(false);
@@ -51,7 +45,7 @@ export function DeleteAccountSection() {
         if ("requested" in r && r.requested && r.requestedAt) setPending(r.requestedAt);
         return;
       }
-      await clearLocalData();
+      await clearLocalData(() => queryClient.clear());
       window.location.assign("/konto-loeschen?geloescht=1");
     } catch {
       setMsg("Löschen fehlgeschlagen. Bitte versuche es erneut oder schreibe an info@mytransporter.org.");
@@ -74,7 +68,7 @@ export function DeleteAccountSection() {
         {pending && (
           <p role="status" className="mt-3 font-medium">
             Dein Löschantrag vom {formatBerlinDateTime(pending).date} um {formatBerlinDateTime(pending).time} Uhr ist
-            gespeichert und in Bearbeitung. Dein Konto wird nach Abschluss der Miete gelöscht.
+            gespeichert und in Bearbeitung. Nach Ende der Miete wird dein Konto automatisch gelöscht (stündliche Prüfung).
           </p>
         )}
         {!open ? (

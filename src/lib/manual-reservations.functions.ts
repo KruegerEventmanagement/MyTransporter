@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveAccount } from "@/lib/active-account";
 import { isValidIsoDate, todayIsoBerlin } from "@/lib/age";
 
 export type ManualReservation = {
@@ -111,7 +111,7 @@ async function assertAdmin(context: { supabase: any; userId: string }) {
 }
 
 export const listManualReservations = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((input: unknown) => listSchema.parse(input))
   .handler(async ({ data, context }): Promise<ManualReservation[]> => {
     await assertAdmin(context);
@@ -126,7 +126,7 @@ export const listManualReservations = createServerFn({ method: "POST" })
   });
 
 export const upsertManualReservation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((input: unknown) => upsertSchema.parse(input))
   .handler(async ({ data, context }): Promise<ManualReservation> => {
     await assertAdmin(context);
@@ -183,7 +183,7 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
   });
 
 export const deleteManualReservation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -210,7 +210,7 @@ export const deleteManualReservation = createServerFn({ method: "POST" })
 
 /** Dokumente eines manuellen Termins inkl. zeitlich begrenzter Ansichts-Links. */
 export const listManualReservationDocuments = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((input: unknown) =>
     z.object({ reservationId: z.string().uuid() }).parse(input),
   )
@@ -241,7 +241,7 @@ export const listManualReservationDocuments = createServerFn({ method: "POST" })
 
 /** Legt einen Dokumenteintrag zu einem manuellen Termin an (Datei liegt bereits im Speicher). */
 export const addManualReservationDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((input: unknown) =>
     z
       .object({
@@ -271,7 +271,7 @@ export const addManualReservationDocument = createServerFn({ method: "POST" })
 
 /** Entfernt ein Dokument samt Datei aus dem geschützten Speicher. */
 export const deleteManualReservationDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -305,7 +305,7 @@ export type ManualNotificationState = {
 
 /** Zustand der Owner-Benachrichtigungen (ausstehend / gesendet / Fehler). */
 export const listManualNotificationStates = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((input: unknown) =>
     z.object({ reservationIds: z.array(z.string().uuid()).max(300) }).parse(input),
   )

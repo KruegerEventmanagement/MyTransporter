@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveAccount } from "@/lib/active-account";
 import { berlinDateParts, checkCoupon, normalizeCouponCode, type CouponRow } from "@/lib/birthday";
 
 export interface CouponPreview {
@@ -13,7 +13,7 @@ export interface CouponPreview {
 
 /** Prüft einen Gutscheincode für den angemeldeten Nutzer (nur Anzeige/Vorschau). */
 export const previewCoupon = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: { couponCode: string }) => {
     if (typeof data.couponCode !== "string" || data.couponCode.length > 64) {
       throw new Error("Ungültiger Gutscheincode");
@@ -71,7 +71,7 @@ export interface BirthdayCampaignRow {
 
 /** Adminübersicht „Geburtstagsaktionen". */
 export const listBirthdayCampaigns = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .handler(async ({ context }): Promise<BirthdayCampaignRow[]> => {
     await assertAdmin(context.supabase as never, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -110,7 +110,7 @@ export interface MissingBirthDateRow {
 
 /** Kunden ohne Geburtsdatum – damit Admins es nachtragen können. */
 export const listProfilesMissingBirthDate = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .handler(async ({ context }): Promise<MissingBirthDateRow[]> => {
     await assertAdmin(context.supabase as never, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -130,7 +130,7 @@ export const listProfilesMissingBirthDate = createServerFn({ method: "GET" })
 
 /** Admin trägt ein Geburtsdatum nach. */
 export const setCustomerBirthDate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: { userId: string; birthDate: string }) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data.birthDate)) throw new Error("Ungültiges Datum");
     if (typeof data.userId !== "string" || data.userId.length < 10) {

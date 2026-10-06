@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveAccount } from "@/lib/active-account";
 import { summarizeCalendarState, type CalendarStateRow, type CalendarSyncStatus } from "@/lib/calendar-status";
 
 export type { CalendarSyncStatus } from "@/lib/calendar-status";
@@ -8,7 +8,7 @@ const PAGE = 1000;
 
 /** Geschützter Admin-Status der Google-Kalender-Übertragung (nur Zähler, keine Kundendaten). */
 export const getCalendarSyncStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .handler(async ({ context }): Promise<CalendarSyncStatus> => {
     const { data: isAdmin, error: roleErr } = await context.supabase.rpc("has_role", {
       _user_id: context.userId,

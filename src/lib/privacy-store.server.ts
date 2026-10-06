@@ -2,16 +2,19 @@ import type { PrivacyStore } from "./privacy-ops.server";
 
 const USER_BUCKET = "user-documents";
 export const ARCHIVE_BUCKET = "document-archive";
+const LEASE_SECONDS = 300;
 
 function check(error: { message?: string; code?: string } | null | undefined, step: string) {
   if (error) throw new Error(`${step}: ${error.code ?? ""} ${error.message ?? ""}`.trim());
 }
 
-/** Adapter auf den privilegierten Server-Client. Nur in Server-Handlern verwenden. */
-export async function createPrivacyStore(): Promise<PrivacyStore> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabaseAdmin as any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyDb = any;
+
+/** Adapter auf einen privilegierten Server-Client. `client` nur für Tests injizieren. */
+export async function createPrivacyStore(client?: AnyDb): Promise<PrivacyStore> {
+  const admin: AnyDb = client ?? (await import("@/integrations/supabase/client.server")).supabaseAdmin;
+  const db = admin;
   return {
     async listDocs(uid, types) {
       const { data, error } = await db
@@ -24,20 +27,25 @@ export async function createPrivacyStore(): Promise<PrivacyStore> {
       return data ?? [];
     },
     async listBookings(uid) {
-      const { data, error } = await db
-        .from("bookings")
-        .select("id, status, start_date, start_hour, plan_id")
-        .eq("user_id", uid);
+      const { data, error } = await db.from("bookings").select("id, status, start_date, start_hour, plan_id").eq("user_id", uid);
       check(error, "Buchungen lesen");
       return data ?? [];
     },
-    async archiveExists(id) {
-      const { data, error } = await db.from("document_archive").select("id").eq("source_document_id", id).maybeSingle();
+    async getArchive(id) {
+      const { data, error } = await db.from("document_archive").select("storage_path").eq("source_document_id", id).maybeSingle();
       check(error, "Archiv lesen");
-      return !!data;
+      return data ?? null;
+    },
+    async archiveObjectExists(path) {
+      const i = path.lastIndexOf("/");
+      const folder = path.slice(0, i);
+      const name = path.slice(i + 1);
+      const { data, error } = await admin.storage.from(ARCHIVE_BUCKET).list(folder, { search: name, limit: 20 });
+      check(error, "Archivobjekt prüfen");
+      return (data ?? []).some((f: { name: string }) => f.name === name);
     },
     async download(path) {
-      const { data, error } = await supabaseAdmin.storage.from(USER_BUCKET).download(path);
+      const { data, error } = await admin.storage.from(USER_BUCKET).download(path);
       if (error) {
         if (/not.?found|404|does not exist/i.test(`${error.message} ${(error as { status?: number }).status ?? ""}`)) return null;
         throw new Error(`Download: ${error.message}`);
@@ -46,61 +54,108 @@ export async function createPrivacyStore(): Promise<PrivacyStore> {
       return { bytes: new Uint8Array(await data.arrayBuffer()), contentType: data.type || "image/jpeg" };
     },
     async uploadArchive(path, bytes, contentType) {
-      const { error } = await supabaseAdmin.storage
-        .from(ARCHIVE_BUCKET)
-        .upload(path, bytes, { contentType, upsert: false });
+      const { error } = await admin.storage.from(ARCHIVE_BUCKET).upload(path, bytes, { contentType, upsert: false });
       if (error && !/exist|duplicate/i.test(error.message)) throw new Error(`Archiv-Upload: ${error.message}`);
     },
     async insertArchive(row) {
       const { error } = await db.from("document_archive").insert(row);
       if (error && error.code !== "23505") check(error, "Archiv-Eintrag");
     },
+    async removeArchiveFile(path) {
+      const { error } = await admin.storage.from(ARCHIVE_BUCKET).remove([path]);
+      check(error, "Archivdatei löschen");
+    },
     async removeUserFiles(paths) {
       if (!paths.length) return;
-      const { error } = await supabaseAdmin.storage.from(USER_BUCKET).remove(paths);
+      const { error } = await admin.storage.from(USER_BUCKET).remove(paths);
       check(error, "Datei entfernen");
     },
     async markRemoved(id, uid) {
+      const read = async () => {
+        const { data, error } = await db
+          .from("user_documents")
+          .select("deleted_by_user_at, removed_from_account_at")
+          .eq("id", id)
+          .eq("user_id", uid)
+          .maybeSingle();
+        check(error, "Dokument lesen");
+        return data as { deleted_by_user_at: string | null; removed_from_account_at: string | null } | null;
+      };
+      const row = await read();
+      if (!row) throw new Error("Dokument nicht gefunden");
+      if (row.removed_from_account_at) return;
       const now = new Date().toISOString();
-      const { error } = await db
+      const { data, error } = await db
         .from("user_documents")
-        .update({ removed_from_account_at: now })
+        .update({ removed_from_account_at: now, deleted_by_user_at: row.deleted_by_user_at ?? now })
         .eq("id", id)
         .eq("user_id", uid)
-        .is("removed_from_account_at", null);
+        .is("removed_from_account_at", null)
+        .select("id");
       check(error, "Dokument markieren");
-      await db.from("user_documents").update({ deleted_by_user_at: now }).eq("id", id).is("deleted_by_user_at", null);
+      if (!data?.length) {
+        const again = await read();
+        if (!again?.removed_from_account_at) throw new Error("Dokument markieren: kein Treffer");
+      }
     },
-    async claimDeletion(uid, createdAt) {
-      const { data, error } = await db.rpc("claim_account_deletion", { _uid: uid, _account_created_at: createdAt, _lease_seconds: 120 });
+    async isAdminUser(uid) {
+      const { data, error } = await db.from("user_roles").select("id").eq("user_id", uid).eq("role", "admin").limit(1);
+      check(error, "Rolle prüfen");
+      return (data ?? []).length > 0;
+    },
+    async claimDeletion(uid, createdAt, create) {
+      const { data, error } = await db.rpc("claim_account_deletion_lease", {
+        _uid: uid,
+        _account_created_at: createdAt,
+        _lease_seconds: LEASE_SECONDS,
+        _create: create,
+      });
       check(error, "Löschung starten");
-      return String(data);
+      const d = (data ?? {}) as { state?: string; token?: string };
+      return d.state === "claimed" && d.token ? { state: "claimed", token: d.token } : { state: d.state ?? "unknown" };
+    },
+    async renewDeletion(uid, token) {
+      const { data, error } = await db.rpc("renew_account_deletion_lease", { _uid: uid, _token: token, _lease_seconds: LEASE_SECONDS });
+      check(error, "Löschung verlängern");
+      return data === true;
     },
     async requestDeletion(uid, createdAt, reason) {
       const { data, error } = await db.rpc("request_account_deletion", { _uid: uid, _account_created_at: createdAt, _reason: reason });
       check(error, "Löschantrag");
       return data ?? null;
     },
-    async completeDeletion(uid, count) {
-      const { data, error } = await db.rpc("complete_account_deletion", { _uid: uid, _booking_count: count });
+    async completeDeletion(uid, token, count) {
+      const { data, error } = await db.rpc("complete_account_deletion_lease", { _uid: uid, _token: token, _booking_count: count });
       check(error, "Löschung abschließen");
       return data ?? null;
     },
-    async failDeletion(uid, msg) {
-      await db.rpc("fail_account_deletion", { _uid: uid, _error: msg });
+    async failDeletion(uid, token, msg) {
+      await db.rpc("fail_account_deletion_lease", { _uid: uid, _token: token, _error: msg });
     },
     async deletionStatus(uid) {
-      const { data } = await db
+      const { data, error } = await db
         .from("account_deletions")
         .select("status, requested_at, completed_at")
         .eq("former_user_id", uid)
         .maybeSingle();
+      check(error, "Löschstatus");
       return data ?? null;
     },
+    async listResumableDeletions(nowIso, limit) {
+      const { data, error } = await db
+        .from("account_deletions")
+        .select("former_user_id")
+        .or(`status.in.(requested,failed),and(status.eq.processing,locked_until.lt.${nowIso})`)
+        .lt("attempts", 20)
+        .order("requested_at", { ascending: true })
+        .limit(limit);
+      check(error, "Löschanträge lesen");
+      return (data ?? []).map((r: { former_user_id: string }) => r.former_user_id);
+    },
     async listUserFiles(uid) {
-      const { data, error } = await supabaseAdmin.storage.from(USER_BUCKET).list(uid, { limit: 1000 });
+      const { data, error } = await admin.storage.from(USER_BUCKET).list(uid, { limit: 1000 });
       check(error, "Dateien auflisten");
-      return (data ?? []).map((f) => `${uid}/${f.name}`);
+      return (data ?? []).map((f: { name: string }) => `${uid}/${f.name}`);
     },
     async deleteUserDocumentRows(uid) {
       const { error } = await db.from("user_documents").delete().eq("user_id", uid);
@@ -118,7 +173,7 @@ export async function createPrivacyStore(): Promise<PrivacyStore> {
       return count ?? 0;
     },
     async deleteAuthUser(uid) {
-      const { error } = await supabaseAdmin.auth.admin.deleteUser(uid, false);
+      const { error } = await admin.auth.admin.deleteUser(uid, false);
       if (!error) return "deleted";
       if ((error as { status?: number }).status === 404 || /not.?found/i.test(error.message)) return "missing";
       throw new Error(`Auth-Konto: ${error.message}`);
@@ -137,10 +192,6 @@ export async function createPrivacyStore(): Promise<PrivacyStore> {
         .limit(limit);
       check(error, "Fällige Archivkopien");
       return data ?? [];
-    },
-    async removeArchiveFile(path) {
-      const { error } = await supabaseAdmin.storage.from(ARCHIVE_BUCKET).remove([path]);
-      check(error, "Archivdatei löschen");
     },
     async markPurged(id) {
       const { error } = await db

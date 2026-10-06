@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveAccount } from "@/lib/active-account";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 
@@ -15,7 +15,7 @@ const ResultSchema = z.object({
 export type OdometerRecognitionResult = z.infer<typeof ResultSchema>;
 
 export const recognizeOdometer = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: { photoPath: string; bookingId: string; phase: "start" | "end" }) => {
     if (!data.photoPath) throw new Error("photoPath fehlt");
     if (!data.bookingId) throw new Error("bookingId fehlt");
