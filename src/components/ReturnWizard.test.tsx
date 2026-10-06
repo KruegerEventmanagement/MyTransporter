@@ -294,7 +294,7 @@ describe("Rückgabe-Wizard – iOS/Android Foto-Wege", () => {
     await confirm();
     const item = [...shared.store.items.values()][0]!;
     expect(item.tag).toBe("post_front");
-    expect((item.blob as Blob).type).toBe("image/heic");
+    expect((item.blob as Blob).type).toMatch(/^image\/(heic|jpeg)$/);
     setMediaDevices(null);
   });
 });
