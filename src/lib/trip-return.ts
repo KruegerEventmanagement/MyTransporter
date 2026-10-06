@@ -1,3 +1,4 @@
+import { stripExceptionKind } from "./documentation-fee";
 /**
  * Rückgabe: Pflichtnachweise, Ausnahmen und Kilometerauswertung.
  * Rein und testbar; wird von UI und Server-Rückgabemeldung gemeinsam genutzt.
