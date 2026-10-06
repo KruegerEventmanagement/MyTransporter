@@ -1452,6 +1452,15 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      claim_mail_test: {
+        Args: {
+          _admin: string
+          _cooldown_seconds: number
+          _request: string
+          _test_id: string
+        }
+        Returns: Json
+      }
       claim_manual_notifications: {
         Args: { _lease_seconds?: number; _limit?: number }
         Returns: {
@@ -1509,6 +1518,7 @@ export type Database = {
             Args: { _id: string; _lease_token?: string; _push_sent?: boolean }
             Returns: boolean
           }
+      count_user_owned_storage: { Args: { _uid: string }; Returns: number }
       create_booking_hold_atomic: {
         Args: {
           _minutes?: number
@@ -1629,6 +1639,10 @@ export type Database = {
       plan_end_at: {
         Args: { _plan_id: string; _start: string }
         Returns: string
+      }
+      release_retained_storage_ownership: {
+        Args: { _uid: string }
+        Returns: number
       }
       renew_account_deletion_lease: {
         Args: { _lease_seconds: number; _token: string; _uid: string }
