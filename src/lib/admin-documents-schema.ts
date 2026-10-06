@@ -29,6 +29,7 @@ export const docInputSchema = z.object({
   }),
   items: z.array(docItemSchema).min(1).max(30),
   note: z.string().trim().max(600).optional(),
+  bookingId: z.string().uuid().optional().or(z.literal("")),
 });
 
 export const sendDocSchema = z.object({
@@ -39,3 +40,10 @@ export const sendDocSchema = z.object({
 });
 
 export type DocInputData = z.infer<typeof docInputSchema>;
+
+export const listDocsSchema = z.object({
+  kind: z.enum(["all", "invoice", "offer"]).default("all"),
+  q: z.string().trim().max(120).default(""),
+});
+
+export const docIdSchema = z.object({ id: z.string().uuid() });
