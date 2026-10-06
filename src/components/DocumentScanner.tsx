@@ -647,7 +647,7 @@ export function DocumentScanner({
               <div className="flex flex-col items-center gap-3">
                 <button
                   onClick={runCapture}
-                  aria-label="Foto aufnehmen"
+                  aria-label="Auslöser"
                   className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-95 transition-transform"
                 >
                   <div className="w-14 h-14 rounded-full border-4 border-black/10" />
