@@ -94,7 +94,7 @@ describe("CameraCapture", () => {
     setMediaDevices(null);
     renderCam();
     expect(await screen.findByText(/Live-Kamera nicht verfügbar/)).toBeTruthy();
-    expect(screen.getByText("Foto mit Geräte-Kamera / aus Galerie")).toBeTruthy();
+    expect(screen.getByText("Aus Galerie auswählen")).toBeTruthy();
   });
 
   it("0-Dimensionen-Video: Zeitlimit-Fehler, Stream gestoppt, kein Auslöser", async () => {
@@ -112,7 +112,7 @@ describe("CameraCapture", () => {
     let late: (s: MediaStream) => void = () => {};
     setMediaDevices(() => new Promise((r) => (late = r)));
     const { rerender, onCapture } = renderCam();
-    expect(screen.getByText("Foto mit Geräte-Kamera / aus Galerie")).toBeTruthy();
+    expect(screen.getByText("Aus Galerie auswählen")).toBeTruthy();
     rerender(<CameraCapture open={false} title="Vorne" variant="front" onClose={vi.fn()} onCapture={onCapture} />);
     await act(async () => {
       late(stream);
@@ -143,9 +143,9 @@ describe("CameraCapture", () => {
     let late: (s: MediaStream) => void = () => {};
     setMediaDevices(() => new Promise((r) => (late = r)));
     renderCam();
-    const clickSpy = vi.spyOn(fileInput(), "click");
-    fireEvent.click(screen.getByText("Foto mit Geräte-Kamera / aus Galerie"));
-    expect(clickSpy).toHaveBeenCalledTimes(1);
+    const label = screen.getByText("Mit Geräte-Kamera").closest("label")!;
+    expect(label.getAttribute("for")).toBe(fileInput().id);
+    fireEvent.click(label);
     await act(async () => {
       late(stream);
       await new Promise((r) => setTimeout(r, 10));
@@ -160,7 +160,7 @@ describe("CameraCapture", () => {
     media.play = vi.fn(() => new Promise<void>(() => {}));
     renderCam();
     expect(await screen.findByText(/Live-Kamera startet nicht/)).toBeTruthy();
-    expect(screen.getByText("Foto mit Geräte-Kamera / aus Galerie")).toBeTruthy();
+    expect(screen.getByText("Aus Galerie auswählen")).toBeTruthy();
   });
 
   it("Schließen während Kodierung liefert keinen veralteten Foto-Callback", async () => {
@@ -175,5 +175,54 @@ describe("CameraCapture", () => {
       await new Promise((r) => setTimeout(r, 1700));
     });
     expect(onCapture).not.toHaveBeenCalled();
+  });
+
+  it("iOS/Android: Kamera-Input mit capture, Galerie-Input ohne capture, beide echt und per label verknüpft", () => {
+    setMediaDevices(null);
+    renderCam();
+    const cam = fileInput();
+    const gal = screen.getByTestId("camera-gallery-input") as HTMLInputElement;
+    expect(cam.type).toBe("file");
+    expect(cam.getAttribute("capture")).toBe("environment");
+    expect(gal.hasAttribute("capture")).toBe(false);
+    expect(gal.accept).toMatch(/image\/\*/);
+    expect(gal.accept).toMatch(/\.heic/);
+    for (const i of [cam, gal]) {
+      expect(i.className).not.toMatch(/\bhidden\b/);
+      expect(i.style.display).not.toBe("none");
+    }
+    expect(screen.getByText("Mit Geräte-Kamera").closest("label")!.htmlFor).toBe(cam.id);
+    expect(screen.getByText("Aus Galerie auswählen").closest("label")!.htmlFor).toBe(gal.id);
+  });
+
+  it("Erlaubnis abgelehnt: Galerie liefert Foto, gleiche Datei erneut wählbar (value reset)", async () => {
+    setMediaDevices(async () => Promise.reject(domError("NotAllowedError")));
+    const { onCapture } = renderCam();
+    await screen.findByText(/Kamerazugriff nicht erlaubt/);
+    const gal = screen.getByTestId("camera-gallery-input") as HTMLInputElement;
+    const f = imageFile("gleich.png", "image/png");
+    for (let i = 0; i < 2; i += 1) {
+      await act(async () => {
+        Object.defineProperty(gal, "files", { configurable: true, value: [f] });
+        fireEvent.change(gal);
+      });
+      expect(gal.value).toBe("");
+      await waitFor(() => expect(onCapture).toHaveBeenCalledTimes(i + 1));
+    }
+  });
+
+  it("HEIC aus der iPhone-Galerie wird nicht abgewiesen und bleibt als HEIC typisiert", async () => {
+    setMediaDevices(null);
+    const { onCapture } = renderCam();
+    const gal = screen.getByTestId("camera-gallery-input") as HTMLInputElement;
+    media.imageFails = true;
+    await act(async () => {
+      Object.defineProperty(gal, "files", { configurable: true, value: [new File([new Uint8Array([1, 2, 3])], "IMG_1.HEIC", { type: "image/heic" })] });
+      fireEvent.change(gal);
+    });
+    await waitFor(() => expect(onCapture).toHaveBeenCalledTimes(1));
+    const out = onCapture.mock.calls[0][0] as File;
+    expect(out.type).toBe("image/heic");
+    expect(out.name).toMatch(/\.heic$/);
   });
 });
