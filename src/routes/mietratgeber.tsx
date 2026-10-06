@@ -21,7 +21,6 @@ const eur = (cents: number) => (cents / 100).toLocaleString("de-DE", { minimumFr
 const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
 const EXTRA_KM = extraKmCentsFor("l1h1", 1);
 const P24 = PLAN_CATALOG.find((p) => p.id === "24h_300")!;
-const TITLE = "Mietratgeber: Transporter richtig planen, buchen und zurückgeben | MyTransporter";
 const DESCRIPTION =
   "Praktischer Ratgeber für deine Transportermiete bei MyTransporter: passendes Fahrzeug wählen, Mietdauer und Kilometer planen, Unterlagen, Buchungsablauf und Checkliste für Abholung und Rückgabe.";
 
@@ -29,7 +28,7 @@ export const Route = createFileRoute("/mietratgeber")({
   head: () =>
     pageHead({
       path: "/mietratgeber",
-      title: TITLE,
+      title: "Mietratgeber: Transporter richtig planen, buchen und zurückgeben | MyTransporter",
       description: DESCRIPTION,
       ogType: "article",
       breadcrumbs: [{ name: "Start", path: "/" }, { name: "Mietratgeber", path: "/mietratgeber" }],
