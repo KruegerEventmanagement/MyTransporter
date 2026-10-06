@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { getRouteAdPolicy } from "@/lib/ad-placements";
 import { isNativeApp } from "@/lib/native/platform";
 import { subscribeAdConsent } from "@/lib/adsense-consent";
 import { resetAdSenseScriptLoad } from "@/components/ads/adsense-loader";
@@ -21,24 +22,28 @@ import {
   teardownAdConsentCmp,
 } from "@/lib/adsense-cmp";
 
-export function useAdCmpBootstrap(suppressed: boolean): void {
+export function useAdCmpBootstrap(suppressed: boolean, pathname?: string): void {
+  const path = pathname ?? (typeof window !== "undefined" ? window.location.pathname : "");
+  const allowed = getRouteAdPolicy(path) !== null;
   useEffect(() => {
-    // Native App-Screens laden nie AdSense/CMP-Scripts.
-    if (suppressed || isNativeApp()) {
+    // Native App-Screens und nicht erlaubte Pfade laden nie AdSense/CMP-Scripts.
+    if (suppressed || isNativeApp() || !allowed) {
       // Unterdrückung: sofort pausieren und Listener/Timer abbauen, damit
       // veraltete Callbacks nichts mehr freigeben können.
       teardownAdConsentCmp();
       resetAdSenseScriptLoad();
       return;
     }
-    bootstrapAdConsentCmp({ pathname: window.location.pathname, suppressed: false });
+    bootstrapAdConsentCmp({ pathname: path, suppressed: false });
     return () => {
       // Route-/Unterdrückungswechsel: Anfragen anhalten und abbauen.
       pauseAdRequests();
       teardownAdConsentCmp();
       resetAdSenseScriptLoad();
     };
-  }, [suppressed]);
+    // Neuer Pfad (auch zwischen zwei erlaubten Seiten) = neuer Lebenszyklus.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suppressed, allowed, path]);
 }
 
 export function useAdConsentGranted(): boolean {

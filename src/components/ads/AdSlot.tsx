@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ADSENSE_CONFIG, getSlotId, isSlotReady, type AdSenseSlotKey } from "@/lib/adsense";
 import { useAdsSuppressed } from "@/lib/ad-visibility";
-import { areAdRequestsAllowed } from "@/lib/adsense-cmp";
+import { areAdRequestsAllowed, lastAdConsentEvaluation } from "@/lib/adsense-cmp";
+import { getRouteAdPolicy } from "@/lib/ad-placements";
+import { areAdsSuppressed } from "@/lib/ad-visibility";
 import { adRequestsCurrentlyPermitted, ensureAdSenseScript } from "./adsense-loader";
 import { isNativeApp } from "@/lib/native/platform";
 
@@ -78,19 +80,28 @@ export function AdSlot({
     if (!el) return;
 
     let cancelled = false;
+    let intersecting = false;
+    /** Alle Live-Bedingungen – vor UND nach dem Script-Await geprüft. */
+    const eligibleNow = () =>
+      !cancelled &&
+      !isNativeApp() &&
+      !areAdsSuppressed() &&
+      getRouteAdPolicy(window.location.pathname) !== null &&
+      matchesAdViewport(viewport) &&
+      el.isConnected &&
+      el.getBoundingClientRect().width > 0 &&
+      areAdRequestsAllowed() &&
+      lastAdConsentEvaluation().consented;
     const tryInit = async () => {
-      if (cancelled) return;
+      if (!intersecting) return;
       const ins = insRef.current;
       if (!ins || initializedIns.current === ins) return; // pro echtem <ins> nur einmal
-      if (!matchesAdViewport(viewport)) return; // keine Anfragen für ausgeblendete Viewports
-      const width = el.getBoundingClientRect().width;
-      if (width <= 0) return; // niemals mit Breite 0 anfragen
-      if (!areAdRequestsAllowed()) return; // QA-Modus/unfertige Konfiguration: nie anfragen
+      if (!eligibleNow()) return; // nie für versteckte/zu schmale/fremde Ansichten
       const loaded = await ensureAdSenseScript(ADSENSE_CONFIG, { suppressed: false });
       if (cancelled || !loaded) return;
-      // Nach dem await: aktuelle Berechtigung und identisches <ins> erneut prüfen.
+      // Nach dem await: Route, Unterdrückung, Native, Consent, Viewport, Breite und <ins> erneut prüfen.
       if (insRef.current !== ins || initializedIns.current === ins) return;
-      if (!adRequestsCurrentlyPermitted()) return;
+      if (!eligibleNow() || !adRequestsCurrentlyPermitted()) return;
       initializedIns.current = ins;
       setActive(true);
       try {
@@ -104,14 +115,22 @@ export function AdSlot({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) void tryInit();
+        intersecting = entries.some((e) => e.isIntersecting);
+        if (intersecting) void tryInit();
       },
       { rootMargin: "200px" },
     );
     observer.observe(el);
+    // Später sichtbar werdende Flächen (Fenster vergrößert/gedreht) erneut prüfen.
+    const recheck = () => void tryInit();
+    const mq = typeof window.matchMedia === "function" ? window.matchMedia(QUERIES[viewport]) : null;
+    mq?.addEventListener?.("change", recheck);
+    window.addEventListener("resize", recheck);
     return () => {
       cancelled = true;
       observer.disconnect();
+      mq?.removeEventListener?.("change", recheck);
+      window.removeEventListener("resize", recheck);
       // Kein globales Pausieren hier: andere berechtigte Flächen bleiben aktiv.
     };
   }, [ready, suppressed, viewport]);

@@ -10,6 +10,7 @@ import {
 import { isNativeApp } from "@/lib/native/platform";
 import { AdSlot, matchesAdViewport } from "./AdSlot";
 import { useAdConsentGranted } from "./useAdCmp";
+import { useAdPathname } from "./useAdPathname";
 
 interface InFlowAdProps {
   placement: "inFlowTop" | "inFlowBottom";
@@ -31,19 +32,21 @@ function currentViewport(): InFlowViewport | null {
 export function InFlowAd({ placement, className }: InFlowAdProps) {
   const suppressed = useAdsSuppressed();
   const consented = useAdConsentGranted();
+  const pathname = useAdPathname();
   const [target, setTarget] = useState<{ viewport: InFlowViewport; slot: AdSenseSlotKey } | null>(null);
   const [claimed, setClaimed] = useState(false);
 
   useEffect(() => {
     if (isNativeApp() || typeof window === "undefined" || typeof window.matchMedia !== "function") {
       setTarget(null);
+      setClaimed(false);
       return;
     }
     const owner = Symbol(placement);
     setClaimed(claimPlacement(placement, owner));
     const update = () => {
       const viewport = currentViewport();
-      const slot = viewport ? placementSlotFor(window.location.pathname, placement, viewport) : null;
+      const slot = viewport ? placementSlotFor(pathname, placement, viewport) : null;
       setTarget(viewport && slot ? { viewport, slot } : null);
     };
     update();
@@ -52,8 +55,10 @@ export function InFlowAd({ placement, className }: InFlowAdProps) {
     return () => {
       mq.removeEventListener?.("change", update);
       releasePlacement(placement, owner);
+      setClaimed(false);
+      setTarget(null);
     };
-  }, [placement]);
+  }, [placement, pathname]);
 
   if (suppressed || !consented || !claimed || !target || !isSlotReady(target.slot)) return null;
 

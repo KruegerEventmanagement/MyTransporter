@@ -1,9 +1,10 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { isSlotReady } from "@/lib/adsense";
 import { useAdsSuppressed } from "@/lib/ad-visibility";
 import { getRouteAdPolicy, type RouteAdPolicy } from "@/lib/ad-placements";
 import { AdSlot } from "./AdSlot";
 import { useAdCmpBootstrap, useAdConsentGranted } from "./useAdCmp";
+import { useAdPathname } from "./useAdPathname";
 
 interface AdRailsProps {
   children: ReactNode;
@@ -20,11 +21,18 @@ interface AdRailsTreeArgs {
   leftLower?: boolean;
   rightLower?: boolean;
   children: ReactNode;
+  contentRef?: RefObject<HTMLDivElement | null>;
 }
 
 const ASIDE_CLASS = "hidden min-w-0 xl:flex xl:w-[160px] xl:shrink-0 xl:flex-col";
-/** Großer Abstand: der zweite Platz liegt weit unten neben weiterem Inhalt. */
-const LOWER_CLASS = "xl:mt-auto xl:pt-[60vh]";
+/**
+ * Zweiter Platz sitzt am unteren Ende der Spalte (mt-auto, kein Padding).
+ * Er wird nur eingehängt, wenn die Inhaltsspalte hoch genug ist
+ * (LOWER_RAIL_MIN_CONTENT_PX); damit erzeugt er nie zusätzliche Seitenhöhe,
+ * auch nicht, wenn er ungefüllt zusammenklappt.
+ */
+const LOWER_CLASS = "xl:mt-auto";
+export const LOWER_RAIL_MIN_CONTENT_PX = 2000;
 
 /**
  * Baut die Layoutstruktur der Werbespalten.
@@ -42,6 +50,7 @@ export function buildAdRailsTree({
   leftLower = false,
   rightLower = false,
   children,
+  contentRef,
 }: AdRailsTreeArgs) {
   const showLeft = !suppressed && (left || leftLower);
   const showRight = !suppressed && (right || rightLower);
@@ -62,7 +71,7 @@ export function buildAdRailsTree({
           ) : null}
         </aside>
       ) : null}
-      <div key={AD_RAILS_CONTENT_KEY} className={railsActive ? "min-w-0 xl:flex-1" : "contents"}>
+      <div key={AD_RAILS_CONTENT_KEY} ref={contentRef} data-ad-content="" className={railsActive ? "min-w-0 xl:flex-1" : "contents"}>
         {children}
       </div>
       {showRight ? (
@@ -98,9 +107,37 @@ export function railFlags(policy: RouteAdPolicy | null, consented: boolean) {
  */
 export function AdRails({ children }: AdRailsProps) {
   const suppressed = useAdsSuppressed();
-  useAdCmpBootstrap(suppressed);
+  const pathname = useAdPathname();
+  useAdCmpBootstrap(suppressed, pathname);
   const consented = useAdConsentGranted();
-  const [policy, setPolicy] = useState<RouteAdPolicy | null>(null);
-  useEffect(() => setPolicy(getRouteAdPolicy(window.location.pathname)), []);
-  return buildAdRailsTree({ suppressed, ...railFlags(policy, consented), children });
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  // Reaktiv aus dem aktuellen Router-Pfad – nie vom vorherigen Pfad.
+  const policy = hydrated ? getRouteAdPolicy(pathname) : null;
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const [tall, setTall] = useState(false);
+  const flags = railFlags(policy, consented);
+  // Nur messbar, wenn die Spalten aktiv sind (sonst display: contents = 0 px).
+  const baseActive = !suppressed && (flags.left || flags.right);
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el || !baseActive) {
+      setTall(false);
+      return;
+    }
+    const read = () => setTall(el.getBoundingClientRect().height >= LOWER_RAIL_MIN_CONTENT_PX);
+    read();
+    if (typeof ResizeObserver !== "function") return;
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [baseActive]);
+  return buildAdRailsTree({
+    suppressed,
+    ...flags,
+    leftLower: flags.leftLower && tall,
+    rightLower: flags.rightLower && tall,
+    children,
+    contentRef,
+  });
 }
