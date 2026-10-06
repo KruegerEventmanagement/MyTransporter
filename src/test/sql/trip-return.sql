@@ -125,7 +125,7 @@ DECLARE
                            'post_fuel','tank_receipt'];
   covered text[] := ARRAY[]::text[];
   -- v2 (geführter Foto-Wizard): 4 Seiten + Innenraum + EIN Instrumentenfoto (Kilometer+Tank),
-  -- Tankbeleg nur wenn der Kunde angibt, getankt zu haben. Ohne flow=v2 gilt unverändert die Altliste.
+  -- plus IMMER Tankbeleg (7 Pflichtnachweise). Ohne flow=v2 gilt unverändert die Altliste.
   v2 boolean := COALESCE(_exceptions->>'flow', '') = 'v2';
   refueled boolean := COALESCE(_exceptions->>'refueled', '') = 'true';
   missing text[];
@@ -164,7 +164,7 @@ BEGIN
 
   IF v2 THEN
     required := ARRAY['post_front','post_back','post_left','post_right','post_interior','post_dashboard'];
-    IF refueled THEN required := array_append(required, 'tank_receipt'::text); END IF;
+    required := array_append(required, 'tank_receipt'::text);
   END IF;
 
   FOREACH k IN ARRAY ARRAY['photos','fuel','receipt'] LOOP

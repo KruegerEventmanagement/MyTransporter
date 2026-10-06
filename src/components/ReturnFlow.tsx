@@ -81,7 +81,7 @@ export interface ReturnSlot {
   exKey: ExceptionKey;
 }
 
-/** Genau 6 Kernfotos; der Tankbeleg folgt nur, wenn der Kunde getankt hat. */
+/** 6 Kernfotos; der Tankbeleg folgt immer als 7. Pflichtschritt. */
 export const RETURN_CORE_SLOTS: readonly ReturnSlot[] = [
   { tag: "post_front", title: "Fahrzeug vorne", hint: "Stelle dich mittig vor das Fahrzeug. Die ganze Front muss im Bild sein.", outline: "front", camera: "front", exKey: "photos" },
   { tag: "post_back", title: "Fahrzeug hinten", hint: "Stelle dich mittig hinter das Fahrzeug. Das ganze Heck muss im Bild sein.", outline: "back", camera: "back", exKey: "photos" },
@@ -100,8 +100,8 @@ export const RETURN_RECEIPT_SLOT: ReturnSlot = {
   exKey: "receipt",
 };
 
-export function returnSlots(refueled: boolean | null): ReturnSlot[] {
-  return refueled ? [...RETURN_CORE_SLOTS, RETURN_RECEIPT_SLOT] : [...RETURN_CORE_SLOTS];
+export function returnSlots(): ReturnSlot[] {
+  return [...RETURN_CORE_SLOTS, RETURN_RECEIPT_SLOT];
 }
 
 interface ReturnFlowProps {
@@ -157,8 +157,9 @@ export function ReturnFlow({
   const draft0 = useRef(userId ? loadReturnDraft(userId, bookingId) : null).current;
   const initialCode = serverReturnCode ?? draft0?.returnCode ?? null;
   const [step, setStep] = useState<Step>(initialStep(initialCode, draft0?.step));
-  const [refueled, setRefueled] = useState<boolean | null>(draft0?.refueled ?? null);
-  const slots = returnSlots(refueled);
+  // Tankbeleg ist immer Pflicht → keine Tank-Frage mehr; Feld bleibt nur für Entwurfs-Kompatibilität.
+  const refueled = true;
+  const slots = returnSlots();
   const [slide, setSlide] = useState(() => Math.max(0, Math.min(draft0?.slide ?? 0, 6)));
   const [dir, setDir] = useState<"next" | "prev">("next");
   /** Aus der Übersicht bearbeitetes Foto: nach Bestätigung zurück zur Übersicht. */
@@ -388,7 +389,7 @@ export function ReturnFlow({
   const latestLocal = (tag: string) =>
     pendingList.filter((p) => p.tag === tag).sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
   const kmValid = endKm.trim() !== "" && Number.isInteger(Number(endKm)) && Number(endKm) >= 0;
-  const allDone = slots.every(slotDone) && kmValid && refueled !== null;
+  const allDone = slots.every(slotDone) && kmValid;
 
   const runOdometerAi = useCallback(
     async (path: string) => {
@@ -572,7 +573,6 @@ export function ReturnFlow({
   const next = async () => {
     if (!slotDone(current)) return;
     if (current.tag === RETURN_DASHBOARD_TAG) {
-      if (refueled === null) return;
       if (!(await saveKmDraft())) return;
     }
     if (editingTag) {
@@ -620,10 +620,9 @@ export function ReturnFlow({
       );
     const test = { path: "admin-test", url: placeholder };
     const next: Record<string, StoredTripPhoto> = {};
-    returnSlots(true).forEach((s) => (next[s.tag] = test));
+    returnSlots().forEach((s) => (next[s.tag] = test));
     setPhotos((p) => ({ ...p, ...next }));
     if (!endKm) setEndKm("42920");
-    if (refueled === null) setRefueled(false);
   };
 
   // ---------- Rückgabemeldung ----------
@@ -657,7 +656,7 @@ export function ReturnFlow({
           endFuelPercent: fuel,
           endKmManual,
           exceptions,
-          mode: { flow: "v2", refueled: refueled === true },
+          mode: { flow: "v2", refueled },
         },
       });
       if (!res || (res as { ok?: boolean }).ok !== true) {
@@ -921,7 +920,6 @@ export function ReturnFlow({
         <div className="mb-6 rounded-2xl border border-border p-4 text-sm">
           <div className="flex justify-between"><span className="text-muted-foreground">Kilometerstand</span><span className="text-foreground">{kmValid ? `${Number(endKm).toLocaleString("de-DE")} km` : "fehlt"}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Tankstand</span><span className="text-foreground">{endFuelPercent !== "" ? `${endFuelPercent} %` : "–"}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Getankt</span><span className="text-foreground">{refueled === null ? "–" : refueled ? "Ja" : "Nein"}</span></div>
           {km && (
             <div className="mt-3 pt-3 border-t border-border" data-testid="km-summary">
               {km.reviewReason ? (
@@ -1002,7 +1000,7 @@ export function ReturnFlow({
   const done = slotDone(current);
   const isDashboard = current.tag === RETURN_DASHBOARD_TAG;
   const confirmedThumb = !candidate ? thumbFor(current.tag, current.title, "w-full h-56") : null;
-  const canNext = done && (!isDashboard || (refueled !== null && kmValid)) && !saving && !uploading;
+  const canNext = done && (!isDashboard || kmValid) && !saving && !uploading;
 
   return (
     <div className="max-w-lg mx-auto overflow-hidden" data-testid="return-wizard">
@@ -1138,18 +1136,6 @@ export function ReturnFlow({
                 {aiRecognition.confidence === "low" ? " (unsicher – bitte prüfen)" : " – bitte prüfen"}
               </p>
             )}
-            <fieldset className="rounded-2xl border border-border p-3">
-              <legend className="px-1 text-sm font-medium text-foreground">Hast du während der Miete getankt?</legend>
-              <div className="mt-1 flex gap-2">
-                {[true, false].map((v) => (
-                  <label key={String(v)} className={`flex-1 min-h-11 rounded-full border flex items-center justify-center gap-2 text-sm cursor-pointer ${refueled === v ? "border-foreground bg-secondary font-semibold" : "border-border"}`}>
-                    <input type="radio" name="ret-refueled" className="sr-only" checked={refueled === v} onChange={() => setRefueled(v)} />
-                    {v ? "Ja" : "Nein"}
-                  </label>
-                ))}
-              </div>
-              {refueled === true && <p className="mt-2 text-xs text-muted-foreground">Im nächsten Schritt fotografierst du den Tankbeleg.</p>}
-            </fieldset>
           </div>
         )}
 

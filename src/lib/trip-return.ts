@@ -24,7 +24,7 @@ export const RETURN_RECEIPT_TAG = "tank_receipt";
 /** v2: EIN gemeinsames Instrumentenfoto für Kilometerstand UND Tankstand. */
 export const RETURN_DASHBOARD_TAG = "post_dashboard";
 
-/** v2-Wizard: genau 6 Kernfotos; Tankbeleg nur bedingt (Kunde hat getankt). */
+/** v2-Wizard: 6 Fahrzeug-/Instrumentenfotos; dazu IMMER der Tankbeleg (7 Pflichtnachweise). */
 export const RETURN_V2_CORE_TAGS = ["post_front", "post_back", "post_left", "post_right", RETURN_INTERIOR_TAG, RETURN_DASHBOARD_TAG] as const;
 
 export const EXCEPTION_COVERS_V2: Record<"photos" | "fuel" | "receipt", readonly string[]> = {
@@ -33,8 +33,9 @@ export const EXCEPTION_COVERS_V2: Record<"photos" | "fuel" | "receipt", readonly
   receipt: [RETURN_RECEIPT_TAG],
 };
 
-export function requiredReturnTagsV2(refueled: boolean): string[] {
-  return refueled ? [...RETURN_V2_CORE_TAGS, RETURN_RECEIPT_TAG] : [...RETURN_V2_CORE_TAGS];
+/** Tankbeleg ist immer Pflicht; der Parameter bleibt nur für Signatur-Kompatibilität. */
+export function requiredReturnTagsV2(_refueled?: boolean): string[] {
+  return [...RETURN_V2_CORE_TAGS, RETURN_RECEIPT_TAG];
 }
 
 export interface ReturnFlowMode {
