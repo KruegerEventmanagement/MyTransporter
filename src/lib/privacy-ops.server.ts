@@ -64,6 +64,10 @@ export interface PrivacyStore {
   deleteUserDocumentRows(uid: string): Promise<void>;
   deleteDevicesAndMarketing(uid: string): Promise<void>;
   countBookings(uid: string): Promise<number>;
+  /** Behaltene eigene Objekte (Fahrtfotos/Belege) vom Login lösen, nichts löschen. */
+  releaseRetainedStorage(uid: string): Promise<number>;
+  /** Noch dem Login gehörende Speicherobjekte (Auth-Löschung wäre blockiert). */
+  countOwnedStorage(uid: string): Promise<number>;
   deleteAuthUser(uid: string): Promise<"deleted" | "missing">;
   deleteProfile(uid: string): Promise<void>;
   // Archivbereinigung
@@ -210,6 +214,9 @@ export async function runAccountDeletion(
     await store.deleteDevicesAndMarketing(uid);
     const bookingCount = await store.countBookings(uid);
     await keep();
+    await store.releaseRetainedStorage(uid);
+    const stillOwned = await store.countOwnedStorage(uid);
+    if (stillOwned > 0) throw new Error(`storage_owned: ${stillOwned} Objekt(e) gehören noch dem Konto`);
     await store.deleteAuthUser(uid); // "missing" bei Wiederaufnahme ist ok
     await store.deleteProfile(uid);
     const completedAt = await store.completeDeletion(uid, token, bookingCount);
