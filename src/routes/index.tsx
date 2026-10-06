@@ -10,6 +10,7 @@ import { Navbar } from "@/components/Navbar";
 
 import { SocialBanner } from "@/components/SocialBanner";
 import { HomeIntroSection } from "@/components/HomeIntroSection";
+import { HomeOfferSummary } from "@/components/HomeOfferSummary";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
@@ -30,6 +31,7 @@ function Index() {
       <Navbar />
       <AdRails>
         <HeroSection />
+        <HomeOfferSummary />
         <BookingSection />
         <SocialBanner />
         <HomeIntroSection />
@@ -44,6 +46,7 @@ function Index() {
           <AdConsentRevokeButton />
           <Link to="/kontakt" className="hover:text-foreground transition-colors">Kontakt</Link>
           <Link to="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
+          <Link to="/mietratgeber" className="hover:text-foreground transition-colors">Mietratgeber</Link>
           <Link to="/ueber-uns" className="hover:text-foreground transition-colors">Über uns</Link>
           <Link to="/werbung" className="hover:text-foreground transition-colors">Werbung am Transporter</Link>
           <Link to="/werbeflaeche" className="hover:text-foreground transition-colors">Partnerangebote</Link>

@@ -42,6 +42,7 @@ export function HomeIntroSection() {
           <Link to="/langzeitmiete" className="underline underline-offset-2 text-foreground">Langzeitmiete</Link>
           <Link to="/umzugstransporter-mieten" className="underline underline-offset-2 text-foreground">Umzugstransporter wählen</Link>
           <Link to="/transporter-mieten-pforzheim-calw" className="underline underline-offset-2 text-foreground">Pforzheim & Calw</Link>
+          <Link to="/mietratgeber" className="underline underline-offset-2 text-foreground">Mietratgeber</Link>
           <Link to="/faq" className="underline underline-offset-2 text-foreground">FAQ</Link>
           <Link to="/kontakt" className="underline underline-offset-2 text-foreground">Kontakt</Link>
         </nav>

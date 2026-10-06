@@ -9,6 +9,8 @@ export const Route = createFileRoute("/werbeflaeche")({
   head: () =>
     pageHead({
       path: "/werbeflaeche",
+      // Reine Partnerlink-Seite: nicht indexieren, Links folgen; kein AdSense-Inventar.
+      robots: "noindex,follow",
       title: "Partnerangebote für Umzug, Möbel & Autozubehör | MyTransporter",
       description:
         "Praktische Tipps für deinen Transport und ausgewählte Partnerangebote rund um Umzug, Möbel, Reifen und Autozubehör. Gekennzeichnete Partnerlinks.",

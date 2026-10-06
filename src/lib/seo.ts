@@ -48,7 +48,7 @@ export const PUBLIC_PAGES = [
   "/kontakt",
   "/ueber-uns",
   "/werbung",
-  "/werbeflaeche",
+  "/mietratgeber",
   "/impressum",
   "/agb",
   "/datenschutz",
@@ -103,6 +103,8 @@ export type PageHeadInput = {
   webPageType?: string;
   /** Zusätzliche Felder direkt am WebPage-Knoten (z. B. mainEntity bei FAQPage). */
   webPageExtra?: Record<string, unknown>;
+  /** Standard index,follow; z. B. "noindex,follow" für reine Partnerlink-Seiten. */
+  robots?: "index,follow" | "noindex,follow";
 };
 
 export function pageHead(input: PageHeadInput) {
@@ -129,7 +131,7 @@ export function pageHead(input: PageHeadInput) {
     meta: [
       { title: input.title },
       { name: "description", content: input.description },
-      { name: "robots", content: "index,follow" },
+      { name: "robots", content: input.robots ?? "index,follow" },
       { property: "og:type", content: input.ogType ?? "website" },
       { property: "og:site_name", content: SITE_NAME },
       { property: "og:locale", content: "de_DE" },
