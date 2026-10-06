@@ -13,6 +13,7 @@ const auth = vi.hoisted(() => ({
   getUser: vi.fn(),
   updateUser: vi.fn(),
   onAuthStateChange: vi.fn(),
+  initialize: vi.fn(),
 }));
 let emit: ((e: string) => void) | null = null;
 
@@ -37,6 +38,7 @@ beforeEach(() => {
     return { data: { subscription: { unsubscribe: vi.fn() } } };
   });
   auth.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+  auth.initialize.mockResolvedValue({ error: null });
 });
 afterEach(() => cleanup());
 
@@ -112,5 +114,57 @@ describe("Passwort-Reset-Seite (simuliert)", () => {
     fireEvent.click(screen.getByText("Passwort speichern"));
     expect(await screen.findByText(/Passwort wurde geändert/)).toBeTruthy();
     expect(auth.updateUser).toHaveBeenLastCalledWith({ password: "geheim123" });
+  });
+});
+
+describe("verzögerte Client-Initialisierung (simuliert)", () => {
+  it("URL bleibt bis zum Konsum stehen; erst danach Prüfung und Entfernen", async () => {
+    setUrl("/reset-password#access_token=T&type=recovery");
+    let consumed = false;
+    let hashSeenByClient = "";
+    let finish!: () => void;
+    auth.initialize.mockImplementation(
+      () =>
+        new Promise((res) => {
+          finish = () => {
+            hashSeenByClient = window.location.hash; // detectSessionInUrl liest die URL erst jetzt
+            consumed = true;
+            res({ error: null });
+          };
+        }),
+    );
+    auth.getSession.mockImplementation(async () =>
+      consumed ? session([{ method: "recovery", timestamp: NOW - 2 }]) : { data: { session: null } },
+    );
+    render(<ResetPasswordView />);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(window.location.hash).not.toBe(""); // noch nicht entfernt
+    expect(auth.getSession).not.toHaveBeenCalled();
+    await act(async () => finish());
+    await waitFor(() => expect(formShown()).not.toBeNull());
+    expect(hashSeenByClient).toContain("type=recovery");
+    expect(window.location.hash).toBe("");
+  });
+
+  it("Initialisierung wirft: Fehleranzeige, Token trotzdem entfernt", async () => {
+    setUrl("/reset-password#access_token=T&type=recovery");
+    auth.initialize.mockRejectedValue(new Error("x"));
+    auth.getSession.mockRejectedValue(new Error("offline"));
+    render(<ResetPasswordView />);
+    expect(await screen.findByText(/nicht geprüft werden/)).toBeTruthy();
+    expect(window.location.hash).toBe("");
+  });
+
+  it("PASSWORD_RECOVERY-Event + späterer fehlschlagender Check: ready bleibt", async () => {
+    setUrl("/reset-password");
+    auth.getSession.mockResolvedValueOnce(session([{ method: "recovery", timestamp: NOW - 2 }]));
+    render(<ResetPasswordView />);
+    await waitFor(() => expect(formShown()).not.toBeNull());
+    auth.getSession.mockResolvedValue({ data: { session: null } });
+    await act(async () => {
+      emit?.("PASSWORD_RECOVERY");
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    expect(formShown()).not.toBeNull();
   });
 });
