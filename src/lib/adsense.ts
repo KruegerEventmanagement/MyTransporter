@@ -9,7 +9,12 @@
 export type AdSenseSlotKey =
   | "railLeft"
   | "railRight"
-  | "inlineContent";
+  | "inlineContent"
+  /**
+   * Mobiler Banner oberhalb des Startseiten-Logos. Absichtlich OHNE Slot-ID:
+   * erst eintragen, wenn im AdSense-Konto eine echte Einheit erzeugt wurde.
+   */
+  | "mobileTop";
 
 export type AdSenseSlots = Partial<Record<AdSenseSlotKey, string>>;
 
@@ -43,6 +48,7 @@ export const ADSENSE_CONFIG: AdSenseConfig = {
   slots: {
     railLeft: "4238348588",
     railRight: "6950298526",
+    // mobileTop: "" – echte Slot-ID aus dem AdSense-Konto hier eintragen.
   },
   autoAds: false,
   siteApproved: false,

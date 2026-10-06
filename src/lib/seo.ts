@@ -48,6 +48,7 @@ export const PUBLIC_PAGES = [
   "/kontakt",
   "/ueber-uns",
   "/werbung",
+  "/werbeflaeche",
   "/impressum",
   "/agb",
   "/datenschutz",

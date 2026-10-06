@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/collapsible";
 import { PartnerBenefits } from "@/components/partner/PartnerBenefits";
 import { PartnerInquiryForm } from "@/components/partner/PartnerInquiryForm";
+import { WebAdInquiryForm } from "@/components/partner/WebAdInquiryForm";
 import type { PartnerPackageId } from "@/lib/partner-packages";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
@@ -238,55 +239,70 @@ function WerbungPage() {
       </section>
 
       {/* Form */}
-      {/* Online-Werbung auf der Website */}
+      {/* Online-Werbung auf der Website: genau zwei feste Desktop-Seitenplätze */}
       <section id="online-werbung" className="px-4 pb-16 scroll-mt-20">
         <div className="max-w-4xl mx-auto rounded-3xl border border-border bg-card p-6 sm:p-10">
           <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center">
             Online-Werbung auf MyTransporter
           </h2>
           <p className="mt-3 text-center text-muted-foreground max-w-2xl mx-auto">
-            Neben der Fläche am Transporter kannst du auch Werbeplätze auf unserer Website buchen.
-            Unsere Seiten werden vor allem von Menschen besucht, die gerade einen Transport, Umzug
-            oder ein Projekt planen – also in einem Moment mit konkretem Bedarf.
+            Wir vermieten genau zwei feste Werbeplätze in den Seitenspalten unserer Website – links und rechts
+            neben dem Inhalt. Besucher planen dort meist gerade einen Transport, Umzug oder ein Projekt.
           </p>
 
-          <div className="mt-8 grid sm:grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-border bg-secondary/40 p-5">
-              <h3 className="text-sm font-bold text-foreground">Passende Branchen</h3>
-              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                <li>Umzugsunternehmen &amp; Umzugshelfer</li>
-                <li>Möbelhäuser &amp; Möbelhandel</li>
-                <li>Baumarkt &amp; Baustoffe</li>
-                <li>Handwerk (Maler, Elektro, Sanitär, Montage)</li>
-                <li>Lagerflächen &amp; Selfstorage</li>
-                <li>Fahrzeugservice (Werkstatt, Reifen, Pflege)</li>
-                <li>Gewerbe &amp; Dienstleistungen aus der Region</li>
+          <div className="mt-8 grid gap-6 md:grid-cols-[1fr_1fr] md:items-center">
+            {/* Schematische Vorschau, kein echter Werbekunde */}
+            <figure aria-label="Vorschau der beiden Seitenplätze" className="rounded-2xl border border-border bg-secondary/40 p-3">
+              <div className="flex gap-2">
+                <div className="flex w-1/5 flex-col items-center justify-center rounded-md border-2 border-dashed border-foreground/60 bg-background py-10 text-center text-[10px] font-bold uppercase leading-tight text-foreground">
+                  Ihr<br />Banner<br />links
+                </div>
+                <div className="flex-1 space-y-2 rounded-md bg-background p-2">
+                  <div className="h-3 w-1/2 rounded bg-muted" />
+                  <div className="h-16 rounded bg-muted" />
+                  <div className="h-3 w-3/4 rounded bg-muted" />
+                  <div className="h-3 w-2/3 rounded bg-muted" />
+                  <div className="h-10 rounded bg-muted" />
+                </div>
+                <div className="flex w-1/5 flex-col items-center justify-center rounded-md border-2 border-dashed border-foreground/60 bg-background py-10 text-center text-[10px] font-bold uppercase leading-tight text-foreground">
+                  Ihr<br />Banner<br />rechts
+                </div>
+              </div>
+              <figcaption className="mt-2 text-center text-[11px] text-muted-foreground">
+                Schematische Darstellung · Format ca. 160 × 600 px
+              </figcaption>
+            </figure>
+
+            <div>
+              <p className="text-3xl font-bold text-foreground">29 € netto</p>
+              <p className="text-sm text-muted-foreground">pro Platz und 30 Tage, zzgl. gesetzlicher Umsatzsteuer</p>
+              <ul className="mt-4 space-y-1.5 text-sm text-muted-foreground">
+                <li>2 Plätze verfügbar: links oder rechts, je ein Werbekunde pro Platz</li>
+                <li>Laufzeit 30 Tage ab vereinbartem Start</li>
+                <li>Kein Abo, keine automatische Verlängerung</li>
+                <li>Sichtbar nur auf Desktop-Bildschirmen ab ca. 1280 px Breite, nicht auf Handy oder Tablet</li>
+                <li>Nicht während Buchung, Zahlung, Login oder im Kundenkonto</li>
+                <li>Keine Garantie für Einblendungen, Klicks, Kunden oder Umsätze</li>
               </ul>
-            </div>
-            <div className="rounded-2xl border border-border bg-secondary/40 p-5">
-              <h3 className="text-sm font-bold text-foreground">Mögliche Platzierungen</h3>
-              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                <li>Desktop: Banner in den freien seitlichen Werbespalten links und rechts</li>
-                <li>Ausschließlich Desktop ab großer Bildschirmbreite, nicht auf Handy oder Tablet</li>
-                <li>Keine Banner innerhalb oder zwischen Inhaltsabschnitten</li>
-                <li>Keine Pop-ups, keine Einblendungen über dem Inhalt, keine mobilen Werbeplätze</li>
-              </ul>
+              <a
+                href="#web-ad-form"
+                className="mt-5 inline-flex rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background hover:opacity-90 transition-opacity"
+              >
+                Werbeplatz für 29 € netto anfragen
+              </a>
             </div>
           </div>
 
-          <p className="mt-6 text-sm text-muted-foreground">
-            Preise für Online-Werbeplätze <span className="font-semibold text-foreground">auf Anfrage</span>,
-            abhängig von Platzierung und Laufzeit. Wir stimmen Format, Zeitraum und Preis individuell
-            mit dir ab.
+          <p className="mt-6 text-xs text-muted-foreground">
+            Angebot nur für Unternehmen. Der Preis gilt ausschließlich für direkt von uns vermietete Werbeplätze, nicht
+            für automatisch ausgelieferte Google-Anzeigen. Die Anfrage ist unverbindlich; erst nach unserer
+            Bestätigung und Abstimmung des Starttermins entsteht ein Auftrag. Partnerlinks anderer Anbieter findest
+            du getrennt davon unter{" "}
+            <Link to="/werbeflaeche" className="underline">Partnerangebote</Link>.
           </p>
 
-          <div className="mt-6 flex justify-center">
-            <a
-              href="mailto:info@mytransporter.org?subject=Anfrage%20Online-Werbung%20auf%20MyTransporter"
-              className="rounded-full bg-foreground text-background px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
-            >
-              Online-Werbung anfragen
-            </a>
+          <div id="web-ad-form" className="mt-8 scroll-mt-20">
+            <WebAdInquiryForm />
           </div>
         </div>
       </section>
@@ -314,6 +330,7 @@ function WerbungPage() {
           <Link to="/datenschutz" className="hover:text-foreground transition-colors">Datenschutz</Link>
           <AdConsentRevokeButton />
           <Link to="/kontakt" className="hover:text-foreground transition-colors">Kontakt</Link>
+          <Link to="/werbeflaeche" className="hover:text-foreground transition-colors">Partnerangebote</Link>
         </div>
       </footer>
     </AdRails>

@@ -1,4 +1,5 @@
 import logoImage from "@/assets/logo.png";
+import { MobileTopAd } from "@/components/ads/MobileTopAd";
 function goToBooking() {
   window.dispatchEvent(new CustomEvent("mt:go-to-booking-start"));
   document.getElementById("booking")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -7,6 +8,7 @@ function goToBooking() {
 export function HeroSection() {
   return (
     <section className="pt-10 pb-6 px-4">
+      <MobileTopAd />
       <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
         <button
           type="button"

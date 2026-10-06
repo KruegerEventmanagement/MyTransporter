@@ -106,15 +106,21 @@ function OfferCard({ offer, rail }: { offer: AffiliateOffer; rail: AffiliateRail
   );
 }
 
-/** Acht Partnerkarten für eine der beiden reinen Desktop-Seitenleisten. */
-export function AffiliateRail({ rail }: { rail: AffiliateRail }) {
-  const offers = affiliateOffersForRail(rail);
+/**
+ * Partnerangebote ausschließlich für die eigene Seite /werbeflaeche.
+ * Links bleiben unverändert (fester, nicht personenbezogener clickref je Gruppe).
+ */
+export function AffiliateOfferGrid({ group, title }: { group: AffiliateRail; title: string }) {
+  const offers = affiliateOffersForRail(group);
   if (offers.length === 0) return null;
   return (
-    <div data-testid={`affiliate-rail-${rail}`} data-rail={rail} className="flex min-w-0 flex-col gap-3 py-8">
-      {offers.map((offer) => (
-        <OfferCard key={offer.id} offer={offer} rail={rail} />
-      ))}
-    </div>
+    <section aria-label={title} data-testid={`affiliate-group-${group}`} data-rail={group}>
+      <h2 className="text-lg font-bold text-foreground">{title}</h2>
+      <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3">
+        {offers.map((offer) => (
+          <OfferCard key={offer.id} offer={offer} rail={group} />
+        ))}
+      </div>
+    </section>
   );
 }
