@@ -18,11 +18,17 @@ import { classifyResendError, sendEmail, redactSecrets } from "@/lib/booking-ema
 const respond = (status: number, body: unknown) =>
   vi.fn(async () => new Response(JSON.stringify(body), { status }));
 
+let errorSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
   inserts.length = 0;
-  process.env.RESEND_API_KEY = "re_testtesttest123456";
+  vi.stubEnv("RESEND_API_KEY", "re_testtesttest123456");
+  errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+  errorSpy.mockRestore();
+});
 
 describe("classifyResendError", () => {
   it("401 validation_error 'API key is invalid' → Schlüssel ungültig", () => {
@@ -56,12 +62,30 @@ describe("classifyResendError", () => {
   });
 });
 
-describe("sendEmail Wahrheit gesendet/nicht gesendet", () => {
-  it("echter 401 invalid key → false + Hinweis, kein Secret im Log", async () => {
+describe("sendEmail (simulierte Resend-Antworten) Wahrheit gesendet/nicht gesendet", () => {
+  it("simulierter 401 validation_error invalid key → false + Hinweis, kein Secret im Log", async () => {
     vi.stubGlobal("fetch", respond(401, { statusCode: 401, name: "validation_error", message: "API key is invalid" }));
     expect(await sendEmail("a@b.de", "S", "<p/>")).toBe(false);
     expect(String(inserts[0].body)).toMatch(/Schlüssel ungültig/);
     expect(String(inserts[0].body)).not.toContain("re_testtesttest123456");
+  });
+  it("simulierter Fehlertext mit Schlüssel/Bearer wird in Konsole und DB-Log geschwärzt", async () => {
+    const leaked = "re_LEAKEDkey9876543210";
+    vi.stubGlobal(
+      "fetch",
+      respond(401, { name: "validation_error", message: `API key is invalid: ${leaked} (Authorization: Bearer ${leaked})` }),
+    );
+    expect(await sendEmail("a@b.de", "S", "<p/>")).toBe(false);
+    const consoleOut = errorSpy.mock.calls.map((c: unknown[]) => c.map(String).join(" ")).join("\n");
+    expect(consoleOut).toContain("Resend send failed");
+    expect(consoleOut).not.toContain("LEAKEDkey");
+    expect(String(inserts[0].body)).not.toContain("LEAKEDkey");
+    expect(String(inserts[0].body)).toContain("re_***");
+  });
+  it("429 Hinweis verspricht keine Wiederholung", () => {
+    const h = classifyResendError(429, "x").hint ?? "";
+    expect(h).toBe("Vorübergehende Störung beim Mailanbieter; Versand nicht erfolgt.");
+    expect(h).not.toMatch(/erneut/);
   });
   it("restricted_api_key → false, Berechtigungshinweis", async () => {
     vi.stubGlobal("fetch", respond(401, { name: "restricted_api_key", message: "restricted" }));
@@ -74,7 +98,7 @@ describe("sendEmail Wahrheit gesendet/nicht gesendet", () => {
     expect(String(inserts[0].body)).toMatch(/Domain/);
     expect(String(inserts[0].body)).not.toMatch(/ungültig/);
   });
-  it("erfolgreicher Versand → true, kein Fehlerprotokoll", async () => {
+  it("simulierter erfolgreicher Versand → true, kein Fehlerprotokoll", async () => {
     vi.stubGlobal("fetch", respond(200, { id: "msg_1" }));
     expect(await sendEmail("a@b.de", "S", "<p/>")).toBe(true);
     expect(inserts).toHaveLength(0);
