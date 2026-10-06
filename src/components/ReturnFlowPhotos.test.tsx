@@ -77,18 +77,18 @@ describe("ReturnFlow – native Foto-Wege", () => {
     expect(screen.getByText(/^Weiter/).closest("button")!.disabled).toBe(false);
   });
 
-  it("verweigerte Kamera: Galerie funktioniert; erneut aufnehmen ersetzt im selben Slot", async () => {
+  it("verweigerte Kamera: Galerie funktioniert, gleiche Datei im nächsten Slot erneut wählbar, gesicherter Slot gesperrt", async () => {
     setMediaDevices(async () => Promise.reject(domError("NotAllowedError")));
     mount();
     openSlot(/Vorne$/);
     await screen.findByText(/Kamerazugriff nicht erlaubt/);
     const f = imageFile("gleich.png", "image/png");
     await pickVia("gallery", f);
-    openSlot(/Vorne$/);
+    expect(screen.getByText(/Vorne$/).closest("button")!.disabled).toBe(true);
+    openSlot(/Hinten$/);
     await pickVia("gallery", f);
-    await waitFor(() => expect(tags().filter((t) => t === "post_front").length).toBeGreaterThanOrEqual(1));
-    expect(tags().every((t) => t === "post_front")).toBe(true);
-    expect(screen.getByTestId("local-post_front")).toBeTruthy();
+    expect(tags()).toEqual(["post_back", "post_front"]);
     expect(screen.getByText(/^Weiter/).closest("button")!.disabled).toBe(true);
   });
+});
 });
