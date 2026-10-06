@@ -39,8 +39,7 @@ export const WebAdInquirySchema = z.object({
   startDate: z
     .string()
     .trim()
-    .refine((v) => v === "" || isRealCalendarDate(v), "Ungültiges Startdatum")
-    .refine((v) => v === "" || !isRealCalendarDate(v) || v >= berlinToday(), "Startdatum liegt in der Vergangenheit"),
+    .refine((v) => v === "" || isRealCalendarDate(v), "Ungültiges Startdatum"),
   message: z.string().trim().max(2000),
   consent: z.literal(true, { errorMap: () => ({ message: "Zustimmung fehlt" }) }),
   /** Honeypot: muss leer bleiben. */
