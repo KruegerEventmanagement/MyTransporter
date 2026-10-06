@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { isNativeApp } from "@/lib/native/platform";
 import { subscribeAdConsent } from "@/lib/adsense-consent";
 import { resetAdSenseScriptLoad } from "@/components/ads/adsense-loader";
 import {
@@ -22,7 +23,8 @@ import {
 
 export function useAdCmpBootstrap(suppressed: boolean): void {
   useEffect(() => {
-    if (suppressed) {
+    // Native App-Screens laden nie AdSense/CMP-Scripts.
+    if (suppressed || isNativeApp()) {
       // Unterdrückung: sofort pausieren und Listener/Timer abbauen, damit
       // veraltete Callbacks nichts mehr freigeben können.
       teardownAdConsentCmp();

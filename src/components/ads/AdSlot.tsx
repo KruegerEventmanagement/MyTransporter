@@ -3,14 +3,19 @@ import { ADSENSE_CONFIG, getSlotId, isSlotReady, type AdSenseSlotKey } from "@/l
 import { useAdsSuppressed } from "@/lib/ad-visibility";
 import { areAdRequestsAllowed } from "@/lib/adsense-cmp";
 import { adRequestsCurrentlyPermitted, ensureAdSenseScript } from "./adsense-loader";
+import { isNativeApp } from "@/lib/native/platform";
 
 /** Seitenspalten erscheinen ausschließlich auf breiten Desktop-Fenstern. */
 const WIDE_DESKTOP_QUERY = "(min-width: 1280px)";
+/** Mobiler Banner nur auf echten Handybreiten. */
+const MOBILE_QUERY = "(max-width: 767px)";
 
-function isWideDesktop(): boolean {
+export type AdViewport = "desktop" | "mobile";
+
+export function matchesAdViewport(viewport: AdViewport): boolean {
   if (typeof window === "undefined") return false;
-  if (typeof window.matchMedia !== "function") return true;
-  return window.matchMedia(WIDE_DESKTOP_QUERY).matches;
+  if (typeof window.matchMedia !== "function") return false; // fail-closed
+  return window.matchMedia(viewport === "mobile" ? MOBILE_QUERY : WIDE_DESKTOP_QUERY).matches;
 }
 
 interface AdSlotProps {
@@ -19,6 +24,10 @@ interface AdSlotProps {
   minHeight?: number;
   className?: string;
   label?: string;
+  /** Viewport, für den die Fläche gedacht ist; außerhalb davon keine Anfrage. */
+  viewport?: AdViewport;
+  /** Reserviert minHeight bereits vor der Befüllung (gegen Layout-Sprünge). */
+  reserve?: boolean;
 }
 
 /**
@@ -38,7 +47,14 @@ interface AdSlotProps {
  *   anderer, weiterhin berechtigter Flächen; das Pausieren übernimmt der
  *   CMP-/Suppression-Lebenszyklus (useAdCmp).
  */
-export function AdSlot({ slot, minHeight = 250, className, label = "Anzeige" }: AdSlotProps) {
+export function AdSlot({
+  slot,
+  minHeight = 250,
+  className,
+  label = "Anzeige",
+  viewport = "desktop",
+  reserve = false,
+}: AdSlotProps) {
   const suppressed = useAdsSuppressed();
   const ready = isSlotReady(slot);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -49,7 +65,7 @@ export function AdSlot({ slot, minHeight = 250, className, label = "Anzeige" }: 
   const [unfilled, setUnfilled] = useState(false);
 
   useEffect(() => {
-    if (!ready || suppressed) return;
+    if (!ready || suppressed || isNativeApp()) return;
     const el = containerRef.current;
     if (!el) return;
 
@@ -58,7 +74,7 @@ export function AdSlot({ slot, minHeight = 250, className, label = "Anzeige" }: 
       if (cancelled) return;
       const ins = insRef.current;
       if (!ins || initializedIns.current === ins) return; // pro echtem <ins> nur einmal
-      if (!isWideDesktop()) return; // keine Anfragen für ausgeblendete Mobilansicht
+      if (!matchesAdViewport(viewport)) return; // keine Anfragen für ausgeblendete Viewports
       const width = el.getBoundingClientRect().width;
       if (width <= 0) return; // niemals mit Breite 0 anfragen
       if (!areAdRequestsAllowed()) return; // QA-Modus/unfertige Konfiguration: nie anfragen
@@ -90,7 +106,7 @@ export function AdSlot({ slot, minHeight = 250, className, label = "Anzeige" }: 
       observer.disconnect();
       // Kein globales Pausieren hier: andere berechtigte Flächen bleiben aktiv.
     };
-  }, [ready, suppressed]);
+  }, [ready, suppressed, viewport]);
 
   // Echten Füllstatus von Google beobachten und leere Flächen zusammenklappen.
   useEffect(() => {
@@ -103,7 +119,7 @@ export function AdSlot({ slot, minHeight = 250, className, label = "Anzeige" }: 
     return () => mo.disconnect();
   }, [active]);
 
-  if (!ready || suppressed || !areAdRequestsAllowed()) return null;
+  if (!ready || suppressed || isNativeApp() || !areAdRequestsAllowed()) return null;
 
   const slotId = getSlotId(slot);
   if (!slotId) return null;
@@ -112,9 +128,9 @@ export function AdSlot({ slot, minHeight = 250, className, label = "Anzeige" }: 
     <div
       ref={containerRef}
       className={className}
-      style={unfilled ? { display: "none" } : undefined}
+      style={unfilled ? { display: "none" } : reserve ? { minHeight: minHeight + 16 } : undefined}
     >
-      {active && !unfilled && (
+      {(active || reserve) && !unfilled && (
         <span className="mb-1 block text-[10px] uppercase tracking-wider text-muted-foreground">
           {label}
         </span>

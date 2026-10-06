@@ -3,8 +3,6 @@ import { isSlotReady } from "@/lib/adsense";
 import { useAdsSuppressed } from "@/lib/ad-visibility";
 import { AdSlot } from "./AdSlot";
 import { useAdCmpBootstrap, useAdConsentGranted } from "./useAdCmp";
-import { AffiliateRail } from "./AffiliateOffers";
-import { activeAffiliateOffers } from "@/lib/affiliate";
 
 interface AdRailsProps {
   children: ReactNode;
@@ -17,8 +15,6 @@ interface AdRailsTreeArgs {
   suppressed: boolean;
   left: boolean;
   right: boolean;
-  /** Awin-Partnerkarten unabhängig von den AdSense-Slots. */
-  affiliate?: boolean;
   children: ReactNode;
 }
 
@@ -36,11 +32,10 @@ export function buildAdRailsTree({
   suppressed,
   left,
   right,
-  affiliate = false,
   children,
 }: AdRailsTreeArgs) {
-  const showLeft = !suppressed && (left || affiliate);
-  const showRight = !suppressed && (right || affiliate);
+  const showLeft = !suppressed && left;
+  const showRight = !suppressed && right;
   const railsActive = showLeft || showRight;
   const asideClass = "hidden min-w-0 xl:block xl:w-[160px] xl:shrink-0";
 
@@ -52,7 +47,6 @@ export function buildAdRailsTree({
       {showLeft ? (
         <aside key="ad-rails-left" aria-label="Anzeige" className={asideClass}>
           {left ? <AdSlot slot="railLeft" minHeight={600} /> : null}
-          {affiliate ? <AffiliateRail rail="left" /> : null}
         </aside>
       ) : null}
       <div
@@ -64,7 +58,6 @@ export function buildAdRailsTree({
       {showRight ? (
         <aside key="ad-rails-right" aria-label="Anzeige" className={asideClass}>
           {right ? <AdSlot slot="railRight" minHeight={600} /> : null}
-          {affiliate ? <AffiliateRail rail="right" /> : null}
         </aside>
       ) : null}
     </div>
@@ -72,6 +65,8 @@ export function buildAdRailsTree({
 }
 
 /**
+ * Awin-Partnerangebote erscheinen hier bewusst NICHT mehr (nur /werbeflaeche).
+ *
  * Responsives Layout mit reservierten Werbespalten links und rechts.
  *
  * - Inaktiv (nicht konfiguriert / keine Einwilligung / transaktionaler Schritt):
@@ -90,7 +85,6 @@ export function AdRails({ children }: AdRailsProps) {
     suppressed,
     left: consented && isSlotReady("railLeft"),
     right: consented && isSlotReady("railRight"),
-    affiliate: activeAffiliateOffers().length > 0,
     children,
   });
 }
