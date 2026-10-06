@@ -487,31 +487,14 @@ export function DocumentScanner({
   // Echte, nur visuell versteckte Eingaben (kein display:none – iOS/Android öffnen sie so zuverlässig).
   // Aktivierung ausschließlich per <label htmlFor> bzw. synchronem click() im Nutzerklick.
   const fileInputs = (
-    <>
-      <input
-        ref={cameraInputRef}
-        id={cameraInputId}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        tabIndex={-1}
-        aria-hidden="true"
-        className="sr-only"
-        data-testid="doc-camera-input"
-        onChange={handleFilePicked}
-      />
-      <input
-        ref={galleryInputRef}
-        id={galleryInputId}
-        type="file"
-        accept="image/*,.heic,.heif"
-        tabIndex={-1}
-        aria-hidden="true"
-        className="sr-only"
-        data-testid="doc-gallery-input"
-        onChange={handleFilePicked}
-      />
-    </>
+    <NativePhotoInputs
+      cameraId={cameraInputId}
+      galleryId={galleryInputId}
+      cameraRef={cameraInputRef}
+      galleryRef={galleryInputRef}
+      onChange={handleFilePicked}
+      testIdPrefix="doc"
+    />
   );
 
   const pickerLabels = (variant: "card" | "overlay") => {
