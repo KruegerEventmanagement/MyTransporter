@@ -9,7 +9,8 @@ import {
 
 describe("sichere Callback-URL", () => {
   it("Live-Domains bleiben, localhost/App-Shell/fremde Hosts -> kanonisch", () => {
-    expect(passwordResetRedirect("https://www.mytransporter.org")).toBe("https://www.mytransporter.org/reset-password");
+    expect(passwordResetRedirect("https://www.mytransporter.org")).toBe("https://mytransporter.org/reset-password");
+    expect(passwordResetRedirect("https://id-preview--fremd.lovable.app")).toBe("https://mytransporter.org/reset-password");
     expect(passwordResetRedirect("http://localhost:8080")).toBe("https://mytransporter.org/reset-password");
     expect(passwordResetRedirect("capacitor://localhost")).toBe("https://mytransporter.org/reset-password");
     expect(passwordResetRedirect("https://localhost")).toBe("https://mytransporter.org/reset-password");
