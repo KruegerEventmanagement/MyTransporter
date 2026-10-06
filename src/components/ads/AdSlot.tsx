@@ -3,7 +3,7 @@ import { ADSENSE_CONFIG, getSlotId, isSlotReady, type AdSenseSlotKey } from "@/l
 import { useAdsSuppressed } from "@/lib/ad-visibility";
 import { areAdRequestsAllowed, lastAdConsentEvaluation } from "@/lib/adsense-cmp";
 import { getRouteAdPolicy } from "@/lib/ad-placements";
-import { areAdsSuppressedNow } from "@/lib/ad-visibility";
+import { areAdsSuppressed } from "@/lib/ad-visibility";
 import { adRequestsCurrentlyPermitted, ensureAdSenseScript } from "./adsense-loader";
 import { isNativeApp } from "@/lib/native/platform";
 
@@ -85,7 +85,7 @@ export function AdSlot({
     const eligibleNow = () =>
       !cancelled &&
       !isNativeApp() &&
-      !areAdsSuppressedNow() &&
+      !areAdsSuppressed() &&
       getRouteAdPolicy(window.location.pathname) !== null &&
       matchesAdViewport(viewport) &&
       el.isConnected &&
