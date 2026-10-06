@@ -6,14 +6,14 @@ const NOW = Math.floor(Date.now() / 1000);
 const jwt = (amr: Array<{ method: string; timestamp: number }>, sub = "u1") =>
   `x.${btoa(JSON.stringify({ sub, amr })).replace(/=+$/, "")}.y`;
 
-const auth = {
+const auth = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   verifyOtp: vi.fn(),
   getSession: vi.fn(),
   getUser: vi.fn(),
   updateUser: vi.fn(),
   onAuthStateChange: vi.fn(),
-};
+}));
 let emit: ((e: string) => void) | null = null;
 
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth } }));
