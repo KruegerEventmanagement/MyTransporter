@@ -90,7 +90,7 @@ describe("echter Checkout-Handler + Webhook-Persistenz", () => {
     const { res, s, total, md } = await checkout({ customKm: 503, addonIds: ["umzugspaket"], couponCode: "BDAY" });
     expect("clientSecret" in res).toBe(true);
     const amounts = s.line_items.map((l: any) => l.price_data.unit_amount);
-    expect(amounts).toContain(9135); // Paket, nicht rabattiert
+    expect(amounts).toContain(1035); // Paket, nicht rabattiert
     expect(amounts).toContain(8910); // 99 € − 10 %
     const b = persist(md, total);
     if (b.kind !== "ok") throw new Error(b.reason);
@@ -107,7 +107,7 @@ describe("echter Checkout-Handler + Webhook-Persistenz", () => {
     const b = persist(md, total);
     if (b.kind !== "ok") throw new Error(b.reason);
     expect(b.planPrice).toBe(99);
-    expect(b.addonsTotalCents).toBe(9135);
+    expect(b.addonsTotalCents).toBe(1035);
     expect(Math.round(b.planPrice * 100) + b.addonsTotalCents + 20000).toBe(total);
   });
 

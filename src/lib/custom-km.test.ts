@@ -10,11 +10,10 @@ const eur = (planId: string, km: number, c: "l1h1" | "l4h2" | "l5h2" = "l1h1") =
 
 describe("Beispiele L1H1", () => {
   it("24 h", () => {
-    expect([200, 300, 400, 500, 503, 700, 800, 803].map((k) => eur("24h_300", k))).toEqual([99, 144, 189, 189, 190.35, 279, 299, 300.35]);
+    expect([480, 500, 503, 700, 800, 803].map((k) => eur("24h_300", k))).toEqual([99, 108, 109.35, 198, 243, 244.35]);
     const q = quoteCustomKm("24h_300", "l1h1", 503)!;
-    expect([q.consideredPlanId, q.contractKm, q.surchargeCents, q.rateCents]).toEqual(["24h_500", 503, 9135, 45]);
-    expect(customKmLabel(q)).toContain("berechnet über");
-    expect(quoteCustomKm("24h_300", "l1h1", 400)!.contractKm).toBe(500);
+    expect([q.consideredPlanId, q.contractKm, q.surchargeCents, q.rateCents]).toEqual(["24h_300", 503, 1035, 45]);
+    expect(quoteCustomKm("24h_300", "l1h1", 400)!.contractKm).toBe(480);
   });
   it("Mehrtage/Woche", () => {
     expect([600, 900, 1200].map((k) => eur("multi_3d", k))).toEqual([269, 404, 539]);
@@ -25,18 +24,18 @@ describe("Beispiele L1H1", () => {
     expect(quoteCustomKm("multi_7d", "l1h1", 2000)!.rateCents).toBe(45);
   });
   it("500/800-Grenzen ±1 km", () => {
-    expect(eur("24h_300", 499)).toBe(189);
-    expect(eur("24h_300", 501)).toBe(189.45);
-    expect(eur("24h_300", 799)).toBe(299); // 800er-Paket günstiger als 500 + 299 × 0,45
-    expect(eur("24h_300", 801)).toBe(299.45);
+    expect(eur("24h_300", 479)).toBe(99);
+    expect(eur("24h_300", 481)).toBe(99.45);
+    expect(eur("24h_300", 799)).toBe(242.55);
+    expect(eur("24h_300", 801)).toBe(243.45);
   });
 });
 
 describe("Regeln", () => {
   it("≤ enthalten → 0 € Aufschlag, volles Kontingent, keine Gutschrift", () => {
-    for (const k of [0, 100, 200]) {
+    for (const k of [0, 100, 480]) {
       const q = quoteCustomKm("24h_300", "l1h1", k)!;
-      expect([q.surchargeCents, q.contractKm]).toEqual([0, 200]);
+      expect([q.surchargeCents, q.contractKm]).toEqual([0, 480]);
     }
     expect(quoteCustomKm("multi_3d", "l1h1", 0)!.totalRentCents).toBe(26900);
   });
@@ -47,7 +46,7 @@ describe("Regeln", () => {
   });
   it("kein Dauerwechsel: 3h/6h bleiben bei eigenem Satz", () => {
     const q = quoteCustomKm("3h", "l1h1", 167)!;
-    expect([q.consideredPlanId, q.surchargeCents]).toEqual(["3h", 4500]);
+    expect([q.consideredPlanId, q.surchargeCents]).toEqual(["3h", 4815]);
   });
   it("jede Klasse × Tarif: nie negativ, Kontingent ≥ Original, monoton", () => {
     for (const c of VEHICLE_CLASSES) for (const p of planCatalog(c)) {
