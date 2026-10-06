@@ -91,3 +91,24 @@ describe("ReturnFlow – native Foto-Wege", () => {
     expect(screen.getByText(/^Weiter/).closest("button")!.disabled).toBe(true);
   });
 });
+
+describe("ReturnFlow – Bearbeitungspauschale", () => {
+  it("Hinweis sichtbar; technisches Problem ohne, bewusstes Nichtbereitstellen mit Pauschalen-Hinweis", async () => {
+    setMediaDevices(null);
+    mount();
+    expect(screen.getByTestId("documentation-fee-notice").textContent).toMatch(/Bearbeitungspauschale von 30 € berechnet/);
+    fireEvent.click(screen.getByText("Foto oder Kamera funktioniert nicht?"));
+    // Begründung erst nach Einordnung
+    expect(screen.queryByLabelText(/Bitte kurz begründen/)).toBeNull();
+    fireEvent.click(screen.getByLabelText(/Technisches Problem/));
+    expect(screen.getByTestId("exception-photos-technical").textContent).toMatch(/keine Bearbeitungspauschale/);
+    expect(screen.queryByTestId("exception-photos-fee")).toBeNull();
+    fireEvent.change(screen.getByLabelText(/Bitte kurz begründen/), { target: { value: "Galerie öffnet nicht" } });
+    const draft = () => JSON.stringify(Object.fromEntries(Object.entries(localStorage)));
+    await waitFor(() => expect(draft()).toMatch(/\[Technisches Problem\] Galerie öffnet nicht/));
+    fireEvent.click(screen.getByLabelText(/nicht bereitstellen/));
+    expect(screen.getByTestId("exception-photos-fee").textContent).toMatch(/30 €/);
+    expect((screen.getByLabelText(/Bitte kurz begründen/) as HTMLTextAreaElement).value).toBe("Galerie öffnet nicht");
+    await waitFor(() => expect(draft()).toMatch(/\[Nachweis nicht bereitgestellt\] Galerie öffnet nicht/));
+  });
+});

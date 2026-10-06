@@ -1,4 +1,12 @@
 import { isPhysicalAddon } from "@/lib/custom-km";
+import { DocumentationFeeNotice } from "./DocumentationFeeNotice";
+import {
+  EXCEPTION_KIND_LABEL,
+  exceptionKind,
+  stripExceptionKind,
+  withExceptionKind,
+  type ExceptionKind,
+} from "@/lib/documentation-fee";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Camera, ChevronRight, Key, AlertTriangle, Plus, X, ScanLine, Fuel, CloudOff, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -531,14 +539,18 @@ export function ReturnFlow({
   );
 
   const notice = (
+    <>
     <p className="mb-4 rounded-2xl border border-border p-3 text-xs leading-relaxed text-muted-foreground" data-testid="return-notice">
       {RETURN_DOCUMENTATION_NOTICE}
     </p>
+    <DocumentationFeeNotice />
+    </>
   );
 
   const exceptionBox = (key: ExceptionKey, label: string) => {
     const value = exceptions[key] ?? "";
     const open = openException === key || value.length > 0;
+    const kind = exceptionKind(value);
     return (
       <div className="mb-4">
         {!open ? (
@@ -546,18 +558,46 @@ export function ReturnFlow({
             {label}
           </button>
         ) : (
-          <div className="rounded-2xl border border-border p-3">
-            <label className="text-xs font-medium text-foreground" htmlFor={`ex-${key}`}>
-              {label} – bitte kurz begründen (mind. {MIN_REASON_LENGTH} Zeichen). MyTransporter prüft das manuell.
-            </label>
-            <textarea
-              id={`ex-${key}`}
-              value={value}
-              maxLength={500}
-              onChange={(e) => setExceptions((x) => ({ ...x, [key]: e.target.value }))}
-              className="mt-2 w-full rounded-xl border border-border bg-background p-2 text-sm"
-              rows={2}
-            />
+          <div className="rounded-2xl border border-border p-3" data-testid={`exception-${key}`}>
+            <p className="text-xs font-medium text-foreground">{label} – was trifft zu?</p>
+            <div className="mt-2 flex flex-col gap-1.5" role="radiogroup" aria-label={`${label}: Einordnung`}>
+              {(["technical", "not_provided"] as ExceptionKind[]).map((k) => (
+                <label key={k} className="flex min-h-11 items-center gap-2 text-xs text-foreground">
+                  <input
+                    type="radio"
+                    name={`ex-kind-${key}`}
+                    checked={kind === k}
+                    onChange={() => setExceptions((x) => ({ ...x, [key]: withExceptionKind(k, x[key] ?? "") }))}
+                  />
+                  {EXCEPTION_KIND_LABEL[k]}
+                </label>
+              ))}
+            </div>
+            {kind === "technical" && (
+              <p className="mt-2 text-xs text-muted-foreground" data-testid={`exception-${key}-technical`}>
+                Technische Probleme lösen keine Bearbeitungspauschale aus. MyTransporter prüft den Fall manuell.
+              </p>
+            )}
+            {kind === "not_provided" && (
+              <div className="mt-2" data-testid={`exception-${key}-fee`}>
+                <DocumentationFeeNotice compact />
+              </div>
+            )}
+            {(kind || value.length > 0) && (
+              <>
+                <label className="mt-2 block text-xs font-medium text-foreground" htmlFor={`ex-${key}`}>
+                  Bitte kurz begründen (mind. {MIN_REASON_LENGTH} Zeichen). MyTransporter prüft das manuell.
+                </label>
+                <textarea
+                  id={`ex-${key}`}
+                  value={stripExceptionKind(value)}
+                  maxLength={460}
+                  onChange={(e) => setExceptions((x) => ({ ...x, [key]: kind ? withExceptionKind(kind, e.target.value) : e.target.value }))}
+                  className="mt-2 w-full rounded-xl border border-border bg-background p-2 text-sm"
+                  rows={2}
+                />
+              </>
+            )}
           </div>
         )}
       </div>

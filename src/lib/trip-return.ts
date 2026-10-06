@@ -1,3 +1,4 @@
+import { stripExceptionKind } from "./documentation-fee";
 /**
  * Rückgabe: Pflichtnachweise, Ausnahmen und Kilometerauswertung.
  * Rein und testbar; wird von UI und Server-Rückgabemeldung gemeinsam genutzt.
@@ -42,8 +43,9 @@ export const MIN_REASON_LENGTH = 10;
 
 export type ReturnExceptions = Partial<Record<ExceptionKey, string>>;
 
+/** Begründungstext zählt ohne die Einordnungs-Kennung ([Technisches Problem] / [Nachweis nicht bereitgestellt]). */
 export function validReason(r: string | null | undefined): boolean {
-  return typeof r === "string" && r.trim().length >= MIN_REASON_LENGTH;
+  return typeof r === "string" && stripExceptionKind(r).trim().length >= MIN_REASON_LENGTH;
 }
 
 export function cleanExceptions(ex: ReturnExceptions | null | undefined): ReturnExceptions {
