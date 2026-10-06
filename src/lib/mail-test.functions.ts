@@ -17,26 +17,22 @@ export const sendAdminMailTest = createServerFn({ method: "POST" })
           const { data: ok } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
           return !!ok;
         },
-        findByRequest: async (id) =>
-          (await db.from("mail_test_runs").select("status, test_id, created_at").eq("request_id", id).maybeSingle()).data ?? null,
-        lastRunAt: async (adminId) =>
-          (
-            await db
-              .from("mail_test_runs")
-              .select("created_at")
-              .eq("admin_id", adminId)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle()
-          ).data?.created_at ?? null,
-        insertRun: async (row) => {
-          const { error } = await db.from("mail_test_runs").insert(row);
-          if (error?.code === "23505") return "duplicate";
-          if (error) throw new Error("Testprotokoll fehlgeschlagen");
-          return "ok";
+        claim: async (row) => {
+          const { data: res, error } = await db.rpc("claim_mail_test", {
+            _admin: row.admin_id,
+            _request: row.request_id,
+            _test_id: row.test_id,
+            _cooldown_seconds: 60,
+          });
+          if (error || !res?.state) throw new Error("Testprotokoll fehlgeschlagen");
+          return res;
         },
         setStatus: async (id, status) => {
-          await db.from("mail_test_runs").update({ status, updated_at: new Date().toISOString() }).eq("request_id", id);
+          const { error } = await db
+            .from("mail_test_runs")
+            .update({ status, updated_at: new Date().toISOString() })
+            .eq("request_id", id);
+          if (error) throw new Error("Status-Update fehlgeschlagen");
         },
         send: (to, subject, html, key) => sendEmail(to, subject, html, undefined, key),
         now: () => Date.now(),

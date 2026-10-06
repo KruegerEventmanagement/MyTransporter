@@ -17,7 +17,7 @@ const NOW = Date.parse("2026-10-06T12:00:00Z");
 
 type Bk = { id: string; status: string; start_date: string; start_hour: number; plan_id: string };
 
-function makeStore(opts: { docs?: DocRow[]; bookings?: Bk[]; files?: Record<string, boolean>; failAt?: string; admin?: boolean | "error" } = {}) {
+function makeStore(opts: { owned?: { path: string; bucket: string; owner: string | null }[]; docs?: DocRow[]; bookings?: Bk[]; files?: Record<string, boolean>; failAt?: string; admin?: boolean | "error" } = {}) {
   const docs = [...(opts.docs ?? [])];
   const removed = new Set<string>();
   const archive = new Map<string, unknown>();
@@ -28,6 +28,8 @@ function makeStore(opts: { docs?: DocRow[]; bookings?: Bk[]; files?: Record<stri
   let authExists = true;
   let failAt = opts.failAt;
   const log: string[] = [];
+  const owned = opts.owned ?? [];
+  const RETAINED = ["trip-photos", "issued-documents", "document-archive"];
   const maybeFail = (step: string) => {
     if (failAt === step) {
       failAt = undefined; // nur einmal, dann Wiederaufnahme möglich
@@ -94,8 +96,15 @@ function makeStore(opts: { docs?: DocRow[]; bookings?: Bk[]; files?: Record<stri
       log.push("devices");
     },
     countBookings: async () => (opts.bookings ?? []).length,
-    deleteAuthUser: async () => {
+    releaseRetainedStorage: async (uid) => {
+      let n = 0;
+      for (const o of owned) if (o.owner === uid && RETAINED.includes(o.bucket)) { o.owner = null; n++; }
+      return n;
+    },
+    countOwnedStorage: async (uid) => owned.filter((o) => o.owner === uid).length,
+    deleteAuthUser: async (uid) => {
       maybeFail("auth");
+      if (owned.some((o) => o.owner === uid)) throw new Error("Auth-Konto: storage objects owned");
       if (!authExists) return "missing";
       authExists = false;
       log.push("auth");
@@ -111,7 +120,7 @@ function makeStore(opts: { docs?: DocRow[]; bookings?: Bk[]; files?: Record<stri
     },
     markPurged: async () => {},
   };
-  return { store, archive, archiveFiles, userFiles, removed, log, get deletion() { return deletion; }, get authExists() { return authExists; } };
+  return { owned, store, archive, archiveFiles, userFiles, removed, log, get deletion() { return deletion; }, get authExists() { return authExists; } };
 }
 
 const doc = (id: string, type: string, created = "2026-09-01T10:00:00Z", user = UID): DocRow => ({
@@ -343,5 +352,31 @@ describe("Archivbereinigung", () => {
     };
     expect(await purgeExpiredArchive(s.store, NOW)).toEqual({ due: 2, purged: 1, failed: 1 });
     expect(purged).toEqual(["b"]);
+  });
+});
+
+describe("Kontolöschung mit behaltenen Fahrtfotos (simuliert)", () => {
+  const done = { id: "b1aaaaaa", status: "completed", start_date: "2026-09-05", start_hour: 10, plan_id: "24h" };
+  it("abgeschlossene Buchung: Fahrtfotos bleiben, Besitz gelöst, Auth-Löschung erfolgreich, Fremdobjekte unberührt", async () => {
+    const owned = [
+      { path: "b1aaaaaa/pre_front.jpg", bucket: "trip-photos", owner: UID as string | null },
+      { path: "b9/other.jpg", bucket: "trip-photos", owner: OTHER as string | null },
+    ];
+    const s = makeStore({ bookings: [done], owned });
+    const r = await runAccountDeletion(s.store, { uid: UID, accountCreatedAt: null, bookings: [done] as never, nowMs: NOW });
+    expect(r.ok).toBe(true);
+    expect(s.authExists).toBe(false);
+    expect(owned.map((o) => o.path)).toEqual(["b1aaaaaa/pre_front.jpg", "b9/other.jpg"]); // nichts gelöscht
+    expect(owned[0].owner).toBeNull();
+    expect(owned[1].owner).toBe(OTHER);
+  });
+  it("verbleibender Besitz außerhalb behaltener Buckets: kein Auth-Löschversuch, retrybar", async () => {
+    const owned = [{ path: "x.jpg", bucket: "vehicles", owner: UID as string | null }];
+    const s = makeStore({ bookings: [done], owned });
+    const r = await runAccountDeletion(s.store, { uid: UID, accountCreatedAt: null, bookings: [done] as never, nowMs: NOW });
+    expect(r).toEqual({ ok: false, kind: "failed" });
+    expect(s.authExists).toBe(true);
+    expect(s.deletion?.status).toBe("failed");
+    expect(owned).toHaveLength(1);
   });
 });

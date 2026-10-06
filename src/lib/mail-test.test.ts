@@ -1,18 +1,28 @@
 import { describe, it, expect, vi } from "vitest";
-import { runMailTest, MAIL_TEST_TO, MAIL_TEST_SUBJECT, type MailTestDeps } from "./mail-test.server";
+import { runMailTest, MAIL_TEST_TO, MAIL_TEST_SUBJECT, type MailTestDeps, type MailTestClaim } from "./mail-test.server";
 
 const RID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+const RID2 = "ffffffff-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+
+/** Simuliert die DB-Funktion claim_mail_test inkl. Sperre pro Admin (serialisierte Promise-Kette). */
 function deps(over: Partial<MailTestDeps> = {}) {
   const runs = new Map<string, { status: string; test_id: string; created_at: string; admin: string }>();
+  const locks = new Map<string, Promise<unknown>>();
   const send = vi.fn().mockResolvedValue(true);
   const d: MailTestDeps = {
     isAdmin: async () => true,
-    findByRequest: async (id) => runs.get(id) ?? null,
-    lastRunAt: async (a) => [...runs.values()].filter((r) => r.admin === a).at(-1)?.created_at ?? null,
-    insertRun: async (r) => {
-      if (runs.has(r.request_id)) return "duplicate";
-      runs.set(r.request_id, { status: "sending", test_id: r.test_id, created_at: new Date(1_000_000).toISOString(), admin: r.admin_id });
-      return "ok";
+    claim: (r) => {
+      const prev = locks.get(r.admin_id) ?? Promise.resolve();
+      const next = prev.then(async (): Promise<MailTestClaim> => {
+        await new Promise((res) => setTimeout(res, 5));
+        const ex = runs.get(r.request_id);
+        if (ex) return { state: "duplicate", status: ex.status, test_id: ex.test_id, created_at: ex.created_at };
+        if ([...runs.values()].some((x) => x.admin === r.admin_id)) return { state: "rate_limited" };
+        runs.set(r.request_id, { status: "sending", test_id: r.test_id, created_at: new Date(1_000_000).toISOString(), admin: r.admin_id });
+        return { state: "claimed" };
+      });
+      locks.set(r.admin_id, next.catch(() => {}));
+      return next;
     },
     setStatus: async (id, s) => {
       runs.get(id)!.status = s;
@@ -40,15 +50,26 @@ describe("Admin-Versandtest (simuliert, kein echter Versand)", () => {
   });
   it("Fehlversand ist kein Erfolg", async () => {
     const { d } = deps({ send: vi.fn().mockResolvedValue(false) });
-    const r = await runMailTest(d, "admin", RID);
-    expect(r.ok).toBe(false);
+    expect((await runMailTest(d, "admin", RID)).ok).toBe(false);
   });
-  it("gleiche Anfrage-ID: kein zweiter Versand; neue Anfrage innerhalb 1 Minute: abgelehnt", async () => {
+  it("2 parallele Requests mit unterschiedlichen IDs: genau ein Versand", async () => {
     const { d, send } = deps();
-    await runMailTest(d, "admin", RID);
-    expect((await runMailTest(d, "admin", RID)).ok).toBe(true);
-    const r = await runMailTest(d, "admin", "ffffffff-bbbb-4ccc-8ddd-eeeeeeeeeeee");
-    expect(r.ok).toBe(false);
+    const [a, b] = await Promise.all([runMailTest(d, "admin", RID), runMailTest(d, "admin", RID2)]);
+    expect([a.ok, b.ok].filter(Boolean)).toHaveLength(1);
     expect(send).toHaveBeenCalledTimes(1);
+  });
+  it("parallel gleiche ID: kein zweiter Versand", async () => {
+    const { d, send } = deps();
+    await Promise.all([runMailTest(d, "admin", RID), runMailTest(d, "admin", RID)]);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+  it("DB-Fehler beim Claim: kein Versand, kein Erfolg", async () => {
+    const { d, send } = deps({ claim: async () => { throw new Error("db down"); } });
+    expect((await runMailTest(d, "admin", RID)).ok).toBe(false);
+    expect(send).not.toHaveBeenCalled();
+  });
+  it("Status-Update-Fehler nach Fehlversand: trotzdem kein Erfolg", async () => {
+    const { d } = deps({ send: vi.fn().mockResolvedValue(false), setStatus: async () => { throw new Error("x"); } });
+    expect((await runMailTest(d, "admin", RID)).ok).toBe(false);
   });
 });

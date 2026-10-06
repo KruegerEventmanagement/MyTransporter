@@ -172,6 +172,16 @@ export async function createPrivacyStore(client?: AnyDb): Promise<PrivacyStore> 
       check(error, "Buchungen zählen");
       return count ?? 0;
     },
+    async releaseRetainedStorage(uid) {
+      const { data, error } = await db.rpc("release_retained_storage_ownership", { _uid: uid });
+      check(error, "Speicherbesitz lösen");
+      return Number(data ?? 0);
+    },
+    async countOwnedStorage(uid) {
+      const { data, error } = await db.rpc("count_user_owned_storage", { _uid: uid });
+      check(error, "Speicherbesitz prüfen");
+      return Number(data ?? 0);
+    },
     async deleteAuthUser(uid) {
       const { error } = await admin.auth.admin.deleteUser(uid, false);
       if (!error) return "deleted";
