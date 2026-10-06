@@ -1,3 +1,4 @@
+import { ForgotPassword } from "@/components/ForgotPassword";
 import { useState } from "react";
 import { LogIn, ArrowLeft } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -74,6 +75,9 @@ export function AdminLogin({ onSuccess }: Props) {
           >
             {loading ? "Anmelden…" : "Einloggen"}
           </button>
+          <div className="text-center">
+            <ForgotPassword initialEmail={email} />
+          </div>
         </div>
       </div>
     </main>

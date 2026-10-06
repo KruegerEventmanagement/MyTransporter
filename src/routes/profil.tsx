@@ -1,3 +1,4 @@
+import { DocumentRemoval } from "@/components/DocumentRemoval";
 import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 import { AddressFields } from "@/components/AddressFields";
 import { EMPTY_ADDRESS } from "@/lib/address";
@@ -6,7 +7,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { privateHead } from "@/lib/seo";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, Car, Wallet, Route as RouteIcon, Calendar, Hash, MapPin, X, Shield, Trash2, FileText } from "lucide-react";
+import { ChevronLeft, Car, Wallet, Route as RouteIcon, Calendar, Hash, MapPin, X, Shield, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useServerFn } from "@tanstack/react-start";
@@ -178,14 +179,6 @@ function ProfilePage() {
     await loadDocs();
   };
 
-
-  const deleteDoc = async (id: string) => {
-    await supabase
-      .from("user_documents")
-      .update({ deleted_by_user_at: new Date().toISOString() })
-      .eq("id", id);
-    await loadDocs();
-  };
 
   const loadBookings = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -439,18 +432,12 @@ function ProfilePage() {
                         })()}
                       </p>
                     </div>
-                    <button
-                      onClick={() => deleteDoc(d.id)}
-                      className="text-muted-foreground hover:text-destructive p-1 -m-1"
-                      aria-label="Dokument löschen"
-                      title="Dokument löschen"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+
                   </div>
                 </li>
               ))}
             </ul>
+            <DocumentRemoval available={docTypes} onDone={() => void loadDocs()} />
           </section>
         )}
 

@@ -46,7 +46,7 @@ function DatenschutzPage() {
 
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">4. Fotos und Dokumente</h2>
-            <p>Fahrzeugfotos und eingescannte Dokumente (Führerschein, Ausweis, Tankbeleg) werden verschlüsselt gespeichert und ausschließlich zur Abwicklung des Mietverhältnisses verwendet. Löschung erfolgt 90 Tage nach Vertragsende.</p>
+            <p>Fahrzeugfotos und eingescannte Dokumente (Führerschein, Ausweis, Tankbeleg) werden verschlüsselt gespeichert und ausschließlich zur Abwicklung des Mietverhältnisses verwendet. Löschung erfolgt 90 Tage nach Vertragsende. Entfernen Sie Ausweis oder Führerschein selbst aus Ihrem Konto oder löschen Sie Ihr Konto, sind die Dokumente für Sie nicht mehr abrufbar; gehören sie zu keinem Mietvertrag oder ist die Frist abgelaufen, werden sie sofort gelöscht, andernfalls bleibt eine gesperrte, nur intern zugängliche Kopie bis zum Ablauf dieser Frist erhalten.</p>
           </div>
 
           <div>

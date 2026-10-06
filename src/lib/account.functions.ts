@@ -1,55 +1,130 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { BLOCKING_BOOKING_STATUSES } from "@/lib/booking-status";
+import { DOC_GROUPS, type DocGroup } from "@/lib/document-retention";
 
-/** Status, bei denen eine Kontolöschung blockiert ist (laufende/bevorstehende Miete). */
-export const BLOCKING_STATUSES = [
-  "paid",
-  "confirmed",
-  "active",
-  "started",
-  "running",
-  "in_progress",
-  "picked_up",
-  "returning",
-  "return_pending",
-];
+/** Status, bei denen eine Kontolöschung geprüft wird (Spiegel der DB-Funktion). */
+export const BLOCKING_STATUSES = [...BLOCKING_BOOKING_STATUSES];
+
+/** Erneute Besitzbestätigung gilt ohne Passwort nur so lange nach der Anmeldung. */
+export const RECENT_AUTH_SECONDS = 600;
+
+export function isRecentAuth(claims: Record<string, unknown>, nowSec: number): boolean {
+  const amr = Array.isArray(claims.amr) ? (claims.amr as Array<{ timestamp?: number }>) : [];
+  const last = Math.max(0, ...amr.map((a) => Number(a?.timestamp) || 0));
+  return last > 0 && nowSec - last <= RECENT_AUTH_SECONDS;
+}
+
+/** Prüft das Passwort mit einem isolierten Client; erzeugte Sitzung wird sofort beendet. Nie loggen. */
+async function verifyPassword(email: string, password: string, uid: string): Promise<boolean> {
+  const { createClient } = await import("@supabase/supabase-js");
+  const tmp = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await tmp.auth.signInWithPassword({ email, password });
+  const ok = !error && data.user?.id === uid;
+  if (data.session) await tmp.auth.signOut({ scope: "local" }).catch(() => {});
+  return ok;
+}
+
+type Ctx = { supabase: any; userId: string; claims: Record<string, unknown> };
+
+async function isAdmin(ctx: Ctx) {
+  const { data } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
+  return !!data;
+}
 
 /**
- * Kontolöschung (App-Store-/Play-Anforderung). Löscht Konto, Profil, Dokumente
- * und Push-Registrierungen. Buchungen/Rechnungen bleiben wegen gesetzlicher
- * Aufbewahrungspflicht erhalten. Bei offener Miete wird abgelehnt.
+ * Echte Kontolöschung (App-Store-/Play-Anforderung): Auth-Konto inkl. Sitzungen,
+ * Profil, Geräte-/Marketingdaten und Kundendokumente. Buchungen/Rechnungen bleiben
+ * getrennt erhalten; Ausweiskopien nur befristet im Adminarchiv, wenn ein
+ * Mietvertrag sie noch erfordert. Bei laufender/bevorstehender Miete: Löschantrag.
  */
 export const deleteMyAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { confirm: string }) => {
+  .inputValidator((d: { confirm: string; password?: string }) => {
     if (d?.confirm !== "LÖSCHEN") throw new Error("Bestätigung fehlt");
-    return d;
+    if (d.password != null && (typeof d.password !== "string" || d.password.length > 200)) throw new Error("Ungültig");
+    return { confirm: d.confirm, password: d.password ?? "" };
   })
-  .handler(async ({ context }) => {
-    const uid = context.userId;
-    const today = new Date().toISOString().slice(0, 10);
-    const { data: open, error: openErr } = await context.supabase
-      .from("bookings")
-      .select("id,status,start_date")
-      .eq("user_id", uid)
-      .in("status", BLOCKING_STATUSES);
-    if (openErr) throw new Error("Buchungen konnten nicht geprüft werden.");
-    const blocking = (open ?? []).filter(
-      (b) => !["paid", "confirmed"].includes(String(b.status)) || String(b.start_date) >= today,
-    );
-    if (blocking.length > 0) {
-      return { ok: false as const, reason: "Du hast noch eine laufende oder bevorstehende Miete. Bitte storniere sie oder schließe sie ab." };
+  .handler(async ({ data, context }) => {
+    const ctx = context as unknown as Ctx;
+    const uid = ctx.userId;
+    const { createPrivacyStore } = await import("@/lib/privacy-store.server");
+    const { runAccountDeletion } = await import("@/lib/privacy-ops.server");
+    const store = await createPrivacyStore();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(uid);
+    if (!authUser?.user) {
+      const s = await store.deletionStatus(uid);
+      if (s?.status === "completed") return { ok: true as const, completedAt: s.completed_at };
+      return { ok: false as const, reason: "Konto nicht gefunden." };
+    }
+    if (await isAdmin(ctx)) {
+      return { ok: false as const, reason: "Admin-Konten können hier nicht gelöscht werden." };
+    }
+    const nowSec = Math.floor(Date.now() / 1000);
+    const email = authUser.user.email ?? "";
+    let confirmed = false;
+    if (data.password) confirmed = !!email && (await verifyPassword(email, data.password, uid));
+    else confirmed = isRecentAuth(ctx.claims, nowSec);
+    if (!confirmed) {
+      return {
+        ok: false as const,
+        reason: data.password
+          ? "Das Passwort stimmt nicht. Bitte versuche es erneut."
+          : "Bitte bestätige mit deinem Passwort (oder melde dich neu an).",
+        needsPassword: true,
+      };
     }
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: files } = await supabaseAdmin.storage.from("user-documents").list(uid, { limit: 1000 });
-    if (files && files.length) {
-      await supabaseAdmin.storage.from("user-documents").remove(files.map((f) => `${uid}/${f.name}`));
+    const bookings = await store.listBookings(uid);
+    const r = await runAccountDeletion(store, {
+      uid,
+      accountCreatedAt: authUser.user.created_at ?? null,
+      bookings,
+      nowMs: Date.now(),
+    });
+    if (r.ok) return { ok: true as const, completedAt: r.completedAt };
+    if (r.kind === "requested") {
+      return {
+        ok: false as const,
+        requested: true,
+        requestedAt: r.requestedAt,
+        reason:
+          "Du hast eine laufende oder bevorstehende Miete. Wir haben deinen Löschantrag gespeichert und löschen dein Konto nach Abschluss der Miete. Bei Fragen: info@mytransporter.org.",
+      };
     }
-    await supabaseAdmin.from("push_subscriptions").delete().eq("user_id", uid);
-    await supabaseAdmin.from("native_push_tokens").delete().eq("user_id", uid);
-    await supabaseAdmin.from("profiles").delete().eq("id", uid);
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(uid);
-    if (error) throw new Error("Konto konnte nicht gelöscht werden. Bitte kontaktiere uns.");
-    return { ok: true as const };
+    if (r.kind === "busy") return { ok: false as const, reason: "Die Löschung läuft bereits. Bitte warte einen Moment." };
+    return { ok: false as const, reason: "Löschen fehlgeschlagen. Bitte versuche es erneut; bereits erledigte Schritte bleiben erhalten." };
+  });
+
+/** Ausweis oder Führerschein aus dem eigenen Konto entfernen (nur eigene Daten). */
+export const removeMyDocuments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { group: DocGroup }) => {
+    if (d?.group !== "id" && d?.group !== "license") throw new Error("Ungültig");
+    return { group: d.group };
+  })
+  .handler(async ({ data, context }) => {
+    const { createPrivacyStore } = await import("@/lib/privacy-store.server");
+    const { removeDocumentsFromAccount } = await import("@/lib/privacy-ops.server");
+    const store = await createPrivacyStore();
+    try {
+      const r = await removeDocumentsFromAccount(store, context.userId, DOC_GROUPS[data.group], Date.now());
+      return { ok: true as const, ...r };
+    } catch (e) {
+      console.error("document removal failed", e instanceof Error ? e.message.slice(0, 200) : "unknown");
+      return { ok: false as const, reason: "Entfernen fehlgeschlagen. Bitte versuche es erneut." };
+    }
+  });
+
+/** Eigener Löschantrag-Status (nur Status/Zeitpunkt). */
+export const getMyDeletionStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { createPrivacyStore } = await import("@/lib/privacy-store.server");
+    const s = await (await createPrivacyStore()).deletionStatus(context.userId);
+    return s ? { status: s.status, requestedAt: s.requested_at } : null;
   });

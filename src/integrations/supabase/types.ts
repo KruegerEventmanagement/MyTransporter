@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletions: {
+        Row: {
+          account_created_at: string | null
+          attempts: number
+          booking_count: number | null
+          completed_at: string | null
+          created_at: string
+          former_user_id: string
+          id: string
+          last_error: string | null
+          locked_until: string | null
+          request_reason: string | null
+          requested_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_created_at?: string | null
+          attempts?: number
+          booking_count?: number | null
+          completed_at?: string | null
+          created_at?: string
+          former_user_id: string
+          id?: string
+          last_error?: string | null
+          locked_until?: string | null
+          request_reason?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_created_at?: string | null
+          attempts?: number
+          booking_count?: number | null
+          completed_at?: string | null
+          created_at?: string
+          former_user_id?: string
+          id?: string
+          last_error?: string | null
+          locked_until?: string | null
+          request_reason?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       admin_notifications: {
         Row: {
           body: string | null
@@ -479,6 +527,51 @@ export type Database = {
           synced_version?: number
           updated_at?: string
           version?: number
+        }
+        Relationships: []
+      }
+      document_archive: {
+        Row: {
+          archived_at: string
+          created_at: string
+          doc_type: string
+          id: string
+          legal_hold_reason: string | null
+          legal_hold_until: string | null
+          purged_at: string | null
+          retention_reason: string
+          retention_until: string
+          source_document_id: string
+          storage_path: string | null
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string
+          created_at?: string
+          doc_type: string
+          id?: string
+          legal_hold_reason?: string | null
+          legal_hold_until?: string | null
+          purged_at?: string | null
+          retention_reason: string
+          retention_until: string
+          source_document_id: string
+          storage_path?: string | null
+          user_id: string
+        }
+        Update: {
+          archived_at?: string
+          created_at?: string
+          doc_type?: string
+          id?: string
+          legal_hold_reason?: string | null
+          legal_hold_until?: string | null
+          purged_at?: string | null
+          retention_reason?: string
+          retention_until?: string
+          source_document_id?: string
+          storage_path?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -959,6 +1052,7 @@ export type Database = {
           doc_type: string
           id: string
           photo_url: string
+          removed_from_account_at: string | null
           user_id: string
           verified_at: string | null
         }
@@ -972,6 +1066,7 @@ export type Database = {
           doc_type: string
           id?: string
           photo_url: string
+          removed_from_account_at?: string | null
           user_id: string
           verified_at?: string | null
         }
@@ -985,6 +1080,7 @@ export type Database = {
           doc_type?: string
           id?: string
           photo_url?: string
+          removed_from_account_at?: string | null
           user_id?: string
           verified_at?: string | null
         }
@@ -1246,6 +1342,14 @@ export type Database = {
         Args: { _source_id: string; _source_type: string }
         Returns: Json
       }
+      claim_account_deletion: {
+        Args: {
+          _account_created_at: string
+          _lease_seconds?: number
+          _uid: string
+        }
+        Returns: string
+      }
       claim_booking_action: {
         Args: {
           _action_key: string
@@ -1341,6 +1445,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      complete_account_deletion: {
+        Args: { _booking_count: number; _uid: string }
+        Returns: string
+      }
       complete_booking_action: {
         Args: { _action_key: string; _booking_id: string }
         Returns: undefined
@@ -1392,6 +1500,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      fail_account_deletion: {
+        Args: { _error: string; _uid: string }
+        Returns: undefined
+      }
       fail_booking_action: {
         Args: {
           _action_key: string
@@ -1441,6 +1553,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_account_active: { Args: { _uid: string }; Returns: boolean }
       is_vehicle_available: {
         Args: {
           _end: string
@@ -1492,6 +1605,10 @@ export type Database = {
           _exceptions?: Json
         }
         Returns: Json
+      }
+      request_account_deletion: {
+        Args: { _account_created_at: string; _reason: string; _uid: string }
+        Returns: string
       }
       set_calendar_source_event: {
         Args: {

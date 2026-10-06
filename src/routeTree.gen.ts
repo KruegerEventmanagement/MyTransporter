@@ -21,6 +21,7 @@ import { Route as LangzeitmieteRouteImport } from './routes/langzeitmiete'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as PreiseRouteImport } from './routes/preise'
 import { Route as ProfilRouteImport } from './routes/profil'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TransporterMietenPforzheimCalwRouteImport } from './routes/transporter-mieten-pforzheim-calw'
 import { Route as UeberUnsRouteImport } from './routes/ueber-uns'
@@ -37,6 +38,7 @@ import { Route as ApiPublicHealthAutomationsRouteImport } from './routes/api/pub
 import { Route as ApiPublicHooksNotifyAdminRouteImport } from './routes/api/public/hooks/notify-admin'
 import { Route as ApiPublicHooksProcessCalendarSyncRouteImport } from './routes/api/public/hooks/process-calendar-sync'
 import { Route as ApiPublicHooksProcessManualNotificationsRouteImport } from './routes/api/public/hooks/process-manual-notifications'
+import { Route as ApiPublicHooksPurgeDocumentArchiveRouteImport } from './routes/api/public/hooks/purge-document-archive'
 import { Route as ApiPublicHooksReturnRemindersRouteImport } from './routes/api/public/hooks/return-reminders'
 import { Route as ApiPublicHooksSendBirthdayEmailsRouteImport } from './routes/api/public/hooks/send-birthday-emails'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
@@ -100,6 +102,11 @@ const PreiseRoute = PreiseRouteImport.update({
 const ProfilRoute = ProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -189,6 +196,12 @@ const ApiPublicHooksProcessManualNotificationsRoute =
     path: '/api/public/hooks/process-manual-notifications',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksPurgeDocumentArchiveRoute =
+  ApiPublicHooksPurgeDocumentArchiveRouteImport.update({
+    id: '/api/public/hooks/purge-document-archive',
+    path: '/api/public/hooks/purge-document-archive',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksReturnRemindersRoute =
   ApiPublicHooksReturnRemindersRouteImport.update({
     id: '/api/public/hooks/return-reminders',
@@ -227,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/partner': typeof PartnerRoute
   '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -243,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
+  '/api/public/hooks/purge-document-archive': typeof ApiPublicHooksPurgeDocumentArchiveRoute
   '/api/public/hooks/return-reminders': typeof ApiPublicHooksReturnRemindersRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
@@ -261,6 +276,7 @@ export interface FileRoutesByTo {
   '/partner': typeof PartnerRoute
   '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -277,6 +293,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
+  '/api/public/hooks/purge-document-archive': typeof ApiPublicHooksPurgeDocumentArchiveRoute
   '/api/public/hooks/return-reminders': typeof ApiPublicHooksReturnRemindersRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
@@ -296,6 +313,7 @@ export interface FileRoutesById {
   '/partner': typeof PartnerRoute
   '/preise': typeof PreiseRoute
   '/profil': typeof ProfilRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
@@ -312,6 +330,7 @@ export interface FileRoutesById {
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
+  '/api/public/hooks/purge-document-archive': typeof ApiPublicHooksPurgeDocumentArchiveRoute
   '/api/public/hooks/return-reminders': typeof ApiPublicHooksReturnRemindersRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
@@ -332,6 +351,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/preise'
     | '/profil'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
@@ -348,6 +368,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/process-calendar-sync'
     | '/api/public/hooks/process-manual-notifications'
+    | '/api/public/hooks/purge-document-archive'
     | '/api/public/hooks/return-reminders'
     | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
@@ -366,6 +387,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/preise'
     | '/profil'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
@@ -382,6 +404,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/process-calendar-sync'
     | '/api/public/hooks/process-manual-notifications'
+    | '/api/public/hooks/purge-document-archive'
     | '/api/public/hooks/return-reminders'
     | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
@@ -400,6 +423,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/preise'
     | '/profil'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
@@ -416,6 +440,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/process-calendar-sync'
     | '/api/public/hooks/process-manual-notifications'
+    | '/api/public/hooks/purge-document-archive'
     | '/api/public/hooks/return-reminders'
     | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
@@ -435,6 +460,7 @@ export interface RootRouteChildren {
   PartnerRoute: typeof PartnerRoute
   PreiseRoute: typeof PreiseRoute
   ProfilRoute: typeof ProfilRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TransporterMietenPforzheimCalwRoute: typeof TransporterMietenPforzheimCalwRoute
   UeberUnsRoute: typeof UeberUnsRoute
@@ -451,6 +477,7 @@ export interface RootRouteChildren {
   ApiPublicHooksNotifyAdminRoute: typeof ApiPublicHooksNotifyAdminRoute
   ApiPublicHooksProcessCalendarSyncRoute: typeof ApiPublicHooksProcessCalendarSyncRoute
   ApiPublicHooksProcessManualNotificationsRoute: typeof ApiPublicHooksProcessManualNotificationsRoute
+  ApiPublicHooksPurgeDocumentArchiveRoute: typeof ApiPublicHooksPurgeDocumentArchiveRoute
   ApiPublicHooksReturnRemindersRoute: typeof ApiPublicHooksReturnRemindersRoute
   ApiPublicHooksSendBirthdayEmailsRoute: typeof ApiPublicHooksSendBirthdayEmailsRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
@@ -541,6 +568,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/profil'
       preLoaderRoute: typeof ProfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -655,6 +689,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProcessManualNotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/purge-document-archive': {
+      id: '/api/public/hooks/purge-document-archive'
+      path: '/api/public/hooks/purge-document-archive'
+      fullPath: '/api/public/hooks/purge-document-archive'
+      preLoaderRoute: typeof ApiPublicHooksPurgeDocumentArchiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/return-reminders': {
       id: '/api/public/hooks/return-reminders'
       path: '/api/public/hooks/return-reminders'
@@ -699,6 +740,7 @@ const rootRouteChildren: RootRouteChildren = {
   PartnerRoute: PartnerRoute,
   PreiseRoute: PreiseRoute,
   ProfilRoute: ProfilRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TransporterMietenPforzheimCalwRoute: TransporterMietenPforzheimCalwRoute,
   UeberUnsRoute: UeberUnsRoute,
@@ -717,6 +759,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksProcessCalendarSyncRoute,
   ApiPublicHooksProcessManualNotificationsRoute:
     ApiPublicHooksProcessManualNotificationsRoute,
+  ApiPublicHooksPurgeDocumentArchiveRoute:
+    ApiPublicHooksPurgeDocumentArchiveRoute,
   ApiPublicHooksReturnRemindersRoute: ApiPublicHooksReturnRemindersRoute,
   ApiPublicHooksSendBirthdayEmailsRoute: ApiPublicHooksSendBirthdayEmailsRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,

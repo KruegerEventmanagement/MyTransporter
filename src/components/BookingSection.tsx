@@ -1,3 +1,4 @@
+import { ForgotPassword } from "@/components/ForgotPassword";
 import { publicOrigin } from "@/lib/native/platform";
 import { AddressFields } from "@/components/AddressFields";
 import { EMPTY_ADDRESS, addressSignUpMetadata } from "@/lib/address";
@@ -1983,6 +1984,9 @@ export function BookingSection() {
                           </button>
                         </div>
                       </div>
+                    </div>
+                    <div className="mt-3 text-right">
+                      <ForgotPassword initialEmail={loginForm.email} />
                     </div>
                     {authError && (
                       <p className="mt-4 text-sm text-destructive text-center">{authError}</p>

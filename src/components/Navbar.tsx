@@ -1,3 +1,4 @@
+import { ForgotPassword } from "@/components/ForgotPassword";
 import { publicOrigin } from "@/lib/native/platform";
 import { AddressFields } from "@/components/AddressFields";
 import { EMPTY_ADDRESS, addressSignUpMetadata } from "@/lib/address";
@@ -473,6 +474,11 @@ export function Navbar() {
                 </button>
               </div>
 
+              {showModal === "login" && (
+                <div className="text-right">
+                  <ForgotPassword initialEmail={form.email} />
+                </div>
+              )}
               {error && <p className="text-xs text-destructive">{error}</p>}
               {info && <p className="text-xs text-foreground bg-secondary p-2 rounded-lg">{info}</p>}
 
