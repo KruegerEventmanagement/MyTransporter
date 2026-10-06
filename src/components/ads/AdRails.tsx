@@ -71,7 +71,7 @@ export function buildAdRailsTree({
           ) : null}
         </aside>
       ) : null}
-      <div key={AD_RAILS_CONTENT_KEY} ref={contentRef} className={railsActive ? "min-w-0 xl:flex-1" : "contents"}>
+      <div key={AD_RAILS_CONTENT_KEY} ref={contentRef} data-ad-content="" className={railsActive ? "min-w-0 xl:flex-1" : "contents"}>
         {children}
       </div>
       {showRight ? (
@@ -116,17 +116,22 @@ export function AdRails({ children }: AdRailsProps) {
   const policy = hydrated ? getRouteAdPolicy(pathname) : null;
   const contentRef = useRef<HTMLDivElement | null>(null);
   const [tall, setTall] = useState(false);
+  const flags = railFlags(policy, consented);
+  // Nur messbar, wenn die Spalten aktiv sind (sonst display: contents = 0 px).
+  const baseActive = !suppressed && (flags.left || flags.right);
   useEffect(() => {
     const el = contentRef.current;
-    if (!el) return;
+    if (!el || !baseActive) {
+      setTall(false);
+      return;
+    }
     const read = () => setTall(el.getBoundingClientRect().height >= LOWER_RAIL_MIN_CONTENT_PX);
     read();
     if (typeof ResizeObserver !== "function") return;
     const ro = new ResizeObserver(read);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
-  const flags = railFlags(policy, consented);
+  }, [baseActive]);
   return buildAdRailsTree({
     suppressed,
     ...flags,
