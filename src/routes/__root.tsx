@@ -137,7 +137,7 @@ function RootComponent() {
       <ActiveTripBanner />
       <HelpBubble />
       <CookieConsent />
-      <Toaster position="top-center" />
+      <Toaster position="top-center" offset="calc(16px + var(--mt-trip-bar, 0px))" />
     </QueryClientProvider>
   );
 }

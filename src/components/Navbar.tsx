@@ -217,7 +217,11 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50">
+      <nav
+        className="fixed left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50"
+        style={{ top: "var(--mt-trip-bar, 0px)" }}
+        data-testid="site-navbar"
+      >
         <div className="max-w-5xl mx-auto px-3 sm:px-4 h-12 flex items-center justify-end gap-2 sm:gap-3">
           <BrandHomeLink className="mr-1 sm:mr-3" imageClassName="h-6 w-auto sm:h-7" />
           <button

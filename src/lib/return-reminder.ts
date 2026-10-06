@@ -45,7 +45,7 @@ export interface ReminderDeps {
  * Lädt aktive Mieten, claimt atomar (Ende + Status + Zeitraum unverändert)
  * und sendet erst danach. Mehrfachläufe senden pro Mietende höchstens einmal.
  */
-export async function processReturnReminders(deps: ReminderDeps): Promise<{ due: number; claimed: number; pushed: number }> {
+export async function processReturnReminders(deps: ReminderDeps): Promise<{ due: number; claimed: number; pushed: number; released: number }> {
   const { data, error } = await deps.client
     .from("bookings")
     .select("id, user_id, status, start_date, start_hour, plan_id, return_reminder_10min_for")
@@ -54,6 +54,7 @@ export async function processReturnReminders(deps: ReminderDeps): Promise<{ due:
   const due = dueReturnReminders((data ?? []) as ReminderRow[], deps.now());
   let claimed = 0;
   let pushed = 0;
+  let released = 0;
   for (const b of due) {
     let claim = deps.client
       .from("bookings")
@@ -69,17 +70,41 @@ export async function processReturnReminders(deps: ReminderDeps): Promise<{ due:
     const { data: won, error: claimErr } = await claim.select("id");
     if (claimErr || !Array.isArray(won) || won.length === 0) continue;
     claimed++;
+    let sent = 0;
     try {
       const r = await deps.push(b.user_id, {
         title: "Rückgabe in Kürze",
         body: `Deine Miete endet ${deps.formatEnd(b.endMs)} Uhr. Sobald du sicher geparkt hast, starte die Rückgabe.`,
         url: `/trip/${b.id}`,
+        // Gleicher Tag/Topic je Buchung: Gerät ersetzt eine evtl. doppelte Anzeige statt zu stapeln.
         tag: `mt-return-${b.id}`,
       });
-      pushed += r.sent;
+      sent = r?.sent ?? 0;
     } catch {
-      /* Push-Fehler blockieren keine anderen Erinnerungen; on-screen-Hinweis bleibt */
+      sent = 0;
+    }
+    if (sent > 0) {
+      pushed += sent;
+      continue;
+    }
+    // Nichts zugestellt (Fehler oder 0 Geräte): nur den EIGENEN, noch unveränderten Claim
+    // freigeben, damit der nächste Minutenlauf im Zeitfenster erneut versucht.
+    // Parallele oder neuere Claims (anderes Ende, anderer Status) bleiben unberührt.
+    try {
+      const { data: rel } = await deps.client
+        .from("bookings")
+        .update({ return_reminder_10min_for: b.return_reminder_10min_for })
+        .eq("id", b.id)
+        .eq("status", b.status)
+        .eq("plan_id", b.plan_id)
+        .eq("start_date", b.start_date)
+        .eq("start_hour", b.start_hour)
+        .eq("return_reminder_10min_for", b.endIso)
+        .select("id");
+      if (Array.isArray(rel) && rel.length > 0) released++;
+    } catch {
+      /* Freigabe fehlgeschlagen: Claim bleibt; kein Doppelversand */
     }
   }
-  return { due: due.length, claimed, pushed };
+  return { due: due.length, claimed, pushed, released };
 }

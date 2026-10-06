@@ -30,8 +30,6 @@ const GOOGLE_MAPS_API_KEY =
   (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined) ||
   "AIzaSyAidsYmswSyYosN9yKXswFF3RtJxk8pclc";
 
-/** Abholort laut Projektvorgabe; dient nur als Kartenmitte/Routenstart, nie als "dein Standort". */
-export const DEFAULT_PICKUP_ADDRESS = "Poststraße 60, 71229 Leonberg";
 
 // Monochromer Karten-Style passend zur Marke
 const MONOCHROME_STYLE: google.maps.MapTypeStyle[] = [
@@ -73,7 +71,9 @@ interface Props {
   vehiclePlate: string;
   planLabel: string;
   addons?: Array<{ id: string; label: string }>;
+  /** Nur bestätigte fahrzeugbezogene Adresse aus der Fahrzeugdatenbank; nie geraten. */
   pickupAddress?: string | null;
+  pickupStatus?: "loading" | "ok" | "missing" | "error";
   onReturn: () => void;
 }
 
@@ -88,6 +88,7 @@ export function ActiveTripDashboard({
   planLabel,
   addons,
   pickupAddress,
+  pickupStatus = pickupAddress ? "ok" : "missing",
   onReturn,
 }: Props) {
   const nav0 = useRef(userId ? loadTripNav(userId, bookingId) : null).current;
@@ -126,6 +127,10 @@ export function ActiveTripDashboard({
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const trackInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const gate = useRef(createRequestGate()).current;
+  /** Adresssuche: späte Geocoder-Antworten nach neuer Suche/Entfernen/Unmount verwerfen. */
+  const searchSeq = useRef(0);
+  const [pickupGeoFailed, setPickupGeoFailed] = useState(false);
+  const confirmedPickup = pickupStatus === "ok" && pickupAddress ? pickupAddress : null;
 
   // Persistenz pro Nutzer + Buchung
   useEffect(() => {
@@ -192,12 +197,15 @@ export function ActiveTripDashboard({
       setGpsError("Dieses Gerät stellt keinen Standort bereit. Die Karte funktioniert trotzdem.");
       return;
     }
+    let active = true;
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
+        if (!active) return;
         setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setGpsError(null);
       },
       (err) => {
+        if (!active) return;
         if (err.code === err.PERMISSION_DENIED) {
           setGpsError("Standortzugriff wurde abgelehnt. Du kannst ihn in den Browser-Einstellungen erlauben.");
           setGpsChoice("declined");
@@ -209,11 +217,15 @@ export function ActiveTripDashboard({
     );
     trackInterval.current = setInterval(() => {
       navigator.geolocation.getCurrentPosition(
-        (pos) => void recordPosition(pos.coords.latitude, pos.coords.longitude),
+        (pos) => {
+          if (active) void recordPosition(pos.coords.latitude, pos.coords.longitude);
+        },
         () => {},
       );
     }, 30000);
     return () => {
+      active = false;
+      positionRef.current = null;
       navigator.geolocation.clearWatch(watchId);
       if (trackInterval.current) clearInterval(trackInterval.current);
     };
@@ -238,6 +250,7 @@ export function ActiveTripDashboard({
       if (!origin) {
         map.panTo({ lat: dest.lat, lng: dest.lng });
         map.setZoom(14);
+        setSearchError("Noch kein Startpunkt: Erlaube deinen Standort, um eine Route zu berechnen.");
         return;
       }
       setRouteFromPickup(!positionRef.current);
@@ -338,9 +351,15 @@ export function ActiveTripDashboard({
         }
         mapInstance.current = map;
         setMapReady(true);
-        // Abholort als neutraler Ausgangsort (keine Standortbehauptung).
-        geocoderRef.current.geocode({ address: pickupAddress || DEFAULT_PICKUP_ADDRESS }, (res, status) => {
-          if (cancelled || status !== "OK" || !res?.[0]) return;
+        // Nur bestätigter Abholort als neutraler Ausgangsort (keine Standortbehauptung, kein Ersatzort).
+        pickupRef.current = null;
+        setPickupGeoFailed(false);
+        if (confirmedPickup) geocoderRef.current.geocode({ address: confirmedPickup }, (res, status) => {
+          if (cancelled) return;
+          if (status !== "OK" || !res?.[0]) {
+            setPickupGeoFailed(true);
+            return;
+          }
           pickupRef.current = { lat: res[0].geometry.location.lat(), lng: res[0].geometry.location.lng() };
           if (!positionRef.current && !destinationRef.current) map.panTo(pickupRef.current);
           if (destinationRef.current && !lastDirectionsResult.current) computeRoute(destinationRef.current);
@@ -366,7 +385,7 @@ export function ActiveTripDashboard({
       mapInstance.current = null;
       lastDirectionsResult.current = null;
     };
-  }, [mapAttempt, pickupAddress, computeRoute, gate]);
+  }, [mapAttempt, confirmedPickup, computeRoute, gate]);
 
   // Karte nach Reconnect erneut laden, falls sie fehlgeschlagen war.
   useEffect(() => {
@@ -430,6 +449,7 @@ export function ActiveTripDashboard({
 
   const clearDestination = () => {
     gate.invalidate();
+    searchSeq.current++;
     setDestination(null);
     destinationRef.current = null;
     preferredRouteIdx.current = 0;
@@ -493,7 +513,7 @@ export function ActiveTripDashboard({
             <h2 className="text-xl font-bold mb-2">Standort verwenden?</h2>
             <p className="text-sm text-muted-foreground mb-6">
               Freiwillig: Mit deinem Standort zeigen wir dich auf der Karte und berechnen Routen ab deiner Position, solange diese Seite geöffnet ist.
-              Ohne Standort starten Routen am Abholort.
+              Ohne Standort starten Routen am bestätigten Abholort des Fahrzeugs, sofern hinterlegt.
             </p>
             <div className="space-y-2">
               <button onClick={() => setGpsChoice("granted")} className="w-full min-h-12 rounded-full bg-accent py-3 text-accent-foreground font-semibold">
@@ -647,7 +667,9 @@ export function ActiveTripDashboard({
                           setSearchError("Karte ist noch nicht bereit. Bitte gleich erneut versuchen.");
                           return;
                         }
+                        const mySearch = ++searchSeq.current;
                         geocoderRef.current.geocode({ address: q }, (results, status) => {
+                          if (mySearch !== searchSeq.current || !mapInstance.current) return;
                           if (status === "OK" && results && results[0]) {
                             const r = results[0];
                             applyDestination({ lat: r.geometry.location.lat(), lng: r.geometry.location.lng(), label: r.formatted_address });
@@ -680,6 +702,15 @@ export function ActiveTripDashboard({
                           </button>
                         )}
                       </div>
+                    )}
+                    {!position && (pickupStatus !== "ok" || pickupGeoFailed) && (
+                      <p className="mt-2 text-xs text-muted-foreground" data-testid="pickup-hint">
+                        {pickupStatus === "loading"
+                          ? "Abholort wird geladen …"
+                          : pickupStatus === "error" || pickupGeoFailed
+                            ? "Abholort konnte gerade nicht geladen werden. Routen starten erst mit deinem Standort; die Rückgabe funktioniert trotzdem."
+                            : "Für dieses Fahrzeug ist kein Abholort hinterlegt. Routen starten erst mit deinem Standort; die Rückgabe funktioniert trotzdem."}
+                      </p>
                     )}
                     {gpsChoice === "declined" && (
                       <button onClick={() => setGpsChoice("granted")} className="mt-2 min-h-11 text-xs font-medium underline">
