@@ -34,12 +34,23 @@ describe("Website-Werbeplatz-Anfrage (simuliert, kein Versand)", () => {
     [{ website: "javascript:alert(1)" }],
     [{ consent: false }],
     [{ startDate: "2020-01-01" }],
+    [{ startDate: "2026-02-31" }],
+    [{ startDate: "2026-13-01" }],
+    [{ startDate: "2026-10-05" }],
   ])("lehnt ungültige Eingaben serverseitig ab %#", async (patch) => {
     const d = deps();
     const r = await processWebAdInquiry({ ...valid, ...patch }, d);
     expect(r.ok).toBe(false);
     expect(d.store).not.toHaveBeenCalled();
     expect(d.mail).not.toHaveBeenCalled();
+  });
+
+  it("Vergangenheit nach Berliner Kalenderdatum", async () => {
+    // 05.10. 23:30 UTC = 06.10. 01:30 Berlin → 06.10. zulässig, 05.10. nicht
+    const late = deps({ now: () => new Date("2026-10-05T23:30:00Z") });
+    expect((await processWebAdInquiry({ ...valid, startDate: "2026-10-06" }, late)).ok).toBe(true);
+    const late2 = deps({ now: () => new Date("2026-10-05T23:30:00Z") });
+    expect((await processWebAdInquiry({ ...valid, startDate: "2026-10-05" }, late2)).ok).toBe(false);
   });
 
   it("Honeypot ausgefüllt: keine Annahme, kein Erfolg", async () => {

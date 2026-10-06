@@ -82,7 +82,17 @@ function DatenschutzPage() {
             <p>Auf einigen Seiten zeigen wir als „Anzeige · Partnerlink“ gekennzeichnete Links zu ausgewählten Händlern, die über das Partnernetzwerk Awin (AWIN AG) vermittelt werden. Beim Seitenaufruf werden dafür keine Skripte, Pixel oder Bilder von Awin oder den Händlern geladen. Erst wenn Sie einen Partnerlink bewusst anklicken, werden Sie über einen Server von Awin zum Händler weitergeleitet; dabei verarbeiten Awin und der Händler nach ihren eigenen Datenschutzhinweisen Daten wie IP-Adresse und Klickzeitpunkt und können Cookies setzen, um einen Kauf zuzuordnen. Bei einem Kauf über diese Links können wir eine Provision erhalten.</p>
           </div>
 
-          <p className="text-xs text-muted-foreground mt-8">Stand: 29. September 2026</p>
+          <div>
+            <h2 className="font-bold text-lg text-foreground mb-2">9. Partnerangebote auf /werbeflaeche</h2>
+            <p>Die gesammelten Partnerlinks aus Abschnitt 8 zeigen wir ausschließlich auf der Seite „Partnerangebote“ (/werbeflaeche). Auf der Startseite und im Buchungsablauf erscheinen keine Partnerlinks. Es gelten die Angaben aus Abschnitt 8: Beim Aufruf der Seite werden keine Inhalte von Awin oder Händlern geladen, eine Datenübermittlung an Awin und den Händler erfolgt erst nach Ihrem bewussten Klick auf einen Partnerlink.</p>
+          </div>
+
+          <div>
+            <h2 className="font-bold text-lg text-foreground mb-2">10. Anfrageformular für Website-Werbeplätze</h2>
+            <p>Unternehmen können über das Formular auf /werbung eine unverbindliche Anfrage für einen Werbeplatz auf unserer Website stellen. Dabei verarbeiten wir Firma, Ansprechpartner, E-Mail-Adresse, optional Website, gewünschten Platz, gewünschten Starttermin und Ihre Nachricht sowie den Zeitpunkt der Anfrage. Zweck ist ausschließlich die Bearbeitung und Beantwortung Ihrer Anfrage (Art. 6 Abs. 1 lit. b DSGVO, vorvertragliche Maßnahmen). Die Anfrage wird in unserer Datenbank gespeichert und per E-Mail an info@mytransporter.org übermittelt; zum Schutz vor Missbrauch prüfen wir die Anzahl der Anfragen je E-Mail-Adresse in einem kurzen Zeitraum. Mit dem Absenden melden Sie sich nicht für einen Newsletter an, und wir erstellen daraus kein automatisches Werbeprofil.</p>
+          </div>
+
+          <p className="text-xs text-muted-foreground mt-8">Stand: 6. Oktober 2026</p>
         </div>
       </div>
     </main>
