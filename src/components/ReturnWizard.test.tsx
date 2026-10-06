@@ -191,6 +191,7 @@ describe("Rückgabe-Wizard", () => {
     const again = screen.getByText("Erneut aufnehmen").closest("label")!;
     expect(again.htmlFor).toBe(camInput().id);
     await pick("camera", f);
+    await act(async () => new Promise((r) => setTimeout(r, 10)));
     expect(queueTags()).toEqual([]);
     await confirm();
     expect(queueTags()).toEqual(["post_front"]);

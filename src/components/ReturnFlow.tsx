@@ -473,7 +473,11 @@ export function ReturnFlow({
   );
 
   // ---------- Kandidat (Vorschau vor Bestätigung, nur im Arbeitsspeicher) ----------
+  // Jede Auswahl/Freigabe erhöht den Zähler: eine verspätet fertig gewordene Konvertierung
+  // (z. B. HEIC) darf einen bereits bestätigten oder verworfenen Slot nie wieder überschreiben.
+  const pickSeq = useRef(0);
   const clearCandidate = useCallback(() => {
+    pickSeq.current += 1;
     setCandidate((c) => {
       if (c?.url) URL.revokeObjectURL?.(c.url);
       return null;
@@ -482,9 +486,11 @@ export function ReturnFlow({
 
   const acceptFile = useCallback(async (file: File, source: Candidate["source"]) => {
     setPickError(null);
+    const seq = ++pickSeq.current;
     try {
       const blob = await normalizeImageFile(file);
       const out = blobToImageFile(blob, "photo");
+      if (seq !== pickSeq.current) return;
       setCandidate((c) => {
         if (c?.url) URL.revokeObjectURL?.(c.url);
         return { file: out, url: makePreview(out), source };
