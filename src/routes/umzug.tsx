@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { AdRails } from "@/components/ads/AdRails";
+import { InFlowAd } from "@/components/ads/InFlowAd";
 import { Phone, MessageCircle, Truck, Package, ShieldCheck, Hand, Link2, CalendarDays, MapPin, Building2, Home, Warehouse, KeyRound } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { ORG_ID, SITE_URL, pageHead, type Crumb } from "@/lib/seo";
@@ -86,6 +88,7 @@ function UmzugPage() {
   return (
     <main className="min-h-screen bg-background pt-12">
       <Navbar />
+      <AdRails>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
         <header className="py-8 sm:py-14">
           <h1 className="text-4xl sm:text-5xl font-bold leading-tight text-foreground text-balance">
@@ -127,6 +130,7 @@ function UmzugPage() {
         </section>
 
 
+<InFlowAd placement="inFlowTop" />
         <section className="mt-14" aria-labelledby="weitere-leistungen">
           <h2 id="weitere-leistungen" className="text-2xl sm:text-3xl font-bold text-foreground">
             Platz schaffen. Veränderungen gut organisieren.
@@ -183,6 +187,7 @@ function UmzugPage() {
           </ol>
         </section>
 
+<InFlowAd placement="inFlowBottom" />
         <section className="mt-14 rounded-3xl border border-border bg-card p-6 sm:p-10" aria-labelledby="anrufen">
           <h2 id="anrufen" className="text-2xl sm:text-3xl font-bold text-foreground">
             Lass uns dein Vorhaben planen.
@@ -206,6 +211,7 @@ function UmzugPage() {
         </section>
 
       </div>
+      </AdRails>
       <footer className="border-t border-border">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
           <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">

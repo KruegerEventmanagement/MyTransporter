@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { InFlowAd } from "@/components/ads/InFlowAd";
 import { pageHead } from "@/lib/seo";
 import { PLAN_CATALOG, DEPOSIT_EUR } from "@/lib/booking-rules";
 const HOME_MIN_PRICE = Math.min(...PLAN_CATALOG.map((p) => p.price));
@@ -34,6 +35,7 @@ function Index() {
         <HomeOfferSummary />
         <BookingSection />
         <SocialBanner />
+        <InFlowAd placement="inFlowBottom" />
         <HomeIntroSection />
       </AdRails>
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">

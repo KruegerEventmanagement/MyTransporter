@@ -1,4 +1,5 @@
 import { RelatedLinks } from "@/components/seo/RelatedLinks";
+import { InFlowAd } from "@/components/ads/InFlowAd";
 import { pageHead } from "@/lib/seo";
 import { createFileRoute } from "@tanstack/react-router";
 import { CalendarDays, Truck, Sparkles } from "lucide-react";
@@ -73,6 +74,7 @@ function LangzeitmietePage() {
             </div>
           ))}
         </section>
+<InFlowAd placement="inFlowTop" />
         <RelatedLinks exclude="/langzeitmiete" />
         <div className="mt-10 flex justify-center text-sm text-muted-foreground">
           <AdConsentRevokeButton />

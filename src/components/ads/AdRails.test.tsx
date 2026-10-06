@@ -74,3 +74,24 @@ describe("AdRails Struktur", () => {
     expect(render(variants[3]!)).not.toContain("ad-rails-right");
   });
 });
+
+import { railFlags } from "./AdRails";
+import { getRouteAdPolicy } from "@/lib/ad-placements";
+
+describe("AdRails Richtlinie", () => {
+  it("ohne Route-Richtlinie, Consent oder Freigabe keine Rails", () => {
+    const none = { left: false, right: false, leftLower: false, rightLower: false };
+    expect(railFlags(null, true)).toEqual(none);
+    expect(railFlags(getRouteAdPolicy("/umzug"), false)).toEqual(none);
+    expect(railFlags(getRouteAdPolicy("/umzug"), true)).toEqual(none); // Konfiguration deaktiviert
+  });
+
+  it("zweite Rail-Einheit hängt in derselben Spalte, Inhalt bleibt gekeyt", () => {
+    const tree = buildAdRailsTree({ suppressed: false, left: true, right: true, leftLower: true, rightLower: true, children: CHILD });
+    const json = JSON.stringify(tree, (k, v) => (k === "children" && v === CHILD ? "child" : v));
+    expect(json).toContain("ad-rails-left-lower");
+    expect(json).toContain("ad-rails-right-lower");
+    expect(json).not.toContain("sticky");
+    expect(findContentPath(tree)).toEqual(["div#ad-rails-root", `div#${AD_RAILS_CONTENT_KEY}`]);
+  });
+});

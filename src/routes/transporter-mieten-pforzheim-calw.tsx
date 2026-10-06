@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { AdRails } from "@/components/ads/AdRails";
+import { InFlowAd } from "@/components/ads/InFlowAd";
 import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { RelatedLinks } from "@/components/seo/RelatedLinks";
@@ -60,6 +62,7 @@ function PforzheimCalwPage() {
   return (
     <main className="min-h-screen bg-background pt-12">
       <Navbar />
+      <AdRails>
       <article className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
         <Breadcrumbs items={CRUMBS} />
         <h1 className="text-3xl sm:text-4xl font-bold text-foreground">
@@ -112,6 +115,7 @@ function PforzheimCalwPage() {
           </p>
         </section>
 
+        <InFlowAd placement="inFlowTop" />
         <section className="mt-10">
           <h2 className="text-2xl font-bold text-foreground">Preise für den Crafter</h2>
           <p className="mt-3 text-muted-foreground leading-relaxed">
@@ -146,6 +150,7 @@ function PforzheimCalwPage() {
           </Link>
         </section>
 
+        <InFlowAd placement="inFlowBottom" />
         <section className="mt-10">
           <h2 className="text-2xl font-bold text-foreground">Lieber in Leonberg abholen?</h2>
           <p className="mt-3 text-muted-foreground leading-relaxed">
@@ -157,6 +162,7 @@ function PforzheimCalwPage() {
 
         <RelatedLinks exclude={PATH} />
       </article>
+      </AdRails>
     </main>
   );
 }

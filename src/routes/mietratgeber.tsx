@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { AdRails } from "@/components/ads/AdRails";
+import { InFlowAd } from "@/components/ads/InFlowAd";
 import { pageHead, BUSINESS } from "@/lib/seo";
 import { Navbar } from "@/components/Navbar";
 import {
@@ -59,6 +61,7 @@ function MietratgeberPage() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-background pt-12">
       <Navbar />
+      <AdRails>
       <article className="mx-auto max-w-3xl px-4 py-10 text-foreground">
         <h1 className="text-3xl font-bold text-balance md:text-4xl">Mietratgeber für deinen Transporter</h1>
         <p className="mt-3 text-sm text-muted-foreground">
@@ -111,6 +114,7 @@ function MietratgeberPage() {
           Rückgabe. Alle Tarife findest du unter <Link to="/preise" className="underline">Tarife &amp; Preise</Link>.
         </p>
 
+<InFlowAd placement="inFlowTop" />
         <H2 id="kilometer">3. Kilometer berechnen</H2>
         <p className="mt-3 leading-relaxed text-muted-foreground">
           Jeder Zeittarif enthält Inklusivkilometer (z. B. {P24.label}: {P24.freeKm} km). Gezählt wird die gesamte
@@ -149,6 +153,7 @@ function MietratgeberPage() {
           <li>Du erhältst eine Buchungsbestätigung mit Rechnung. Abholort und Zeitraum stehen in deiner Buchung.</li>
         </ol>
 
+<InFlowAd placement="inFlowBottom" />
         <H2 id="abholung">6. Checkliste Abholung</H2>
         <ul className="mt-3 list-disc space-y-1.5 pl-5 text-muted-foreground">
           <li>Pünktlich am Abholort aus deiner Buchung sein. Unsere Abholorte: {BUSINESS.leonberg.street},{" "}
@@ -179,6 +184,7 @@ function MietratgeberPage() {
           </p>
         </section>
       </article>
+      </AdRails>
       <footer className="border-t border-border py-12 text-center text-sm text-muted-foreground">
         <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
         <div className="mt-3 flex flex-wrap justify-center gap-4">

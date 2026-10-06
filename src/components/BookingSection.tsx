@@ -1213,7 +1213,7 @@ export function BookingSection() {
 
   // Werbeflächen während Verifizierung, Registrierung, Zahlung, Bestätigung
   // und aktiver Fahrt vollständig ausblenden (Google-Richtlinien).
-  useSuppressAds(step >= 3 || showCheckout || paid || drivePhase !== null);
+  useSuppressAds(step >= 1 || showCheckout || paid || drivePhase !== null);
   useHideHouseAd(step >= 1 || showCheckout || paid || drivePhase !== null);
 
   const stepTitles = registrationComplete

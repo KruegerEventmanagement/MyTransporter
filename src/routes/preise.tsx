@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { InFlowAd } from "@/components/ads/InFlowAd";
 import { RelatedLinks } from "@/components/seo/RelatedLinks";
 import { pageHead, SITE_URL, ORG_ID } from "@/lib/seo";
 import { Navbar } from "@/components/Navbar";
@@ -145,8 +146,10 @@ function PreisePage() {
         </div>
       </section>
 
+      <InFlowAd placement="inFlowTop" />
       <TariffSection />
       <AddonPackagesSection />
+      <InFlowAd placement="inFlowBottom" />
 
       <section className="pb-16 px-4">
         <div className="max-w-3xl mx-auto text-center">
