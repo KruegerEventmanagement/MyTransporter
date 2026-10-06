@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { InFlowAd } from "@/components/ads/InFlowAd";
 import { pageHead } from "@/lib/seo";
 import { Navbar } from "@/components/Navbar";
 import { TariffSection } from "@/components/TariffSection";
@@ -39,6 +40,7 @@ function UeberUnsPage() {
         <TariffSection />
         <AddonPackagesSection />
         <AdvantagesSection />
+        <InFlowAd placement="inFlowBottom" />
         <CompareSection />
         <BookingInfoSection />
       </AdRails>

@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { AdRails } from "@/components/ads/AdRails";
+import { InFlowAd } from "@/components/ads/InFlowAd";
 import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { RelatedLinks } from "@/components/seo/RelatedLinks";
@@ -43,6 +45,7 @@ function UmzugstransporterPage() {
   return (
     <main className="min-h-screen bg-background pt-12">
       <Navbar />
+      <AdRails>
       <article className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
         <Breadcrumbs items={CRUMBS} />
         <h1 className="text-3xl sm:text-4xl font-bold text-foreground">Umzugstransporter mieten – so wählst du richtig</h1>
@@ -129,6 +132,7 @@ function UmzugstransporterPage() {
 
         <RelatedLinks exclude={PATH} />
       </article>
+      </AdRails>
     </main>
   );
 }

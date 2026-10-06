@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { InFlowAd } from "@/components/ads/InFlowAd";
 import { RelatedLinks } from "@/components/seo/RelatedLinks";
 import { pageHead } from "@/lib/seo";
 import { AdRails } from "@/components/ads/AdRails";
@@ -99,6 +100,7 @@ function FaqPage() {
           ))}
         </div>
 
+<InFlowAd placement="inFlowTop" />
         <section className="mt-12 p-6 rounded-2xl bg-secondary">
           <h2 className="text-lg font-semibold text-foreground mb-2">
             Noch Fragen? Wir sind für dich da.
@@ -116,6 +118,7 @@ function FaqPage() {
           </p>
         </section>
 
+<InFlowAd placement="inFlowBottom" />
         <section className="mt-16">
           <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-8 text-center">
             Deine Transporter-Vermietung für Leonberg, Stuttgart & Umgebung
