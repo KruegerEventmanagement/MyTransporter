@@ -76,7 +76,7 @@ describe("sendEmail (simulierte Resend-Antworten) Wahrheit gesendet/nicht gesend
       respond(401, { name: "validation_error", message: `API key is invalid: ${leaked} (Authorization: Bearer ${leaked})` }),
     );
     expect(await sendEmail("a@b.de", "S", "<p/>")).toBe(false);
-    const consoleOut = errorSpy.mock.calls.map((c) => c.map(String).join(" ")).join("\n");
+    const consoleOut = errorSpy.mock.calls.map((c: unknown[]) => c.map(String).join(" ")).join("\n");
     expect(consoleOut).toContain("Resend send failed");
     expect(consoleOut).not.toContain("LEAKEDkey");
     expect(String(inserts[0].body)).not.toContain("LEAKEDkey");
