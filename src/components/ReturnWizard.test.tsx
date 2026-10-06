@@ -181,6 +181,7 @@ describe("Rückgabe-Wizard", () => {
 
   it("Vorschau: erst „Bestätigen“ speichert; „Erneut aufnehmen“ ersetzt Kandidat; gleiche Datei erneut", async () => {
     online = false;
+    fake.storage.upload = [{ error: "throw" }];
     mount();
     await start();
     const f = imageFile("gleich.png", "image/png");
@@ -282,6 +283,7 @@ describe("Rückgabe-Wizard – iOS/Android Foto-Wege", () => {
   it("Live-Kamera fehlt oder verweigert: Galerie/Kamera am Slide funktionieren weiter, HEIC wird angenommen", async () => {
     setMediaDevices(async () => Promise.reject(domError("NotAllowedError")));
     online = false;
+    fake.storage.upload = [{ error: "throw" }];
     mount();
     await start();
     fireEvent.click(screen.getByText(/Live-Kamera mit Rahmen/));
