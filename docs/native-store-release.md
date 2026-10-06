@@ -1,6 +1,6 @@
 # MyTransporter – Native App (iOS/Android) Build & Release
 
-Stand: 05.10.2026, 21:32 UTC (23:30 Europe/Berlin). Kein Store-Upload aus Lovable. Keine Secrets im Repository.
+Stand: 06.10.2026; interner Release um 19:30 Europe/Berlin bestätigt. Kein Store-Upload aus Lovable. Keine Secrets im Repository.
 
 ## Architektur
 
@@ -52,9 +52,9 @@ Stand 05.10.2026: Das Google-Play-Entwicklerkonto „Krueger Eventmanagement“ 
 
 1. In der Play Console App `de.mytransporter.app` anlegen bzw. prüfen; Play App Signing aktivieren.
 2. Upload-Keystore lokal erzeugen (`keytool -genkey -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000`) – **nicht committen**.
-3. GitHub-Secrets setzen: `ANDROID_KEYSTORE_BASE64` (base64 von upload.jks), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`.
+3. Die vier Signierungs-Secrets sind eingerichtet: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. `PLAY_SERVICE_ACCOUNT_JSON` wird zusätzlich für automatische Uploads benötigt und fehlt derzeit.
 4. Version nicht manuell erhöhen: CI setzt `versionCode = 1000 + run_number*100 + run_attempt`, `versionName = 1.0.<run>-<sha7>`.
-5. Erster Upload manuell: Artefakt `mytransporter-release-<versionCode>` (AAB) aus dem Workflow-Lauf laden und in „Interner Test“ hochladen; danach lädt jeder main-Push automatisch hoch (Track `internal`).
+5. Manueller Upload: Artefakt `mytransporter-release-<versionCode>` (AAB) aus dem Workflow-Lauf laden und in „Interner Test“ hochladen. Automatische Uploads nach main-Push sind erst mit eingerichtetem `PLAY_SERVICE_ACCOUNT_JSON` möglich (Standard-Track `internal`).
 6. Datenschutz-Formular (Datensicherheit), Kontolöschungs-URL: `https://mytransporter.org/konto-loeschen`.
 7. Push: Firebase-Projekt, `google-services.json` nach `android/app/` (gitignored), Versandweg serverseitig mit FCM-Service-Account als Secret.
 
@@ -74,13 +74,13 @@ Stand 05.10.2026: Das Google-Play-Entwicklerkonto „Krueger Eventmanagement“ 
 3. Signing Credentials (iOS-Zertifikat + Provisioning Profile, Android-Keystore) in Appflow hochladen.
 4. Native Builds: iOS „App Store“, Android „Release (aab)“; Deploy-Ziele App Store Connect / Play erst nach Prüfung.
 
-## Android-CI & automatische Play-Updates (Stand 05.10.2026, 20:30 UTC)
+## Android-CI & automatische Play-Updates (Stand 06.10.2026)
 
 Workflow `.github/workflows/android.yml` (iOS-CI deaktiviert, `ios/` bleibt im Repo; `native-ci.yml` entfernt).
 
 - **check** (push `main` + PR): `bun install --frozen-lockfile` (kein Fallback), `bun run typecheck`, `bunx vitest run`, `bun run build:native`, `npx cap sync android`, `./gradlew assembleDebug lintDebug`, Artefakt `android-debug-apk` (+ Lint-Bericht).
 - **release** (nur `push` auf `main` bzw. manuell im Repo `KruegerEventmanagement/MyTransporter`, erst nach grünem check): signiertes AAB (`bundleRelease`) + Upload per Play Developer API (`r0adkll/upload-google-play`).
-  - Secrets (GitHub → Settings → Secrets → Actions): `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`. Fehlt eines, meldet der Job „NICHT eingerichtet“ (Warnung + Summary) und lädt nichts hoch. Keine Secret-Ausgabe.
+  - Secrets (GitHub → Settings → Secrets → Actions): `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`. Die vier `ANDROID_*`-Secrets steuern die Signierung. Fehlt eines davon, wird kein Release gebaut. `PLAY_SERVICE_ACCOUNT_JSON` steuert ausschließlich den automatischen Upload: Fehlt es, wird das signierte AAB trotzdem als Artefakt für den manuellen Upload erstellt. Keine Secret-Ausgabe.
   - Track: Variable `PLAY_TRACK` (Standard `internal`) bzw. Eingabe bei manuellem Start. `production` läuft über die GitHub-Umgebung `play-production` (dort Reviewer als Freigabe eintragen); sonst `play-internal`.
   - `PLAY_RELEASE_STATUS` (Standard `completed`). Solange die App in Play noch Entwurf ist, auf `draft` setzen.
   - **Erster Upload muss manuell** in der Play Console erfolgen (App anlegen, Play App Signing); erst danach akzeptiert die API Uploads.
@@ -93,7 +93,7 @@ Workflow `.github/workflows/android.yml` (iOS-CI deaktiviert, `ios/` bleibt im R
 Nur über `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. Unvollständig → `bundleRelease`/`assembleRelease` bricht mit klarer Meldung ab; nie Debug-Signierung. Unsigniertes Prüf-Bundle nur explizit: `./gradlew bundleRelease -PmtUnsignedRelease=true`.
 
 ### SDK
-compile/targetSdk 36, minSdk 23, AGP 8.10.1, Gradle 8.11.1, Java 21.
+compile/targetSdk 36, minSdk 24 (Android 7.0+), AGP 8.10.1, Gradle 8.11.1, Java 21. Die Play Console lehnte das Bundle mit minSdk 23 bei aktiviertem automatischem Schutz ab. minSdk 24 behebt diesen Upload-Blocker; der Schutz bleibt aktiviert. Android-6-Geräte werden damit nicht mehr unterstützt.
 
 ### Berechtigungen
 INTERNET, NETWORK_STATE, CAMERA, POST_NOTIFICATIONS, Vordergrund-Standort. `READ_MEDIA_IMAGES`/`READ_EXTERNAL_STORAGE` entfernt (Fotoauswahl über System-Picker). Kamera/GPS als `uses-feature required=false`.
@@ -126,27 +126,31 @@ Preflight `OPTIONS` auf `/_serverFn/*`, `/api/*` → 204 nur für App-Origins; C
 | `npx cap sync android` | 0 |
 | Gradle `assembleDebug`/`lintDebug`/`bundleRelease` | **nicht lokal ausführbar** – läuft erst im GitHub-Workflow |
 
-## Release-Stand Android (05.10.2026, 23:30 Europe/Berlin)
+## Verifizierter Release-Stand Android (06.10.2026)
 
-- Play Console: App `de.mytransporter.app` angelegt; **interner Test** mit 1.0.1 / versionCode **1002** am 05.10.2026 23:30 Europe/Berlin veröffentlicht. 1.0.0 / 1001 ist damit ersetzt. Kein offener oder Produktions-Release.
-- **Store-Eintrag** (Deutsch) mit Icon, Featuregrafik und 2 Screenshots ist „Bereit für die Überprüfung“. Der App-Name ist noch temporär und nicht reviewt.
-- **Testerliste** mit `info@mytransporter.org` und `superkruger5@gmail.com` ist nur vorbereitet, **nicht gespeichert** – die automatische Freigabeprüfung verlangt eine konkrete Zustimmung.
-- **IARC-Nutzungsbedingungen** noch **nicht** akzeptiert; danach ist der Fragebogen offen.
-- **Prüferzugang fehlt**; dadurch sind Zielgruppe und fertig ausgefüllte Datensicherheit (als Entwurf) noch blockiert.
-- Kein Produktionszugang vor **12 Testern / 14 Tage** im geschlossenen Test.
-- Achtung: die CI-Formel `1000 + run_number*100 + run_attempt` erzeugt deutlich höhere Codes als 1002 – nach einem CI-Upload sind manuelle Codes darunter nicht mehr möglich.
-- GitHub-Actions-Run **37375920823** (Commit `3b673a0`): Job `check` erfolgreich (Typecheck, 501 Tests, Native-Build, `assembleDebug`, `lintDebug`); Job `release` hat Signierung + Upload wegen fehlender Secrets übersprungen. **Automatische Play-Updates sind somit NICHT aktiv** – 1002 wurde manuell hochgeladen.
+- **Interner Test veröffentlicht:** versionCode **3601**, versionName **1.0.26-19733fc**, Release-Name „1.0.26 - Interner Funktionstest“. Die Play Console bestätigt „Für interne Tester verfügbar“, veröffentlicht am 06.10.2026 um 19:30 Europe/Berlin. Status „Nicht überprüft“; keine öffentliche Produktionsfreigabe.
+- Installations-/Opt-in-Link für freigeschaltete interne Testkonten: https://play.google.com/apps/internaltest/4701236058930531396
+- Beide vorhandenen internen Testerlisten „MyTransporter – Inhaber“ (2 Adressen) und „MyTransporter – Inhaber GMX“ (1 Adresse) sind gespeichert und aktiviert. Keine neuen Personen eingeladen.
+- **Geschlossener Test Alpha vorbereitet:** derselbe Build 3601, Release-Name „1.0.26 - Geschlossener Test“, Zielland Deutschland. Release und Land sind gespeichert, aber noch nicht zur Überprüfung eingereicht. Eine Liste echter geschlossener Testpersonen fehlt.
+- Die Veröffentlichungsübersicht zeigt 10 noch nicht eingereichte Änderungen, darunter den deutschen Store-Eintrag und den Fragebogen zur Inhaltseinstufung. Die frühere Angabe zum noch offenen IARC-Fragebogen ist damit überholt.
+- Google nennt **Zielgruppe/Inhalte** und **Datensicherheit** als Einreichungsblocker. Die Zielgruppe ist durch fehlende App-Anmeldedaten blockiert; das vollständig ausgefüllte Datensicherheitsformular lässt sich erst nach Angabe der Zielgruppe abschließend speichern. Der vorhandene Datenschutz-Entwurf wurde geprüft und beibehalten.
+- **Prüferzugang erforderlich:** dauerhaft erreichbares, bestätigtes Kunden-Testkonto mit Zugang zu den eingeschränkten App-Funktionen und passenden Prüfanweisungen. Kein persönlicher Administratorzugang. Zugangsdaten direkt in der Play Console hinterlegen, nie im Repository.
+- Für betroffene neue private Entwicklerkonten verlangt Google mindestens **12 Testpersonen**, die mindestens **14 Tage fortlaufend** am geschlossenen Test teilnehmen. Danach Produktionszugriff beantragen. Eigene zusätzliche E-Mail-Adressen ersetzen keine unabhängigen Testpersonen; der interne Test zählt für diese Frist nicht. Die Frist hat mit dem hier vorbereiteten, noch nicht veröffentlichten Alpha-Release noch nicht begonnen.
+- Offizielle Vorgaben: https://support.google.com/googleplay/android-developer/answer/14151465?hl=de
 
-## Offene Credentials / Blocker
+### Build-Nachweis
 
-- App angelegt; interner Release 1002 veröffentlicht (1001 ersetzt); 5 GitHub-Secrets fehlen → CI-Signierung/Upload inaktiv, automatische Play-Updates nicht aktiv
-- Store-Eintrag: „Bereit für die Überprüfung“; App-Name temporär/unreviewed; IARC-Nutzungsbedingungen nicht akzeptiert, Fragebogen offen
-- Prüferzugang fehlt; Zielgruppe + Datensicherheits-Entwurf dadurch blockiert; Testerliste vorbereitet, nicht gespeichert
-- 12 Tester / 14 Tage vor Produktion
-- Gradle-Lauf im CI bestätigt (Run 37375920823: assembleDebug + lintDebug grün)
-- www-App-Link nicht verifizierbar, solange www per 302 umleitet
-- Firebase (`google-services.json`) und serverseitiger FCM-Versand (nicht gebaut)
-- 1024×1024-App-Icon nur für iOS (später); Android nutzt das 512er-Icon
-- (erledigt) Web mit CORS und /konto-loeschen veröffentlicht; per curl verifiziert: OPTIONS 204 mit ACAO https://localhost, /konto-loeschen 200
-- Apple/iOS: später (Team-ID, Zertifikate, APNs); iOS-CI deaktiviert
-- Keine physischen Gerätetests
+- Workflow-Korrektur auf main: Commit `185d0171e6964006dbee379696f31b90e57b9c27` trennt Signierung vom optionalen automatischen Play-Upload.
+- minSdk-Korrektur auf main: Commit `19733fc8396afd064f5b84c386d328d32cadf165`.
+- Erfolgreicher GitHub-Actions-Lauf: https://github.com/KruegerEventmanagement/MyTransporter/actions/runs/37502309840
+- Typecheck, Tests, Native-Build, Capacitor-Sync, `assembleDebug`, `lintDebug` und signiertes `bundleRelease` erfolgreich. Automatischer Play-Upload wegen fehlendem `PLAY_SERVICE_ACCOUNT_JSON` übersprungen; der manuelle Upload von 3601 wurde anschließend erfolgreich veröffentlicht.
+- Artefakt `mytransporter-release-3601` (ID 11430761818); ZIP-SHA-256 beim Download verifiziert: `18f4ab5e8feeafff468db9e2b5d6504cd7b55322c3eedf22cf7c304b6a2184da`.
+- Kein physischer Android-Gerätetest und kein vollständiger Buchungs-/Zahlungsablauf durch diesen Durchlauf bestätigt.
+
+## Weitere offene technische Punkte
+
+- `PLAY_SERVICE_ACCOUNT_JSON` fehlt; automatische Play-Uploads sind weiterhin inaktiv. Signierte AABs werden erfolgreich gebaut.
+- www-App-Link nicht verifizierbar, solange www per 302 umleitet (zuletzt 05.10.2026 geprüft).
+- Firebase-Konfiguration und serverseitiger FCM-Versand fehlen; nativen Push nicht als fertig ausgeliefert betrachten.
+- Web mit CORS und /konto-loeschen war am 05.10.2026 live verifiziert: OPTIONS 204 mit ACAO https://localhost, /konto-loeschen 200.
+- Apple/iOS bleibt separat: Team-ID, Zertifikate, APNs und 1024×1024-Icon; iOS-CI deaktiviert.
