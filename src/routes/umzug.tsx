@@ -180,6 +180,22 @@ function UmzugPage() {
 
         <RelatedLinks exclude={PATH} />
       </div>
+      <footer className="border-t border-border">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
+            Startseite
+          </Link>
+          <Link to="/kontakt" className="text-muted-foreground hover:text-foreground transition-colors">
+            Kontakt
+          </Link>
+          <Link to="/impressum" className="text-muted-foreground hover:text-foreground transition-colors">
+            Impressum
+          </Link>
+          <Link to="/datenschutz" className="text-muted-foreground hover:text-foreground transition-colors">
+            Datenschutz
+          </Link>
+        </div>
+      </footer>
     </main>
   );
 }
