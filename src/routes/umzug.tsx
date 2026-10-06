@@ -102,8 +102,8 @@ function UmzugPage() {
             Gut geschützt auf dem Weg ins neue Zuhause.
           </h2>
           <p className="mt-3 max-w-2xl text-muted-foreground leading-relaxed">
-            Decken und Stretchfolie schützen Oberflächen, Gurte sichern die Ladung. So kommt dein
-            Hausrat so an, wie er losgefahren ist.
+            Decken und Stretchfolie schützen Oberflächen, Gurte sichern die Ladung. So bereiten wir
+            deine Möbel sorgfältig auf den Transport vor.
           </p>
           <ul className="mt-6 grid gap-4 sm:grid-cols-2">
             {EQUIPMENT.map(({ icon: Icon, title, text }) => (
@@ -166,8 +166,8 @@ function UmzugPage() {
             Du organisierst deinen Umzug selbst? Hier findest du den passenden Miettransporter.
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Die Mietung zum Selbstfahren läuft über unsere festen Miettarife und ist getrennt vom
-            individuellen Umzugsangebot.
+            Für die reine Transportermiete gelten unsere Miettarife. Deinen Umzug mit Unterstützung
+            planen und kalkulieren wir individuell.
           </p>
           <Link
             to="/"
@@ -180,6 +180,22 @@ function UmzugPage() {
 
         <RelatedLinks exclude={PATH} />
       </div>
+      <footer className="border-t border-border">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
+            Startseite
+          </Link>
+          <Link to="/kontakt" className="text-muted-foreground hover:text-foreground transition-colors">
+            Kontakt
+          </Link>
+          <Link to="/impressum" className="text-muted-foreground hover:text-foreground transition-colors">
+            Impressum
+          </Link>
+          <Link to="/datenschutz" className="text-muted-foreground hover:text-foreground transition-colors">
+            Datenschutz
+          </Link>
+        </div>
+      </footer>
     </main>
   );
 }
