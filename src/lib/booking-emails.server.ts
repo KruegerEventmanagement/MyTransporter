@@ -102,7 +102,7 @@ export function classifyResendError(
     return { kind: "sender_domain", hint: "Absender/Domain in Resend nicht freigegeben – Domain-Verifizierung prüfen (kein Schlüsselproblem)" };
   }
   if (status === 429 || status >= 500) {
-    return { kind: "transient", hint: "Vorübergehender Fehler beim Mailanbieter – wird später erneut versucht" };
+    return { kind: "transient", hint: "Vorübergehende Störung beim Mailanbieter; Versand nicht erfolgt." };
   }
   return { kind: "other", hint: null };
 }
@@ -142,7 +142,7 @@ export async function sendEmail(
   });
   if (!res.ok) {
     const errText = await res.text();
-    console.error("Resend send failed", res.status, errText.slice(0, 400));
+    console.error("Resend send failed", res.status, redactSecrets(errText).slice(0, 400));
     const cls = classifyResendError(res.status, errText);
     try {
       await supabaseAdmin.from("admin_notifications").insert({
