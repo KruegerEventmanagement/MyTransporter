@@ -1,35 +1,39 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Phone, MessageCircle, Truck, Package, ShieldCheck, Hand, Link2, CalendarDays, MapPin, Building2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
-import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
-import { RelatedLinks } from "@/components/seo/RelatedLinks";
-import { BUSINESS, ORG_ID, SITE_URL, pageHead, type Crumb } from "@/lib/seo";
+import { ORG_ID, SITE_URL, pageHead, type Crumb } from "@/lib/seo";
 
 const PATH = "/umzug";
 const CRUMBS: Crumb[] = [
   { name: "Start", path: "/" },
   { name: "Umzug", path: PATH },
 ];
-const TEL = `tel:${BUSINESS.phone}`;
-const WHATSAPP = "https://wa.me/4915236230118";
+const UMZUG_CONTACT = {
+  phone: "+491789276274",
+  phoneDisplay: "0178 9276274",
+  whatsappDraft: "Hallo, ich möchte einen Umzug mit MyTransporter anfragen.",
+} as const;
+const TEL = `tel:${UMZUG_CONTACT.phone}`;
+const WHATSAPP = `https://wa.me/${UMZUG_CONTACT.phone.slice(1)}?text=${encodeURIComponent(UMZUG_CONTACT.whatsappDraft)}`;
 
 export const Route = createFileRoute("/umzug")({
   head: () =>
     pageHead({
       path: PATH,
-      title: "Umzug mit 10 Jahren Erfahrung | MyTransporter Leonberg",
+      title: "Professionelle Umzüge – über 10 Jahre Umzugserfahrung | MyTransporter",
       description:
-        "Umzugsunterstützung von MyTransporter: 10 Jahre Umzugserfahrung, eigene Transporter, Umzugsdecken, Stretchfolie und Gurte. Individuelles Angebot nach kurzem Telefonat.",
+        "Professionelle Umzüge mit MyTransporter: über 10 Jahre Erfahrung im Team, eigene Transporter und passende Ausstattung. Individuelles Angebot: 0178 9276274.",
       breadcrumbs: CRUMBS,
       schema: [
         {
           "@type": "Service",
           "@id": `${SITE_URL}${PATH}#service`,
           name: "Umzug",
-          serviceType: "Umzugsunterstützung",
+          serviceType: "Professionelle Umzüge",
+          telephone: UMZUG_CONTACT.phone,
           provider: { "@id": ORG_ID },
           description:
-            "Umzugsunterstützung mit eigenen Transportern, Umzugsdecken, Stretchfolie und Gurten. Preis nach individueller Absprache.",
+            "Professionelle Umzüge mit über zehn Jahren Erfahrung im Team, eigenen Transportern, Umzugsdecken, Stretchfolie und Gurten. Individuelles Angebot nach persönlicher Absprache.",
         },
       ],
     }),
@@ -38,13 +42,15 @@ export const Route = createFileRoute("/umzug")({
 
 function CallButtons({ className = "" }: { className?: string }) {
   return (
-    <div className={`flex flex-col sm:flex-row gap-3 ${className}`}>
+    <div className={className}>
+      <p className="mb-3 font-semibold text-foreground">Dein direkter Kontakt für Umzüge</p>
+      <div className="flex flex-col sm:flex-row gap-3">
       <a
         href={TEL}
         className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-foreground px-8 text-base font-semibold text-background hover:opacity-90 transition-opacity"
       >
         <Phone className="h-5 w-5" aria-hidden="true" />
-        Jetzt anrufen: {BUSINESS.phoneDisplay}
+        Jetzt anrufen: {UMZUG_CONTACT.phoneDisplay}
       </a>
       <a
         href={WHATSAPP}
@@ -55,6 +61,7 @@ function CallButtons({ className = "" }: { className?: string }) {
         <MessageCircle className="h-5 w-5" aria-hidden="true" />
         WhatsApp schreiben
       </a>
+      </div>
     </div>
   );
 }
@@ -79,20 +86,23 @@ function UmzugPage() {
     <main className="min-h-screen bg-background pt-12">
       <Navbar />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
-        <Breadcrumbs items={CRUMBS} />
-
         <header className="py-8 sm:py-14">
           <p className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-sm font-medium text-foreground">
             <Truck className="h-4 w-4" aria-hidden="true" />
-            10 Jahre Umzugserfahrung
+            Über 10 Jahre Umzugserfahrung
           </p>
           <h1 className="mt-6 text-4xl sm:text-5xl font-bold leading-tight text-foreground">
-            Dein Umzug. Mit Erfahrung und der passenden Ausstattung.
+            Dein Umzug. Professionell von A nach B.
           </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            Ein neues Zuhause wartet. Wir helfen dir dabei, deine Möbel und Kartons gut dorthin zu
-            bringen. Mit zehn Jahren Umzugserfahrung, eigenen Transportern und der passenden
-            Ausrüstung planen wir die Unterstützung, die du für deinen Umzug brauchst.
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-foreground">
+            <strong>Mit über zehn Jahren Umzugserfahrung</strong> bietet dir das Team von MyTransporter
+            professionelle Umzüge von A nach B. Wir bringen Erfahrung, eigene Transporter und die
+            passende Ausstattung mit, damit dein Umzug gut vorbereitet starten kann.
+          </p>
+          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-foreground">
+            <strong>Von der ersten Absprache bis zum Transport deiner Möbel und Kartons:</strong>{" "}
+            Wir stimmen den Ablauf persönlich mit dir ab und kümmern uns um die vereinbarten
+            Leistungen. Du bekommst ein Angebot, das zu deinem Umzug passt.
           </p>
           <CallButtons className="mt-8" />
         </header>
@@ -123,12 +133,13 @@ function UmzugPage() {
             Ein Angebot, das zu deinem Umzug passt.
           </h2>
           <p className="mt-3 max-w-2xl text-muted-foreground leading-relaxed">
-            Jeder Umzug ist anders. Wir besprechen mit dir, was transportiert werden soll, welche
-            Strecke ansteht und wie die Zugänge vor Ort aussehen. Auf dieser Grundlage erhältst du
-            ein individuelles Angebot.
+            Ein guter Umzug beginnt mit einer klaren Absprache. Im persönlichen Gespräch besprechen
+            wir deinen Wunschtermin, die Strecke, die Menge an Möbeln und Kartons sowie Etagen und
+            Zugänge. Nach Einschätzung des Aufwands erhältst du ein individuelles Angebot.
+            Leistungen und Preis stimmen wir vor der Beauftragung mit dir ab.
           </p>
           <ol className="mt-6 grid gap-4 sm:grid-cols-3">
-            {["Umzug telefonisch besprechen", "Umfang und Preis abstimmen", "Termin und Durchführung vereinbaren"].map(
+            {["Umzug besprechen", "Umfang und Preis abstimmen", "Termin und Durchführung vereinbaren"].map(
               (step, i) => (
                 <li key={step} className="rounded-2xl bg-secondary p-5">
                   <span className="text-sm font-semibold text-muted-foreground">Schritt {i + 1}</span>
@@ -141,11 +152,11 @@ function UmzugPage() {
 
         <section className="mt-14 rounded-3xl border border-border bg-card p-6 sm:p-10" aria-labelledby="anrufen">
           <h2 id="anrufen" className="text-2xl sm:text-3xl font-bold text-foreground">
-            Ruf uns an und wir planen deinen Umzug.
+            Lass uns deinen Umzug planen.
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Das Gespräch ist unverbindlich, eine Registrierung brauchst du dafür nicht. Hilfreich
-            ist, wenn du schon grob weißt:
+            Ruf uns an oder schreib uns auf WhatsApp. Gemeinsam besprechen wir, was du brauchst.
+            Halte dafür am besten diese Angaben bereit:
           </p>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
             {PREP.map(({ icon: Icon, text }) => (
@@ -161,24 +172,6 @@ function UmzugPage() {
           <CallButtons className="mt-6" />
         </section>
 
-        <aside className="mt-10 rounded-2xl bg-secondary p-6">
-          <p className="font-semibold text-foreground">
-            Du organisierst deinen Umzug selbst? Hier findest du den passenden Miettransporter.
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Für die reine Transportermiete gelten unsere Miettarife. Deinen Umzug mit Unterstützung
-            planen und kalkulieren wir individuell.
-          </p>
-          <Link
-            to="/"
-            hash="booking"
-            className="mt-4 inline-flex min-h-12 items-center rounded-full bg-foreground px-6 font-semibold text-background hover:opacity-90"
-          >
-            Transporter mieten
-          </Link>
-        </aside>
-
-        <RelatedLinks exclude={PATH} />
       </div>
       <footer className="border-t border-border">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
