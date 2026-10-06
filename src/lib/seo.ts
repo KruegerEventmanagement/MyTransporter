@@ -41,6 +41,7 @@ export const PUBLIC_PAGES = [
   "/",
   "/preise",
   "/langzeitmiete",
+  "/umzug",
   "/umzugstransporter-mieten",
   "/transporter-mieten-pforzheim-calw",
   "/faq",
