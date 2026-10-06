@@ -363,7 +363,7 @@ describe("Kontolöschung mit behaltenen Fahrtfotos (simuliert)", () => {
       { path: "b9/other.jpg", bucket: "trip-photos", owner: OTHER as string | null },
     ];
     const s = makeStore({ bookings: [done], owned });
-    const r = await runAccountDeletion(s.store, UID, { accountCreatedAt: null, nowMs: NOW, create: true });
+    const r = await runAccountDeletion(s.store, { uid: UID, accountCreatedAt: null, bookings: [done] as never, nowMs: NOW });
     expect(r.ok).toBe(true);
     expect(s.authExists).toBe(false);
     expect(owned.map((o) => o.path)).toEqual(["b1aaaaaa/pre_front.jpg", "b9/other.jpg"]); // nichts gelöscht
@@ -373,7 +373,7 @@ describe("Kontolöschung mit behaltenen Fahrtfotos (simuliert)", () => {
   it("verbleibender Besitz außerhalb behaltener Buckets: kein Auth-Löschversuch, retrybar", async () => {
     const owned = [{ path: "x.jpg", bucket: "vehicles", owner: UID as string | null }];
     const s = makeStore({ bookings: [done], owned });
-    const r = await runAccountDeletion(s.store, UID, { accountCreatedAt: null, nowMs: NOW, create: true });
+    const r = await runAccountDeletion(s.store, { uid: UID, accountCreatedAt: null, bookings: [done] as never, nowMs: NOW });
     expect(r).toEqual({ ok: false, kind: "failed" });
     expect(s.authExists).toBe(true);
     expect(s.deletion?.status).toBe("failed");
