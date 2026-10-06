@@ -705,6 +705,36 @@ export type Database = {
           },
         ]
       }
+      mail_test_runs: {
+        Row: {
+          admin_id: string
+          created_at: string
+          id: string
+          request_id: string
+          status: string
+          test_id: string
+          updated_at: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          id?: string
+          request_id: string
+          status?: string
+          test_id: string
+          updated_at?: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          id?: string
+          request_id?: string
+          status?: string
+          test_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       manual_reservation_documents: {
         Row: {
           created_at: string
