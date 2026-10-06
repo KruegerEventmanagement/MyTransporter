@@ -108,15 +108,15 @@ describe("performReturnReport", () => {
 
 describe("v2 Pflichtnachweise", async () => {
   const { missingReturnEvidence, requiredReturnTagsV2, RETURN_V2_CORE_TAGS } = await import("./trip-return");
-  it("genau 6 Kernfotos, Tankbeleg nur bei Tanken", () => {
+  it("immer genau 7 Pflichtnachweise inkl. Tankbeleg", () => {
     expect(RETURN_V2_CORE_TAGS).toEqual(["post_front", "post_back", "post_left", "post_right", "post_interior", "post_dashboard"]);
-    expect(requiredReturnTagsV2(false)).toHaveLength(6);
+    expect(requiredReturnTagsV2(false)).toEqual([...RETURN_V2_CORE_TAGS, "tank_receipt"]);
     expect(requiredReturnTagsV2(true)).toEqual([...RETURN_V2_CORE_TAGS, "tank_receipt"]);
   });
   it("Altfotos Tacho+Tank decken Instrumentenfoto; Ausnahme photos deckt nur Fahrzeugfotos", () => {
     const mode = { flow: "v2" as const, refueled: false };
-    expect(missingReturnEvidence(["post_front", "post_back", "post_left", "post_right", "post_interior", "post_odometer", "post_fuel"], {}, mode)).toEqual([]);
-    expect(missingReturnEvidence([], { photos: "[Technisches Problem] Kamera kaputt" }, mode)).toEqual(["post_dashboard"]);
+    expect(missingReturnEvidence(["post_front", "post_back", "post_left", "post_right", "post_interior", "post_odometer", "post_fuel"], {}, mode)).toEqual(["tank_receipt"]);
+    expect(missingReturnEvidence([], { photos: "[Technisches Problem] Kamera kaputt" }, mode)).toEqual(["post_dashboard", "tank_receipt"]);
     expect(missingReturnEvidence(["post_front"], {}, null)).toContain("post_front_right");
   });
 });

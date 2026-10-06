@@ -62,13 +62,13 @@ async function shootSlide(kind: "camera" | "gallery" = "camera") {
   await pick(kind);
   await confirm();
 }
-async function fillDashboard(refueled: boolean, km = "150") {
+async function fillDashboard(_refueled?: boolean, km = "150") {
   await shootSlide();
   fireEvent.change(screen.getByLabelText("Kilometerstand (Ende)"), { target: { value: km } });
   fireEvent.change(screen.getByLabelText("Tankstand (Ende, in %)"), { target: { value: "80" } });
-  fireEvent.click(screen.getByLabelText(refueled ? "Ja" : "Nein"));
 }
-async function runAll(refueled = false) {
+async function runAll(_r = true) {
+  const refueled = true;
   await start();
   for (let i = 0; i < 5; i += 1) {
     await shootSlide(i % 2 ? "gallery" : "camera");
@@ -117,11 +117,11 @@ describe("Rückgabe-Wizard", () => {
     expect(screen.getByTestId("documentation-fee-notice").textContent).toMatch(/Bearbeitungspauschale von 30 €/);
     expect(screen.queryByText("Buchung abschließen")).toBeNull();
     await start();
-    expect(progress()).toBe("1 von 6");
+    expect(progress()).toBe("1 von 7");
     expect(screen.getByTestId("outline-front")).toBeTruthy();
   });
 
-  it("genau 6 Kernschritte mit Fortschritt, Perspektive und richtiger Zuordnung; ohne Tanken kein Belegschritt", async () => {
+  it("genau 7 Pflichtschritte mit Fortschritt, Perspektive und richtiger Zuordnung; Tankbeleg immer", async () => {
     mount();
     await start();
     const expected = [
@@ -132,7 +132,7 @@ describe("Rückgabe-Wizard", () => {
       ["Innenraum", "interior"],
     ];
     for (const [i, [title, outline]] of expected.entries()) {
-      expect(progress()).toBe(`${i + 1} von 6`);
+      expect(progress()).toBe(`${i + 1} von 7`);
       expect(screen.getByRole("heading", { name: title })).toBeTruthy();
       expect(screen.getByTestId(`outline-${outline}`)).toBeTruthy();
       expect(nextBtn().disabled).toBe(true);
@@ -140,19 +140,23 @@ describe("Rückgabe-Wizard", () => {
       fireEvent.click(nextBtn());
       await waitFor(() => expect(screen.queryByTestId("slot-confirmed")).toBeNull());
     }
-    expect(progress()).toBe("6 von 6");
+    expect(progress()).toBe("6 von 7");
     expect(screen.getByTestId("slide-hint").textContent).toBe(DASHBOARD_HINT);
     expect(DASHBOARD_HINT).toBe("Zündung einschalten. Kilometerstand und Tankstand müssen auf demselben Foto vollständig und gut erkennbar sein.");
     expect(screen.getByTestId("outline-dashboard")).toBeTruthy();
     await fillDashboard(false);
     await act(async () => fireEvent.click(nextBtn()));
+    await screen.findByTestId("slide-tank_receipt");
+    expect(progress()).toBe("7 von 7");
+    expect(screen.queryByLabelText("Ja")).toBeNull();
+    await shootSlide();
+    fireEvent.click(nextBtn());
     await screen.findByTestId("return-overview");
-    await waitFor(() => expect([...confirmedTags].sort()).toEqual([...CORE].sort()));
-    for (const t of CORE) expect(screen.getByTestId(`card-${t}`)).toBeTruthy();
-    expect(screen.queryByTestId("card-tank_receipt")).toBeNull();
+    await waitFor(() => expect([...confirmedTags].sort()).toEqual([...CORE, "tank_receipt"].sort()));
+    for (const t of [...CORE, "tank_receipt"]) expect(screen.getByTestId(`card-${t}`)).toBeTruthy();
   });
 
-  it("getankt → zusätzlicher Tankbeleg-Schritt (7), Abschluss mit v2-Modus", async () => {
+  it("Tankbeleg-Schritt 7/7, Abschluss mit v2-Modus", async () => {
     reportImpl.mockResolvedValue({ ok: true, returnCode: "ABC234", reviewReason: null });
     mount();
     await start();
@@ -161,7 +165,7 @@ describe("Rückgabe-Wizard", () => {
       fireEvent.click(nextBtn());
       await waitFor(() => expect(screen.queryByTestId("slot-confirmed")).toBeNull());
     }
-    await fillDashboard(true);
+    await fillDashboard();
     expect(progress()).toBe("6 von 7");
     await act(async () => fireEvent.click(nextBtn()));
     await screen.findByTestId("slide-tank_receipt");
@@ -217,7 +221,7 @@ describe("Rückgabe-Wizard", () => {
 
   it("Übersicht: Stift ersetzt genau dieses Foto und führt zurück zur Übersicht; alte Nachweise bleiben", async () => {
     mount();
-    await runAll(false);
+    await runAll();
     const before = uploadedPaths().filter((p) => p.includes("post_left")).length;
     fireEvent.click(screen.getByLabelText("Fahrzeug linke Seite bearbeiten"));
     await screen.findByTestId("slide-post_left");
@@ -230,15 +234,15 @@ describe("Rückgabe-Wizard", () => {
   it("Abschluss gesperrt, solange ein Pflichtnachweis fehlt (z. B. wiederhergestellte Übersicht)", async () => {
     localStorage.setItem(
       "mt_return_draft_v1:u1:b1",
-      JSON.stringify({ v: 1, updatedAt: 1, started: true, step: "overview", endKm: "150", refueled: false, exceptions: {} }),
+      JSON.stringify({ v: 1, updatedAt: 1, started: true, step: "overview", endKm: "150", exceptions: {} }),
     );
     fake.on("trip_photos", "select", {
-      data: ["post_front", "post_back", "post_left", "post_right", "post_interior"].map((t) => ({ photo_type: t, photo_url: `b1/${t}_1.jpg`, created_at: "2026-10-06" })),
+      data: ["post_front", "post_back", "post_left", "post_right", "post_interior", "tank_receipt"].map((t) => ({ photo_type: t, photo_url: `b1/${t}_1.jpg`, created_at: "2026-10-06" })),
       error: null,
     });
     mount();
     await screen.findByTestId("return-overview");
-    await waitFor(() => expect(screen.getAllByLabelText("Foto gespeichert").length).toBe(5));
+    await waitFor(() => expect(screen.getAllByLabelText("Foto gespeichert").length).toBe(6));
     expect((screen.getByText("Buchung abschließen") as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByTestId("card-post_dashboard").textContent).toMatch(/Fehlt noch/);
   });
@@ -304,7 +308,7 @@ describe("Rückgabe-Wizard – Offline-Warteschlange", () => {
     online = false;
     fake.storage.upload = [{ error: "throw" }];
     mount();
-    await runAll(true);
+    await runAll();
     expect(queueTags()).toEqual([...CORE, "tank_receipt"].sort());
     expect(screen.getByTestId("photo-queue").textContent).toMatch(/7 Foto\(s\) noch nicht übertragen/);
     expect(screen.getByTestId("km-local")).toBeTruthy();
