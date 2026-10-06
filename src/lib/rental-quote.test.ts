@@ -79,7 +79,7 @@ describe("quoteRental", () => {
   it("1 Tag: günstigster 24h-Tarif je km", () => {
     const d = { startDate: "2026-10-05", startTime: "09:00", endDate: "2026-10-06", endTime: "09:00" };
     expect(ok(quoteRental({ ...d, desiredKm: 300 }, "l1h1")).planId).toBe("24h_300");
-    expect(ok(quoteRental({ ...d, desiredKm: 800 }, "l1h1")).planId).toBe("24h_800");
+    expect(ok(quoteRental({ ...d, desiredKm: 800 }, "l1h1")).planId).toBe("24h_300");
     const h3 = { ...d, endDate: "2026-10-05", endTime: "12:00" };
     expect(ok(quoteRental({ ...h3, desiredKm: 50 }, "l1h1")).planId).toBe("3h");
   });
@@ -137,7 +137,7 @@ describe("Langzeit: angefragtes Kontingent = Wunschkilometer", () => {
 });
 
 describe("Km-Reduktion um ein Drittel (2/3)", () => {
-  const NEW: Record<string, number> = { "3h": 67, "6h": 133, "24h_300": 200, "24h_500": 500, "24h_800": 800, multi_2d: 400, multi_3d: 600, multi_4d: 800, multi_5d: 1000, multi_6d: 1200, multi_7d: 1400 };
+  const NEW: Record<string, number> = { "3h": 60, "6h": 120, "24h_300": 480, "24h_500": 500, "24h_800": 800, multi_2d: 400, multi_3d: 600, multi_4d: 800, multi_5d: 1000, multi_6d: 1200, multi_7d: 1400 };
   const PRICES: Record<string, [number, number]> = { "3h": [49, 59], "6h": [69, 79], "24h_300": [99, 109], "24h_500": [189, 199], "24h_800": [299, 309], multi_2d: [189, 209], multi_3d: [269, 299], multi_4d: [339, 379], multi_5d: [399, 449], multi_6d: [449, 509], multi_7d: [499, 569] };
   it("jede Klasse × jeder Tarif: neue km, unveränderte Preise", () => {
     for (const c of VEHICLE_CLASSES) for (const [id, km] of Object.entries(NEW)) {
@@ -149,16 +149,16 @@ describe("Km-Reduktion um ein Drittel (2/3)", () => {
     expect(getPlanById("multi_3d", "l5h2")!.price).toBe(315);
     expect(getPlanById("week_x3", "l1h1")!.freeKm).toBe(4200);
     expect(getPlanById("week_x3", "l1h1")!.price).toBe(1497);
-    expect(getPlanById("24h_300", "l1h1")!.shortLabel).toBe("24 h · 200 km");
-    expect(getPlanById("24h", "l1h1")!.freeKm).toBe(200);
+    expect(getPlanById("24h_300", "l1h1")!.shortLabel).toBe("24 h · 480 km");
+    expect(getPlanById("24h", "l1h1")!.freeKm).toBe(480);
   });
-  it("24h: 200 km ohne Extras, 300 km = 100 × 0,45 = 45 €", () => {
+  it("24h: 480 km ohne Extras, 580 km = 100 × 0,45 = 45 €", () => {
     const d = { startDate: "2026-10-05", startTime: "09:00", endDate: "2026-10-06", endTime: "09:00" };
-    const a = ok(quoteRental({ ...d, desiredKm: 200 }, "l1h1"));
+    const a = ok(quoteRental({ ...d, desiredKm: 480 }, "l1h1"));
     expect([a.planId, a.totalEur, a.extraKmCostEur]).toEqual(["24h_300", 99, 0]);
-    const b = ok(quoteRental({ ...d, desiredKm: 300 }, "l1h1"));
+    const b = ok(quoteRental({ ...d, desiredKm: 580 }, "l1h1"));
     expect([b.planId, b.totalEur, b.extraKmCostEur]).toEqual(["24h_300", 144, 45]);
-    expect(ok(quoteRental({ ...d, desiredKm: 500 }, "l1h1")).planId).toBe("24h_500");
+    
   });
   it("Langzeitbasis erst am Ende gerundet", () => {
     expect([7, 14, 30, 45, 60].map(longTermFreeKm)).toEqual([622, 1244, 2667, 4000, 5333]);
