@@ -183,7 +183,7 @@ function WerbungPage() {
             Bearbeitungsgebühr für die Produktion der Magnetfolie.
           </p>
           <div className="mt-8">
-            <PartnerAreaPicker highlight={selected} onSelect={handleSelect} />
+            <PartnerAreaPicker highlight={selected} onSelect={setSelected} />
           </div>
           <Collapsible className="mt-6">
             <CollapsibleTrigger className="mx-auto flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-medium text-foreground transition-colors hover:border-foreground/40">
