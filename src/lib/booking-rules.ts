@@ -6,8 +6,8 @@
  * Der Zahlbetrag wird ausschließlich serverseitig aus diesem Katalog berechnet.
  *
  * Preis-Invariante: Grundtarif + Mehrkilometer ist nie günstiger als ein
- * beworbenes Kilometerpaket. Beispiel L1H1: 24h/200 km (99 €) + 300 km × 0,45 €
- * = 234 € > 189 € (24h/500-km-Paket); 24h/800 km kostet als Paket 299 € statt 369 €.
+ * beworbenes Kilometerpaket. Beispiel L1H1: 24h/480 km (99 €) + 320 km × 0,45 €
+ * = 243 € (24h/800-km-Paket 299 €). Kurzzeittarife (3h/6h/24h) = 20 km je Mietstunde.
  *
  * Kilometer-Katalogversion: Seit KM_CATALOG_VERSION sind die zeitabhängigen
  * Inklusivkilometer um ein Drittel reduziert (Faktor 2/3). Bestehende Buchungen
@@ -139,19 +139,19 @@ export function extraKmCentsFor(vehicleClass: VehicleClass, days: number): numbe
 const PLAN_TEMPLATES: PlanTemplate[] = [
   {
     id: "3h", label: "3 Stunden Express", shortLabel: "3 h Express",
-    days: 1, durationHours: 3, basePrice: 49, basePriceL4h2: 59, freeKm: 67,
+    days: 1, durationHours: 3, basePrice: 49, basePriceL4h2: 59, freeKm: 60,
     returnRule: "Rückgabe nach 3 Stunden",
     idealFor: "Kurze Transporte, Möbelhaus, Kleinanzeigen-Abholung",
   },
   {
     id: "6h", label: "6 Stunden Umzug Mini", shortLabel: "6 h Mini",
-    days: 1, durationHours: 6, basePrice: 69, basePriceL4h2: 79, freeKm: 133,
+    days: 1, durationHours: 6, basePrice: 69, basePriceL4h2: 79, freeKm: 120,
     returnRule: "Rückgabe nach 6 Stunden",
     idealFor: "Kleine Umzüge, mehrere Fahrten, Entrümpelung",
   },
   {
-    id: "24h_300", label: "24 Stunden Umzugstag", shortLabel: "24 h · 200 km",
-    days: 1, durationHours: 24, basePrice: 99, basePriceL4h2: 109, freeKm: 200,
+    id: "24h_300", label: "24 Stunden Umzugstag", shortLabel: "24 h · 480 km",
+    days: 1, durationHours: 24, basePrice: 99, basePriceL4h2: 109, freeKm: 480,
     returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit",
     idealFor: "Kompletter Umzugstag, stressfreies Be- und Entladen",
     highlight: "popular", highlightLabel: "Beliebtester Tarif",
@@ -210,9 +210,9 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
 ];
 
 /** Aktuelle Kilometer-Katalogversion (wird in Stripe-Metadata festgehalten). */
-export const KM_CATALOG_VERSION = "km-2026-09-30b";
+export const KM_CATALOG_VERSION = "km-2026-10-06";
 /** Vorherige Version (neue km, alte Sätze 0,35/0,29) – Snapshots daraus bleiben gültig. */
-export const PREVIOUS_KM_CATALOG_VERSIONS = ["km-2026-09-30"] as const;
+export const PREVIOUS_KM_CATALOG_VERSIONS = ["km-2026-09-30", "km-2026-09-30b"] as const;
 
 export const KM_CATALOG_OUTDATED_MESSAGE =
   "Tarife wurden aktualisiert. Bitte Seite neu laden und die aktuellen Konditionen prüfen.";

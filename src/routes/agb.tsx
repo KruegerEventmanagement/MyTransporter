@@ -53,9 +53,9 @@ function AgbPage() {
             <h2 className="font-bold text-lg text-foreground mb-2">§ 4 Preise und Tarife</h2>
             <p className="mb-2">Alle Preise verstehen sich in Euro und enthalten die gesetzliche Umsatzsteuer von 19 %. Die Mietpreise gelten je gebuchtem Mietzeitraum und Transporter inklusive der angegebenen Freikilometer. Angegeben ist jeweils der Preis für den kurzen Transporter L1H1; für den langen Transporter L4H2 erhöht sich der jeweilige Festpreis um 10 € je Miettag (Eintagestarife +10 €, Mehrtagestarife +10 € pro Tag).</p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>3-Stunden-Tarif „Express": 49 € (L4H2 59 €) inklusive 67 Freikilometern (Rückgabe nach 3 Stunden).</li>
-              <li>6-Stunden-Tarif „Umzug Mini": 69 € (L4H2 79 €) inklusive 133 Freikilometern (Rückgabe nach 6 Stunden).</li>
-              <li>24-Stunden-Tarif „Umzugstag": 99 € (L4H2 109 €) inklusive 200 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
+              <li>3-Stunden-Tarif „Express": 49 € (L4H2 59 €) inklusive 60 Freikilometern (Rückgabe nach 3 Stunden).</li>
+              <li>6-Stunden-Tarif „Umzug Mini": 69 € (L4H2 79 €) inklusive 120 Freikilometern (Rückgabe nach 6 Stunden).</li>
+              <li>24-Stunden-Tarif „Umzugstag": 99 € (L4H2 109 €) inklusive 480 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
               <li>24-Stunden-Tarif „Langstrecke": 189 € (L4H2 199 €) inklusive 500 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
               <li>24-Stunden-Tarif „Fernstrecke": 299 € (L4H2 309 €) inklusive 800 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
               <li>2-Tage-Tarif „Kurzprojekt": 189 € (L4H2 209 €) inklusive 400 Freikilometern.</li>
