@@ -66,6 +66,18 @@ beforeEach(async () => {
 });
 
 describe("report_trip_return (SQL)", () => {
+  it("fehlender Start-Kilometerstand: Rückgabe gelingt mit Prüfvermerk, ohne erfundene Kosten", async () => {
+    await as(null);
+    await seed({ start_km: null });
+    for (const t of ALL) await photo(t);
+    await as(U1);
+    const r = await report(1250, { photos: "Kamera defekt beim letzten Bild" });
+    expect(r).toMatchObject({ ok: true, alreadyReported: false, extraKm: null, chargeCents: null });
+    expect(String(r.reviewReason)).toMatch(/^Start-Kilometerstand fehlt – manuelle Prüfung\. · Foto-\/Kameraproblem: Kamera defekt/);
+    const b = await booking();
+    expect(b).toMatchObject({ status: "returning", end_km: 1250, extra_km: null, extra_km_charge_cents: null });
+    expect(await notifications()).toBe(1);
+  });
   it("berechnet Mehrkilometer aus Snapshots, setzt returning, genau eine Admin-Meldung", async () => {
     await as(null);
     await seed();

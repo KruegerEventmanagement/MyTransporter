@@ -76,7 +76,8 @@ type CaptureTarget =
   | { kind: "receipt" };
 
 type ReturnStep = DraftStep | "done";
-type PendingState = { id: string; status: "local" | "uploading" | "error"; preview: string | null; message?: string };
+/** Nur Aufnahmen, deren IndexedDB-Transaktion abgeschlossen ist, erscheinen hier (dauerhaft lokal gesichert). */
+type PendingState = { id: string; tag: string; status: "local" | "uploading" | "error"; preview: string | null; message?: string };
 
 const tagOf = (t: CaptureTarget) =>
   t.kind === "side"
@@ -156,6 +157,9 @@ export function ReturnFlow({
   const [reportPending, setReportPending] = useState(draft0?.reportPending ?? false);
   const [reviewNote, setReviewNote] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  /** Erhöht sich nach jedem abgeschlossenen Warteschlangen-Durchlauf (Reconnect/Start). */
+  const [syncTick, setSyncTick] = useState(0);
+  const [kmLocalOnly, setKmLocalOnly] = useState(false);
   const [awaitingAdmin, setAwaitingAdmin] = useState(!!initialCode);
   const [isAdmin, setIsAdmin] = useState(false);
   const [aiRecognition, setAiRecognition] = useState<{ km: number | null; fuelPercent: number | null; confidence: string } | null>(null);
@@ -247,13 +251,15 @@ export function ReturnFlow({
     };
   }, [bookingId, loadAttempt]);
 
+  const pendingTags = useRef<Record<string, string>>({});
   const transfer = useCallback(
     async (id: string, tag: string) => {
       const store = storeRef.current;
       if (!store) return;
-      setPending((p) => ({ ...p, [id]: { ...(p[id] ?? { id, preview: null }), id, status: "uploading" } as PendingState }));
+      setPending((p) => (p[id] ? { ...p, [id]: { ...p[id]!, status: "uploading" } } : p));
       try {
         const saved = await transferQueuedPhoto(supabase, store, id);
+        delete pendingTags.current[id];
         setPending((p) => {
           const { [id]: done, ...rest } = p;
           if (done?.preview) URL.revokeObjectURL?.(done.preview);
@@ -268,9 +274,9 @@ export function ReturnFlow({
     [applySaved],
   );
 
-  const pendingTags = useRef<Record<string, string>>({});
-  const transferAll = useCallback(() => {
-    Object.entries(pendingTags.current).forEach(([id, tag]) => void transfer(id, tag));
+  /** Überträgt alle lokal gesicherten Aufnahmen; löst erst auf, wenn alle Versuche beendet sind. */
+  const transferAll = useCallback(async () => {
+    await Promise.allSettled(Object.entries(pendingTags.current).map(([id, tag]) => transfer(id, tag)));
   }, [transfer]);
 
   // Warteschlange öffnen, offene Aufnahmen anzeigen und übertragen; bei online erneut.
@@ -290,12 +296,18 @@ export function ReturnFlow({
       const next: Record<string, PendingState> = {};
       for (const it of items) {
         pendingTags.current[it.id] = it.tag;
-        next[it.id] = { id: it.id, status: "local", preview: makePreview(it.blob) };
+        next[it.id] = { id: it.id, tag: it.tag, status: "local", preview: makePreview(it.blob) };
       }
       setPending((p) => ({ ...next, ...p }));
-      items.forEach((it) => void transfer(it.id, it.tag));
+      await transferAll();
+      if (alive) setSyncTick((n) => n + 1);
     })();
-    const onOnline = () => transferAll();
+    // Reconnect: ERST die Warteschlange abarbeiten, dann ggf. die beauftragte Meldung wiederholen.
+    const onOnline = () => {
+      void transferAll().then(() => {
+        if (alive) setSyncTick((n) => n + 1);
+      });
+    };
     window.addEventListener("online", onOnline);
     return () => {
       alive = false;
@@ -348,8 +360,11 @@ export function ReturnFlow({
     };
   }, [awaitingAdmin, returnCode, bookingId, onComplete]);
 
-  const allSidesTaken = PHOTO_SIDES.every((s) => photos[s.id]);
-  const interiorTaken = !!interiorPhoto;
+  // Lokal DAUERHAFT gesicherte Aufnahmen erlauben das Weitergehen im Entwurf.
+  // Serverseitig zählen weiterhin nur bestätigte Storage+DB-Fotos (report_trip_return).
+  const localTags = new Set(Object.values(pending).map((p) => p.tag));
+  const allSidesTaken = PHOTO_SIDES.every((s) => photos[s.id] || localTags.has(s.id));
+  const interiorTaken = !!interiorPhoto || localTags.has(RETURN_INTERIOR_TAG);
   const photosException = validReason(exceptions.photos);
   const photosReady = (allSidesTaken && interiorTaken) || photosException;
   const pendingCount = Object.keys(pending).length;
@@ -409,7 +424,7 @@ export function ReturnFlow({
         try {
           const item = await enqueuePhoto(store, { userId, bookingId, tag, blob: file });
           pendingTags.current[item.id] = tag;
-          setPending((p) => ({ ...p, [item.id]: { id: item.id, status: "local", preview: makePreview(file) } }));
+          setPending((p) => ({ ...p, [item.id]: { id: item.id, tag, status: "local", preview: makePreview(file) } }));
           setCurrentTarget(null);
           setUploading(false);
           try {
@@ -426,6 +441,7 @@ export function ReturnFlow({
             const message = err instanceof Error ? err.message : "Übertragung fehlgeschlagen.";
             setPending((p) => (p[item.id] ? { ...p, [item.id]: { ...p[item.id]!, status: "error", message } } : p));
           }
+          setSyncTick((n) => n + 1);
           return;
         } catch (err) {
           if (!(err instanceof QueueUnavailableError)) throw err;
@@ -607,6 +623,17 @@ export function ReturnFlow({
         ...(endFuelPercent !== "" ? { ai_end_fuel_percent: parseInt(endFuelPercent) } : {}),
       });
     } catch (err) {
+      const offline =
+        (typeof navigator !== "undefined" && navigator.onLine === false) ||
+        (err instanceof BookingUpdateError && err.kind === "network");
+      if (offline) {
+        // Wert liegt im lokalen Entwurf; die Rückgabemeldung überträgt den Endstand ohnehin.
+        setKmLocalOnly(true);
+        setSaving(false);
+        setKmSummary(km);
+        setReturnStep("receipt");
+        return;
+      }
       if (err instanceof BookingUpdateError && err.kind === "locked" && onBookingRefresh) {
         try {
           await onBookingRefresh();
@@ -619,18 +646,31 @@ export function ReturnFlow({
       return;
     }
     setSaving(false);
+    setKmLocalOnly(false);
     setKmSummary(km);
     setReturnStep("receipt");
   };
 
+  const submittingRef = useRef(false);
+  const pendingCountRef = useRef(pendingCount);
+  pendingCountRef.current = pendingCount;
+
+  /** Nur nach Nutzeraktion „Schlüssel zurückgeben“ (setzt reportPending) bzw. deren automatischer Wiederholung. */
   const submitReport = useCallback(async () => {
-    if (saving) return;
+    if (submittingRef.current) return; // Doppelklick/parallele Auslöser im selben Tab
     setActionError(null);
+    setReportPending(true);
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      setReportPending(true);
       setActionError("Keine Verbindung. Die Rückgabe ist noch NICHT gemeldet und wird automatisch gesendet, sobald du wieder online bist.");
       return;
     }
+    if (pendingCountRef.current > 0) {
+      // Erst Fotos übertragen; danach wiederholt der Sync-Effekt die Meldung automatisch.
+      setActionError("Fotos werden zuerst übertragen. Die Rückgabe wird danach automatisch gemeldet – noch NICHT bestätigt.");
+      void transferAll().then(() => setSyncTick((n) => n + 1));
+      return;
+    }
+    submittingRef.current = true;
     setSaving(true);
     try {
       const fuel = endFuelPercent === "" ? null : parseInt(endFuelPercent);
@@ -639,6 +679,8 @@ export function ReturnFlow({
       });
       if (!res || (res as { ok?: boolean }).ok !== true) {
         const r = res as { error?: string } | null;
+        // Serverseitige Ablehnung (z. B. fehlende bestätigte Nachweise): Auftrag beenden, kein Endlos-Retry.
+        setReportPending(false);
         setActionError(`Rückgabe nicht gespeichert. ${r?.error ?? ""}`.trim());
         return;
       }
@@ -649,20 +691,27 @@ export function ReturnFlow({
       setAwaitingAdmin(true);
       setReturnStep("code");
     } catch (err) {
-      setReportPending(typeof navigator !== "undefined" && navigator.onLine === false);
-      setActionError(err instanceof Error ? `Rückgabe nicht gespeichert. ${err.message}` : "Rückgabe nicht gespeichert.");
+      // Netz-/Serverfehler: Auftrag bleibt bestehen und wird beim nächsten Sync wiederholt.
+      setActionError(
+        err instanceof Error
+          ? `Rückgabe noch NICHT gemeldet. ${err.message} Wir versuchen es automatisch erneut.`
+          : "Rückgabe noch NICHT gemeldet. Wir versuchen es automatisch erneut.",
+      );
     } finally {
+      submittingRef.current = false;
       setSaving(false);
     }
-  }, [saving, endFuelPercent, report, bookingId, endKm, endKmManual, exceptions]);
+  }, [report, bookingId, endKm, endFuelPercent, endKmManual, exceptions, transferAll]);
 
-  // Offline angeforderte Meldung nach Reconnect automatisch senden.
+  // Beauftragte Meldung nach abgeschlossenem Warteschlangen-Durchlauf automatisch wiederholen –
+  // je Durchlauf höchstens einmal, nur wenn keine Fotos mehr offen sind.
+  const lastAutoTick = useRef(-1);
   useEffect(() => {
-    if (!reportPending || returnCode) return;
-    const onOnline = () => void submitReport();
-    window.addEventListener("online", onOnline);
-    return () => window.removeEventListener("online", onOnline);
-  }, [reportPending, returnCode, submitReport]);
+    if (!reportPending || returnCode || pendingCount > 0) return;
+    if (lastAutoTick.current === syncTick) return;
+    lastAutoTick.current = syncTick;
+    void submitReport();
+  }, [syncTick, reportPending, returnCode, pendingCount, submitReport]);
 
   if (returnStep === "photos") {
     return (
@@ -690,7 +739,7 @@ export function ReturnFlow({
             <button
               key={side.id}
               onClick={() => openCamera({ kind: "side", id: side.id })}
-              disabled={!!photos[side.id] || uploading}
+              disabled={!!photos[side.id] || localTags.has(side.id) || uploading}
               className={`p-4 rounded-2xl border-2 text-center transition-all ${
                 photos[side.id] ? "border-foreground bg-secondary" : "border-border hover:border-accent/50"
               }`}
@@ -708,6 +757,9 @@ export function ReturnFlow({
                 {side.icon} {side.label}
               </p>
               {photos[side.id] && <p className="text-[10px] text-muted-foreground">Übertragen</p>}
+              {!photos[side.id] && localTags.has(side.id) && (
+                <p className="text-[10px] text-muted-foreground" data-testid={`local-${side.id}`}>Auf diesem Gerät gespeichert</p>
+              )}
             </button>
           ))}
         </div>
@@ -791,8 +843,8 @@ export function ReturnFlow({
   }
 
   if (returnStep === "km") {
-    const kmReady = endKm.trim() !== "" && (!!odometerPhoto || photosException);
-    const fuelReady = !!fuelPhoto || validReason(exceptions.fuel);
+    const kmReady = endKm.trim() !== "" && (!!odometerPhoto || localTags.has(RETURN_ODOMETER_TAG) || photosException);
+    const fuelReady = !!fuelPhoto || localTags.has(RETURN_FUEL_TAG) || validReason(exceptions.fuel);
     return (
       <div className="max-w-lg mx-auto animate-fade-in-up">
         {camera}
@@ -896,7 +948,7 @@ export function ReturnFlow({
   }
 
   if (returnStep === "receipt") {
-    const receiptReady = !!receiptPhoto || validReason(exceptions.receipt);
+    const receiptReady = !!receiptPhoto || localTags.has(RETURN_RECEIPT_TAG) || validReason(exceptions.receipt);
     return (
       <div className="max-w-lg mx-auto animate-fade-in-up">
         {camera}
@@ -1014,7 +1066,17 @@ export function ReturnFlow({
 
         {pendingCount > 0 && (
           <p className="mb-3 text-xs text-muted-foreground">
-            Es sind noch Fotos auf diesem Gerät, die nicht übertragen sind. Sie werden nicht als Nachweis gezählt, bis sie übertragen sind.
+            Es sind noch Fotos nur auf diesem Gerät. Sie zählen erst als Nachweis, wenn sie übertragen sind; die Rückgabe wird danach gemeldet.
+          </p>
+        )}
+        {kmLocalOnly && (
+          <p className="mb-3 text-xs text-muted-foreground" data-testid="km-local">
+            Kilometer- und Tankstand sind auf diesem Gerät gespeichert und werden mit der Rückgabemeldung übertragen.
+          </p>
+        )}
+        {reportPending && !returnCode && (
+          <p className="mb-3 rounded-2xl border border-foreground p-3 text-xs font-medium" data-testid="report-pending">
+            Rückgabe ausstehend – noch nicht serverseitig bestätigt.
           </p>
         )}
         {actionError && <TripErrorBanner message={actionError} onRetry={() => void submitReport()} busy={saving} />}

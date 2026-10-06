@@ -107,3 +107,19 @@ Neue Tests: `src/components/TripPage.test.tsx` (A→B mit verspäteter Antwort, 
 Browser (Playwright, gemockte Sitzung + gemockte Buchungsantworten, keine Produktionsdaten): Leiste `top 0 / height 44`, Navbar `top 44 / bottom 93`, body padding-top 44 px bei 320, 390 und 1280 px; kein horizontaler Overflow. `/trip/<mock>` mit Status `returning` (390 px): ReturnFlow sichtbar, keine Leiste. Screenshots: `docs/qa-active-trip-2026-10-06/`.
 
 Offen: kein Gerätetest iPhone/Android, kein Push-Empfangstest, keine Live-Buchung, kein Deploy. Beobachtung außerhalb des Auftrags: „App installieren“-Hinweis überdeckt auf der Fahrtseite kurzzeitig die Überschrift (unverändert).
+
+## Nachtrag 06.10.2026 (II): Zusatzbefunde A–E der unabhängigen Prüfung
+
+- **A Rückgabe-SQL (22P02):** Neue additive Migration `20261006005626_6c23a935-2b47-4098-b711-22e73ad475ba.sql` ersetzt `report_trip_return`; alle fünf `reasons := reasons || …` durch `array_append(reasons, …::text)` (betroffen war das unbekannte Literal bei fehlendem start_km). Übrige `||`-Ausdrücke geprüft: `covered || ARRAY[…]`, `ex || jsonb`, Text-Konkatenationen – typkorrekt. Alte Migration unverändert; Testfixture `src/test/sql/trip-return.sql` gleich angepasst. PGlite-Test: start_km NULL → ok, returning, Prüfvermerk, extra_km/charge NULL, genau eine Admin-Meldung.
+- **B IndexedDB:** put/delete lösen erst bei `transaction.oncomplete` auf; `onerror`/`onabort` werfen; blockiertes Öffnen → kein Store (ehrlicher Online-Fallback); `onversionchange` schließt. „Auf diesem Gerät gespeichert“ erscheint nur für Einträge nach Commit. Test `photo-queue-idb.test.ts` mit echtem Abbruch NACH Anfrage-onsuccess.
+- **C Offline-Schritte:** Dauerhaft lokal gesicherte Aufnahmen erlauben Weitergehen (Seiten, Innenraum, Tacho, Tank, Beleg); KM-Schritt geht bei Netzfehler/offline mit lokal gesichertem Entwurf weiter (Hinweis). Server zählt unverändert nur bestätigte Storage+DB-Fotos oder begründete Ausnahmen.
+- **D Reconnect:** online → erst Warteschlange vollständig abarbeiten, dann eine bereits per Klick beauftragte Meldung genau einmal je Durchlauf wiederholen; bei offenen Fotos wird nicht gemeldet, sondern gewartet. Doppelklick per Ref gesperrt, Mehrfachtabs über serverseitige Idempotenz (gleicher Code). Ohne Klick keine Meldung. Status „Rückgabe ausstehend – noch nicht serverseitig bestätigt“ sichtbar.
+- **E Adresse:** Karte nutzt die bestätigte Fahrzeugadresse aus `vehicles` (aktuell Poststraße 60), kein Erraten. Offen zur Klärung: Code-Schritt der Rückgabe nennt fest „Römerstraße 36“ als Schlüsselabgabe – unverändert gelassen.
+
+| Befehl | Exitcode | Ergebnis |
+|---|---|---|
+| `bunx vitest run` (2×) | 0 / 0 | 45 Dateien, 530 Tests |
+| `bunx tsgo --noEmit` | 0 | – |
+| `bun run build` / `build:native` | 0 / 0 | – |
+
+Neue Tests: `ReturnOffline.test.tsx` (12 Fotos + Werte offline → Reload → Reconnect → Meldung erst nach allen Uploads, genau 1×; hängender Upload + Doppelklick → automatisch genau 1×; keine Meldung ohne Klick), `photo-queue-idb.test.ts`, PGlite start_km NULL. Keine Produktionskunden, keine Benachrichtigungen, kein Deploy.
