@@ -13,7 +13,7 @@ export const submitWebAdInquiry = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<WebAdInquiryResult> => {
     const { processWebAdInquiry } = await import("./web-ad-inquiry.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { sendEmail, DEFAULT_ADMIN_EMAIL } = await import("./booking-emails.server");
+    const { sendEmail } = await import("./booking-emails.server");
     return processWebAdInquiry(data, {
       now: () => new Date(),
       countRecent: async (since, email) => {
@@ -32,6 +32,6 @@ export const submitWebAdInquiry = createServerFn({ method: "POST" })
         if (error) console.error("web_ad_inquiry store failed", error.code);
         return !error;
       },
-      mail: (subject, html) => sendEmail(DEFAULT_ADMIN_EMAIL, subject, html),
+      mail: (subject, html) => sendEmail("info@mytransporter.org", subject, html),
     });
   });
