@@ -1,3 +1,4 @@
+import { InFlowAd } from "@/components/ads/InFlowAd";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AdRails } from "@/components/ads/AdRails";
 import { InFlowAd } from "@/components/ads/InFlowAd";
@@ -115,6 +116,7 @@ function PforzheimCalwPage() {
           </p>
         </section>
 
+        <InFlowAd placement="inFlowTop" />
         <section className="mt-10">
           <h2 className="text-2xl font-bold text-foreground">Preise für den Crafter</h2>
           <p className="mt-3 text-muted-foreground leading-relaxed">
@@ -149,6 +151,7 @@ function PforzheimCalwPage() {
           </Link>
         </section>
 
+        <InFlowAd placement="inFlowBottom" />
         <section className="mt-10">
           <h2 className="text-2xl font-bold text-foreground">Lieber in Leonberg abholen?</h2>
           <p className="mt-3 text-muted-foreground leading-relaxed">

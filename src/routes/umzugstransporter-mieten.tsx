@@ -1,3 +1,4 @@
+import { InFlowAd } from "@/components/ads/InFlowAd";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AdRails } from "@/components/ads/AdRails";
 import { InFlowAd } from "@/components/ads/InFlowAd";
@@ -72,6 +73,7 @@ function UmzugstransporterPage() {
           </p>
         </section>
 
+        <InFlowAd placement="inFlowTop" />
         <section className="mt-10">
           <h2 className="text-2xl font-bold text-foreground">Mietdauer planen</h2>
           <ul className="mt-3 list-disc pl-5 space-y-2 text-muted-foreground">
@@ -108,6 +110,7 @@ function UmzugstransporterPage() {
           </ul>
         </section>
 
+        <InFlowAd placement="inFlowBottom" />
         <section className="mt-10">
           <h2 className="text-2xl font-bold text-foreground">So läuft die Buchung</h2>
           <ol className="mt-3 list-decimal pl-5 space-y-2 text-muted-foreground">
