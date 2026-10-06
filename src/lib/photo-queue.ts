@@ -66,13 +66,33 @@ function req<T>(r: IDBRequest<T>): Promise<T> {
   });
 }
 
-/** IndexedDB-Store oder null, wenn auf diesem Gerät nicht verfügbar. */
-export async function openIdbQueueStore(): Promise<QueueStore | null> {
-  if (typeof indexedDB === "undefined") return null;
+/**
+ * Schreibvorgang gilt erst nach transaction.oncomplete als dauerhaft gesichert.
+ * onsuccess einer Anfrage reicht nicht: die Transaktion kann danach noch abbrechen.
+ */
+function commit(db: IDBDatabase, run: (s: IDBObjectStore) => void): Promise<void> {
+  return new Promise((res, rej) => {
+    let t: IDBTransaction;
+    try {
+      t = db.transaction(STORE, "readwrite");
+      run(t.objectStore(STORE));
+    } catch (e) {
+      rej(e);
+      return;
+    }
+    t.oncomplete = () => res();
+    t.onerror = () => rej(t.error ?? new Error("IndexedDB-Fehler"));
+    t.onabort = () => rej(t.error ?? new DOMException("Transaktion abgebrochen", "AbortError"));
+  });
+}
+
+/** IndexedDB-Store oder null, wenn auf diesem Gerät nicht verfügbar bzw. durch anderen Tab blockiert. */
+export async function openIdbQueueStore(factory: IDBFactory | undefined = typeof indexedDB === "undefined" ? undefined : indexedDB): Promise<QueueStore | null> {
+  if (!factory) return null;
   let db: IDBDatabase;
   try {
     db = await new Promise<IDBDatabase>((res, rej) => {
-      const open = indexedDB.open(DB, 1);
+      const open = factory.open(DB, 1);
       open.onupgradeneeded = () => {
         if (!open.result.objectStoreNames.contains(STORE)) open.result.createObjectStore(STORE, { keyPath: "id" });
       };
@@ -83,11 +103,13 @@ export async function openIdbQueueStore(): Promise<QueueStore | null> {
   } catch {
     return null;
   }
-  const tx = (mode: IDBTransactionMode) => db.transaction(STORE, mode).objectStore(STORE);
+  // Ein anderer Tab braucht eine neue Version: Verbindung freigeben statt ihn zu blockieren.
+  db.onversionchange = () => db.close();
+  const read = () => db.transaction(STORE, "readonly").objectStore(STORE);
   return {
     async put(i) {
       try {
-        await req(tx("readwrite").put(i));
+        await commit(db, (st) => st.put(i));
       } catch (e) {
         const quota = (e as DOMException)?.name === "QuotaExceededError";
         throw new QueueUnavailableError(
@@ -98,14 +120,14 @@ export async function openIdbQueueStore(): Promise<QueueStore | null> {
       }
     },
     async get(id) {
-      return (await req(tx("readonly").get(id))) as QueuedPhoto | undefined;
+      return (await req(read().get(id))) as QueuedPhoto | undefined;
     },
     async list(u, b) {
-      const all = (await req(tx("readonly").getAll())) as QueuedPhoto[];
+      const all = (await req(read().getAll())) as QueuedPhoto[];
       return all.filter((i) => i.userId === u && i.bookingId === b).sort((a, c) => a.createdAt - c.createdAt);
     },
     async remove(id) {
-      await req(tx("readwrite").delete(id));
+      await commit(db, (st) => st.delete(id));
     },
   };
 }
