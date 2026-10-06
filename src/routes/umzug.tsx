@@ -91,8 +91,9 @@ function UmzugPage() {
             <Truck className="h-4 w-4" aria-hidden="true" />
             Über 10 Jahre Umzugserfahrung
           </p>
-          <h1 className="mt-6 text-4xl sm:text-5xl font-bold leading-tight text-foreground">
-            Dein Umzug. Professionell von A nach B.
+          <h1 className="mt-6 text-4xl sm:text-5xl font-bold leading-tight text-foreground text-balance">
+            <span className="block">Dein Umzug.</span>{" "}
+            <span className="block">Professionell von A nach B.</span>
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-foreground">
             <strong>Mit über zehn Jahren Umzugserfahrung</strong> bietet dir das Team von MyTransporter
