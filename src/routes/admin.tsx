@@ -1,3 +1,4 @@
+import { AdminPrivacy } from "@/components/admin/AdminPrivacy";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { privateHead } from "@/lib/seo";
 import { BrandHomeLink } from "@/components/BrandHomeLink";
@@ -124,7 +125,7 @@ interface AdminNotification {
   created_at: string;
 }
 
-type Tab = "customers" | "bookings" | "calendar" | "vehicles" | "documents" | "birthdays" | "notifications";
+type Tab = "customers" | "bookings" | "calendar" | "vehicles" | "documents" | "birthdays" | "notifications" | "privacy";
 
 function AdminDashboard() {
   const [authReady, setAuthReady] = useState(false);
@@ -553,6 +554,9 @@ function AdminDashboard() {
           <TabButton active={tab === "birthdays"} onClick={() => setTab("birthdays")}>
             <Gift className="w-4 h-4" /> Geburtstage
           </TabButton>
+          <TabButton active={tab === "privacy"} onClick={() => setTab("privacy")}>
+            <FileText className="w-4 h-4" /> Löschungen
+          </TabButton>
           <TabButton active={tab === "notifications"} onClick={() => setTab("notifications")}>
             <Bell className="w-4 h-4" /> Push
             {unreadCount > 0 && (
@@ -709,6 +713,7 @@ function AdminDashboard() {
         )}
 
         {tab === "birthdays" && <BirthdayAdmin />}
+        {tab === "privacy" && <AdminPrivacy />}
       </div>
     </main>
       {alertNotification && (

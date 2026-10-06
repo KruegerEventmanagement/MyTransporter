@@ -75,7 +75,7 @@ export async function runBookingCheckout(data: BookingCheckoutInput, context: Ct
   const catalogError = checkoutKmCatalogError(data.kmCatalog);
   if (catalogError) return { error: catalogError };
   try {
-    const { data: docs } = await context.supabase.from("user_documents").select("doc_type").eq("user_id", context.userId);
+    const { data: docs } = await context.supabase.from("user_documents").select("doc_type").eq("user_id", context.userId).is("deleted_by_user_at", null).is("removed_from_account_at", null);
     const have = new Set((docs ?? []).map((d: { doc_type: string }) => d.doc_type));
     if (REQUIRED_DOC_TYPES.some((t) => !have.has(t))) {
       return { error: "Bitte zuerst Ausweis und Führerschein hochladen, bevor du bezahlen kannst." };
