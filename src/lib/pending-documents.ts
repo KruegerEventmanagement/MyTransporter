@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { imageExtension } from "@/lib/image-capture";
 
 export const PENDING_DOC_TYPES = [
   "id_front",
@@ -86,11 +87,12 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 function dataUrlToBlob(dataUrl: string): Blob {
-  const [, base64 = ""] = dataUrl.split(",");
+  const [head = "", base64 = ""] = dataUrl.split(",");
+  const mime = /^data:([^;]+)/.exec(head)?.[1] || "image/jpeg";
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new Blob([bytes], { type: "image/jpeg" });
+  return new Blob([bytes], { type: mime });
 }
 
 function safeLocalStorage(): Storage | null {
@@ -116,7 +118,7 @@ export async function savePendingDocument(docType: PendingDocType, blob: Blob): 
 
   try {
     const buffer = await blob.arrayBuffer();
-    await tx("readwrite", (store) => store.put(buffer, docType));
+    await tx("readwrite", (store) => store.put({ buffer, type: blob.type || "image/jpeg" }, docType));
     persisted = true;
   } catch (e) {
     console.warn("[pending-documents] IndexedDB nicht nutzbar", e);
@@ -145,9 +147,17 @@ async function readPendingDocument(docType: PendingDocType): Promise<Blob | null
   if (inMemory) return inMemory;
 
   try {
-    const stored = await tx<ArrayBuffer | Blob | undefined>("readonly", (store) => store.get(docType));
+    const stored = await tx<ArrayBuffer | Blob | { buffer: ArrayBuffer; type: string } | undefined>(
+      "readonly",
+      (store) => store.get(docType),
+    );
     if (stored) {
-      const blob = stored instanceof Blob ? stored : new Blob([stored], { type: "image/jpeg" });
+      const blob =
+        stored instanceof Blob
+          ? stored
+          : stored instanceof ArrayBuffer
+            ? new Blob([stored], { type: "image/jpeg" })
+            : new Blob([stored.buffer], { type: stored.type || "image/jpeg" });
       memory.set(docType, blob);
       return blob;
     }
@@ -224,10 +234,11 @@ export async function uploadPendingDocuments(userId: string): Promise<number> {
   for (const docType of PENDING_DOC_TYPES) {
     const blob = await readPendingDocument(docType);
     if (!blob) continue;
-    const path = `${userId}/${docType}_${Date.now()}.jpg`;
+    const contentType = blob.type || "image/jpeg";
+    const path = `${userId}/${docType}_${Date.now()}.${imageExtension(contentType)}`;
     const { error: upErr } = await supabase.storage
       .from("user-documents")
-      .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+      .upload(path, blob, { contentType, upsert: false });
     if (upErr) throw upErr;
     const { error: insErr } = await supabase.from("user_documents").insert({
       user_id: userId,

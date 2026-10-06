@@ -184,6 +184,20 @@ export function classifyCameraError(err: unknown): CameraErrorKind {
   return "unsupported";
 }
 
+const HEIC_EXT = /\.(heic|heif)$/i;
+
+export function isHeicFile(file: File): boolean {
+  return /^image\/hei[cf](-sequence)?$/i.test(file.type) || HEIC_EXT.test(file.name);
+}
+
+/** Dateiendung zum gespeicherten MIME-Typ (Standard: jpg). */
+export function imageExtension(mime: string): string {
+  if (/hei[cf]/i.test(mime)) return mime.toLowerCase().includes("heif") ? "heif" : "heic";
+  if (mime === "image/png") return "png";
+  if (mime === "image/webp") return "webp";
+  return "jpg";
+}
+
 export function isLikelyImageFile(file: File): boolean {
   if (file.type) return file.type.startsWith("image/");
   return IMAGE_EXT.test(file.name);
@@ -209,6 +223,20 @@ export async function normalizeImageFile(
   if (file.size > MAX_IMAGE_BYTES) {
     throw new CaptureError("Das Foto ist zu groß (max. 30 MB).", "too_large");
   }
+  try {
+    return await decodeToJpeg(file, maxDimension, decodeTimeoutMs);
+  } catch (err) {
+    // HEIC/HEIF kann z. B. Android Chrome nicht dekodieren: Original unverändert übernehmen
+    // statt das Foto grundlos abzulehnen (iOS Safari liefert meist schon JPEG).
+    if (isHeicFile(file) && err instanceof CaptureError && err.code === "decode_failed") {
+      const mime = /heif/i.test(file.type) || /\.heif$/i.test(file.name) ? "image/heif" : "image/heic";
+      return new Blob([await file.arrayBuffer()], { type: mime });
+    }
+    throw err;
+  }
+}
+
+async function decodeToJpeg(file: File, maxDimension: number, decodeTimeoutMs: number): Promise<Blob> {
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();
