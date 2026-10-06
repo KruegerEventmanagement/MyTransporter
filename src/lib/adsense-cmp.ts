@@ -30,6 +30,7 @@ import {
   type AdSenseConfig,
 } from "./adsense";
 import { registerAdConsentAdapter } from "./adsense-consent";
+import { AD_ALLOWED_PATHS, getRouteAdPolicy } from "./ad-placements";
 
 /** Google Advertising Products (IAB TCF Global Vendor List). */
 export const GOOGLE_VENDOR_ID = 755;
@@ -42,15 +43,8 @@ export const PERSONALIZED_PURPOSES = [3, 4] as const;
 export const QA_PARAMS = { fc: "alwaysshow", fctype: "gdpr" } as const;
 
 /** Öffentliche Seiten, auf denen die Meldung überhaupt starten darf. */
-export const CMP_ALLOWED_PATHS = [
-  "/",
-  "/werbung",
-  "/preise",
-  "/langzeitmiete",
-  "/faq",
-  "/ueber-uns",
-  "/kontakt",
-] as const;
+/** Identisch mit der Anzeigen-Allowlist (eine gemeinsame Quelle: ad-placements.ts). */
+export const CMP_ALLOWED_PATHS = AD_ALLOWED_PATHS;
 
 type Bool = boolean | undefined;
 
@@ -203,8 +197,7 @@ export function isCmpQaMode(win: CmpWindow | null = defaultWin()): boolean {
 /** Darf die Meldung auf diesem Pfad überhaupt starten? */
 export function isCmpAllowedPath(pathname: string | undefined): boolean {
   if (!pathname) return false;
-  const clean = pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
-  return (CMP_ALLOWED_PATHS as readonly string[]).includes(clean);
+  return getRouteAdPolicy(pathname) !== null;
 }
 
 /**

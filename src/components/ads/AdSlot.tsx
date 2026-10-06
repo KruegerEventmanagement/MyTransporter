@@ -9,13 +9,21 @@ import { isNativeApp } from "@/lib/native/platform";
 const WIDE_DESKTOP_QUERY = "(min-width: 1280px)";
 /** Mobiler Banner nur auf echten Handybreiten. */
 const MOBILE_QUERY = "(max-width: 767px)";
+/** In-Flow-Einheiten ab Tablet-Breite (disjunkt zu MOBILE_QUERY). */
+const WIDE_QUERY = "(min-width: 768px)";
 
-export type AdViewport = "desktop" | "mobile";
+export type AdViewport = "desktop" | "mobile" | "wide";
+
+const QUERIES: Record<AdViewport, string> = {
+  desktop: WIDE_DESKTOP_QUERY,
+  mobile: MOBILE_QUERY,
+  wide: WIDE_QUERY,
+};
 
 export function matchesAdViewport(viewport: AdViewport): boolean {
   if (typeof window === "undefined") return false;
   if (typeof window.matchMedia !== "function") return false; // fail-closed
-  return window.matchMedia(viewport === "mobile" ? MOBILE_QUERY : WIDE_DESKTOP_QUERY).matches;
+  return window.matchMedia(QUERIES[viewport]).matches;
 }
 
 interface AdSlotProps {

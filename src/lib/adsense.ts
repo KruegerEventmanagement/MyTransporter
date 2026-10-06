@@ -6,15 +6,20 @@
  * KEIN Google-Script geladen und KEINE Anfrage an Google gesendet (fail-closed).
  */
 
+/**
+ * Physische Anzeigeneinheiten. Zuordnung zu logischen Plätzen je Route nur in
+ * ad-placements.ts. Einheiten ohne echte ID bleiben einzeln gesperrt, ohne
+ * andere korrekt konfigurierte Einheiten zu beeinträchtigen.
+ */
 export type AdSenseSlotKey =
   | "railLeft"
   | "railRight"
-  | "inlineContent"
-  /**
-   * Mobiler Banner oberhalb des Startseiten-Logos. Absichtlich OHNE Slot-ID:
-   * erst eintragen, wenn im AdSense-Konto eine echte Einheit erzeugt wurde.
-   */
-  | "mobileTop";
+  | "railLeftLower"
+  | "railRightLower"
+  | "inlineTop"
+  | "inlineBottom"
+  | "mobileTop"
+  | "mobileBottom";
 
 export type AdSenseSlots = Partial<Record<AdSenseSlotKey, string>>;
 
@@ -51,6 +56,8 @@ export const ADSENSE_CONFIG: AdSenseConfig = {
     railRight: "6950298526",
     // mobileTop = "MyTransporter - Mobil oberhalb Logo" (erstellt 06.10.2026)
     mobileTop: "7518309544",
+    // railLeftLower, railRightLower, inlineTop, inlineBottom, mobileBottom:
+    // noch keine echten Einheiten – NICHT erfinden, Platzierungen bleiben gesperrt.
   },
   autoAds: false,
   siteApproved: false,
@@ -77,10 +84,11 @@ export function validateAdSenseConfig(config: AdSenseConfig = ADSENSE_CONFIG): s
   if (!config.siteApproved) problems.push("Website ist bei Google nicht freigegeben.");
   if (!config.certifiedCmpConfigured) problems.push("Keine zertifizierte CMP konfiguriert.");
   if (!config.liveCmpVerified) problems.push("Einwilligungsmeldung nicht live geprüft.");
+  // Einzelne fehlende/ungültige Slot-IDs sperren nur ihre eigene Platzierung
+  // (siehe getSlotId), nicht die gesamte Konfiguration.
   const slotKeys = Object.keys(config.slots) as AdSenseSlotKey[];
-  if (slotKeys.length === 0) problems.push("Keine Slot-IDs konfiguriert.");
-  for (const key of slotKeys) {
-    if (!isValidSlotId(config.slots[key])) problems.push(`Ungültige Slot-ID für ${key}.`);
+  if (!slotKeys.some((key) => isValidSlotId(config.slots[key]))) {
+    problems.push("Keine gültige Slot-ID konfiguriert.");
   }
   return problems;
 }
