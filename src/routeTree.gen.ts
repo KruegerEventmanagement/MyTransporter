@@ -27,6 +27,7 @@ import { Route as TransporterMietenPforzheimCalwRouteImport } from './routes/tra
 import { Route as UeberUnsRouteImport } from './routes/ueber-uns'
 import { Route as UmzugRouteImport } from './routes/umzug'
 import { Route as UmzugstransporterMietenRouteImport } from './routes/umzugstransporter-mieten'
+import { Route as WerbeflaecheRouteImport } from './routes/werbeflaeche'
 import { Route as WerbungRouteImport } from './routes/werbung'
 import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
 import { Route as BuchungBookingIdRouteImport } from './routes/buchung.$bookingId'
@@ -133,6 +134,11 @@ const UmzugRoute = UmzugRouteImport.update({
 const UmzugstransporterMietenRoute = UmzugstransporterMietenRouteImport.update({
   id: '/umzugstransporter-mieten',
   path: '/umzugstransporter-mieten',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WerbeflaecheRoute = WerbeflaecheRouteImport.update({
+  id: '/werbeflaeche',
+  path: '/werbeflaeche',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WerbungRoute = WerbungRouteImport.update({
@@ -246,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/ueber-uns': typeof UeberUnsRoute
   '/umzug': typeof UmzugRoute
   '/umzugstransporter-mieten': typeof UmzugstransporterMietenRoute
+  '/werbeflaeche': typeof WerbeflaecheRoute
   '/werbung': typeof WerbungRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
@@ -282,6 +289,7 @@ export interface FileRoutesByTo {
   '/ueber-uns': typeof UeberUnsRoute
   '/umzug': typeof UmzugRoute
   '/umzugstransporter-mieten': typeof UmzugstransporterMietenRoute
+  '/werbeflaeche': typeof WerbeflaecheRoute
   '/werbung': typeof WerbungRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
@@ -319,6 +327,7 @@ export interface FileRoutesById {
   '/ueber-uns': typeof UeberUnsRoute
   '/umzug': typeof UmzugRoute
   '/umzugstransporter-mieten': typeof UmzugstransporterMietenRoute
+  '/werbeflaeche': typeof WerbeflaecheRoute
   '/werbung': typeof WerbungRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
@@ -357,6 +366,7 @@ export interface FileRouteTypes {
     | '/ueber-uns'
     | '/umzug'
     | '/umzugstransporter-mieten'
+    | '/werbeflaeche'
     | '/werbung'
     | '/auth/confirm'
     | '/buchung/$bookingId'
@@ -393,6 +403,7 @@ export interface FileRouteTypes {
     | '/ueber-uns'
     | '/umzug'
     | '/umzugstransporter-mieten'
+    | '/werbeflaeche'
     | '/werbung'
     | '/auth/confirm'
     | '/buchung/$bookingId'
@@ -429,6 +440,7 @@ export interface FileRouteTypes {
     | '/ueber-uns'
     | '/umzug'
     | '/umzugstransporter-mieten'
+    | '/werbeflaeche'
     | '/werbung'
     | '/auth/confirm'
     | '/buchung/$bookingId'
@@ -466,6 +478,7 @@ export interface RootRouteChildren {
   UeberUnsRoute: typeof UeberUnsRoute
   UmzugRoute: typeof UmzugRoute
   UmzugstransporterMietenRoute: typeof UmzugstransporterMietenRoute
+  WerbeflaecheRoute: typeof WerbeflaecheRoute
   WerbungRoute: typeof WerbungRoute
   AuthConfirmRoute: typeof AuthConfirmRoute
   BuchungBookingIdRoute: typeof BuchungBookingIdRoute
@@ -612,6 +625,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UmzugstransporterMietenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/werbeflaeche': {
+      id: '/werbeflaeche'
+      path: '/werbeflaeche'
+      fullPath: '/werbeflaeche'
+      preLoaderRoute: typeof WerbeflaecheRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/werbung': {
       id: '/werbung'
       path: '/werbung'
@@ -746,6 +766,7 @@ const rootRouteChildren: RootRouteChildren = {
   UeberUnsRoute: UeberUnsRoute,
   UmzugRoute: UmzugRoute,
   UmzugstransporterMietenRoute: UmzugstransporterMietenRoute,
+  WerbeflaecheRoute: WerbeflaecheRoute,
   WerbungRoute: WerbungRoute,
   AuthConfirmRoute: AuthConfirmRoute,
   BuchungBookingIdRoute: BuchungBookingIdRoute,
