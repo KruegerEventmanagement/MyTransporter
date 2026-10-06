@@ -26,17 +26,20 @@ function invoiceNumber(bookingId: string, createdAt: string): string {
   return `MT-${yyyy}${mm}-${short}`;
 }
 
-export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pdfBase64: string; invoiceNo: string; filename: string }> {
+export async function generateBookingInvoicePdf(
+  bookingId: string,
+  opts: { archive?: boolean } = {},
+): Promise<{ pdfBase64: string; invoiceNo: string; filename: string; archiveId?: string | null }> {
   const { data: booking, error } = await supabaseAdmin
     .from("bookings")
-    .select("id, user_id, created_at, vehicle_name, vehicle_plate, plan_id, plan_label, plan_price, deposit, free_km, km_price_cents, start_date, start_hour, pickup_code, addons, addons_total_cents")
+    .select("id, user_id, created_at, vehicle_name, vehicle_plate, plan_id, plan_label, plan_price, deposit, free_km, km_price_cents, start_date, start_hour, pickup_code, addons, addons_total_cents, status, deposit_status, coupon_code, discount_cents")
     .eq("id", bookingId)
     .maybeSingle();
   if (error || !booking) throw new Error("Buchung nicht gefunden");
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("email, first_name, last_name, account_type, company_name, vat_id")
+    .select("email, first_name, last_name, account_type, company_name, vat_id, address_street, address_postal_code, address_city, address_country")
     .eq("id", booking.user_id)
     .maybeSingle();
 
@@ -300,5 +303,82 @@ export async function generateBookingInvoicePdf(bookingId: string): Promise<{ pd
   }
   const pdfBase64 = btoa(binary);
 
-  return { pdfBase64, invoiceNo, filename: `MyTransporter-Rechnung-${invoiceNo}.pdf` };
+  const filename = `MyTransporter-Rechnung-${invoiceNo}.pdf`;
+  let archiveId: string | null = null;
+  if (opts.archive !== false) {
+    // Belegarchiv: Fehler hier dürfen Bestätigung/Rechnungsversand nie blockieren,
+    // werden aber für den Admin protokolliert.
+    try {
+      const { archiveIssuedDocument } = await import("@/lib/document-archive.server");
+      const now = new Date();
+      const docDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const billingAddress = {
+        street: profile?.address_street ?? null,
+        postal_code: profile?.address_postal_code ?? null,
+        city: profile?.address_city ?? null,
+        country: profile?.address_country ?? null,
+        vat_id: vatId || null,
+        account_type: profile?.account_type ?? null,
+      };
+      const items = [
+        { label: `Miete · ${booking.plan_label}`, net_cents: rentSplit.netC, vat_cents: rentSplit.vatC, gross_cents: rentSplit.grossC, vat_rate: VAT_RATE },
+        ...addonSplits.map((a) => ({ label: a.label, net_cents: a.netC, vat_cents: a.vatC, gross_cents: a.grossC, vat_rate: VAT_RATE })),
+        { label: "Kaution", net_cents: null, vat_cents: null, gross_cents: depositGrossC, vat_rate: null },
+      ];
+      const res = await archiveIssuedDocument({
+        kind: "invoice",
+        source: "booking",
+        documentNumber: invoiceNo,
+        documentDate: docDate,
+        bookingId: booking.id,
+        userId: booking.user_id,
+        customerName: customerName === "Kunde" ? null : customerName,
+        customerCompany: isBusiness && companyName ? companyName : null,
+        customerEmail: customerEmail || null,
+        billingAddress,
+        items,
+        netCents: serviceNetC,
+        vatRate: VAT_RATE,
+        vatCents: serviceVatC,
+        grossCents: serviceGrossC,
+        nonTaxableCents: depositGrossC,
+        totalCents: totalC,
+        paymentStatus: "paid",
+        snapshot: {
+          invoice_no: invoiceNo,
+          invoice_date: docDate,
+          booking: {
+            id: booking.id, pickup_code: booking.pickup_code, status: booking.status,
+            deposit_status: booking.deposit_status, vehicle_name: booking.vehicle_name,
+            vehicle_plate: booking.vehicle_plate, vin, plan_id: booking.plan_id,
+            plan_label: booking.plan_label, start: startStr, return: returnStr,
+            free_km: booking.free_km, km_price_cents: booking.km_price_cents,
+            coupon_code: booking.coupon_code, discount_cents: booking.discount_cents,
+          },
+          customer: { name: customerName, email: customerEmail, company: companyName || null, ...billingAddress },
+          items,
+          totals: { net_cents: serviceNetC, vat_rate: VAT_RATE, vat_cents: serviceVatC, gross_cents: serviceGrossC, deposit_cents: depositGrossC, total_cents: totalC },
+          payment_note: "Bereits bezahlt per Kreditkarte / Stripe",
+        },
+        pdfBase64,
+        filename,
+      });
+      archiveId = res.id;
+    } catch (e) {
+      const msg = String((e as Error)?.message ?? e).slice(0, 300);
+      console.warn("Belegarchiv fehlgeschlagen:", msg);
+      try {
+        await supabaseAdmin.from("admin_notifications").insert({
+          type: "document_archive_failed",
+          title: "Rechnung nicht archiviert",
+          body: `Rechnung ${invoiceNo} (Buchung ${booking.id}): ${msg}`,
+          booking_id: booking.id,
+        });
+      } catch {
+        /* optional */
+      }
+    }
+  }
+
+  return { pdfBase64, invoiceNo, filename, archiveId };
 }

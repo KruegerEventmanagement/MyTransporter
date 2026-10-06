@@ -94,7 +94,7 @@ export const Route = createFileRoute("/api/public/health/automations")({
             .maybeSingle();
           if (bk?.id) {
             const { generateBookingInvoicePdf } = await import("@/lib/invoice-pdf.server");
-            const pdf = await generateBookingInvoicePdf(bk.id);
+            const pdf = await generateBookingInvoicePdf(bk.id, { archive: false });
             invoiceRender = pdf.pdfBase64.length > 1000 ? "ok" : "too_small";
             // Logo im Rechnungskopf: eingebettetes Bild muss im PDF vorhanden sein.
             const bin = atob(pdf.pdfBase64.slice(0, 400_000));
