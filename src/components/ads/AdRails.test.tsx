@@ -77,7 +77,6 @@ describe("AdRails Struktur", () => {
 
 import { railFlags } from "./AdRails";
 import { getRouteAdPolicy } from "@/lib/ad-placements";
-vi.mock("@/components/ads/useAdPathname", async () => ({ useAdPathname: (await import("@/test/ad-pathname-mock")).useAdPathnameMock }));
 
 describe("AdRails Richtlinie", () => {
   it("ohne Route-Richtlinie, Consent oder Freigabe keine Rails", () => {

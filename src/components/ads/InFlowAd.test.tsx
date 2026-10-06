@@ -24,6 +24,7 @@ vi.mock("./adsense-loader", () => ({ ensureAdSenseScript: ensure, adRequestsCurr
 const { InFlowAd } = await import("./InFlowAd");
 const { setAdsSuppressed } = await import("@/lib/ad-visibility");
 
+const { navigateAdPath } = await import("@/test/ad-pathname-mock");
 function setPath(path: string) {
   window.history.replaceState(null, "", path);
 }
@@ -103,5 +104,27 @@ describe("InFlowAd (Mock-gated)", () => {
       </>,
     );
     expect(container.querySelectorAll("ins").length).toBe(1);
+  });
+
+  it("/ueber-uns: genau ein In-Flow-Platz an der unteren Position (logisch inFlowTop)", () => {
+    setPath("/ueber-uns");
+    const { container } = render(<InFlowAd placement="inFlowTop" />);
+    expect(container.querySelectorAll("ins").length).toBe(1);
+    cleanup();
+    expect(render(<InFlowAd placement="inFlowBottom" />).container.querySelectorAll("ins").length).toBe(0);
+  });
+
+  it("SPA-Navigation in derselben Instanz: Policy folgt sofort dem neuen Pfad", () => {
+    setPath("/umzug");
+    const { container } = render(page());
+    expect(container.querySelectorAll("ins").length).toBe(2);
+    act(() => navigateAdPath("/profil"));
+    expect(container.querySelectorAll("ins").length).toBe(0);
+    act(() => navigateAdPath("/langzeitmiete"));
+    expect(container.querySelectorAll("ins").length).toBe(1);
+    act(() => navigateAdPath("/preise"));
+    // Kein blockierter Doppelclaim nach Wechsel.
+    expect(container.querySelectorAll("ins").length).toBe(2);
+    expect(ensure).not.toHaveBeenCalled();
   });
 });
