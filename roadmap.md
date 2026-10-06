@@ -36,3 +36,10 @@
 - [ ] Gradle-Lauf in GitHub (wartet auf ersten Workflow-Lauf)
 - [ ] Play-Secrets/erster manueller Upload (wartet auf Nutzer)
 - [ ] Nativer Push-Versand (wartet auf Firebase)
+
+## Datenschutz/Konto (06.10.2026, nicht veröffentlicht)
+- [x] Passwort vergessen in allen Logins + /reset-password
+- [x] Echte Kontolöschung mit Audit, Löschantrag bei offener Miete, Admin-Tab „Löschungen“
+- [x] Ausweis/Führerschein aus Konto entfernen, befristetes Adminarchiv, Bereinigungs-Hook
+- [ ] Zeitplan für /api/public/hooks/purge-document-archive (wartet auf Freigabe)
+- [ ] Erlaubte Weiterleitungsadressen für /reset-password in den Anmeldeeinstellungen bestätigen
