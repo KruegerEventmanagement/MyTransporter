@@ -9,6 +9,7 @@ import {
   generateReturnCode,
   missingReturnEvidence,
   type ReturnExceptions,
+  type ReturnFlowMode,
 } from "./trip-return";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -22,6 +23,8 @@ export interface ReportReturnInput {
   endFuelPercent: number | null;
   endKmManual: boolean;
   exceptions: ReturnExceptions;
+  /** Geführter Wizard (v2): reduzierte Pflichtfotos + bedingter Tankbeleg. Fehlt bei Altclients. */
+  mode?: ReturnFlowMode | null;
 }
 
 export type ReportReturnResult =
@@ -51,6 +54,9 @@ export function parseReportInput(raw: unknown): ReportReturnInput {
       fuel: typeof ex.fuel === "string" ? ex.fuel : undefined,
       receipt: typeof ex.receipt === "string" ? ex.receipt : undefined,
     },
+    mode: (d.mode as { flow?: unknown } | null)?.flow === "v2"
+      ? { flow: "v2", refueled: (d.mode as { refueled?: unknown }).refueled === true }
+      : null,
   };
 }
 
@@ -100,6 +106,7 @@ export async function performReturnReport(
   const missing = missingReturnEvidence(
     ((photoRows ?? []) as Array<{ photo_type: string }>).map((r) => r.photo_type),
     exceptions,
+    input.mode,
   );
   if (missing.length) {
     return {

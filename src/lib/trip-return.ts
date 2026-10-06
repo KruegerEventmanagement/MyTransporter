@@ -21,6 +21,26 @@ export const RETURN_INTERIOR_TAG = "post_interior";
 export const RETURN_ODOMETER_TAG = "post_odometer";
 export const RETURN_FUEL_TAG = "post_fuel";
 export const RETURN_RECEIPT_TAG = "tank_receipt";
+/** v2: EIN gemeinsames Instrumentenfoto für Kilometerstand UND Tankstand. */
+export const RETURN_DASHBOARD_TAG = "post_dashboard";
+
+/** v2-Wizard: genau 6 Kernfotos; Tankbeleg nur bedingt (Kunde hat getankt). */
+export const RETURN_V2_CORE_TAGS = ["post_front", "post_back", "post_left", "post_right", RETURN_INTERIOR_TAG, RETURN_DASHBOARD_TAG] as const;
+
+export const EXCEPTION_COVERS_V2: Record<"photos" | "fuel" | "receipt", readonly string[]> = {
+  photos: ["post_front", "post_back", "post_left", "post_right", RETURN_INTERIOR_TAG],
+  fuel: [RETURN_DASHBOARD_TAG],
+  receipt: [RETURN_RECEIPT_TAG],
+};
+
+export function requiredReturnTagsV2(refueled: boolean): string[] {
+  return refueled ? [...RETURN_V2_CORE_TAGS, RETURN_RECEIPT_TAG] : [...RETURN_V2_CORE_TAGS];
+}
+
+export interface ReturnFlowMode {
+  flow: "v2";
+  refueled: boolean;
+}
 
 export type ExceptionKey = "photos" | "fuel" | "receipt";
 
@@ -58,12 +78,19 @@ export function cleanExceptions(ex: ReturnExceptions | null | undefined): Return
 }
 
 /** Fehlende Pflichtkategorien, die NICHT durch eine begründete Ausnahme gedeckt sind. */
-export function missingReturnEvidence(confirmedTags: Iterable<string>, ex: ReturnExceptions | null | undefined): string[] {
+export function missingReturnEvidence(
+  confirmedTags: Iterable<string>,
+  ex: ReturnExceptions | null | undefined,
+  mode?: ReturnFlowMode | null,
+): string[] {
   const have = new Set(confirmedTags);
   const clean = cleanExceptions(ex);
   const covered = new Set<string>();
-  for (const k of Object.keys(clean) as ExceptionKey[]) EXCEPTION_COVERS[k].forEach((t) => covered.add(t));
-  return REQUIRED_RETURN_TAGS.filter((t) => !have.has(t) && !covered.has(t));
+  const covers = mode ? EXCEPTION_COVERS_V2 : EXCEPTION_COVERS;
+  for (const k of Object.keys(clean) as ExceptionKey[]) covers[k].forEach((t) => covered.add(t));
+  if (mode && have.has(RETURN_ODOMETER_TAG) && have.has(RETURN_FUEL_TAG)) have.add(RETURN_DASHBOARD_TAG);
+  const required = mode ? requiredReturnTagsV2(mode.refueled) : REQUIRED_RETURN_TAGS;
+  return required.filter((t) => !have.has(t) && !covered.has(t));
 }
 
 export interface KmEvaluation {
