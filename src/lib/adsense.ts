@@ -45,10 +45,12 @@ export const ADSENSE_CONFIG: AdSenseConfig = {
   // Echte, im AdSense-Konto erzeugte Responsive-Display-Einheiten.
   // railLeft  = "MyTransporter – Seitenleiste links"
   // railRight = "MyTransporter – Seitenleiste rechts"
+  // Freigabe-Schalter bleiben FALSE: Website am 04.10.2026 abgelehnt (Minderwertige Inhalte).
   slots: {
     railLeft: "4238348588",
     railRight: "6950298526",
-    // mobileTop: "" – echte Slot-ID aus dem AdSense-Konto hier eintragen.
+    // mobileTop = "MyTransporter - Mobil oberhalb Logo" (erstellt 06.10.2026)
+    mobileTop: "7518309544",
   },
   autoAds: false,
   siteApproved: false,
