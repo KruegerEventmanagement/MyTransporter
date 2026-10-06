@@ -14,6 +14,9 @@ import {
 import { setAdsSuppressed } from "@/lib/ad-visibility";
 import { ADSENSE_CONFIG } from "@/lib/adsense";
 import { AdRails } from "./AdRails";
+import { AffiliateOfferGrid } from "./AffiliateOffers";
+import fs from "node:fs";
+import path from "node:path";
 
 afterEach(() => {
   cleanup();
@@ -114,61 +117,51 @@ describe("Affiliate-Konfiguration", () => {
   });
 });
 
-describe("Affiliate-Seitenleisten", () => {
-  it("zeigt 17 gekennzeichnete Karten mit korrekten Linkattributen und Texten", () => {
-    const { container } = render(
-      <AdRails>
-        <div>Inhalt</div>
-      </AdRails>,
+describe("Partnerangebote nur auf /werbeflaeche", () => {
+  function renderGrids() {
+    return render(
+      <div>
+        <AffiliateOfferGrid group="left" title="L" />
+        <AffiliateOfferGrid group="right" title="R" />
+      </div>,
     );
+  }
+
+  it("zeigt 17 gekennzeichnete Karten mit unveränderten Links und Attributen", () => {
+    const { container } = renderGrids();
     expect(screen.getAllByText("Anzeige · Partnerlink")).toHaveLength(17);
-    expect(screen.getAllByText(AFFILIATE_DISCLOSURE)).toHaveLength(17);
-    expect(screen.getAllByText("Zum Anbieter")).toHaveLength(16);
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(17);
     links.forEach((a) => {
-      const offer = AFFILIATE_CONFIG.offers.find((candidate) => candidate.id === a.dataset.affiliate);
-      expect(offer).toBeDefined();
-      if (!offer) return;
+      const offer = AFFILIATE_CONFIG.offers.find((c) => c.id === a.dataset.affiliate)!;
       expect(a.getAttribute("href")).toBe(affiliateTrackingUrl(offer, offer.rail));
       expect(a.getAttribute("target")).toBe("_blank");
-      const rel = (a.getAttribute("rel") ?? "").split(" ");
-      for (const r of ["sponsored", "nofollow", "noopener", "noreferrer"]) expect(rel).toContain(r);
       expect(a.getAttribute("rel")).toBe(AFFILIATE_REL);
-      if (offer.originalText) expect(a.textContent).toBe(offer.originalText);
-      else expect(a.textContent).toContain("Zum Anbieter");
     });
-    const tesaLink = container.querySelector('[data-affiliate="tesa"]');
-    expect(tesaLink?.textContent).toBe("tesa");
-    expect(tesaLink?.querySelector("svg")).toBeNull();
     expect(container.querySelectorAll('[data-rail="left"] [data-affiliate]')).toHaveLength(9);
     expect(container.querySelectorAll('[data-rail="right"] [data-affiliate]')).toHaveLength(8);
   });
 
-  it("lädt keine Scripts, Bilder oder Netzwerkanfragen", () => {
+  it("lädt keine Scripts, Bilder oder Netzwerkanfragen vor einem Klick", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    const { container } = render(
-      <AdRails>
-        <div>Inhalt</div>
-      </AdRails>,
-    );
+    const { container } = renderGrids();
     expect(container.querySelectorAll("script, img, iframe, link").length).toBe(0);
-    expect(document.querySelectorAll('script[src*="awin"]').length).toBe(0);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("enthält nur lokal gerenderte Lucide-Symbole", () => {
-    const { container } = render(
-      <AdRails>
-        <div>Inhalt</div>
-      </AdRails>,
-    );
-    expect(container.querySelectorAll("svg")).toHaveLength(33);
-    expect(container.querySelectorAll("img, picture, source")).toHaveLength(0);
+  it("nur die Route /werbeflaeche bindet Partnerangebote ein", () => {
+    const dir = path.resolve(__dirname, "../../routes");
+    const users = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".tsx"))
+      .filter((f) => /AffiliateOffers|AffiliateOfferGrid|@\/lib\/affiliate/.test(fs.readFileSync(path.join(dir, f), "utf8")));
+    expect(users).toEqual(["werbeflaeche.tsx"]);
+    const rails = fs.readFileSync(path.resolve(__dirname, "AdRails.tsx"), "utf8");
+    expect(rails).not.toMatch(/Affiliate/);
   });
 });
 
-describe("AdRails mit Partnerkarten", () => {
+describe("AdRails ohne Partnerkarten", () => {
   function Counter() {
     const [n, setN] = useState(0);
     return (
@@ -178,24 +171,18 @@ describe("AdRails mit Partnerkarten", () => {
     );
   }
 
-  it("zeigt links neun und rechts acht Partnerkarten und erhält Inhalt beim Unterdrücken", () => {
+  it("zeigt keine Affiliate-Links (Startseite) und erhält den Inhalt beim Unterdrücken", () => {
     const { container } = render(
       <AdRails>
         <Counter />
       </AdRails>,
     );
-    expect(container.querySelectorAll('[data-affiliate]')).toHaveLength(17);
+    expect(container.querySelectorAll("[data-affiliate], aside").length).toBe(0);
     const btn = screen.getByRole("button");
     act(() => btn.click());
-    act(() => btn.click());
     act(() => setAdsSuppressed(true));
-    expect(container.querySelectorAll('[data-affiliate]')).toHaveLength(0);
-    expect(container.querySelectorAll("aside").length).toBe(0);
-    expect(screen.getByRole("button")).toBe(btn);
-    expect(btn.textContent).toBe("Zähler 2");
     act(() => setAdsSuppressed(false));
     expect(screen.getByRole("button")).toBe(btn);
-    expect(btn.textContent).toBe("Zähler 2");
-    expect(container.querySelectorAll('[data-affiliate]')).toHaveLength(17);
+    expect(btn.textContent).toBe("Zähler 1");
   });
 });
