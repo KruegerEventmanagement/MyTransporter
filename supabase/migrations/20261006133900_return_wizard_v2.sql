@@ -1,4 +1,4 @@
--- Geführter Rückgabe-Wizard (v2): reduzierte Pflichtfotos, bedingter Tankbeleg. Altpfad ohne flow=v2 unverändert.
+-- Geführter Rückgabe-Wizard (v2): 7 Pflichtnachweise inkl. Tankbeleg. Altpfad ohne flow=v2 unverändert.
 CREATE OR REPLACE FUNCTION public.report_trip_return(
   _booking_id uuid,
   _end_km integer,
