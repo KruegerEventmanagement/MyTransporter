@@ -24,6 +24,7 @@ import { Route as ProfilRouteImport } from './routes/profil'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TransporterMietenPforzheimCalwRouteImport } from './routes/transporter-mieten-pforzheim-calw'
 import { Route as UeberUnsRouteImport } from './routes/ueber-uns'
+import { Route as UmzugRouteImport } from './routes/umzug'
 import { Route as UmzugstransporterMietenRouteImport } from './routes/umzugstransporter-mieten'
 import { Route as WerbungRouteImport } from './routes/werbung'
 import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
@@ -115,6 +116,11 @@ const TransporterMietenPforzheimCalwRoute =
 const UeberUnsRoute = UeberUnsRouteImport.update({
   id: '/ueber-uns',
   path: '/ueber-uns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UmzugRoute = UmzugRouteImport.update({
+  id: '/umzug',
+  path: '/umzug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UmzugstransporterMietenRoute = UmzugstransporterMietenRouteImport.update({
@@ -224,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
+  '/umzug': typeof UmzugRoute
   '/umzugstransporter-mieten': typeof UmzugstransporterMietenRoute
   '/werbung': typeof WerbungRoute
   '/auth/confirm': typeof AuthConfirmRoute
@@ -257,6 +264,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
+  '/umzug': typeof UmzugRoute
   '/umzugstransporter-mieten': typeof UmzugstransporterMietenRoute
   '/werbung': typeof WerbungRoute
   '/auth/confirm': typeof AuthConfirmRoute
@@ -291,6 +299,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
+  '/umzug': typeof UmzugRoute
   '/umzugstransporter-mieten': typeof UmzugstransporterMietenRoute
   '/werbung': typeof WerbungRoute
   '/auth/confirm': typeof AuthConfirmRoute
@@ -326,6 +335,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
+    | '/umzug'
     | '/umzugstransporter-mieten'
     | '/werbung'
     | '/auth/confirm'
@@ -359,6 +369,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
+    | '/umzug'
     | '/umzugstransporter-mieten'
     | '/werbung'
     | '/auth/confirm'
@@ -392,6 +403,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
+    | '/umzug'
     | '/umzugstransporter-mieten'
     | '/werbung'
     | '/auth/confirm'
@@ -426,6 +438,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TransporterMietenPforzheimCalwRoute: typeof TransporterMietenPforzheimCalwRoute
   UeberUnsRoute: typeof UeberUnsRoute
+  UmzugRoute: typeof UmzugRoute
   UmzugstransporterMietenRoute: typeof UmzugstransporterMietenRoute
   WerbungRoute: typeof WerbungRoute
   AuthConfirmRoute: typeof AuthConfirmRoute
@@ -549,6 +562,13 @@ declare module '@tanstack/react-router' {
       path: '/ueber-uns'
       fullPath: '/ueber-uns'
       preLoaderRoute: typeof UeberUnsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/umzug': {
+      id: '/umzug'
+      path: '/umzug'
+      fullPath: '/umzug'
+      preLoaderRoute: typeof UmzugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/umzugstransporter-mieten': {
@@ -682,6 +702,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TransporterMietenPforzheimCalwRoute: TransporterMietenPforzheimCalwRoute,
   UeberUnsRoute: UeberUnsRoute,
+  UmzugRoute: UmzugRoute,
   UmzugstransporterMietenRoute: UmzugstransporterMietenRoute,
   WerbungRoute: WerbungRoute,
   AuthConfirmRoute: AuthConfirmRoute,

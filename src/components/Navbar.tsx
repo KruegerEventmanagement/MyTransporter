@@ -229,11 +229,17 @@ export function Navbar() {
             onClick={() => setShowMobileMenu((v) => !v)}
             aria-label={showMobileMenu ? "Menü schließen" : "Menü öffnen"}
             aria-expanded={showMobileMenu}
-            className="sm:hidden mr-auto h-10 w-10 shrink-0 flex items-center justify-center rounded-full text-foreground hover:bg-secondary transition-colors"
+            className="lg:hidden mr-auto h-10 w-10 shrink-0 flex items-center justify-center rounded-full text-foreground hover:bg-secondary transition-colors"
           >
             {showMobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-          <div className="hidden sm:flex mr-auto items-center gap-3 min-w-0">
+          <div className="hidden lg:flex mr-auto items-center gap-3 min-w-0">
+            <Link
+              to="/umzug"
+              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+            >
+              Umzug
+            </Link>
             <Link
               to="/werbung"
               className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
@@ -249,7 +255,7 @@ export function Navbar() {
           </div>
           <Link
             to="/preise"
-            className="hidden sm:inline text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="hidden lg:inline text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             Preise
           </Link>
@@ -314,8 +320,8 @@ export function Navbar() {
           )}
         </div>
         {showMobileMenu && (
-          <div className="sm:hidden border-t border-border/50 bg-background px-3 py-2">
-            {([["/preise","Preise"],["/langzeitmiete","Langzeitmiete"],["/werbung","Werbefläche"]] as const).map(([to,label]) => (
+          <div className="lg:hidden border-t border-border/50 bg-background px-3 py-2">
+            {([["/umzug","Umzug"],["/preise","Preise"],["/langzeitmiete","Langzeitmiete"],["/werbung","Werbefläche"]] as const).map(([to,label]) => (
               <Link key={to} to={to} onClick={() => setShowMobileMenu(false)} className="flex min-h-11 items-center rounded-lg px-2 text-base font-medium text-foreground hover:bg-secondary">
                 {label}
               </Link>
