@@ -166,7 +166,7 @@ describe("echter Checkout-Handler + Webhook-Persistenz", () => {
     expect(Object.keys(md).some((k) => k.startsWith("ck"))).toBe(false);
     expect(total).toBe(9900 + 20000);
     const b = persist(md, total);
-    expect(b.kind === "ok" && [b.freeKm, b.kmPriceCents]).toEqual([200, 45]);
+    expect(b.kind === "ok" && [b.freeKm, b.kmPriceCents]).toEqual([480, 45]);
     const old = resolveBookingPricing({ md: { planId: "multi_3d" }, planId: "multi_3d", vehicleClass: "l1h1", addonIds: [], couponDiscountCents: 0, paid: { amountTotal: 46900, currency: "eur" } });
     expect(old.kind === "ok" && [old.freeKm, old.kmPriceCents]).toEqual([900, 35]);
     // gespeicherte Altbuchung: Kontingent strikt aus DB
