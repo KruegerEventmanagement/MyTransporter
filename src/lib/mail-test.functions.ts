@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveAccount } from "@/lib/active-account";
 
 /** Admin-Versandtest: keine frei wählbaren Felder außer der Anfrage-ID (Doppelklick-Schutz). */
 export const sendAdminMailTest = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((d: { requestId: string }) => ({ requestId: String(d?.requestId ?? "") }))
   .handler(async ({ data, context }) => {
     const { runMailTest } = await import("@/lib/mail-test.server");

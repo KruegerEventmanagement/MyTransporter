@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveAccount } from "@/lib/active-account";
 
 const HOLD_MINUTES = 15;
 
 export const createBookingHold = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: {
     vehicleId?: string | null;
     vehiclePlate?: string | null;
@@ -44,7 +44,7 @@ export const createBookingHold = createServerFn({ method: "POST" })
   });
 
 export const releaseBookingHold = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: { holdId?: string; startDate?: string; startHour?: number }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;

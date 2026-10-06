@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveAccount } from "@/lib/active-account";
 import {
   docInputSchema,
   docIdSchema,
@@ -73,7 +73,7 @@ async function renderAndArchive(doc: DocInputData, adminId: string) {
 }
 
 export const renderAdminDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: unknown) => docInputSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -81,7 +81,7 @@ export const renderAdminDocument = createServerFn({ method: "POST" })
   });
 
 export const sendAdminDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: unknown) => sendDocSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -121,7 +121,7 @@ export const sendAdminDocument = createServerFn({ method: "POST" })
 
 /** Belegarchiv: Liste für Admins (RLS: nur Admin sieht alle). */
 export const listIssuedDocuments = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: unknown) => listDocsSchema.parse(data ?? {}))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -152,7 +152,7 @@ export const listIssuedDocuments = createServerFn({ method: "POST" })
 
 /** Einzelbeleg inkl. Snapshot + kurzlebigem signierten PDF-Link. */
 export const getIssuedDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: unknown) => docIdSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);

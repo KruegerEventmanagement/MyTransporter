@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveAccount } from "@/lib/active-account";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 
 const AiSchema = z.object({
@@ -90,7 +90,7 @@ function nameMatches(profileFirst: string, profileLast: string, docFirst: string
 }
 
 export const verifyIdDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: { imageBase64: string; docType: "license" | "id"; side: "front" | "back" }) => {
     if (!data.imageBase64) throw new Error("imageBase64 fehlt");
     if (data.docType !== "license" && data.docType !== "id") throw new Error("docType ungültig");

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveAccount } from "@/lib/active-account";
 import { loadCalendarEntryDetails, type CalendarEntryDetails } from "@/lib/calendar-details.server";
 
 export type { CalendarEntryDetails, DetailDoc } from "@/lib/calendar-details.server";
@@ -10,7 +10,7 @@ export type { CalendarEntryDetails, DetailDoc } from "@/lib/calendar-details.ser
  * nur Art + ID; Profil, Dokumente und Speicherpfade löst der Server auf.
  */
 export const getCalendarEntryDetails = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((input: unknown) =>
     z.object({ kind: z.enum(["booking", "manual"]), id: z.string().uuid() }).parse(input),
   )

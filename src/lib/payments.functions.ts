@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import type Stripe from "stripe";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveAccount } from "@/lib/active-account";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createStripeClient, getStripeErrorMessage, type StripeEnv } from "@/lib/stripe.server";
 
@@ -32,7 +32,7 @@ function assertStripeEnvironment(environment: StripeEnv) {
 const REQUIRED_DOC_TYPES = ["id_front", "id_back", "license_front", "license_back"] as const;
 
 export const createBookingCheckout = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: {
     plan: string;
     customerEmail?: string;
@@ -185,7 +185,7 @@ async function assertAdmin(supabase: {
 
 /** Bucht Mehrkilometer (oder beliebigen Restbetrag) off-session von der gespeicherten Karte ab. */
 export const chargeBookingExtra = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: { bookingId: string; amountCents: number; description?: string; environment: StripeEnv }) => {
     if (!data.bookingId) throw new Error("bookingId fehlt");
     if (!Number.isInteger(data.amountCents) || data.amountCents < 50) {
@@ -233,7 +233,7 @@ export const chargeBookingExtra = createServerFn({ method: "POST" })
 
 /** Behält einen Teil der Kaution ein und erstattet den Rest. deductCents = einbehaltener Betrag. */
 export const settleDeposit = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: { bookingId: string; deductCents: number; environment: StripeEnv }) => {
     if (!data.bookingId) throw new Error("bookingId fehlt");
     if (!Number.isInteger(data.deductCents) || data.deductCents < 0) {
@@ -302,7 +302,7 @@ function computeCancellationFeeCents(startsAtMs: number, nowMs: number): { hours
 }
 
 export const cancelBookingWithRefund = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((data: { bookingId: string; environment: StripeEnv }) => {
     if (!data.bookingId) throw new Error("bookingId fehlt");
     assertStripeEnvironment(data.environment);

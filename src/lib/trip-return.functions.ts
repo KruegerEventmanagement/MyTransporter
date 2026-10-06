@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveAccount } from "@/lib/active-account";
 import { parseReportInput, type ReportReturnResult } from "./trip-return.server";
 
 /**
@@ -9,7 +9,7 @@ import { parseReportInput, type ReportReturnResult } from "./trip-return.server"
  * berechnet werden. Bei Fehlern wird ehrlich "nicht gespeichert" gemeldet.
  */
 export const reportReturn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveAccount])
   .inputValidator((d: unknown) => parseReportInput(d))
   .handler(async ({ data, context }): Promise<ReportReturnResult> => {
     const { data: rpc, error } = await (context.supabase as unknown as {
