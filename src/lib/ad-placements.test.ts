@@ -65,10 +65,19 @@ describe("Platzierungsrichtlinie", () => {
 
 describe("Slot-IDs", () => {
   it("echte IDs bleiben, keine neuen erfunden, alle Freigaben aus", () => {
-    expect(ADSENSE_CONFIG.slots).toEqual({ railLeft: "4238348588", railRight: "6950298526", mobileTop: "7518309544" });
+    expect(ADSENSE_CONFIG.slots).toEqual({
+      railLeft: "4238348588",
+      railRight: "6950298526",
+      mobileTop: "7518309544",
+      railLeftLower: "6851085973",
+      railRightLower: "7070577825",
+      inlineTop: "7518309544",
+      inlineBottom: "5757496157",
+      mobileBottom: "5757496157",
+    });
     expect(ADSENSE_CONFIG.enabled || ADSENSE_CONFIG.siteApproved || ADSENSE_CONFIG.certifiedCmpConfigured || ADSENSE_CONFIG.liveCmpVerified || ADSENSE_CONFIG.autoAds).toBe(false);
     for (const k of ["railLeftLower", "railRightLower", "inlineTop", "inlineBottom", "mobileBottom"] as const) {
-      expect(getSlotId(k)).toBeNull();
+      expect(getSlotId(k)).not.toBeNull();
     }
   });
 

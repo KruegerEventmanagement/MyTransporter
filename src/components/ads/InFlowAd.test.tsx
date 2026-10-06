@@ -55,14 +55,14 @@ describe("InFlowAd (Mock-gated)", () => {
     setPath("/umzug");
     const { container } = render(page());
     expect(container.querySelectorAll("ins").length).toBe(2);
-    expect(container.querySelector("[data-testid=ad-inFlowTop] ins")?.getAttribute("data-ad-slot")).toBe("1111111111");
+    expect(container.querySelector("[data-testid=ad-inFlowTop] ins")?.getAttribute("data-ad-slot")).toBe("7518309544");
   });
 
   it("390 px mobil: oben mobileTop, unten zweiter Mobilplatz, keine Desktop-Einheit", () => {
     Object.assign(env, { mobile: true, wide: false });
     const { container } = render(page());
     const slots = [...container.querySelectorAll("ins")].map((i) => i.getAttribute("data-ad-slot"));
-    expect(slots).toEqual(["7518309544", "1111111111"]);
+    expect(slots).toEqual(["7518309544", "5757496157"]);
   });
 
   it("kurze Seite /langzeitmiete: nur ein Platz", () => {
