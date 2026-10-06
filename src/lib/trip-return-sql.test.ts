@@ -219,8 +219,8 @@ describe("bookings_guard_customer_update (SQL)", () => {
   });
 
   describe("v2 geführter Wizard", () => {
-    const V2 = ["post_front", "post_back", "post_left", "post_right", "post_interior", "post_dashboard"];
-    it("6 Kernfotos ohne Tanken genügen; ohne flow=v2 gilt weiter die Altliste", async () => {
+    const V2 = ["post_front", "post_back", "post_left", "post_right", "post_interior", "post_dashboard", "tank_receipt"];
+    it("7 Pflichtfotos genügen; ohne flow=v2 gilt weiter die Altliste", async () => {
       await as(null);
       await seed();
       for (const t of V2) await photo(t);
@@ -230,14 +230,13 @@ describe("bookings_guard_customer_update (SQL)", () => {
       expect(legacy.missing).toContain("post_front_right");
       const r = await report(1100, { flow: "v2", refueled: false });
       expect(r).toMatchObject({ ok: true, reviewReason: null });
-      expect((await booking()).return_exceptions).toEqual({ flow: "v2", refueled: false });
     });
-    it("getankt → Tankbeleg Pflicht; Ausnahme deckt ihn mit Prüfvermerk", async () => {
+    it("Tankbeleg immer Pflicht (auch refueled=false); Ausnahme deckt ihn mit Prüfvermerk", async () => {
       await as(null);
       await seed();
-      for (const t of V2) await photo(t);
+      for (const t of V2.slice(0, 6)) await photo(t);
       await as(U1);
-      const miss = await report(1100, { flow: "v2", refueled: true });
+      const miss = await report(1100, { flow: "v2", refueled: false });
       expect(miss).toMatchObject({ ok: false, missing: ["tank_receipt"] });
       const r = await report(1100, { flow: "v2", refueled: true, receipt: "[Technisches Problem] Kamera friert ein" });
       expect(r.ok).toBe(true);
@@ -246,7 +245,7 @@ describe("bookings_guard_customer_update (SQL)", () => {
     it("fehlendes Kernfoto blockiert; Altbuchung mit getrennten Tacho- und Tankfotos zählt als Instrumentenfoto", async () => {
       await as(null);
       await seed();
-      for (const t of ["post_front", "post_back", "post_left", "post_right", "post_interior"]) await photo(t);
+      for (const t of ["post_front", "post_back", "post_left", "post_right", "post_interior", "tank_receipt"]) await photo(t);
       await as(U1);
       expect(await report(1100, { flow: "v2", refueled: false })).toMatchObject({ ok: false, missing: ["post_dashboard"] });
       await as(null);
@@ -258,7 +257,7 @@ describe("bookings_guard_customer_update (SQL)", () => {
     it("HEIC-Fotos zählen; Ausnahme für Instrumentenfoto ergibt eigenen Prüfvermerk", async () => {
       await as(null);
       await seed();
-      for (const t of V2.slice(0, 5)) await photo(t, { mime: "image/heic" });
+      for (const t of [...V2.slice(0, 5), "tank_receipt"]) await photo(t, { mime: "image/heic" });
       await as(U1);
       const r = await report(1100, { flow: "v2", refueled: false, fuel: "[Nachweis nicht bereitgestellt] Display defekt" });
       expect(r.ok).toBe(true);
