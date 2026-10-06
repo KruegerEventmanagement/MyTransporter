@@ -102,8 +102,8 @@ function UmzugPage() {
             Gut geschützt auf dem Weg ins neue Zuhause.
           </h2>
           <p className="mt-3 max-w-2xl text-muted-foreground leading-relaxed">
-            Decken und Stretchfolie schützen Oberflächen, Gurte sichern die Ladung. So kommt dein
-            Hausrat so an, wie er losgefahren ist.
+            Decken und Stretchfolie schützen Oberflächen, Gurte sichern die Ladung. So bereiten wir
+            deine Möbel sorgfältig auf den Transport vor.
           </p>
           <ul className="mt-6 grid gap-4 sm:grid-cols-2">
             {EQUIPMENT.map(({ icon: Icon, title, text }) => (
@@ -166,8 +166,8 @@ function UmzugPage() {
             Du organisierst deinen Umzug selbst? Hier findest du den passenden Miettransporter.
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Die Mietung zum Selbstfahren läuft über unsere festen Miettarife und ist getrennt vom
-            individuellen Umzugsangebot.
+            Für die reine Transportermiete gelten unsere Miettarife. Deinen Umzug mit Unterstützung
+            planen und kalkulieren wir individuell.
           </p>
           <Link
             to="/"
