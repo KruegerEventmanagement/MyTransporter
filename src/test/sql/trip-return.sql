@@ -182,17 +182,17 @@ BEGIN
 
   -- Mehrkilometer nur aus den unveränderten Buchungs-Snapshots.
   IF b.start_km IS NULL THEN
-    reasons := reasons || 'Start-Kilometerstand fehlt – manuelle Prüfung.';
+    reasons := array_append(reasons, 'Start-Kilometerstand fehlt – manuelle Prüfung.'::text);
   ELSIF _end_km < b.start_km THEN
-    reasons := reasons || format('End-Kilometerstand %s ist kleiner als Start %s (z. B. Tacho-Anzeigefehler) – manuelle Prüfung, keine Berechnung.', _end_km, b.start_km);
+    reasons := array_append(reasons, format('End-Kilometerstand %s ist kleiner als Start %s (z. B. Tacho-Anzeigefehler) – manuelle Prüfung, keine Berechnung.', _end_km, b.start_km)::text);
   ELSE
     driven := _end_km - b.start_km;
     extra := CASE WHEN b.plan_id = 'km' THEN driven ELSE GREATEST(0, driven - COALESCE(b.free_km, 0)) END;
     charge := extra * b.km_price_cents;
   END IF;
-  IF ex ? 'photos' THEN reasons := reasons || ('Foto-/Kameraproblem: ' || (ex->>'photos')); END IF;
-  IF ex ? 'fuel' THEN reasons := reasons || ('Tankstand-Foto fehlt: ' || (ex->>'fuel')); END IF;
-  IF ex ? 'receipt' THEN reasons := reasons || ('Tankbeleg fehlt: ' || (ex->>'receipt')); END IF;
+  IF ex ? 'photos' THEN reasons := array_append(reasons, ('Foto-/Kameraproblem: ' || (ex->>'photos'))::text); END IF;
+  IF ex ? 'fuel' THEN reasons := array_append(reasons, ('Tankstand-Foto fehlt: ' || (ex->>'fuel'))::text); END IF;
+  IF ex ? 'receipt' THEN reasons := array_append(reasons, ('Tankbeleg fehlt: ' || (ex->>'receipt'))::text); END IF;
   review := NULLIF(array_to_string(reasons, ' · '), '');
 
   raw := decode(md5(gen_random_uuid()::text), 'hex');
