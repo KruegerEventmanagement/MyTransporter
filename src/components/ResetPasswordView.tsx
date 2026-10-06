@@ -24,31 +24,58 @@ export function ResetPasswordView() {
   const linkRef = useRef<RecoveryLink | null>(null);
   const activeRef = useRef(true);
 
-  const check = useCallback(async (link: RecoveryLink) => {
-    let ok = false;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const r = await resolveRecovery(supabase as any, link, Math.floor(Date.now() / 1000));
-      ok = r.ok;
-      if (!r.ok) setHint(r.network ? "network" : r.expired ? "expired" : "invalid");
-    } catch {
-      setHint("network");
-    } finally {
-      if (activeRef.current) setPhase(ok ? "ready" : "invalid");
-    }
+  const readyRef = useRef(false);
+  const queueRef = useRef<Promise<void>>(Promise.resolve());
+
+  // Prüfungen laufen streng nacheinander; eine bestätigte Recovery-Sitzung wird nie wieder auf "invalid" gesetzt.
+  const check = useCallback((link: RecoveryLink) => {
+    queueRef.current = queueRef.current.then(async () => {
+      if (readyRef.current) return;
+      let ok = false;
+      let nextHint: "expired" | "invalid" | "network" = "invalid";
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const r = await resolveRecovery(supabase as any, link, Math.floor(Date.now() / 1000));
+        ok = r.ok;
+        if (!r.ok) nextHint = r.network ? "network" : r.expired ? "expired" : "invalid";
+      } catch {
+        nextHint = "network";
+      }
+      if (ok) readyRef.current = true;
+      if (!activeRef.current) return;
+      if (ok) setPhase("ready");
+      else if (!readyRef.current) {
+        setHint(nextHint);
+        setPhase("invalid");
+      }
+    });
+    return queueRef.current;
   }, []);
 
   useEffect(() => {
     activeRef.current = true;
-    // URL vor jedem Client-Zugriff lesen, danach Token sofort aus der Adresszeile entfernen.
+    // Ursprünglichen Link einmal erfassen; die URL bleibt stehen, bis der Client ihn konsumiert hat.
     const link = parseRecoveryUrl(window.location.href);
     linkRef.current = link;
-    window.history.replaceState(null, "", "/reset-password");
-    // Event kann vor oder nach dem Mount kommen: geprüft wird immer der tatsächliche Sitzungszustand.
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") void check({ kind: "none" });
     });
-    void check(link);
+    void (async () => {
+      try {
+        // Wartet auf die asynchrone detectSessionInUrl-Initialisierung (liest die URL selbst).
+        await supabase.auth.initialize();
+      } catch {
+        /* Fehler zeigt die anschließende Prüfung */
+      }
+      try {
+        await check(link);
+      } finally {
+        // Token erst nach Konsum/Prüfung aus der Adresszeile entfernen – auch bei Fehlern.
+        if (window.location.pathname === "/reset-password" && (window.location.hash || window.location.search)) {
+          window.history.replaceState(null, "", "/reset-password");
+        }
+      }
+    })();
     return () => {
       activeRef.current = false;
       sub.subscription.unsubscribe();
