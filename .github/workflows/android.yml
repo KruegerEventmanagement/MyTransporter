@@ -2,7 +2,8 @@
 # check:   push main + PR – frozen bun.lock, Typecheck, Tests, Native-Shell, cap sync android,
 #          Gradle assembleDebug + lintDebug, Debug-APK als Artefakt.
 # release: nur push auf main im Original-Repo nach grünem check (oder manuell) – signiertes AAB
-#          + Upload zu Google Play (Track konfigurierbar, Standard internal).
+#          + optionaler Upload zu Google Play (Track konfigurierbar, Standard internal).
+#          Das signierte AAB bleibt auch ohne Play-Servicekonto als Artefakt verfügbar.
 name: android
 on:
   push:
@@ -81,34 +82,42 @@ jobs:
           [ -n "$KSP" ]  || missing="$missing ANDROID_KEYSTORE_PASSWORD"
           [ -n "$KA" ]   || missing="$missing ANDROID_KEY_ALIAS"
           [ -n "$KP" ]   || missing="$missing ANDROID_KEY_PASSWORD"
-          [ -n "$PLAY" ] || missing="$missing PLAY_SERVICE_ACCOUNT_JSON"
           case "$PLAY_TRACK" in internal|alpha|beta|production) ;; *) echo "::error::Ungültiger PLAY_TRACK"; exit 1;; esac
           if [ -n "$missing" ]; then
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Play-Release NICHT eingerichtet – fehlende Secrets:$missing. Kein AAB signiert, nichts hochgeladen."
-            echo "### Android-Release: NICHT eingerichtet" >> "$GITHUB_STEP_SUMMARY"
+            echo "signing=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Android-Signierung NICHT eingerichtet – fehlende Secrets:$missing. Kein AAB signiert, nichts hochgeladen."
+            echo "### Android-Signierung: NICHT eingerichtet" >> "$GITHUB_STEP_SUMMARY"
             echo "Fehlende Secrets:$missing – es wurde nichts signiert oder hochgeladen." >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "signing=true" >> "$GITHUB_OUTPUT"
           fi
-      - if: steps.cfg.outputs.configured == 'true'
+          if [ -z "$missing" ] && [ -n "$PLAY" ]; then
+            echo "upload=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -z "$PLAY" ]; then
+            echo "::warning::Automatischer Play-Upload nicht eingerichtet: PLAY_SERVICE_ACCOUNT_JSON fehlt."
+            echo "Automatischer Play-Upload ist nicht eingerichtet. Bei vollständiger Signierung wird das AAB für den manuellen Upload gebaut und gesichert." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - if: steps.cfg.outputs.signing == 'true'
         uses: actions/checkout@v4
-      - if: steps.cfg.outputs.configured == 'true'
+      - if: steps.cfg.outputs.signing == 'true'
         uses: oven-sh/setup-bun@v2
-      - if: steps.cfg.outputs.configured == 'true'
+      - if: steps.cfg.outputs.signing == 'true'
         uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - if: steps.cfg.outputs.configured == 'true'
+      - if: steps.cfg.outputs.signing == 'true'
         uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 21, cache: gradle }
-      - if: steps.cfg.outputs.configured == 'true'
+      - if: steps.cfg.outputs.signing == 'true'
         run: bun install --frozen-lockfile
-      - if: steps.cfg.outputs.configured == 'true'
+      - if: steps.cfg.outputs.signing == 'true'
         run: bun run build:native && npx cap sync android
-      - if: steps.cfg.outputs.configured == 'true'
+      - if: steps.cfg.outputs.signing == 'true'
         name: Version setzen
         run: node scripts/android-version.mjs >> "$GITHUB_ENV"
-      - if: steps.cfg.outputs.configured == 'true'
+      - if: steps.cfg.outputs.signing == 'true'
         name: Signiertes AAB bauen
         env:
           KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -121,7 +130,7 @@ jobs:
           trap 'rm -f "$ANDROID_KEYSTORE_PATH"' EXIT
           printf '%s' "$KS" | base64 -d > "$ANDROID_KEYSTORE_PATH"
           cd android && chmod +x gradlew && ./gradlew bundleRelease --no-daemon
-      - if: steps.cfg.outputs.configured == 'true'
+      - if: steps.cfg.outputs.signing == 'true'
         name: Signiertes AAB sichern
         uses: actions/upload-artifact@v4
         with:
@@ -129,7 +138,7 @@ jobs:
           path: android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 30
-      - if: steps.cfg.outputs.configured == 'true'
+      - if: steps.cfg.outputs.upload == 'true'
         name: Upload zu Google Play
         uses: r0adkll/upload-google-play@v1
         with:
@@ -138,5 +147,10 @@ jobs:
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           track: ${{ env.PLAY_TRACK }}
           status: ${{ env.PLAY_RELEASE_STATUS }}
-      - if: steps.cfg.outputs.configured == 'true'
+      - if: steps.cfg.outputs.upload == 'true'
         run: echo "### Android-Release hochgeladen ($PLAY_TRACK, versionCode $MT_VERSION_CODE)" >> "$GITHUB_STEP_SUMMARY"
+      - if: steps.cfg.outputs.signing == 'true' && steps.cfg.outputs.upload != 'true'
+        name: Manuellen Upload dokumentieren
+        run: |
+          echo "### Signiertes Android-Bundle bereit (versionCode $MT_VERSION_CODE)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Artefakt: mytransporter-release-$MT_VERSION_CODE. Noch nicht zu Google Play hochgeladen; bitte das AAB in der Play Console hochladen." >> "$GITHUB_STEP_SUMMARY"
