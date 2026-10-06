@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { listPrivacyRecords, getArchivedDocumentUrl } from "@/lib/admin-privacy.functions";
+import { listPrivacyRecords, getArchivedDocumentUrl, retryAccountDeletion, setArchiveReviewHold } from "@/lib/admin-privacy.functions";
 import { formatBerlinDateTime } from "@/lib/privacy-format";
 
 type Deletion = {
@@ -45,6 +45,23 @@ export function deletionLabel(d: Pick<Deletion, "status" | "requested_at" | "com
 export function AdminPrivacy() {
   const list = useServerFn(listPrivacyRecords);
   const sign = useServerFn(getArchivedDocumentUrl);
+  const retry = useServerFn(retryAccountDeletion);
+  const hold = useServerFn(setArchiveReviewHold);
+  const [note, setNote] = useState<string | null>(null);
+  const reload = () => list().then((r) => setData(r as { deletions: Deletion[]; archive: Archive[] })).catch(() => {});
+  const doRetry = async (id: string) => {
+    const r = await retry({ data: { id } }).catch(() => ({ ok: false as const, reason: "Fehler." }));
+    setNote(r.ok ? "Löschung abgeschlossen." : r.reason);
+    void reload();
+  };
+  const doHold = async (id: string) => {
+    const reason = window.prompt("Begründung für den Prüfvermerk (z. B. konkreter Schadensfall, mind. 10 Zeichen):")?.trim();
+    if (!reason) return;
+    const days = Number(window.prompt("Dauer in Tagen (1–180):", "30"));
+    const r = await hold({ data: { id, days, reason } }).catch(() => ({ ok: false as const, reason: "Ungültige Angaben." }));
+    setNote(r.ok ? "Prüfvermerk gesetzt." : r.reason);
+    void reload();
+  };
   const [data, setData] = useState<{ deletions: Deletion[]; archive: Archive[] } | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -57,12 +74,14 @@ export function AdminPrivacy() {
   const open = async (id: string) => {
     const r = await sign({ data: { id } });
     if (r.url) window.open(r.url, "_blank", "noopener");
+    else setNote("Aufbewahrung abgelaufen – Kopie kann nicht mehr angesehen werden.");
   };
 
   if (err) return <p role="alert">{err}</p>;
   if (!data) return <p className="text-sm text-muted-foreground">Wird geladen …</p>;
   return (
     <div className="space-y-8">
+      {note && <p role="status" className="text-sm font-medium">{note}</p>}
       <section>
         <h2 className="font-bold mb-2">Kontolöschungen</h2>
         {data.deletions.length === 0 && <p className="text-sm text-muted-foreground">Keine Einträge.</p>}
@@ -75,6 +94,11 @@ export function AdminPrivacy() {
                 {d.account_created_at && ` · registriert ${formatBerlinDateTime(d.account_created_at).date}`}
                 {d.booking_count != null && ` · ${d.booking_count} Buchung(en) bleiben erhalten`}
               </p>
+              {d.status !== "completed" && (
+                <button onClick={() => doRetry(d.id)} className="mt-2 rounded-full border border-foreground px-3 py-1 text-xs">
+                  Löschung erneut ausführen
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -98,6 +122,11 @@ export function AdminPrivacy() {
               {!a.purged_at && (
                 <button onClick={() => open(a.id)} className="mt-2 rounded-full border border-foreground px-3 py-1 text-xs">
                   Ansehen (60 s gültig)
+                </button>
+              )}
+              {!a.purged_at && (
+                <button onClick={() => doHold(a.id)} className="mt-2 ml-2 rounded-full border border-border px-3 py-1 text-xs">
+                  Befristeten Prüfvermerk setzen
                 </button>
               )}
             </li>
