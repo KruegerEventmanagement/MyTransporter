@@ -583,7 +583,7 @@ export function ReturnFlow({
                 <DocumentationFeeNotice compact />
               </div>
             )}
-            {kind && (
+            {(kind || value.length > 0) && (
               <>
                 <label className="mt-2 block text-xs font-medium text-foreground" htmlFor={`ex-${key}`}>
                   Bitte kurz begründen (mind. {MIN_REASON_LENGTH} Zeichen). MyTransporter prüft das manuell.
@@ -592,7 +592,7 @@ export function ReturnFlow({
                   id={`ex-${key}`}
                   value={stripExceptionKind(value)}
                   maxLength={460}
-                  onChange={(e) => setExceptions((x) => ({ ...x, [key]: withExceptionKind(kind, e.target.value) }))}
+                  onChange={(e) => setExceptions((x) => ({ ...x, [key]: kind ? withExceptionKind(kind, e.target.value) : e.target.value }))}
                   className="mt-2 w-full rounded-xl border border-border bg-background p-2 text-sm"
                   rows={2}
                 />

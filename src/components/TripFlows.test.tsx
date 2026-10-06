@@ -246,7 +246,7 @@ describe("ReturnFlow Wiederherstellung", () => {
     render(<ReturnFlow bookingId="b1" planId="km" startKm={0} userId="u1" onComplete={vi.fn()} />);
     expect((screen.getByPlaceholderText("z.B. 42920") as HTMLInputElement).value).toBe("0");
     expect((screen.getByPlaceholderText("z.B. 75") as HTMLInputElement).value).toBe("55");
-    expect((screen.getByLabelText(/Tankanzeige lässt sich nicht/) as HTMLTextAreaElement).value).toMatch(/dunkel/);
+    expect((screen.getByLabelText(/Bitte kurz begründen/) as HTMLTextAreaElement).value).toMatch(/dunkel/);
     cleanup();
     render(<ReturnFlow bookingId="b1" planId="km" startKm={0} userId="u2" onComplete={vi.fn()} />);
     expect(screen.getByText("Fahrzeug-Rückgabe dokumentieren")).toBeTruthy();
