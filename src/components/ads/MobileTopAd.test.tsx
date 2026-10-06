@@ -8,11 +8,11 @@ import { AdSlot } from "./AdSlot";
 afterEach(() => cleanup());
 
 describe("AdSense-Vorbereitung (keine echten Anzeigenabrufe)", () => {
-  it("echte IDs bleiben erhalten, Flags aus, mobile Slot-ID nicht erfunden", () => {
+  it("echte IDs bleiben erhalten, Flags aus, echte mobile Slot-ID eingetragen", () => {
     expect(ADSENSE_CONFIG.publisherId).toBe("ca-pub-6974851907377988");
     expect(ADSENSE_CONFIG.slots.railLeft).toBe("4238348588");
     expect(ADSENSE_CONFIG.slots.railRight).toBe("6950298526");
-    expect(ADSENSE_CONFIG.slots.mobileTop).toBeUndefined();
+    expect(ADSENSE_CONFIG.slots.mobileTop).toBe("7518309544");
     expect(ADSENSE_CONFIG.enabled || ADSENSE_CONFIG.siteApproved || ADSENSE_CONFIG.certifiedCmpConfigured || ADSENSE_CONFIG.liveCmpVerified).toBe(false);
     expect(isSlotReady("mobileTop")).toBe(false);
   });

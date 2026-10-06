@@ -3,6 +3,7 @@ import {
   WEB_AD_SLOTS,
   WEB_AD_TERM_DAYS,
   WebAdInquirySchema,
+  berlinToday,
   type WebAdInquiryResult,
 } from "./web-ad-inquiry";
 
@@ -33,12 +34,9 @@ export async function processWebAdInquiry(raw: unknown, deps: WebAdInquiryDeps):
   if (d.hp.trim() !== "") return { ok: false, error: "Anfrage konnte nicht angenommen werden." };
 
   const now = deps.now();
-  if (d.startDate) {
-    const start = new Date(`${d.startDate}T00:00:00Z`);
-    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    if (Number.isNaN(start.getTime()) || start.getTime() < today.getTime() - 86_400_000) {
-      return { ok: false, error: "Der gewünschte Start liegt in der Vergangenheit." };
-    }
+  // Vergleich nach Berliner Kalenderdatum (Schema garantiert echtes Datum).
+  if (d.startDate && d.startDate < berlinToday(now)) {
+    return { ok: false, error: "Der gewünschte Start liegt in der Vergangenheit." };
   }
 
   try {

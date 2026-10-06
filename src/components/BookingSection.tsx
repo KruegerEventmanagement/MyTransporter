@@ -67,6 +67,7 @@ import { AddonPackageCard } from "./AddonPackageCard";
 import { CustomKmCard } from "./CustomKmCard";
 import { parseCustomKmInput, quoteCustomKm } from "@/lib/custom-km";
 import { useSuppressAds } from "@/lib/ad-visibility";
+import { useHideHouseAd } from "@/lib/house-ad-visibility";
 import {
   PENDING_DOC_TYPES,
   listPendingDocumentTypes,
@@ -1213,6 +1214,7 @@ export function BookingSection() {
   // Werbeflächen während Verifizierung, Registrierung, Zahlung, Bestätigung
   // und aktiver Fahrt vollständig ausblenden (Google-Richtlinien).
   useSuppressAds(step >= 3 || showCheckout || paid || drivePhase !== null);
+  useHideHouseAd(step >= 1 || showCheckout || paid || drivePhase !== null);
 
   const stepTitles = registrationComplete
     ? ["Datum", "Uhrzeit & Tarif", "Fahrzeug & Zubehör", "Verifizierung", "Bezahlen", "Fahrt"]
