@@ -17,6 +17,7 @@ import { AdRails } from "./AdRails";
 import { AffiliateOfferGrid } from "./AffiliateOffers";
 import fs from "node:fs";
 import path from "node:path";
+vi.mock("@/components/ads/useAdPathname", async () => ({ useAdPathname: (await import("@/test/ad-pathname-mock")).useAdPathnameMock }));
 
 afterEach(() => {
   cleanup();

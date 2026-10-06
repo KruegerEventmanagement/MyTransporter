@@ -4,6 +4,7 @@ import { cleanup, render } from "@testing-library/react";
 import { ADSENSE_CONFIG, isSlotReady } from "@/lib/adsense";
 import { MobileTopAd } from "./MobileTopAd";
 import { AdSlot } from "./AdSlot";
+vi.mock("@/components/ads/useAdPathname", async () => ({ useAdPathname: (await import("@/test/ad-pathname-mock")).useAdPathnameMock }));
 
 afterEach(() => cleanup());
 

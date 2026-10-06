@@ -5,6 +5,7 @@ import { act, cleanup, render } from "@testing-library/react";
 /* Simuliert: Freigabe/Consent/Native/Viewport sind gemockt, es gibt keinen echten Netzwerkverkehr. */
 const env = { ready: true, consented: true, native: false, mobile: false, wide: true };
 
+vi.mock("@/components/ads/useAdPathname", async () => ({ useAdPathname: (await import("@/test/ad-pathname-mock")).useAdPathnameMock }));
 vi.mock("@/lib/adsense", async (orig) => {
   const real = await orig<typeof import("@/lib/adsense")>();
   return {
