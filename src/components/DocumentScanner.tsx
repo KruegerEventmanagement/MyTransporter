@@ -1,3 +1,4 @@
+import { NativePhotoInputs } from "./NativePhotoInputs";
 import { useState, useRef, useEffect, useCallback, useId } from "react";
 import { createPortal } from "react-dom";
 import { Camera, X, RotateCcw, CheckCircle, AlertTriangle, Zap, ZapOff, Loader2, Image as ImageIcon, ScanLine } from "lucide-react";
