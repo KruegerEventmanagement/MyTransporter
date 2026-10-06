@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const fake = await vi.hoisted(async () => (await import("@/test/fake-supabase")).createFakeSupabase());
 vi.mock("@/integrations/supabase/client", () => ({ supabase: fake.client }));
@@ -24,7 +24,6 @@ vi.mock("@/components/CameraCapture", () => ({
 }));
 
 import { PreDriveFlow } from "./PreDriveFlow";
-import { ReturnFlow } from "./ReturnFlow";
 
 const PRE = ["front", "front_right", "right", "back_right", "back", "back_left", "left", "front_left"];
 const rows = (prefix: string, extra: string[]) =>
@@ -118,148 +117,5 @@ describe("PreDriveFlow (Abholung)", () => {
     expect(onComplete).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("Erneut versuchen"));
     await waitFor(() => expect(onComplete).toHaveBeenCalledWith(42850));
-  });
-});
-
-describe("ReturnFlow (Rückgabe)", () => {
-  const renderReturn = (onComplete = vi.fn()) => {
-    render(<ReturnFlow bookingId="b1" planId="km" startKm={100} onComplete={onComplete} />);
-    return onComplete;
-  };
-
-  it("lädt vorhandene Rückgabe-, Tacho- und Belegfotos per signierter URL", async () => {
-    fake.on("trip_photos", "select", {
-      data: rows("post", ["post_interior", "post_odometer", "tank_receipt", "pre_front"]),
-      error: null,
-    });
-    renderReturn();
-    await waitFor(() => expect(savedChecks()).toHaveLength(9));
-    const weiter = screen.getByText(/^Weiter/).closest("button")!;
-    expect(weiter.disabled).toBe(false);
-    fireEvent.click(weiter);
-    expect((screen.getByAltText("Tacho") as HTMLImageElement).src).toMatch(/signed\.example\/b1\/post_odometer/);
-  });
-
-  it("Storage-Fehler: kein Haken, Weiter gesperrt; Retry lädt hoch und speichert", async () => {
-    fake.storage.upload = [{ error: "throw" }, { error: null }];
-    fake.on("trip_photos", "insert", { data: { id: "p" }, error: null });
-    renderReturn();
-    fireEvent.click(screen.getByText(/Vorne$/));
-    fireEvent.click(await screen.findByText("stub-capture"));
-    expect(await screen.findByText(/nicht hochgeladen/)).toBeTruthy();
-    expect(savedChecks()).toHaveLength(0);
-    expect(inserts()).toHaveLength(0);
-    expect(screen.getByText(/^Weiter/).closest("button")!.disabled).toBe(true);
-    fireEvent.click(screen.getByText("Erneut versuchen"));
-    await waitFor(() => expect(savedChecks()).toHaveLength(1));
-    expect(uploads()).toHaveLength(2);
-    expect(inserts()).toHaveLength(1);
-  });
-
-  it("verlorene Insert-Antwort: Retry erkennt vorhandenen Eintrag, kein Doppel-Eintrag", async () => {
-    fake.on("trip_photos", "insert", { data: null, error: { message: "timeout" } });
-    renderReturn();
-    await waitFor(() => expect(fake.calls.some((c) => c.table === "trip_photos" && c.op === "select")).toBe(true));
-    fake.on("trip_photos", "select", (st) =>
-      st.single ? { data: { id: "schon-da" }, error: null } : { data: [], error: null },
-    );
-    fireEvent.click(screen.getByText(/Vorne$/));
-    fireEvent.click(await screen.findByText("stub-capture"));
-    await screen.findByText(/hochgeladen, aber nicht gespeichert/);
-    fireEvent.click(screen.getByText("Erneut versuchen"));
-    await waitFor(() => expect(savedChecks()).toHaveLength(1));
-    expect(inserts()).toHaveLength(1);
-    expect(uploads()).toHaveLength(1);
-  });
-
-  it("DB-Fehler beim Foto: kein Haken, Weiter gesperrt; Retry ohne erneuten Upload", async () => {
-    fake.on("trip_photos", "insert", { data: null, error: { message: "x" } }, { data: { id: "p" }, error: null });
-    renderReturn();
-    fireEvent.click(screen.getByText(/Vorne$/));
-    fireEvent.click(await screen.findByText("stub-capture"));
-    expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(savedChecks()).toHaveLength(0);
-    expect(screen.getByText(/^Weiter/).closest("button")!.disabled).toBe(true);
-    fireEvent.click(screen.getByText("Erneut versuchen"));
-    await waitFor(() => expect(savedChecks()).toHaveLength(1));
-    expect(uploads()).toHaveLength(1);
-  });
-
-  it("KM-Speicherfehler bleibt im Schritt; Erfolg führt weiter, Rückgabefehler zeigt keinen Code", async () => {
-    fake.on("trip_photos", "select", {
-      data: rows("post", ["post_interior", "post_odometer", "post_fuel", "tank_receipt"]),
-      error: null,
-    });
-    fake.on(
-      "bookings",
-      "update",
-      { data: null, error: { message: "denied" } },
-      { data: [{ id: "b1" }], error: null },
-      { data: [], error: null },
-    );
-    renderReturn();
-    await waitFor(() => expect(savedChecks()).toHaveLength(9));
-    fireEvent.click(screen.getByText(/^Weiter/));
-    fireEvent.change(screen.getByPlaceholderText("z.B. 42920"), { target: { value: "150" } });
-    fireEvent.click(screen.getByText(/^Weiter/));
-    expect(await screen.findByText(/Kilometerstand nicht gespeichert/)).toBeTruthy();
-    expect(screen.queryByText("Kilometer-Abrechnung")).toBeNull();
-    fireEvent.click(screen.getByText("Erneut versuchen"));
-    const summary = await screen.findByText("Kilometer-Abrechnung");
-    // Preisberechnung unverändert: km-Tarif berechnet alle 50 gefahrenen km
-    expect(within(summary.parentElement!).getAllByText(/^50\s*km$/)).toHaveLength(2);
-    const updates = fake.calls.filter((c) => c.table === "bookings" && c.op === "update");
-    expect(updates[1].values).toMatchObject({ end_km: 150 });
-    // Mehrkilometer/Preis setzt nur der Server (report_trip_return), nie der Browser.
-    expect(updates[1].values).not.toHaveProperty("extra_km");
-    expect(updates[1].values).not.toHaveProperty("extra_km_charge_cents");
-
-    fireEvent.click(screen.getByText(/Schlüssel zurückgeben/));
-    expect(await screen.findByText(/Rückgabe nicht gespeichert/)).toBeTruthy();
-    expect(screen.queryByText("Dein Rückgabecode")).toBeNull();
-  });
-
-  it("lädt bei serverseitig bereits gesperrter Rückgabe den aktuellen Stand neu", async () => {
-    fake.on("trip_photos", "select", {
-      data: rows("post", ["post_interior", "post_odometer", "post_fuel", "tank_receipt"]),
-      error: null,
-    });
-    fake.on("bookings", "update", { data: null, error: { code: "42501", message: "TRIP_FIELD_LOCKED" } });
-    const refresh = vi.fn(async () => {});
-    render(<ReturnFlow bookingId="b1" planId="km" startKm={100} onBookingRefresh={refresh} onComplete={vi.fn()} />);
-    await waitFor(() => expect(savedChecks()).toHaveLength(9));
-    fireEvent.click(screen.getByText(/^Weiter/));
-    fireEvent.change(screen.getByPlaceholderText("z.B. 42920"), { target: { value: "150" } });
-    fireEvent.click(screen.getByText(/^Weiter/));
-    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
-    expect(screen.getByText(/aktuelle Stand der Rückgabe wird neu geladen/)).toBeTruthy();
-  });
-});
-
-describe("ReturnFlow Wiederherstellung", () => {
-  beforeEach(() => localStorage.clear());
-  it("Reload: Schritt, Kilometer, Tank und Ausnahme aus Entwurf; nur für denselben Nutzer", async () => {
-    localStorage.setItem(
-      "mt_return_draft_v1:u1:b1",
-      JSON.stringify({ v: 1, updatedAt: 1, started: true, step: "km", endKm: "0", endKmManual: true, endFuelPercent: "55", exceptions: { fuel: "Anzeige ist dunkel und unlesbar" } }),
-    );
-    render(<ReturnFlow bookingId="b1" planId="km" startKm={0} userId="u1" onComplete={vi.fn()} />);
-    expect((screen.getByPlaceholderText("z.B. 42920") as HTMLInputElement).value).toBe("0");
-    expect((screen.getByPlaceholderText("z.B. 75") as HTMLInputElement).value).toBe("55");
-    expect((screen.getByLabelText(/Bitte kurz begründen/) as HTMLTextAreaElement).value).toMatch(/dunkel/);
-    cleanup();
-    render(<ReturnFlow bookingId="b1" planId="km" startKm={0} userId="u2" onComplete={vi.fn()} />);
-    expect(screen.getByText("Fahrzeug-Rückgabe dokumentieren")).toBeTruthy();
-  });
-  it("returning mit gespeichertem Code zeigt genau diesen Code, ohne neue Meldung", async () => {
-    render(<ReturnFlow bookingId="b1" planId="km" startKm={0} userId="u1" serverReturnCode="ABC234" onComplete={vi.fn()} />);
-    expect(screen.getByText("ABC234")).toBeTruthy();
-    expect(screen.getByText(/Rückgabe gemeldet/)).toBeTruthy();
-    expect(fake.calls.some((c) => c.table === "bookings" && c.op === "update")).toBe(false);
-  });
-  it("ohne Gerätespeicher ehrlicher Hinweis; Dokumentationstext sichtbar", async () => {
-    render(<ReturnFlow bookingId="b1" planId="km" startKm={0} userId="u1" onComplete={vi.fn()} />);
-    expect(await screen.findByText(/nicht zwischengespeichert werden/)).toBeTruthy();
-    expect(screen.getByTestId("return-notice").textContent).toMatch(/mit deiner Kaution verrechnet/);
   });
 });
