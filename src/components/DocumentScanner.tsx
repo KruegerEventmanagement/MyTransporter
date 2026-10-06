@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useId } from "react";
 import { createPortal } from "react-dom";
-import { Camera, X, RotateCcw, CheckCircle, AlertTriangle, Zap, ZapOff, Loader2 } from "lucide-react";
+import { Camera, X, RotateCcw, CheckCircle, AlertTriangle, Zap, ZapOff, Loader2, Image as ImageIcon, ScanLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTapFocus } from "@/hooks/useTapFocus";
 import {
@@ -10,6 +10,7 @@ import {
   normalizeImageFile,
   stopStream,
   waitForVideoFrame,
+  imageExtension,
   type CameraErrorKind,
 } from "@/lib/image-capture";
 
@@ -81,7 +82,16 @@ export function DocumentScanner({
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { focusPoint, handleTap } = useTapFocus(videoRef, streamRef);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  /** Zwei echte native Eingaben: Kamera (capture) und Galerie (ohne capture). */
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const lastPickerRef = useRef<"camera" | "gallery">("gallery");
+  const inputIdBase = useId();
+  const cameraInputId = `${inputIdBase}-camera`;
+  const galleryInputId = `${inputIdBase}-gallery`;
+  /** Live-Kamera nur anbieten, wenn der Browser sie grundsätzlich unterstützt (nach Hydration ermittelt). */
+  const [liveSupported, setLiveSupported] = useState(false);
+  const [previewBroken, setPreviewBroken] = useState(false);
   const [cameraError, setCameraError] = useState<CameraErrorKind | "native">("unsupported");
   /** Herkunft der aktuellen Vorschau: native Dateiauswahl oder Live-Kamera. */
   const sourceRef = useRef<"file" | "live" | null>(null);
@@ -202,6 +212,7 @@ export function DocumentScanner({
         pendingBlobRef.current = blob;
         uploadedPathRef.current = null;
         sourceRef.current = "file";
+        setPreviewBroken(false);
         replaceShotUrl(URL.createObjectURL(blob));
         setRejectMsg("");
         setPhase("preview");
@@ -219,14 +230,20 @@ export function DocumentScanner({
    * Live-Kamera beenden (sonst kann sie die Gerätekamera blockieren), dann
    * synchron im Nutzerklick öffnen. Eine vorhandene Vorschau bleibt erhalten.
    */
-  const openFilePicker = () => {
+  const prepareNativePicker = (kind: "camera" | "gallery") => {
+    lastPickerRef.current = kind;
     genRef.current += 1;
     stopCamera();
     if (phase === "camera" || phase === "error") {
       setCameraError("native");
       setPhase("error");
     }
-    fileInputRef.current?.click();
+  };
+
+  /** Öffnet die native Auswahl synchron im Nutzerklick (kein await davor – sonst blockt iOS). */
+  const openFilePicker = (kind: "camera" | "gallery" = lastPickerRef.current) => {
+    prepareNativePicker(kind);
+    (kind === "camera" ? cameraInputRef : galleryInputRef).current?.click();
   };
 
   const toggleTorch = useCallback(async () => {
@@ -240,6 +257,11 @@ export function DocumentScanner({
       setTorchAvailable(false);
     }
   }, [torchOn]);
+
+  useEffect(() => {
+    const md = typeof navigator !== "undefined" ? navigator.mediaDevices : undefined;
+    setLiveSupported(!!md?.getUserMedia && window.isSecureContext !== false);
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -287,8 +309,9 @@ export function DocumentScanner({
       const blob = await canvasToJpegBlob(canvas);
       if (!mountedRef.current || gen !== genRef.current) return;
       pendingBlobRef.current = blob;
-        uploadedPathRef.current = null;
+      uploadedPathRef.current = null;
       sourceRef.current = "live";
+      setPreviewBroken(false);
       replaceShotUrl(URL.createObjectURL(blob));
       setPhase("preview");
     } catch (err) {
@@ -323,10 +346,11 @@ export function DocumentScanner({
         if (!user) throw new Error("Nicht angemeldet");
         let path = uploadedPathRef.current;
         if (!path) {
-          const candidate = `${user.id}/${docType}_${Date.now()}.jpg`;
+          const contentType = blob.type || "image/jpeg";
+          const candidate = `${user.id}/${docType}_${Date.now()}.${imageExtension(contentType)}`;
           const { error: upErr } = await supabase.storage
             .from("user-documents")
-            .upload(candidate, blob, { contentType: "image/jpeg", upsert: false });
+            .upload(candidate, blob, { contentType, upsert: false });
           if (upErr) throw upErr;
           path = candidate;
           uploadedPathRef.current = candidate;
@@ -460,27 +484,68 @@ export function DocumentScanner({
     });
   }, [phase]);
 
-  const fileInput = (
-    <input
-      ref={fileInputRef}
-      type="file"
-      accept="image/*"
-      capture="environment"
-      className="hidden"
-      onChange={handleFilePicked}
-    />
+  // Echte, nur visuell versteckte Eingaben (kein display:none – iOS/Android öffnen sie so zuverlässig).
+  // Aktivierung ausschließlich per <label htmlFor> bzw. synchronem click() im Nutzerklick.
+  const fileInputs = (
+    <>
+      <input
+        ref={cameraInputRef}
+        id={cameraInputId}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        tabIndex={-1}
+        aria-hidden="true"
+        className="sr-only"
+        data-testid="doc-camera-input"
+        onChange={handleFilePicked}
+      />
+      <input
+        ref={galleryInputRef}
+        id={galleryInputId}
+        type="file"
+        accept="image/*,.heic,.heif"
+        tabIndex={-1}
+        aria-hidden="true"
+        className="sr-only"
+        data-testid="doc-gallery-input"
+        onChange={handleFilePicked}
+      />
+    </>
   );
 
-  // Single field: tap to capture, tap again to replace
+  const pickerLabels = (variant: "card" | "overlay") => {
+    const base =
+      variant === "card"
+        ? "flex-1 cursor-pointer select-none py-2.5 text-xs font-medium text-foreground hover:bg-secondary/60 flex items-center justify-center gap-1.5"
+        : "cursor-pointer select-none px-6 py-3 rounded-full font-medium flex items-center justify-center gap-2";
+    return (
+      <>
+        <label
+          htmlFor={cameraInputId}
+          role="button"
+          onClick={() => prepareNativePicker("camera")}
+          className={variant === "card" ? `${base} border-r border-border` : `${base} bg-accent text-accent-foreground`}
+        >
+          <Camera className="w-4 h-4" /> Foto aufnehmen
+        </label>
+        <label
+          htmlFor={galleryInputId}
+          role="button"
+          onClick={() => prepareNativePicker("gallery")}
+          className={variant === "card" ? base : `${base} bg-white/15 text-white`}
+        >
+          <ImageIcon className="w-4 h-4" /> Aus Galerie auswählen
+        </label>
+      </>
+    );
+  };
+
   if (phase === "idle") {
     return (
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
-        {fileInput}
-        <button
-          type="button"
-          onClick={() => startCamera()}
-          className="w-full p-3 flex items-center gap-3 text-left hover:bg-secondary/60 transition-colors"
-        >
+        {fileInputs}
+        <div className="w-full p-3 flex items-center gap-3 text-left">
           <div className="w-16 h-11 shrink-0 rounded-lg bg-secondary border border-border overflow-hidden flex items-center justify-center">
             {isComplete && storedPreviewUrl ? (
               <img src={storedPreviewUrl} alt={label.title} className="w-full h-full object-cover" />
@@ -491,35 +556,21 @@ export function DocumentScanner({
           <div className="flex-1 min-w-0">
             <p className="font-medium text-foreground text-sm truncate">{label.title}</p>
             <p className="text-xs text-muted-foreground truncate">
-              {isComplete ? "Gespeichert – tippen zum Ändern" : `Foto aufnehmen (${label.hint})`}
+              {isComplete ? "Gespeichert – unten ersetzen" : label.hint}
             </p>
           </div>
-          {isComplete ? (
-            <CheckCircle className="w-6 h-6 text-green-600 shrink-0" aria-label="Foto vorhanden" />
-          ) : (
-            <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-accent text-accent-foreground shrink-0">
-              Foto
-            </span>
-          )}
-        </button>
-        <div className="flex border-t border-border">
-          {isComplete && (
-            <button
-              type="button"
-              onClick={() => startCamera()}
-              className="flex-1 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 py-2 border-r border-border"
-            >
-              Neu aufnehmen
-            </button>
-          )}
+          {isComplete && <CheckCircle className="w-6 h-6 text-green-600 shrink-0" aria-label="Foto vorhanden" />}
+        </div>
+        <div className="flex border-t border-border">{pickerLabels("card")}</div>
+        {liveSupported && (
           <button
             type="button"
-            onClick={openFilePicker}
-            className="flex-1 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 py-2"
+            onClick={() => void startCamera()}
+            className="w-full border-t border-border py-2 text-[11px] text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5"
           >
-            Mit Handy-Kamera / Foto hochladen
+            <ScanLine className="w-3.5 h-3.5" /> Live-Scanner mit Rahmen
           </button>
-        </div>
+        )}
       </div>
     );
   }
@@ -596,18 +647,19 @@ export function DocumentScanner({
               <div className="flex flex-col items-center gap-3">
                 <button
                   onClick={runCapture}
-                  aria-label="Foto aufnehmen"
+                  aria-label="Auslöser"
                   className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-95 transition-transform"
                 >
                   <div className="w-14 h-14 rounded-full border-4 border-black/10" />
                 </button>
-                <button
-                  type="button"
-                  onClick={openFilePicker}
-                  className="text-xs text-white/80 underline underline-offset-2"
-                >
-                  Stattdessen Foto mit Geräte-Kamera / aus Galerie
-                </button>
+                <div className="flex gap-4 text-xs text-white/80">
+                  <label htmlFor={cameraInputId} role="button" onClick={() => prepareNativePicker("camera")} className="cursor-pointer underline underline-offset-2">
+                    Geräte-Kamera
+                  </label>
+                  <label htmlFor={galleryInputId} role="button" onClick={() => prepareNativePicker("gallery")} className="cursor-pointer underline underline-offset-2">
+                    Aus Galerie
+                  </label>
+                </div>
               </div>
             )}
           </div>
@@ -629,11 +681,18 @@ export function DocumentScanner({
       {phase === "preview" && shotUrl && (
         <div className="absolute inset-0 bg-black flex flex-col">
           <div className="flex-1 flex items-center justify-center p-4">
-            <img
-              src={shotUrl}
-              alt="Aufgenommenes Dokument"
-              className="max-w-full max-h-full object-contain rounded-2xl"
-            />
+            {previewBroken ? (
+              <p className="text-white/80 text-center text-sm max-w-xs">
+                Vorschau in diesem Browser nicht möglich (z. B. HEIC-Foto). Das Foto wird trotzdem gespeichert.
+              </p>
+            ) : (
+              <img
+                src={shotUrl}
+                alt="Aufgenommenes Dokument"
+                onError={() => setPreviewBroken(true)}
+                className="max-w-full max-h-full object-contain rounded-2xl"
+              />
+            )}
           </div>
           <div className="p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/90 to-transparent">
             <p className="text-white text-center text-base font-medium mb-4">
@@ -692,7 +751,9 @@ export function DocumentScanner({
                 ? "Kamera wird gerade verwendet"
                 : cameraError === "timeout"
                   ? "Live-Kamera startet nicht"
-                  : "Live-Kamera nicht verfügbar"}
+                  : cameraError === "native"
+                    ? "Foto auswählen"
+                    : "Live-Kamera nicht verfügbar"}
           </h3>
           <p className="text-white/60 text-center text-sm mb-8 max-w-sm">
             {cameraError === "denied"
@@ -701,16 +762,13 @@ export function DocumentScanner({
                 ? "Schließe andere Apps, die die Kamera nutzen, und versuche es erneut – oder nimm das Foto direkt auf."
                 : cameraError === "timeout"
                   ? "Die Kamera liefert kein Bild. Versuche es erneut – oder nimm das Foto direkt mit der Kamera deines Geräts auf."
-                  : "Nimm das Foto einfach direkt mit der Kamera deines Geräts auf oder wähle ein vorhandenes Foto."}
+                  : cameraError === "native"
+                    ? "Nimm das Foto mit der Kamera deines Geräts auf oder wähle ein vorhandenes Foto aus der Galerie."
+                    : "Nimm das Foto einfach direkt mit der Kamera deines Geräts auf oder wähle ein vorhandenes Foto."}
           </p>
           <div className="flex flex-col gap-3 w-full max-w-xs">
-            <button
-              onClick={openFilePicker}
-              className="px-6 py-3 rounded-full bg-accent text-accent-foreground font-medium flex items-center justify-center gap-2"
-            >
-              <Camera className="w-4 h-4" /> Foto aufnehmen / auswählen
-            </button>
-            {cameraError !== "unsupported" && (
+            {pickerLabels("overlay")}
+            {cameraError !== "unsupported" && cameraError !== "native" && (
               <button
                 onClick={() => void startCamera()}
                 className="px-6 py-3 rounded-full bg-white/15 text-white font-medium flex items-center justify-center gap-2"
@@ -724,10 +782,14 @@ export function DocumentScanner({
           </div>
         </div>
       )}
-      {fileInput}
     </div>
   );
 
   if (typeof document === "undefined") return null;
-  return createPortal(overlay, document.body);
+  return (
+    <>
+      {fileInputs}
+      {createPortal(overlay, document.body)}
+    </>
+  );
 }

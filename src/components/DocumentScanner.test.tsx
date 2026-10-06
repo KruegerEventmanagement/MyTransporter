@@ -8,7 +8,8 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: fake.client }));
 
 import { DocumentScanner } from "./DocumentScanner";
 
-const fileInput = () => document.querySelector('input[type="file"]') as HTMLInputElement;
+const fileInput = () => document.querySelector('[data-testid="doc-gallery-input"]') as HTMLInputElement;
+const cameraInput = () => document.querySelector('[data-testid="doc-camera-input"]') as HTMLInputElement;
 const pick = (file: File | null) =>
   act(async () => {
     const input = fileInput();
@@ -50,7 +51,7 @@ describe("DocumentScanner – Dateiauswahl", () => {
   it("Datei → Vorschau → Erneut öffnet wieder die Dateiauswahl; zweite Datei ersetzt die Vorschau", async () => {
     const gum = setMediaDevices(async () => fakeStream().stream);
     const { onCapture } = renderScanner();
-    fireEvent.click(screen.getByText("Mit Handy-Kamera / Foto hochladen"));
+    fireEvent.click(screen.getByText("Aus Galerie auswählen"));
     await pick(imageFile("eins.jpg"));
     await waitFor(() => expect(previewImg()).not.toBeNull());
     const firstSrc = previewImg()!.src;
@@ -99,14 +100,14 @@ describe("DocumentScanner – Live-Kamera", () => {
     media.videoWidth = 1280;
     media.videoHeight = 720;
     renderScanner();
-    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
-    const shutter = await screen.findByLabelText("Foto aufnehmen");
+    fireEvent.click(screen.getByText("Live-Scanner mit Rahmen"));
+    const shutter = await screen.findByLabelText("Auslöser");
     const video = document.querySelector("video") as HTMLVideoElement;
     await waitFor(() => expect(video.srcObject).toBe(stream));
     fireEvent.click(shutter);
     await waitFor(() => expect(previewImg()).not.toBeNull());
     fireEvent.click(screen.getByText("Erneut"));
-    await screen.findByLabelText("Foto aufnehmen");
+    await screen.findByLabelText("Auslöser");
     const video2 = document.querySelector("video") as HTMLVideoElement;
     await waitFor(() => expect(video2.srcObject).toBe(stream));
     expect(track.readyState).toBe("live");
@@ -119,16 +120,17 @@ describe("DocumentScanner – Live-Kamera", () => {
   it("verweigerter Zugriff zeigt Hinweis und den Foto-Weg", async () => {
     setMediaDevices(async () => Promise.reject(domError("NotAllowedError")));
     renderScanner();
-    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
+    fireEvent.click(screen.getByText("Live-Scanner mit Rahmen"));
     expect(await screen.findByText("Kamerazugriff nicht erlaubt")).toBeTruthy();
-    expect(screen.getByText("Foto aufnehmen / auswählen")).toBeTruthy();
+    expect(screen.getByText("Aus Galerie auswählen")).toBeTruthy();
   });
 
-  it("fehlende Kamera-API führt direkt zum Foto-Weg", async () => {
+  it("fehlende Kamera-API: kein Live-Scanner, beide nativen Wege sofort da", async () => {
     setMediaDevices(null);
     renderScanner();
-    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
-    expect(await screen.findByText("Live-Kamera nicht verfügbar")).toBeTruthy();
+    expect(screen.queryByText("Live-Scanner mit Rahmen")).toBeNull();
+    expect(screen.getByText("Foto aufnehmen")).toBeTruthy();
+    expect(screen.getByText("Aus Galerie auswählen")).toBeTruthy();
   });
 
   it("abgelehntes play() ohne Bild endet in Zeitlimit-Fehler mit Foto-Weg, Stream gestoppt", async () => {
@@ -136,10 +138,10 @@ describe("DocumentScanner – Live-Kamera", () => {
     setMediaDevices(async () => stream);
     media.play = vi.fn(async () => Promise.reject(domError("NotAllowedError")));
     renderScanner();
-    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
+    fireEvent.click(screen.getByText("Live-Scanner mit Rahmen"));
     expect(await screen.findByText("Live-Kamera startet nicht")).toBeTruthy();
     expect(track.stop).toHaveBeenCalled();
-    expect(screen.getByText("Foto aufnehmen / auswählen")).toBeTruthy();
+    expect(screen.getByText("Aus Galerie auswählen")).toBeTruthy();
   });
 
   it("abgelehntes play() mit Bild bleibt nutzbar", async () => {
@@ -148,8 +150,8 @@ describe("DocumentScanner – Live-Kamera", () => {
     media.videoWidth = 640;
     media.videoHeight = 480;
     renderScanner();
-    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
-    expect(await screen.findByLabelText("Foto aufnehmen")).toBeTruthy();
+    fireEvent.click(screen.getByText("Live-Scanner mit Rahmen"));
+    expect(await screen.findByLabelText("Auslöser")).toBeTruthy();
   });
 
   it("hängende Kamerafreigabe: Foto-Weg sofort erreichbar, späte Freigabe nach Schließen wird gestoppt", async () => {
@@ -157,21 +159,21 @@ describe("DocumentScanner – Live-Kamera", () => {
     let late: (s: MediaStream) => void = () => {};
     setMediaDevices(() => new Promise((r) => (late = r)));
     renderScanner({ cameraTimeoutMs: 5000 });
-    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
-    expect(screen.getByText("Stattdessen Foto mit Geräte-Kamera / aus Galerie")).toBeTruthy();
+    fireEvent.click(screen.getByText("Live-Scanner mit Rahmen"));
+    expect(screen.getByText("Aus Galerie")).toBeTruthy();
     fireEvent.click(screen.getByLabelText("Schließen"));
     await act(async () => {
       late(stream);
       await new Promise((r) => setTimeout(r, 10));
     });
     expect(track.stop).toHaveBeenCalled();
-    expect(screen.queryByLabelText("Foto aufnehmen")).toBeNull();
+    expect(screen.queryByLabelText("Auslöser")).toBeNull();
   });
 
   it("nie antwortende Kamerafreigabe endet in Fehler statt Endlos-Warten", async () => {
     setMediaDevices(() => new Promise(() => {}));
     renderScanner({ cameraTimeoutMs: 80 });
-    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
+    fireEvent.click(screen.getByText("Live-Scanner mit Rahmen"));
     expect(await screen.findByText("Live-Kamera startet nicht")).toBeTruthy();
   });
 
@@ -182,8 +184,8 @@ describe("DocumentScanner – Live-Kamera", () => {
     media.toBlob = "null";
     media.toDataURL = "data:,";
     const { onCapture } = renderScanner();
-    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
-    fireEvent.click(await screen.findByLabelText("Foto aufnehmen"));
+    fireEvent.click(screen.getByText("Live-Scanner mit Rahmen"));
+    fireEvent.click(await screen.findByLabelText("Auslöser"));
     expect(await screen.findByText("Bitte erneut scannen")).toBeTruthy();
     expect(onCapture).not.toHaveBeenCalled();
   });
@@ -195,7 +197,7 @@ describe("DocumentScanner – Upload", () => {
     fake.on("user_documents", "insert", { data: { id: "neu" }, error: null });
     fake.on("user_documents", "update", { data: null, error: null });
     const { onComplete } = renderScanner({ mode: "upload", isComplete: true, onCapture: undefined });
-    fireEvent.click(screen.getByText("Mit Handy-Kamera / Foto hochladen"));
+    fireEvent.click(screen.getByText("Aus Galerie auswählen"));
     await pick(imageFile());
     fireEvent.click(await screen.findByText("Übernehmen"));
     expect(await screen.findByText(/Speichern fehlgeschlagen/)).toBeTruthy();
@@ -243,27 +245,25 @@ describe("DocumentScanner – Abbruch-Rennen", () => {
     let late: (s: MediaStream) => void = () => {};
     setMediaDevices(() => new Promise((r) => (late = r)));
     renderScanner({ cameraTimeoutMs: 5000 });
-    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
-    const clickSpy = vi.spyOn(fileInput(), "click");
-    fireEvent.click(screen.getByText("Stattdessen Foto mit Geräte-Kamera / aus Galerie"));
-    expect(clickSpy).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByText("Live-Scanner mit Rahmen"));
+    fireEvent.click(screen.getByText("Aus Galerie"));
     await act(async () => {
       late(stream);
       await new Promise((r) => setTimeout(r, 10));
     });
     expect(track.stop).toHaveBeenCalled();
     // Abbruch des Pickers: nutzbarer Bildschirm mit Foto-Weg, kein Livebild
-    expect(screen.getByText("Foto aufnehmen / auswählen")).toBeTruthy();
-    expect(screen.queryByLabelText("Foto aufnehmen")).toBeNull();
+    expect(screen.getByText("Aus Galerie auswählen")).toBeTruthy();
+    expect(screen.queryByLabelText("Auslöser")).toBeNull();
   });
 
   it("nie auflösendes play() mit 0 Dimensionen endet in bedienbarem Fehler", async () => {
     setMediaDevices(async () => fakeStream().stream);
     media.play = vi.fn(() => new Promise<void>(() => {}));
     renderScanner();
-    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
+    fireEvent.click(screen.getByText("Live-Scanner mit Rahmen"));
     expect(await screen.findByText("Live-Kamera startet nicht")).toBeTruthy();
-    expect(screen.getByText("Foto aufnehmen / auswählen")).toBeTruthy();
+    expect(screen.getByText("Aus Galerie auswählen")).toBeTruthy();
   });
 
   it("Schließen während langsamer Kodierung öffnet das Overlay nicht wieder", async () => {
@@ -272,14 +272,132 @@ describe("DocumentScanner – Abbruch-Rennen", () => {
     media.videoHeight = 480;
     media.toBlob = "never";
     const { onCapture } = renderScanner();
-    fireEvent.click(screen.getByText(/Foto aufnehmen \(/));
-    fireEvent.click(await screen.findByLabelText("Foto aufnehmen"));
+    fireEvent.click(screen.getByText("Live-Scanner mit Rahmen"));
+    fireEvent.click(await screen.findByLabelText("Auslöser"));
     fireEvent.click(screen.getByLabelText("Schließen"));
     await act(async () => {
       await new Promise((r) => setTimeout(r, 1700));
     });
     expect(previewImg()).toBeNull();
-    expect(screen.getByText("Mit Handy-Kamera / Foto hochladen")).toBeTruthy();
+    expect(screen.getByText("Aus Galerie auswählen")).toBeTruthy();
     expect(onCapture).not.toHaveBeenCalled();
+  });
+});
+
+describe("DocumentScanner – native Wege (iOS Safari / Android Chrome)", () => {
+  const pickInto = (input: HTMLInputElement, file: File | null) =>
+    act(async () => {
+      Object.defineProperty(input, "files", { configurable: true, value: file ? [file] : [] });
+      fireEvent.change(input);
+    });
+
+  it("zwei echte Eingaben: Kamera mit capture, Galerie ohne capture, nicht display:none, per label verknüpft", () => {
+    renderScanner();
+    const cam = cameraInput();
+    const gal = fileInput();
+    expect(cam.type).toBe("file");
+    expect(cam.accept).toContain("image/*");
+    expect(cam.getAttribute("capture")).toBe("environment");
+    expect(gal.hasAttribute("capture")).toBe(false);
+    expect(gal.accept).toContain("image/*");
+    expect(gal.accept).toContain(".heic");
+    for (const el of [cam, gal]) {
+      expect(el.className).not.toMatch(/\bhidden\b/);
+      expect(el.disabled).toBe(false);
+    }
+    const camLabel = screen.getByText("Foto aufnehmen").closest("label")!;
+    const galLabel = screen.getByText("Aus Galerie auswählen").closest("label")!;
+    expect(camLabel.htmlFor).toBe(cam.id);
+    expect(galLabel.htmlFor).toBe(gal.id);
+  });
+
+  it("Klick auf Label aktiviert den Input synchron, ohne getUserMedia", () => {
+    const gum = setMediaDevices(async () => fakeStream().stream);
+    renderScanner();
+    const camClicks = vi.fn();
+    const galClicks = vi.fn();
+    cameraInput().addEventListener("click", camClicks);
+    fileInput().addEventListener("click", galClicks);
+    fireEvent.click(screen.getByText("Foto aufnehmen"));
+    expect(camClicks).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByText("Aus Galerie auswählen"));
+    expect(galClicks).toHaveBeenCalledTimes(1);
+    expect(gum).not.toHaveBeenCalled();
+  });
+
+  it("Kamera-Input → Vorschau → Übernehmen landet im richtigen Slot", async () => {
+    const { onCapture } = renderScanner({ docType: "license_back" });
+    await pickInto(cameraInput(), imageFile("cam.jpg"));
+    fireEvent.click(await screen.findByText("Übernehmen"));
+    await waitFor(() => expect(onCapture).toHaveBeenCalledTimes(1));
+    expect(onCapture.mock.calls[0][0]).toBe("license_back");
+  });
+
+  it("verweigerte Live-Kamera: beide nativen Wege bleiben bedienbar", async () => {
+    setMediaDevices(async () => Promise.reject(domError("NotAllowedError")));
+    const { onCapture } = renderScanner();
+    fireEvent.click(screen.getByText("Live-Scanner mit Rahmen"));
+    await screen.findByText("Kamerazugriff nicht erlaubt");
+    expect(screen.getByText("Foto aufnehmen").closest("label")!.htmlFor).toBe(cameraInput().id);
+    await pickInto(fileInput(), imageFile("galerie.png", "image/png"));
+    fireEvent.click(await screen.findByText("Übernehmen"));
+    await waitFor(() => expect(onCapture).toHaveBeenCalledTimes(1));
+  });
+
+  it("gleiche Datei erneut wählbar (value wird zurückgesetzt)", async () => {
+    const { onCapture } = renderScanner();
+    const file = imageFile("same.jpg");
+    await pickInto(fileInput(), file);
+    fireEvent.click(await screen.findByText("Übernehmen"));
+    await waitFor(() => expect(onCapture).toHaveBeenCalledTimes(1));
+    expect(fileInput().value).toBe("");
+    await pickInto(fileInput(), file);
+    fireEvent.click(await screen.findByText("Übernehmen"));
+    await waitFor(() => expect(onCapture).toHaveBeenCalledTimes(2));
+  });
+
+  it("HEIC wird nicht abgewiesen, auch wenn der Browser es nicht dekodieren kann", async () => {
+    media.imageFails = true;
+    const { onCapture } = renderScanner();
+    await pickInto(fileInput(), imageFile("IMG_0001.HEIC", "image/heic"));
+    fireEvent.click(await screen.findByText("Übernehmen"));
+    await waitFor(() => expect(onCapture).toHaveBeenCalledTimes(1));
+    expect((onCapture.mock.calls[0][1] as Blob).type).toBe("image/heic");
+  });
+
+  it("vier Slots unabhängig; Weiter erst nach vier Bildern", async () => {
+    const { useState } = await import("react");
+    const types = ["id_front", "id_back", "license_front", "license_back"] as const;
+    function Flow() {
+      const [done, setDone] = useState<Set<string>>(new Set());
+      return (
+        <div>
+          {types.map((t) => (
+            <div key={t} data-testid={`slot-${t}`}>
+              <DocumentScanner
+                docType={t}
+                isComplete={done.has(t)}
+                onComplete={() => {}}
+                mode="pending"
+                onCapture={(d) => setDone((s) => new Set(s).add(d))}
+              />
+            </div>
+          ))}
+          <button disabled={done.size < 4}>Weiter</button>
+        </div>
+      );
+    }
+    render(<Flow />);
+    const weiter = () => screen.getByText("Weiter") as HTMLButtonElement;
+    for (const [i, t] of types.entries()) {
+      expect(weiter().disabled).toBe(true);
+      const input = screen
+        .getByTestId(`slot-${t}`)
+        .querySelector('[data-testid="doc-gallery-input"]') as HTMLInputElement;
+      await pickInto(input, imageFile(`${t}.jpg`));
+      fireEvent.click(await screen.findByText("Übernehmen"));
+      await waitFor(() => expect(screen.getAllByLabelText("Foto vorhanden")).toHaveLength(i + 1));
+    }
+    expect(weiter().disabled).toBe(false);
   });
 });
