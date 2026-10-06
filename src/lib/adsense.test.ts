@@ -27,7 +27,7 @@ describe("AdSense-Konfiguration", () => {
     expect(isValidPublisherId(ADSENSE_CONFIG.publisherId)).toBe(true);
     expect(ADSENSE_CONFIG.slots.railLeft).toBe("4238348588");
     expect(ADSENSE_CONFIG.slots.railRight).toBe("6950298526");
-    expect(ADSENSE_CONFIG.slots.inlineContent).toBeUndefined();
+    expect(ADSENSE_CONFIG.slots.inlineTop).toBeUndefined();
     expect(ADSENSE_CONFIG.autoAds).toBe(false);
     expect(ADSENSE_CONFIG.siteApproved).toBe(false);
     expect(ADSENSE_CONFIG.certifiedCmpConfigured).toBe(false);
@@ -35,7 +35,7 @@ describe("AdSense-Konfiguration", () => {
     expect(isAdSenseConfigured()).toBe(false);
     expect(isSlotReady("railLeft")).toBe(false);
     expect(getSlotId("railLeft")).toBe("4238348588");
-    expect(getSlotId("inlineContent")).toBeNull();
+    expect(getSlotId("inlineTop")).toBeNull();
   });
 
   it("meldet alle fehlenden Voraussetzungen", () => {
@@ -59,7 +59,7 @@ describe("AdSense-Konfiguration", () => {
   it("akzeptiert nur vollständig gültige Konfiguration", () => {
     expect(isAdSenseConfigured(validConfig)).toBe(true);
     expect(isSlotReady("railLeft", validConfig)).toBe(true);
-    expect(isSlotReady("inlineContent", validConfig)).toBe(false);
+    expect(isSlotReady("inlineTop", validConfig)).toBe(false);
   });
 
   it("bleibt fail-closed bei fehlender Freigabe oder CMP", () => {
