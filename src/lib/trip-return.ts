@@ -121,6 +121,10 @@ export function evaluateReturnKm(args: {
         ? KM_TARIFF_CENTS_PER_KM
         : (plan?.extraKmCents ?? KM_TARIFF_CENTS_PER_KM);
   const start = typeof args.startKm === "number" ? args.startKm : null;
+  // Wie report_trip_return: ohne Buchungs-Snapshot (km-Preis) keine Schätzung aus dem aktuellen Katalog.
+  if (typeof args.kmPriceCents !== "number") {
+    return { driven: start === null || endKm < start ? null : endKm - start, free, extra: null, chargeCents: null, pricePerKmCents, reviewReason: "Kilometerpreis der Buchung fehlt – manuelle Prüfung, keine Berechnung." };
+  }
   if (start === null) {
     return { driven: null, free, extra: null, chargeCents: null, pricePerKmCents, reviewReason: "Start-Kilometerstand fehlt – manuelle Prüfung." };
   }

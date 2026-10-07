@@ -7,6 +7,7 @@ import {
   type ActiveTrip,
   type ActiveTripRow,
 } from "@/lib/active-trip";
+import { clearAllTripSnapshots, isNetworkFailure, loadTrips, replaceTrips } from "@/lib/trip-snapshot";
 
 const POLL_MS = 60_000;
 
@@ -18,7 +19,7 @@ const POLL_MS = 60_000;
  */
 export function useActiveTrip(preferredId?: string | null) {
   const [userId, setUserId] = useState<string | null>(null);
-  const [state, setState] = useState<{ uid: string; trip: ActiveTrip | null } | null>(null);
+  const [state, setState] = useState<{ uid: string; trip: ActiveTrip | null; stale: boolean } | null>(null);
   const userRef = useRef<string | null>(null);
   const prefRef = useRef(preferredId ?? null);
   prefRef.current = preferredId ?? null;
@@ -28,6 +29,8 @@ export function useActiveTrip(preferredId?: string | null) {
   /** Synchroner Identitätswechsel: alte Antworten sofort ungültig. */
   const applyUser = useCallback((uid: string | null) => {
     if (userRef.current === uid) return;
+    // Abmelden/Kontowechsel: kein Offline-Stand eines anderen Kontos bleibt auf dem Gerät.
+    if (userRef.current !== null || uid === null) clearAllTripSnapshots();
     userRef.current = uid;
     seq.current++;
     setState(null);
@@ -59,19 +62,28 @@ export function useActiveTrip(preferredId?: string | null) {
     const uid = userRef.current;
     if (!uid) return;
     const my = ++seq.current;
+    const fromSnapshot = () => {
+      if (!alive.current || my !== seq.current || userRef.current !== uid) return;
+      const trip = pickActiveTrip(loadTrips(uid), uid, prefRef.current);
+      setState((prev) => (trip ? { uid, trip, stale: true } : prev && prev.uid === uid ? { ...prev, stale: true } : prev));
+    };
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return fromSnapshot();
     try {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, user_id, status, start_date, start_hour, plan_id, vehicle_name, vehicle_plate")
+        .select("id, user_id, status, start_date, start_hour, plan_id, plan_label, vehicle_name, vehicle_plate, start_km, free_km, km_price_cents, addons")
         .eq("user_id", uid)
         .in("status", [...ACTIVE_TRIP_STATUSES])
         .gte("start_date", TRIP_COMPLETION_REQUIRED_FROM);
       if (error) throw error;
       // Nur die jüngste Anfrage desselben Kontos darf den Stand setzen.
       if (!alive.current || my !== seq.current || userRef.current !== uid) return;
-      setState({ uid, trip: pickActiveTrip((data ?? []) as ActiveTripRow[], uid, prefRef.current) });
-    } catch {
-      /* Netzfehler: letzten Stand desselben Kontos behalten */
+      const rows = (data ?? []) as unknown as Record<string, unknown>[];
+      replaceTrips(uid, rows);
+      setState({ uid, trip: pickActiveTrip(rows as unknown as ActiveTripRow[], uid, prefRef.current), stale: false });
+    } catch (err) {
+      // Nur echte Verbindungsfehler nutzen den letzten bestätigten Stand; sonst letzten Stand behalten.
+      if (isNetworkFailure(err)) fromSnapshot();
     }
   }, []);
 
@@ -110,6 +122,6 @@ export function useActiveTrip(preferredId?: string | null) {
   }, [userId, refresh]);
 
   // Ausgabe nur, wenn der Stand zum aktuellen Konto gehört.
-  const trip = state && userId && state.uid === userId ? state.trip : null;
-  return { userId, trip, refresh };
+  const own = state && userId && state.uid === userId ? state : null;
+  return { userId, trip: own?.trip ?? null, stale: own?.stale ?? false, refresh };
 }

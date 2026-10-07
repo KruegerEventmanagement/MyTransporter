@@ -66,7 +66,8 @@ interface Props {
   /** Bestätigter Mietbeginn / Mietende (zentraler Resolver, Europe/Berlin). */
   startAtMs: number;
   endAtMs: number;
-  startKm: number;
+  /** null = Start-Kilometerstand unbekannt (manuelle Prüfung). */
+  startKm: number | null;
   vehicleName: string;
   vehiclePlate: string;
   planLabel: string;
@@ -633,7 +634,7 @@ export function ActiveTripDashboard({
                         <Gauge className="w-3.5 h-3.5 text-muted-foreground" />
                         <span className="text-xs text-muted-foreground">Start-KM</span>
                       </div>
-                      <p className="text-lg font-bold">{startKm.toLocaleString("de-DE")}</p>
+                      <p className="text-lg font-bold" data-testid="start-km">{typeof startKm === "number" ? startKm.toLocaleString("de-DE") : "unbekannt – wird geprüft"}</p>
                     </div>
                     <div className="p-3 rounded-2xl bg-secondary">
                       <div className="flex items-center gap-1.5 mb-1">
