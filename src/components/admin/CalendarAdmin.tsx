@@ -27,8 +27,10 @@ import {
   type ManualNotificationState,
 } from "@/lib/manual-reservations.functions";
 import { bookingWindowMs } from "@/lib/booking-window";
+import { berlinInputFromDate, berlinInputToDate } from "@/lib/berlin-input";
 import { centsToInput, formatCents, parseEuroToCents } from "@/lib/money-input";
 import { isValidCustomerEmail } from "@/lib/manual-confirmation";
+import type { ConfirmationOutcome } from "@/lib/manual-confirmation.server";
 import { ageOnIsoDate, isValidIsoDate, todayIsoBerlin } from "@/lib/age";
 import { getCalendarSyncStatus, type CalendarSyncStatus } from "@/lib/calendar-status.functions";
 import { calendarStatusView } from "@/lib/calendar-status";
@@ -136,15 +138,15 @@ function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** Gespeicherter Zeitpunkt → Berliner Eingabewerte (Browser-Zeitzone egal). */
 function toLocalInput(d: Date): { date: string; time: string } {
-  return {
-    date: ymd(d),
-    time: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
-  };
+  return berlinInputFromDate(d);
 }
 
+/** Eingabe immer als Europe/Berlin; ungültige/mehrdeutige Zeiten → Invalid Date. */
 function fromLocalInput(date: string, time: string): Date {
-  return new Date(`${date}T${time || "00:00"}:00`);
+  const r = berlinInputToDate(date, time);
+  return r.ok ? r.date : new Date(NaN);
 }
 
 /** Immer Europe/Berlin, unabhängig von der Zeitzone des Browsers. */
@@ -169,6 +171,8 @@ function overlapsDay(entry: Entry, day: Date): boolean {
 
 interface FormState {
   id?: string;
+  /** Stabil je Anlage-Vorgang, auch über Wiederholungen. */
+  createRequestId?: string;
   vehicleKey: string;
   startDate: string;
   startTime: string;
@@ -191,12 +195,21 @@ interface FormState {
   sendConfirmation: boolean;
 }
 
+function newRequestId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
 function emptyForm(day: Date): FormState {
-  const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9, 0);
-  const end = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 18, 0);
-  const s = toLocalInput(start);
-  const e = toLocalInput(end);
+  // Kalenderzelle = Berliner Kalendertag; Uhrzeiten sind Berliner Wanduhrzeit.
+  const s = { date: ymd(day), time: "09:00" };
+  const e = { date: ymd(day), time: "18:00" };
   return {
+    createRequestId: newRequestId(),
     vehicleKey: "",
     startDate: s.date,
     startTime: s.time,
@@ -234,19 +247,35 @@ function notifyLabel(state?: ManualNotificationState): string {
 
 /** Kunden-Bestätigung – getrennt von der Owner-Mail. „Versendet“ heißt: vom Anbieter angenommen, nicht zugestellt. */
 function customerMailLabel(m: ManualReservation, st?: CustomerMailState): string {
-  if (!st) return m.total_price_cents == null ? "Kundenbestätigung: noch kein Preis hinterlegt" : "Kundenbestätigung: nicht versendet";
+  if (!st)
+    return m.total_price_cents == null
+      ? "Kundenbestätigung: noch kein Preis hinterlegt"
+      : m.confirmation_requested
+        ? "Buchung gespeichert – Bestätigung angefordert, noch nicht versendet"
+        : "Kundenbestätigung: nicht angefordert";
   const old = st.revision !== m.revision ? " (ältere Fassung)" : "";
   if (st.status === "sent") return `Kundenbestätigung versendet${old} – vom Mailanbieter angenommen`;
-  if (st.status === "processing") return "Kundenbestätigung wird gerade versendet …";
+  if (st.status === "processing")
+    return leaseExpired(st)
+      ? `Kundenbestätigung unklar – Prüfung nötig${old} (Versuch abgebrochen, evtl. angekommen)`
+      : "Kundenbestätigung wird gerade versendet …";
   if (st.status === "failed")
     return `Buchung gespeichert – Bestätigung nicht versendet${old}: ${mailErrorText(st.error_kind)}${st.ambiguous ? " (Annahme unklar)" : ""}`;
   return "Kundenbestätigung ausstehend";
 }
 
+function leaseExpired(st: CustomerMailState): boolean {
+  return st.status === "processing" && (!st.lease_until || Date.parse(st.lease_until) < Date.now());
+}
+
+/** Button adressiert immer die angezeigte (aktuelle) Fassung – nie eine andere. */
 function canSendConfirmation(m: ManualReservation, st?: CustomerMailState): boolean {
   if (m.total_price_cents == null || !m.customer_email) return false;
-  if (!st || st.revision !== m.revision) return true;
-  return st.status === "failed" || st.status === "pending";
+  if (st && st.revision === m.revision) {
+    return st.status === "failed" || st.status === "pending" || leaseExpired(st);
+  }
+  // Aktuelle Fassung ohne Versandeintrag: nur wenn beim Speichern angefordert.
+  return m.confirmation_requested;
 }
 
 function mailErrorText(kind: string | null): string {
@@ -572,12 +601,18 @@ export function CalendarAdmin() {
       fail("Bitte einen Namen eintragen");
       return;
     }
-    const start = fromLocalInput(form.startDate, form.startTime);
-    const end = fromLocalInput(form.endDate, form.endTime);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-      fail("Bitte Datum und Uhrzeit vollständig angeben");
+    const sp = berlinInputToDate(form.startDate, form.startTime);
+    const ep = berlinInputToDate(form.endDate, form.endTime);
+    if (!sp.ok) {
+      fail(`Von: ${sp.error}`);
       return;
     }
+    if (!ep.ok) {
+      fail(`Bis: ${ep.error}`);
+      return;
+    }
+    const start = sp.date;
+    const end = ep.date;
     if (end <= start) {
       fail("Das Ende muss nach dem Start liegen");
       return;
@@ -614,7 +649,7 @@ export function CalendarAdmin() {
 
     setSaving(true);
     try {
-      const saved = await saveManual({
+      const result = await saveManual({
         data: {
           id: form.id,
           vehicleId: vehicle.id,
@@ -634,8 +669,11 @@ export function CalendarAdmin() {
           reminderEnabled: form.reminderEnabled,
           notifyCustomer: form.notifyCustomer,
           totalPriceCents,
+          sendConfirmation: form.sendConfirmation,
+          createRequestId: form.id ? undefined : form.createRequestId,
         },
       });
+      const saved = result.reservation;
 
       let docWarning: string | null = null;
       try {
@@ -644,13 +682,16 @@ export function CalendarAdmin() {
         docWarning = docErr instanceof Error ? docErr.message : "Dateien nicht gespeichert";
       }
 
-      toast.success(form.id ? "Termin aktualisiert" : "Termin eingetragen", {
-        description: docWarning
-          ? `${vehicle.plate} ist blockiert – aber: ${docWarning}`
-          : `${vehicle.plate} ist im Zeitraum jetzt blockiert.`,
-      });
-      // Bestätigung erst NACH dauerhaft erfolgreichem Speichern.
-      if (form.sendConfirmation) await triggerConfirmation(saved.id);
+      toast.success(
+        result.deduplicated ? "Termin war bereits gespeichert" : form.id ? "Termin aktualisiert" : "Termin eingetragen",
+        {
+          description: docWarning
+            ? `${vehicle.plate} ist blockiert – aber: ${docWarning}`
+            : `${vehicle.plate} ist im Zeitraum jetzt blockiert.`,
+        },
+      );
+      // Der Versand lief bereits serverseitig im Speichern – hier nur Status anzeigen.
+      if (result.confirmation) showConfirmationOutcome(result.confirmation);
       setForm(null);
       setStoredDocs([]);
       setPendingDocs([]);
@@ -668,11 +709,7 @@ export function CalendarAdmin() {
     }
   };
 
-  const triggerConfirmation = async (id: string) => {
-    if (sendingId) return; // Doppelklick-Schutz (Server ist zusätzlich idempotent)
-    setSendingId(id);
-    try {
-      const res = await sendConfirmation({ data: { id } });
+  const showConfirmationOutcome = (res: ConfirmationOutcome) => {
       if (res.status === "sent") {
         toast.success(res.already ? "Bestätigung war bereits versendet" : "Bestätigung an den Kunden versendet", {
           description: "Vom Mailanbieter angenommen – Zustellung wird nicht garantiert.",
@@ -681,11 +718,26 @@ export function CalendarAdmin() {
         toast.error("Buchung gespeichert – Bestätigung nicht versendet", { description: res.reason });
       } else if (res.status === "in_progress") {
         toast.message("Bestätigung wird bereits versendet");
+      } else if (res.status === "accepted_unrecorded") {
+        toast.warning("Bestätigung vom Mailanbieter angenommen", {
+          description: "Status konnte nicht gespeichert werden – bitte nicht erneut senden, sondern im Postfach prüfen.",
+        });
+      } else if (res.status === "needs_review") {
+        toast.error("Bestätigung unklar – Prüfung nötig", {
+          description: "Früherer Versuch ist älter als 23 Stunden und evtl. angekommen. Bitte prüfen statt neu senden.",
+        });
       } else {
         toast.error("Buchung gespeichert – Bestätigung nicht versendet", {
-          description: mailErrorText(res.kind),
+          description: `${mailErrorText(res.kind)}${res.ambiguous ? " (Annahme unklar)" : ""}`,
         });
       }
+  };
+
+  const triggerConfirmation = async (m: ManualReservation, revision: number) => {
+    if (sendingId) return; // Doppelklick-Schutz (Server ist zusätzlich idempotent)
+    setSendingId(m.id);
+    try {
+      showConfirmationOutcome(await sendConfirmation({ data: { id: m.id, revision } }));
     } catch (e) {
       toast.error("Buchung gespeichert – Bestätigung nicht versendet", {
         description: e instanceof Error ? e.message : String(e),
@@ -850,7 +902,7 @@ export function CalendarAdmin() {
                           <button
                             type="button"
                             disabled={sendingId === e.manual.id}
-                            onClick={() => triggerConfirmation(e.manual.id)}
+                            onClick={() => triggerConfirmation(e.manual, e.manual.revision)}
                             className="mt-1 rounded-full bg-secondary px-3 py-1 text-xs font-medium disabled:opacity-50"
                           >
                             {sendingId === e.manual.id ? "Sende …" : "Bestätigung erneut versuchen / senden"}
