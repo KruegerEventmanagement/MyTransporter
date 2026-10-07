@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 vi.mock("@/lib/active-account", () => ({ requireActiveAccount: {} }));
 vi.mock("@/lib/manual-notifications.server", () => ({ kickManualNotificationOutbox: vi.fn() }));
 vi.mock("@/lib/calendar-sync.server", () => ({ kickCalendarSync: vi.fn() }));
-const { run } = vi.hoisted(() => ({ run: vi.fn(async (_d: unknown, t: { revision: number }) => ({ status: "failed", kind: "invalid_key", error: "x", ambiguous: false, revision: t.revision })) }));
+const { run } = vi.hoisted(() => ({ run: vi.fn(async (_d: unknown, t: { revision: number }) => ({ status: "failed", kind: "invalid_key", error: "x", ambiguous: false, revision: t?.revision ?? 0 })) }));
 vi.mock("@/lib/manual-confirmation.server", () => ({ runCustomerConfirmation: run, createConfirmationDeps: async () => ({}) }));
 
 import { performManualUpsert, type UpsertInput } from "@/lib/manual-reservations.functions";
