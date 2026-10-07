@@ -216,14 +216,16 @@ export async function sendEmailDetailed(args: {
       return {
         ok: false,
         kind: cls.kind,
-        ambiguous: false,
+        // 5xx: Annahme durch den Anbieter ist nicht ausgeschlossen.
+        ambiguous: res.status >= 500,
         status: res.status,
         error: `${cls.hint ?? "Versand abgelehnt"} · ${res.status} · ${redactSecrets(raw).slice(0, 300)}`,
       };
     }
     let id = "";
     try {
-      id = String((JSON.parse(raw) as { id?: unknown }).id ?? "");
+      const v = (JSON.parse(raw) as { id?: unknown }).id;
+      if (typeof v === "string" && v.trim()) id = v.trim();
     } catch {
       /* leer */
     }

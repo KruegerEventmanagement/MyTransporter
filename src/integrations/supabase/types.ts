@@ -748,11 +748,14 @@ export type Database = {
           id: string
           idempotency_key: string
           last_error: string | null
+          lease_token: string | null
           lease_until: string | null
+          payload: Json | null
           provider_message_id: string | null
           recipient_email: string
           reservation_id: string
           revision: number
+          sending_started_at: string | null
           sent_at: string | null
           status: string
           updated_at: string
@@ -766,11 +769,14 @@ export type Database = {
           id?: string
           idempotency_key: string
           last_error?: string | null
+          lease_token?: string | null
           lease_until?: string | null
+          payload?: Json | null
           provider_message_id?: string | null
           recipient_email: string
           reservation_id: string
           revision: number
+          sending_started_at?: string | null
           sent_at?: string | null
           status?: string
           updated_at?: string
@@ -784,11 +790,14 @@ export type Database = {
           id?: string
           idempotency_key?: string
           last_error?: string | null
+          lease_token?: string | null
           lease_until?: string | null
+          payload?: Json | null
           provider_message_id?: string | null
           recipient_email?: string
           reservation_id?: string
           revision?: number
+          sending_started_at?: string | null
           sent_at?: string | null
           status?: string
           updated_at?: string
@@ -900,6 +909,8 @@ export type Database = {
       }
       manual_reservations: {
         Row: {
+          confirmation_requested: boolean
+          create_request_id: string | null
           created_at: string
           created_by: string | null
           customer_birth_date: string | null
@@ -927,6 +938,8 @@ export type Database = {
           vehicle_plate: string
         }
         Insert: {
+          confirmation_requested?: boolean
+          create_request_id?: string | null
           created_at?: string
           created_by?: string | null
           customer_birth_date?: string | null
@@ -954,6 +967,8 @@ export type Database = {
           vehicle_plate: string
         }
         Update: {
+          confirmation_requested?: boolean
+          create_request_id?: string | null
           created_at?: string
           created_by?: string | null
           customer_birth_date?: string | null
@@ -1523,6 +1538,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      claim_customer_confirmation: {
+        Args: { _id: string; _lease_seconds: number; _safe_seconds: number }
+        Returns: Json
+      }
       claim_mail_test: {
         Args: {
           _admin: string
@@ -1581,6 +1600,10 @@ export type Database = {
       }
       complete_calendar_sync_job: {
         Args: { _google_event_id?: string; _id: string; _lease_token?: string }
+        Returns: boolean
+      }
+      complete_customer_confirmation: {
+        Args: { _id: string; _lease_token: string; _provider_id: string }
         Returns: boolean
       }
       complete_manual_notification:
@@ -1644,6 +1667,16 @@ export type Database = {
           _id: string
           _lease_token?: string
           _retry_in_seconds?: number
+        }
+        Returns: boolean
+      }
+      fail_customer_confirmation: {
+        Args: {
+          _ambiguous: boolean
+          _error: string
+          _id: string
+          _kind: string
+          _lease_token: string
         }
         Returns: boolean
       }

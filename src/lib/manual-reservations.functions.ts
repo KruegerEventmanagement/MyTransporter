@@ -4,6 +4,7 @@ import { requireActiveAccount } from "@/lib/active-account";
 import { isValidIsoDate, todayIsoBerlin } from "@/lib/age";
 import { MAX_PRICE_CENTS } from "@/lib/money-input";
 import { PICKUP_ADDRESS } from "@/lib/seo";
+import { isValidCustomerEmail } from "@/lib/manual-confirmation";
 
 export type ManualReservation = {
   id: string;
@@ -26,6 +27,7 @@ export type ManualReservation = {
   total_price_cents: number | null;
   pickup_address: string | null;
   revision: number;
+  confirmation_requested: boolean;
   created_at: string;
 };
 
@@ -39,7 +41,7 @@ export type ManualReservationDocument = {
 };
 
 const SELECT_COLUMNS =
-  "id, vehicle_id, vehicle_plate, vehicle_name, start_at, end_at, customer_name, customer_phone, customer_email, customer_birth_date, customer_street, customer_city, customer_id_number, customer_license_number, note, reminder_enabled, notify_customer, total_price_cents, pickup_address, revision, created_at";
+  "id, vehicle_id, vehicle_plate, vehicle_name, start_at, end_at, customer_name, customer_phone, customer_email, customer_birth_date, customer_street, customer_city, customer_id_number, customer_license_number, note, reminder_enabled, notify_customer, total_price_cents, pickup_address, revision, confirmation_requested, created_at";
 
 const DOC_SELECT_COLUMNS = "id, reservation_id, doc_type, file_path, original_name, created_at";
 
@@ -72,7 +74,54 @@ const upsertSchema = z.object({
   notifyCustomer: z.boolean().default(false),
   /** Gesamtmietpreis in ganzen Cent. Pflicht für neue Termine. */
   totalPriceCents: z.number().int().min(0).max(MAX_PRICE_CENTS).nullable().optional(),
+  /** Kunden-Buchungsbestätigung für die gespeicherte Fassung senden. */
+  sendConfirmation: z.boolean().default(false),
+  /** Stabile Kennung je Anlage-Vorgang – schützt vor Doppelanlage bei Retry. */
+  createRequestId: z.string().uuid().optional(),
 });
+
+export type UpsertInput = z.infer<typeof upsertSchema>;
+
+/** Fachliche Pflichtprüfungen (serverseitig, unabhängig vom Browser). */
+export function validateManualUpsert(data: UpsertInput): string | null {
+  const start = Date.parse(data.startAt);
+  const end = Date.parse(data.endAt);
+  if (Number.isNaN(start) || Number.isNaN(end)) return "Ungültiger Zeitraum";
+  if (end <= start) return "Das Ende muss nach dem Start liegen";
+  if (!data.id && data.totalPriceCents == null) return "Bitte den Gesamtmietpreis eintragen";
+  if ((data.sendConfirmation || data.notifyCustomer) && !isValidCustomerEmail(data.customerEmail)) {
+    return "Für Bestätigung/Erinnerung an den Kunden ist eine gültige E-Mail-Adresse Pflicht";
+  }
+  if (data.sendConfirmation && data.id && data.totalPriceCents == null) {
+    return "Für die Bestätigung bitte den Gesamtmietpreis eintragen";
+  }
+  return null;
+}
+
+export type UpsertResult = {
+  reservation: ManualReservation;
+  /** true = Anlage war bereits gespeichert (wiederholte Anfrage), nichts geändert. */
+  deduplicated: boolean;
+  confirmation: import("@/lib/manual-confirmation.server").ConfirmationOutcome | null;
+};
+
+async function confirmSaved(id: string, revision: number) {
+  try {
+    const { runCustomerConfirmation, createConfirmationDeps } = await import(
+      "@/lib/manual-confirmation.server"
+    );
+    return await runCustomerConfirmation(await createConfirmationDeps(), { reservationId: id, revision });
+  } catch (e) {
+    // Speichern ist bereits erfolgreich – Versandfehler nie als Speicherfehler melden.
+    return {
+      status: "failed" as const,
+      kind: "internal",
+      error: String((e as Error)?.message ?? e).slice(0, 300),
+      ambiguous: true,
+      revision,
+    };
+  }
+}
 
 const listSchema = z.object({
   fromIso: z.string().min(1),
@@ -132,24 +181,17 @@ export const listManualReservations = createServerFn({ method: "POST" })
     return (rows ?? []) as ManualReservation[];
   });
 
-export const upsertManualReservation = createServerFn({ method: "POST" })
-  .middleware([requireActiveAccount])
-  .inputValidator((input: unknown) => upsertSchema.parse(input))
-  .handler(async ({ data, context }): Promise<ManualReservation> => {
+/** Kern des Speicherns (exportiert für Tests; nur serverseitig aufrufen). */
+export async function performManualUpsert(
+  data: UpsertInput,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  context: { supabase: any; userId: string },
+): Promise<UpsertResult> {
     await assertAdmin(context);
-
+    const invalid = validateManualUpsert(data);
+    if (invalid) throw new Error(invalid);
     const start = new Date(data.startAt);
     const end = new Date(data.endAt);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-      throw new Error("Ungültiger Zeitraum");
-    }
-    if (end.getTime() <= start.getTime()) {
-      throw new Error("Das Ende muss nach dem Start liegen");
-    }
-
-    if (!data.id && data.totalPriceCents == null) {
-      throw new Error("Bitte den Gesamtmietpreis eintragen");
-    }
 
     const payload: {
       [k: string]: string | number | boolean | null;
@@ -174,6 +216,7 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
       note: data.note || null,
       reminder_enabled: data.reminderEnabled,
       notify_customer: data.notifyCustomer,
+      confirmation_requested: data.sendConfirmation,
       created_by: context.userId,
     };
 
@@ -196,19 +239,53 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
         .single();
       if (error) throw new Error(error.message);
       await kickOutbox(data.id);
-      return row as ManualReservation;
+      const saved = row as ManualReservation;
+      return {
+        reservation: saved,
+        deduplicated: false,
+        confirmation: data.sendConfirmation ? await confirmSaved(saved.id, saved.revision) : null,
+      };
     }
 
     payload.pickup_address = PICKUP_ADDRESS;
+    if (data.createRequestId) payload.create_request_id = data.createRequestId;
     const { data: row, error } = await context.supabase
       .from("manual_reservations")
       .insert(payload as never)
       .select(SELECT_COLUMNS)
       .single();
-    if (error) throw new Error(error.message);
-    await kickOutbox((row as { id: string }).id);
-    return row as ManualReservation;
-  });
+    if (error) {
+      // Wiederholte Anlage (verlorene Antwort): bestehende Zeile zurückgeben, nichts ändern.
+      if (error.code === "23505" && data.createRequestId) {
+        const { data: existing } = await context.supabase
+          .from("manual_reservations")
+          .select(SELECT_COLUMNS)
+          .eq("create_request_id", data.createRequestId)
+          .maybeSingle();
+        if (existing) {
+          const ex = existing as ManualReservation & { confirmation_requested?: boolean };
+          return {
+            reservation: ex,
+            deduplicated: true,
+            confirmation: ex.confirmation_requested ? await confirmSaved(ex.id, ex.revision) : null,
+          };
+        }
+      }
+      throw new Error(error.message);
+    }
+    const saved = row as ManualReservation;
+    await kickOutbox(saved.id);
+    return {
+      reservation: saved,
+      deduplicated: false,
+      confirmation: data.sendConfirmation ? await confirmSaved(saved.id, saved.revision) : null,
+    };
+}
+
+export const upsertManualReservation = createServerFn({ method: "POST" })
+  .middleware([requireActiveAccount])
+  .inputValidator((input: unknown) => upsertSchema.parse(input))
+  .handler(({ data, context }) => performManualUpsert(data, context));
 
 export const deleteManualReservation = createServerFn({ method: "POST" })
   .middleware([requireActiveAccount])
@@ -358,18 +435,19 @@ export type CustomerMailState = {
   error_kind: string | null;
   last_error: string | null;
   sent_at: string | null;
+  lease_until: string | null;
+  first_attempt_at: string | null;
 };
 
 /** Kunden-Bestätigung senden (nur nach gespeicherter Reservierung, idempotent je Revision). */
 export const sendManualReservationConfirmation = createServerFn({ method: "POST" })
   .middleware([requireActiveAccount])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ id: z.string().uuid(), revision: z.number().int().min(1) }).parse(input),
+  )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { runCustomerConfirmation, createConfirmationDeps } = await import(
-      "@/lib/manual-confirmation.server"
-    );
-    return runCustomerConfirmation(await createConfirmationDeps(), data.id);
+    return confirmSaved(data.id, data.revision);
   });
 
 /** Status der Kunden-Bestätigungen (neueste Revision zuerst). */
@@ -383,7 +461,7 @@ export const listCustomerMailStates = createServerFn({ method: "POST" })
     if (data.reservationIds.length === 0) return [];
     const { data: rows, error } = await context.supabase
       .from("manual_reservation_customer_mails")
-      .select("reservation_id, revision, status, attempts, ambiguous, error_kind, last_error, sent_at")
+      .select("reservation_id, revision, status, attempts, ambiguous, error_kind, last_error, sent_at, lease_until, first_attempt_at")
       .in("reservation_id", data.reservationIds)
       .order("revision", { ascending: false });
     if (error) throw new Error(error.message);

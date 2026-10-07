@@ -26,13 +26,14 @@ export function parseEuroToCents(raw: string): EuroParse {
     const idx = s.lastIndexOf(decSep);
     const head = s.slice(0, idx);
     frac = s.slice(idx + 1);
-    if (!thousands(head, grpSep)) return { ok: false, error: "Ungültiges Zahlenformat" };
+    if (!frac || !thousands(head, grpSep)) return { ok: false, error: "Ungültiges Zahlenformat" };
     intPart = head.split(grpSep).join("");
   } else if (lastComma >= 0 || lastDot >= 0) {
     const sep = lastComma >= 0 ? "," : ".";
     const parts = s.split(sep);
     if (parts.length === 2 && parts[1].length <= 2) {
-      intPart = parts[0] || "0";
+      if (!parts[0] || !parts[1]) return { ok: false, error: "Ungültiges Zahlenformat" };
+      intPart = parts[0];
       frac = parts[1];
     } else if (sep === "." && thousands(s, sep)) {
       intPart = parts.join("");
