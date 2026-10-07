@@ -206,10 +206,13 @@ export function ReturnFlow({
   const cameraInputId = `ret-cam-${uid}`;
   const galleryInputId = `ret-gal-${uid}`;
 
-  // Entwurf fortlaufend sichern (nicht erst beim Verlassen).
+  // Entwurf fortlaufend sichern – nur tatsächlich geänderte Felder (Mehr-Tab-sicher).
+  const [draftSaveFailed, setDraftSaveFailed] = useState(false);
+  /** Zuletzt selbst geschriebener ODER aus anderem Tab übernommener Stand. */
+  const lastDraft = useRef<Partial<DraftFields>>(draft0 ? { ...draft0 } : {});
   useEffect(() => {
     if (!userId || step === "code") return;
-    saveReturnDraft(userId, bookingId, {
+    const next: DraftFields = {
       started: true,
       step,
       slide,
@@ -221,8 +224,46 @@ export function ReturnFlow({
       addonsReturned,
       returnCode,
       reportPending,
-    });
+    };
+    const patch = diffDraftFields(lastDraft.current, next);
+    if (!Object.keys(patch).length) return;
+    const ok = saveReturnDraft(userId, bookingId, patch);
+    setDraftSaveFailed(!ok);
+    if (ok) lastDraft.current = { ...lastDraft.current, ...patch };
   }, [userId, bookingId, step, slide, refueled, endKm, endKmManual, endFuelPercent, exceptions, addonsReturned, returnCode, reportPending]);
+
+  // Anderer Tab hat geändert → Datenfelder übernehmen, ohne sie zurückzuschreiben.
+  useEffect(() => {
+    if (!userId || typeof window === "undefined") return;
+    const k = draftKey(userId, bookingId);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== k) return;
+      const d = parseReturnDraft(e.newValue);
+      if (!d) return;
+      const prev = lastDraft.current;
+      const changed = diffDraftFields(prev, d);
+      if ("endKm" in changed) setEndKm(d.endKm);
+      if ("endKmManual" in changed) setEndKmManual(d.endKmManual);
+      if ("endFuelPercent" in changed) {
+        setEndFuelPercent(d.endFuelPercent);
+        setFuelManual(!!d.endFuelPercent);
+      }
+      if ("exceptions" in changed) setExceptions(d.exceptions);
+      if ("addonsReturned" in changed) setAddonsReturned(d.addonsReturned);
+      if ("reportPending" in changed) setReportPending(d.reportPending);
+      if ("returnCode" in changed && d.returnCode) {
+        setReturnCode(d.returnCode);
+        setAwaitingAdmin(true);
+        setStep("code");
+      }
+      // Navigation (step/slide) bleibt je Tab; als übernommen markieren, damit nichts zurückgeschrieben wird.
+      lastDraft.current = { ...prev, ...changed, step: prev.step, slide: prev.slide };
+      if ("step" in changed) lastDraft.current.step = d.step;
+      if ("slide" in changed) lastDraft.current.slide = d.slide;
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [userId, bookingId]);
 
   // Server-Code hat Vorrang (z. B. nach verlorener Antwort).
   useEffect(() => {
@@ -698,6 +739,11 @@ export function ReturnFlow({
   // ---------- Bausteine ----------
   const photoBanners = (
     <>
+      {draftSaveFailed && (
+        <div role="alert" data-testid="draft-save-failed" className="mb-3 rounded-2xl border border-foreground px-4 py-3 text-sm text-foreground">
+          Dein Fortschritt kann auf diesem Gerät gerade nicht gespeichert werden (Speicher voll oder blockiert). Bitte lass diese Seite geöffnet, bis die Rückgabe gemeldet ist.
+        </div>
+      )}
       {loadError && <TripErrorBanner message={loadError} onRetry={() => setLoadAttempt((n) => n + 1)} retryLabel="Neu laden" />}
       {queueNotice && <TripErrorBanner message={queueNotice} onDismiss={() => setQueueNotice(null)} />}
       {photoError && (
