@@ -1,7 +1,12 @@
 /**
  * Rückgabeentwurf pro Nutzer + Buchung (localStorage, nur kleine Werte –
  * Fotos liegen ausschließlich in IndexedDB bzw. bestätigt im Server).
- * Ältere Stände überschreiben nie neuere.
+ *
+ * Konfliktregel (mehrere Tabs): Jeder Schreiber übergibt NUR die tatsächlich
+ * geänderten Felder; sie werden auf den gerade gespeicherten Stand gelegt
+ * (Read-Modify-Write), alle anderen Felder bleiben unangetastet. Jede Änderung
+ * erhöht `rev`; andere Tabs übernehmen sie per storage-Ereignis. Ein explizit
+ * älterer Zeitstempel überschreibt nie einen neueren; gleiche ms gelten als neuer.
  */
 import type { ReturnExceptions } from "./trip-return";
 
@@ -11,6 +16,8 @@ export type DraftStep = "intro" | "wizard" | "overview" | "photos" | "km" | "rec
 export interface ReturnDraft {
   v: 1;
   updatedAt: number;
+  /** Monoton steigende Revision je Schreibvorgang. */
+  rev: number;
   /** Kunde hat die Rückgabe gestartet (Fahrtansicht → Rückgabe). */
   started: boolean;
   step: DraftStep;
@@ -28,10 +35,13 @@ export interface ReturnDraft {
   refueled: boolean | null;
 }
 
+export type DraftFields = Omit<ReturnDraft, "v" | "updatedAt" | "rev">;
+
 export function emptyDraft(): ReturnDraft {
   return {
     v: 1,
     updatedAt: 0,
+    rev: 0,
     started: false,
     step: "photos",
     endKm: "",
@@ -56,34 +66,80 @@ function storage(): Storage | null {
   }
 }
 
-export function loadReturnDraft(userId: string, bookingId: string): ReturnDraft | null {
-  const s = storage();
-  if (!s) return null;
+export function parseReturnDraft(raw: string | null): ReturnDraft | null {
+  if (!raw) return null;
   try {
-    const raw = s.getItem(draftKey(userId, bookingId));
-    if (!raw) return null;
     const d = JSON.parse(raw) as Partial<ReturnDraft>;
     if (d?.v !== 1) return null;
-    return { ...emptyDraft(), ...d } as ReturnDraft;
+    const out = { ...emptyDraft(), ...d } as ReturnDraft;
+    if (!Number.isInteger(out.rev) || out.rev < 0) out.rev = 0;
+    return out;
   } catch {
     return null;
   }
 }
 
-/** Speichert, außer ein neuerer Stand liegt bereits vor. Gibt false bei Speicherfehler. */
-export function saveReturnDraft(userId: string, bookingId: string, patch: Partial<ReturnDraft>, now = Date.now()): boolean {
+export function loadReturnDraft(userId: string, bookingId: string): ReturnDraft | null {
+  const s = storage();
+  if (!s) return null;
+  try {
+    return parseReturnDraft(s.getItem(draftKey(userId, bookingId)));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Legt nur die übergebenen Felder auf den aktuellen Stand. Gibt false bei
+ * blockiertem/vollem Speicher – dann darf die UI keine Sicherung behaupten.
+ */
+export function saveReturnDraft(
+  userId: string,
+  bookingId: string,
+  patch: Partial<DraftFields> & { updatedAt?: number },
+  now = Date.now(),
+): boolean {
   const s = storage();
   if (!s) return false;
   const cur = loadReturnDraft(userId, bookingId) ?? emptyDraft();
   const ts = patch.updatedAt ?? now;
   if (cur.updatedAt > ts) return true;
-  const next: ReturnDraft = { ...cur, ...patch, v: 1, updatedAt: ts };
+  const fields: Partial<DraftFields> = { ...patch };
+  delete (fields as { updatedAt?: number }).updatedAt;
+  delete (fields as { v?: number }).v;
+  delete (fields as { rev?: number }).rev;
+  const next: ReturnDraft = { ...cur, ...fields, v: 1, updatedAt: ts, rev: cur.rev + 1 };
   try {
     s.setItem(draftKey(userId, bookingId), JSON.stringify(next));
     return true;
   } catch {
     return false;
   }
+}
+
+const FIELD_KEYS: (keyof DraftFields)[] = [
+  "started",
+  "step",
+  "endKm",
+  "endKmManual",
+  "endFuelPercent",
+  "exceptions",
+  "addonsReturned",
+  "returnCode",
+  "reportPending",
+  "slide",
+  "refueled",
+];
+
+function same(a: unknown, b: unknown): boolean {
+  return a === b || JSON.stringify(a) === JSON.stringify(b);
+}
+
+/** Nur die Felder, die sich gegenüber dem zuletzt selbst geschriebenen/übernommenen Stand geändert haben. */
+export function diffDraftFields(prev: Partial<DraftFields>, next: DraftFields): Partial<DraftFields> {
+  const out: Partial<DraftFields> = {};
+  for (const k of FIELD_KEYS) if (!same(prev[k], next[k])) (out as Record<string, unknown>)[k] = next[k];
+  return out;
 }
 
 export function clearReturnDraft(userId: string, bookingId: string): void {
