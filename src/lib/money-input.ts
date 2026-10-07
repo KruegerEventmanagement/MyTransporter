@@ -34,7 +34,7 @@ export function parseEuroToCents(raw: string): EuroParse {
     if (parts.length === 2 && parts[1].length <= 2) {
       intPart = parts[0] || "0";
       frac = parts[1];
-    } else if (thousands(s, sep)) {
+    } else if (sep === "." && thousands(s, sep)) {
       intPart = parts.join("");
     } else {
       return { ok: false, error: "Höchstens zwei Nachkommastellen" };
