@@ -13,6 +13,7 @@ import { resolveTripWindow } from "@/lib/trip-time";
 import { isLegacyOpenTrip, isReturningStatus, phaseFor } from "@/lib/active-trip";
 import { loadReturnDraft, saveReturnDraft, clearReturnDraft } from "@/lib/return-draft";
 import { BrandHomeLink } from "@/components/BrandHomeLink";
+import { forgetTrip, isNetworkFailure, loadTrip, rememberTrip } from "@/lib/trip-snapshot";
 
 export const Route = createFileRoute("/trip/$bookingId")({
   head: () => privateHead("MyTransporter · Fahrt"),
@@ -84,6 +85,9 @@ function TripView({ bookingId }: { bookingId: string }) {
   const [startKm, setStartKm] = useState<number | null>(null);
   const [pickup, setPickup] = useState<PickupState>({ status: "loading", address: null });
   const [now, setNow] = useState(() => Date.now());
+  /** Zeitpunkt des angezeigten Offline-Stands (null = Serverstand). */
+  const [offlineSince, setOfflineSince] = useState<number | null>(null);
+  const [draftSaveFailed, setDraftSaveFailed] = useState(false);
   const loadedOnce = useRef(false);
   /** Request-Generation: nur die jüngste Antwort des aktuellen Kontos zählt. */
   const gen = useRef(0);
@@ -201,6 +205,7 @@ function TripView({ bookingId }: { bookingId: string }) {
         if (!current() || uidRef.current !== uid) return;
         if (error) throw error;
         if (!data) {
+          forgetTrip(uid, bookingId);
           setBooking(null);
           setLoading(false);
           return;
@@ -211,6 +216,8 @@ function TripView({ bookingId }: { bookingId: string }) {
           setLoading(false);
           return;
         }
+        rememberTrip(uid, data as unknown as Record<string, unknown>);
+        setOfflineSince(null);
         if (b.status === "completed" || b.status === "cancelled") {
           clearReturnDraft(uid, bookingId);
           if (!loadedOnce.current) {
@@ -226,8 +233,20 @@ function TripView({ bookingId }: { bookingId: string }) {
         const draft = loadReturnDraft(uid, bookingId);
         setPhase((prev) => (prev === "return" && !isReturningStatus(b.status) ? "return" : phaseFor(b.status, !!draft?.started)));
         setLoadError(null);
-      } catch {
+      } catch (err) {
         if (!current()) return;
+        // Verbindungsfehler: letzter bestätigter eigener Stand (nur active/returning, nur dieses Konto).
+        const snap = isNetworkFailure(err) && !loadedOnce.current ? loadTrip(uidRef.current, bookingId) : null;
+        if (snap) {
+          const r = snap.row;
+          setBooking({ ...r, pickup_code: "", plan_id: r.plan_id ?? "", plan_label: r.plan_label ?? "", start_hour: r.start_hour ?? 0, vehicle_name: r.vehicle_name ?? "", vehicle_plate: r.vehicle_plate ?? "", return_code: null });
+          if (typeof r.start_km === "number") setStartKm(r.start_km);
+          const draft = uidRef.current ? loadReturnDraft(uidRef.current, bookingId) : null;
+          setPhase((prev) => (prev === "return" ? "return" : phaseFor(r.status, !!draft?.started)));
+          setOfflineSince(snap.savedAt);
+          setLoadError(null);
+          return;
+        }
         // Beim stillen Neuladen bleibt der letzte Stand sichtbar.
         if (!silent || !loadedOnce.current) setLoadError("Die Verbindung ist gerade zu langsam oder unterbrochen.");
       } finally {
@@ -286,7 +305,7 @@ function TripView({ bookingId }: { bookingId: string }) {
   }, [plate]);
 
   const startReturn = () => {
-    if (userId) saveReturnDraft(userId, bookingId, { started: true });
+    if (userId) setDraftSaveFailed(!saveReturnDraft(userId, bookingId, { started: true }));
     setPhase("return");
   };
 
@@ -368,7 +387,8 @@ function TripView({ bookingId }: { bookingId: string }) {
   const startDate = new Date(window_.startMs);
   const unlockAt = new Date(window_.startMs - 30 * 60_000);
   const isUnlocked = now >= unlockAt.getTime();
-  const effectiveStartKm = booking.start_km ?? startKm ?? 0;
+  // Unbekannter Start bleibt unbekannt (manuelle Prüfung) – nie 0.
+  const effectiveStartKm = booking.start_km ?? startKm ?? null;
 
   if (phase === "pre" && !isUnlocked) {
     return (
@@ -386,6 +406,16 @@ function TripView({ bookingId }: { bookingId: string }) {
 
   return (
     <>
+      {offlineSince !== null && (
+        <div role="status" data-testid="trip-offline" className="sticky top-0 z-[70] bg-foreground px-4 py-2 text-center text-xs font-semibold text-background">
+          Offline – letzter bestätigter Stand von {new Date(offlineSince).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}. Die Rückgabe wird erst mit Verbindung vom Server geprüft.
+        </div>
+      )}
+      {draftSaveFailed && (
+        <div role="alert" className="px-4 py-2 text-center text-xs text-foreground border-b border-foreground">
+          Der Rückgabestart konnte auf diesem Gerät nicht gespeichert werden. Bitte lass die Seite geöffnet.
+        </div>
+      )}
       {phase === "pre" && (
         <main className="min-h-screen bg-background pb-12 px-4">
           <TripLogoBar />
