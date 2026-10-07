@@ -181,10 +181,12 @@ export const listManualReservations = createServerFn({ method: "POST" })
     return (rows ?? []) as ManualReservation[];
   });
 
-export const upsertManualReservation = createServerFn({ method: "POST" })
-  .middleware([requireActiveAccount])
-  .inputValidator((input: unknown) => upsertSchema.parse(input))
-  .handler(async ({ data, context }): Promise<UpsertResult> => {
+/** Kern des Speicherns (exportiert für Tests; nur serverseitig aufrufen). */
+export async function performManualUpsert(
+  data: UpsertInput,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  context: { supabase: any; userId: string },
+): Promise<UpsertResult> {
     await assertAdmin(context);
     const invalid = validateManualUpsert(data);
     if (invalid) throw new Error(invalid);
@@ -278,7 +280,12 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
       deduplicated: false,
       confirmation: data.sendConfirmation ? await confirmSaved(saved.id, saved.revision) : null,
     };
-  });
+}
+
+export const upsertManualReservation = createServerFn({ method: "POST" })
+  .middleware([requireActiveAccount])
+  .inputValidator((input: unknown) => upsertSchema.parse(input))
+  .handler(({ data, context }) => performManualUpsert(data, context));
 
 export const deleteManualReservation = createServerFn({ method: "POST" })
   .middleware([requireActiveAccount])

@@ -1,15 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 vi.mock("@/lib/active-account", () => ({ requireActiveAccount: {} }));
-vi.mock("@tanstack/react-start", () => {
-  const chain = { middleware: () => chain, inputValidator: (v: (i: unknown) => unknown) => ({ ...chain, handler: (h: (a: { data: unknown; context: unknown }) => unknown) => (a: { data: unknown; context: unknown }) => h({ ...a, data: v(a.data) }) }), handler: (h: unknown) => h };
-  return { createServerFn: () => chain };
-});
 vi.mock("@/lib/manual-notifications.server", () => ({ kickManualNotificationOutbox: vi.fn() }));
 vi.mock("@/lib/calendar-sync.server", () => ({ kickCalendarSync: vi.fn() }));
 const { run } = vi.hoisted(() => ({ run: vi.fn(async (_d: unknown, t: { revision: number }) => ({ status: "failed", kind: "invalid_key", error: "x", ambiguous: false, revision: t.revision })) }));
 vi.mock("@/lib/manual-confirmation.server", () => ({ runCustomerConfirmation: run, createConfirmationDeps: async () => ({}) }));
 
-import { upsertManualReservation } from "@/lib/manual-reservations.functions";
+import { performManualUpsert, type UpsertInput } from "@/lib/manual-reservations.functions";
 
 type Row = Record<string, unknown>;
 function fakeSupabase(opts: { admin?: boolean } = {}) {
@@ -38,7 +34,8 @@ function fakeSupabase(opts: { admin?: boolean } = {}) {
   };
   return api;
 }
-const call = upsertManualReservation as unknown as (a: { data: unknown; context: unknown }) => Promise<{
+const call = (a: { data: unknown; context: { supabase: unknown; userId: string } }) =>
+  performManualUpsert({ reminderEnabled: true, notifyCustomer: false, sendConfirmation: false, ...(a.data as object) } as UpsertInput, a.context) as unknown as Promise<{
   reservation: Row; deduplicated: boolean; confirmation: { status: string } | null;
 }>;
 const input = {
