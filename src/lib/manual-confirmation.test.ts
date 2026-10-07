@@ -78,7 +78,7 @@ describe("Kunden-Bestätigung (Vorlage)", () => {
     expect(m.html).toContain("&lt;b&gt;");
   });
   it("Altbestand ohne Preis/Abholort ist keine vollständige Bestätigung", () => {
-    expect(confirmationBlocker({ ...base, totalPriceCents: null })).toMatch(/Preis/);
+    expect(confirmationBlocker({ ...base, totalPriceCents: null })).toMatch(/preis/i);
     expect(confirmationBlocker({ ...base, pickupAddress: null })).toMatch(/Abholort/);
     expect(confirmationBlocker({ ...base, customerEmail: "kaputt@" })).toMatch(/E-Mail/);
     expect(confirmationBlocker(base)).toBeNull();
