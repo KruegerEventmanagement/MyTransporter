@@ -54,12 +54,14 @@ export function buildCustomerConfirmation(i: ConfirmationInput): {
   html: string;
   text: string;
 } {
+  const blocker = confirmationBlocker(i);
+  if (blocker) throw new Error(`Bestätigung unvollständig: ${blocker}`);
   const ref = bookingReference(i.reservationId);
   const vehicle = [i.vehicleName, i.vehiclePlate].filter(Boolean).join(" · ") || "Transporter";
   const start = `${formatBerlin(i.startAt)} Uhr`;
   const end = `${formatBerlin(i.endAt)} Uhr`;
-  const price = formatCents(i.totalPriceCents ?? 0);
-  const pickup = i.pickupAddress ?? "";
+  const price = formatCents(i.totalPriceCents as number);
+  const pickup = (i.pickupAddress as string).trim();
   const name = i.customerName?.trim() || "";
   const greeting = name ? `Hallo ${name},` : "Hallo,";
   const subject = `MyTransporter · Buchungsbestätigung ${ref} · ${formatBerlin(i.startAt)}`;
