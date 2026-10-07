@@ -50,7 +50,7 @@ import {
   type ExceptionKey,
   type ReturnExceptions,
 } from "@/lib/trip-return";
-import { loadReturnDraft, saveReturnDraft } from "@/lib/return-draft";
+import { diffDraftFields, draftKey, loadReturnDraft, parseReturnDraft, saveReturnDraft, type DraftFields } from "@/lib/return-draft";
 import {
   enqueuePhoto,
   openIdbQueueStore,
@@ -258,8 +258,6 @@ export function ReturnFlow({
       }
       // Navigation (step/slide) bleibt je Tab; als übernommen markieren, damit nichts zurückgeschrieben wird.
       lastDraft.current = { ...prev, ...changed, step: prev.step, slide: prev.slide };
-      if ("step" in changed) lastDraft.current.step = d.step;
-      if ("slide" in changed) lastDraft.current.slide = d.slide;
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
