@@ -29,6 +29,14 @@ export const BUSINESS = {
   },
 } as const;
 
+/** Geschäftsstelle/Korrespondenzadresse (juristisch) – KEIN Abholort. */
+export const BUSINESS_OFFICE = {
+  street: "Calwer Straße 29",
+  postalCode: "75331",
+  locality: "Engelsbrand-Grunbach",
+} as const;
+export const BUSINESS_OFFICE_ADDRESS = `${BUSINESS_OFFICE.street}, ${BUSINESS_OFFICE.postalCode} ${BUSINESS_OFFICE.locality}`;
+
 /** Abholort als einzeilige Adresse – für Snapshots, Mails und Hinweise. */
 export const PICKUP_ADDRESS = `${BUSINESS.leonberg.street}, ${BUSINESS.leonberg.postalCode} ${BUSINESS.leonberg.locality}`;
 

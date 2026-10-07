@@ -81,7 +81,7 @@ export async function generateCustomDocumentPdf(
   y = logoBottomY - 14;
   page.drawText("Transporter-Vermietung", { x: left, y, font, size: 10, color: grey });
   y -= 12;
-  page.drawText("Römerstraße 36, 71229 Leonberg", { x: left, y, font, size: 10, color: grey });
+  page.drawText(BUSINESS_OFFICE_ADDRESS, { x: left, y, font, size: 10, color: grey });
 
   y -= 20;
   page.drawLine({ start: { x: left, y }, end: { x: right, y }, color: line, thickness: 1 });
@@ -212,11 +212,11 @@ export async function generateCustomDocumentPdf(
   page.drawText("Christian Krüger", { x: c2, y: fy, font, size: 9, color: black });
   page.drawText("Christian Krüger", { x: c3, y: fy, font, size: 9, color: black });
   fy -= 11;
-  page.drawText("Römerstraße 36", { x: c1, y: fy, font, size: 9, color: grey });
+  page.drawText(BUSINESS_OFFICE.street, { x: c1, y: fy, font, size: 9, color: grey });
   page.drawText("USt-IdNr.: DE328715703", { x: c2, y: fy, font, size: 9, color: grey });
   page.drawText("Finom Payments", { x: c3, y: fy, font, size: 9, color: grey });
   fy -= 11;
-  page.drawText("71229 Leonberg", { x: c1, y: fy, font, size: 9, color: grey });
+  page.drawText(`${BUSINESS_OFFICE.postalCode} ${BUSINESS_OFFICE.locality}`, { x: c1, y: fy, font, size: 9, color: grey });
   page.drawText("mytransporter.org", { x: c2, y: fy, font, size: 9, color: grey });
   page.drawText("IBAN: DE44 1001 8000 0164 8885 87", { x: c3, y: fy, font, size: 9, color: grey });
   fy -= 11;

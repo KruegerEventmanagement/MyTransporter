@@ -41,6 +41,18 @@ function KontaktPage() {
 
           <div className="p-6 rounded-2xl bg-secondary flex items-start gap-4">
             <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+              <MapPin className="w-5 h-5 text-foreground" />
+            </div>
+            <div>
+              <p className="font-medium text-foreground">Geschäftsstelle (keine Fahrzeugabholung)</p>
+              <p className="text-sm text-muted-foreground">MyTransporter</p>
+              <p className="text-sm text-muted-foreground">Calwer Straße 29</p>
+              <p className="text-sm text-muted-foreground">75331 Engelsbrand-Grunbach</p>
+            </div>
+          </div>
+
+          <div className="p-6 rounded-2xl bg-secondary flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
               <Mail className="w-5 h-5 text-foreground" />
             </div>
             <div>

@@ -7,7 +7,7 @@ export const Route = createFileRoute("/impressum")({
     pageHead({
       path: "/impressum",
       title: "Impressum | MyTransporter",
-      description: "Impressum von MyTransporter, Inhaber: Christian Krüger, Römerstraße 36, 71229 Leonberg.",
+      description: "Impressum von MyTransporter, Inhaber: Christian Krüger, Calwer Straße 29, 75331 Engelsbrand-Grunbach.",
       breadcrumbs: [{ name: "Start", path: "/" }, { name: "Impressum", path: "/impressum" }],
     }),
   component: ImpressumPage,
@@ -25,7 +25,7 @@ function ImpressumPage() {
             <h2 className="font-bold text-lg mb-2">Angaben gemäß § 5 TMG</h2>
             <p>MyTransporter</p>
             <p>Inhaber: Christian Krüger</p>
-            <p>Römerstraße 36</p>
+            <p>Calwer Straße 29</p>
             <p>71229 Leonberg</p>
           </div>
 
