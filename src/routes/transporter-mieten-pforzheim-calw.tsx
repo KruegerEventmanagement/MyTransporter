@@ -5,7 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { RelatedLinks } from "@/components/seo/RelatedLinks";
 import { DEPOSIT_EUR, planCatalog } from "@/lib/booking-rules";
-import { BUSINESS, GRUNBACH_PLACE_ID, ORG_ID, SITE_URL, pageHead, type Crumb } from "@/lib/seo";
+import { BUSINESS, LEONBERG_PLACE_ID, ORG_ID, SITE_URL, pageHead, type Crumb } from "@/lib/seo";
 
 const PATH = "/transporter-mieten-pforzheim-calw";
 const CRUMBS: Crumb[] = [
@@ -15,20 +15,20 @@ const CRUMBS: Crumb[] = [
 const CRAFTER = planCatalog("l5h2");
 const CRAFTER_24 = CRAFTER.find((p) => p.id === "24h_300")!;
 const CRAFTER_WEEK = CRAFTER.find((p) => p.id === "multi_7d")!;
-const G = BUSINESS.grunbach;
+const G = BUSINESS.leonberg;
 
 export const Route = createFileRoute("/transporter-mieten-pforzheim-calw")({
   head: () =>
     pageHead({
       path: PATH,
-      title: "Transporter mieten für Pforzheim & Calw – Abholung in Engelsbrand-Grunbach | MyTransporter",
-      description: `Extra langer VW Crafter (L5H2) zur Miete mit persönlicher Schlüsselübergabe in der ${G.street}, ${G.postalCode} ${G.locality} – nah an Pforzheim und Calw. 24 Stunden ${CRAFTER_24.price} €.`,
+      title: "Transporter mieten für Pforzheim & Calw – Abholung in Leonberg | MyTransporter",
+      description: `Transporter inkl. extra langem VW Crafter (L5H2) für Kunden aus Pforzheim und Calw – Abholung in der ${G.street}, ${G.postalCode} ${G.locality}. Crafter 24 Stunden ${CRAFTER_24.price} €.`,
       breadcrumbs: CRUMBS,
       schema: [
         {
           "@type": "Service",
           "@id": `${SITE_URL}${PATH}#service`,
-          name: "Transporter-Vermietung VW Crafter, Abholung Engelsbrand-Grunbach",
+          name: "Transporter-Vermietung für Pforzheim & Calw, Abholung Leonberg",
           serviceType: "Transportervermietung",
           provider: { "@id": ORG_ID },
           areaServed: ["Pforzheim", "Calw", "Engelsbrand"],
@@ -36,8 +36,8 @@ export const Route = createFileRoute("/transporter-mieten-pforzheim-calw")({
             "@type": "ServiceChannel",
             serviceLocation: {
               "@type": "Place",
-              "@id": GRUNBACH_PLACE_ID,
-              name: "Abholort Engelsbrand-Grunbach",
+              "@id": LEONBERG_PLACE_ID,
+              name: "Abholort Leonberg",
               address: {
                 "@type": "PostalAddress",
                 streetAddress: G.street,
@@ -69,23 +69,21 @@ function PforzheimCalwPage() {
           Transporter mieten für Pforzheim und Calw
         </h1>
         <p className="mt-4 text-muted-foreground leading-relaxed">
-          Neben unserem Hauptstandort in Leonberg gibt es einen zweiten, echten Abholort in
-          Engelsbrand-Grunbach. Dort steht ein extra langer VW Crafter (Klasse L5H2) bereit. Für
-          Kunden aus Pforzheim, Calw und den umliegenden Orten ist das oft der kürzere Weg zum
-          Transporter. In Pforzheim oder Calw selbst haben wir keinen Standort – abgeholt und
-          zurückgegeben wird ausschließlich in Grunbach.
+          Auch aus Pforzheim, Calw und Umgebung mieten Kunden bei uns – vor allem den extra langen
+          VW Crafter (Klasse L5H2). In Pforzheim oder Calw selbst haben wir keinen Standort: Alle
+          Transporter, auch der Crafter, werden in Leonberg abgeholt und dort zurückgegeben.
         </p>
 
         <section className="mt-8 rounded-2xl border border-border p-6">
-          <h2 className="text-xl font-bold text-foreground">Abholort Engelsbrand-Grunbach</h2>
+          <h2 className="text-xl font-bold text-foreground">Abholort Leonberg</h2>
           <address className="not-italic mt-3 text-foreground">
             {G.street}
             <br />
             {G.postalCode} {G.locality}
           </address>
           <dl className="mt-4 grid gap-2 text-sm">
-            <div><dt className="inline font-medium text-foreground">Fahrzeug: </dt><dd className="inline text-muted-foreground">VW Crafter, extra lang (L5H2)</dd></div>
-            <div><dt className="inline font-medium text-foreground">Übergabe: </dt><dd className="inline text-muted-foreground">persönliche Schlüsselübergabe, keine Schlüsselbox</dd></div>
+            <div><dt className="inline font-medium text-foreground">Fahrzeug: </dt><dd className="inline text-muted-foreground">alle Transporter, inkl. VW Crafter extra lang (L5H2)</dd></div>
+            <div><dt className="inline font-medium text-foreground">Übergabe: </dt><dd className="inline text-muted-foreground">wie in deiner Buchung angegeben</dd></div>
             <div><dt className="inline font-medium text-foreground">Übergabezeit: </dt><dd className="inline text-muted-foreground">wie bei der Buchung gewählt; bei Fragen vorher anrufen</dd></div>
           </dl>
           <div className="mt-5 flex flex-wrap gap-3">
@@ -109,7 +107,7 @@ function PforzheimCalwPage() {
             Der Crafter ist unser längstes Fahrzeug. Er passt, wenn beim Umzug viele Möbel auf
             einmal mitsollen, wenn lange Teile wie Küchenarbeitsplatten, Schränke oder Latten
             transportiert werden oder wenn du die Zahl der Fahrten möglichst klein halten willst.
-            Für eine einzelne Kommode aus einer Kleinanzeige ist oft der kurze L1H1 in Leonberg die
+            Für eine einzelne Kommode aus einer Kleinanzeige ist oft der kurze L1H1 die
             günstigere Wahl. Hilfe bei der Auswahl findest du im Ratgeber{" "}
             <Link to="/umzugstransporter-mieten" className="underline text-foreground">Umzugstransporter mieten</Link>.
           </p>
@@ -130,12 +128,12 @@ function PforzheimCalwPage() {
         </section>
 
         <section className="mt-10">
-          <h2 className="text-2xl font-bold text-foreground">So buchst du den Crafter in Grunbach</h2>
+          <h2 className="text-2xl font-bold text-foreground">So buchst du den Crafter</h2>
           <ol className="mt-3 list-decimal pl-5 space-y-2 text-muted-foreground">
             <li>Auf der Startseite Datum und Uhrzeit wählen.</li>
-            <li>Tarif auswählen; im Fahrzeugschritt wird der Crafter mit Abholort Grunbach angezeigt, wenn er im Zeitraum frei ist.</li>
+            <li>Tarif auswählen; im Fahrzeugschritt wird der Crafter mit seinem Abholort angezeigt, wenn er im Zeitraum frei ist.</li>
             <li>Mit Führerschein und Ausweis verifizieren und online bezahlen.</li>
-            <li>Zur gebuchten Zeit nach Grunbach kommen – der Schlüssel wird persönlich übergeben.</li>
+            <li>Zur gebuchten Zeit zum Abholort in Leonberg kommen.</li>
             <li>Rückgabe vollgetankt und besenrein am selben Ort.</li>
           </ol>
           <p className="mt-3 text-sm text-muted-foreground">
@@ -152,10 +150,10 @@ function PforzheimCalwPage() {
 
         <InFlowAd placement="inFlowBottom" />
         <section className="mt-10">
-          <h2 className="text-2xl font-bold text-foreground">Lieber in Leonberg abholen?</h2>
+          <h2 className="text-2xl font-bold text-foreground">Kleinerer Transporter reicht?</h2>
           <p className="mt-3 text-muted-foreground leading-relaxed">
-            Die kurzen und langen Transporter (L1H1 und L4H2) werden in Leonberg übergeben. Das
-            ist vor allem aus Richtung Stuttgart, Böblingen und Sindelfingen praktisch. Adresse und
+            Die kurzen und langen Transporter (L1H1 und L4H2) stehen am selben Abholort in Leonberg.
+            Adresse und
             Kontakt stehen auf der <Link to="/kontakt" className="underline text-foreground">Kontaktseite</Link>.
           </p>
         </section>

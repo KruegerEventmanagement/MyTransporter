@@ -14,27 +14,23 @@ export const SHARE_IMAGE = `${SITE_URL}/icons/icon-512.png`;
 export const ORG_ID = `${SITE_URL}/#organization`;
 export const WEBSITE_ID = `${SITE_URL}/#website`;
 export const LEONBERG_PLACE_ID = `${SITE_URL}/#abholung-leonberg`;
-export const GRUNBACH_PLACE_ID = `${SITE_URL}/#abholung-grunbach`;
 
 export const BUSINESS = {
   phone: "+4915236230118",
   phoneDisplay: "0152 3623 0118",
   email: "info@mytransporter.org",
+  /** Einziger aktueller Abholort aller Transporter (keine Geschäftsadresse!). */
   leonberg: {
-    street: "Römerstraße 36",
+    street: "Poststraße 60",
     postalCode: "71229",
     locality: "Leonberg",
     mapsUrl:
-      "https://www.google.com/maps/dir/?api=1&destination=R%C3%B6merstra%C3%9Fe+36%2C+71229+Leonberg",
-  },
-  grunbach: {
-    street: "Calwer Straße 29",
-    postalCode: "75331",
-    locality: "Engelsbrand-Grunbach",
-    mapsUrl:
-      "https://www.google.com/maps/dir/?api=1&destination=Calwer+Stra%C3%9Fe+29%2C+75331+Engelsbrand",
+      "https://www.google.com/maps/dir/?api=1&destination=Poststra%C3%9Fe+60%2C+71229+Leonberg",
   },
 } as const;
+
+/** Abholort als einzeilige Adresse – für Snapshots, Mails und Hinweise. */
+export const PICKUP_ADDRESS = `${BUSINESS.leonberg.street}, ${BUSINESS.leonberg.postalCode} ${BUSINESS.leonberg.locality}`;
 
 /** Öffentliche, indexierbare Seiten (Sitemap + Tests). */
 export const PUBLIC_PAGES = [

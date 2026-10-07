@@ -11,7 +11,7 @@ export const Route = createFileRoute("/kontakt")({
     pageHead({
       path: "/kontakt",
       title: "Kontakt & Abholung in Leonberg | MyTransporter",
-      description: "So erreichst du MyTransporter: Telefon 0152 3623 0118, E-Mail info@mytransporter.org. Schlüsselübergabe in der Römerstraße 36, 71229 Leonberg.",
+      description: "So erreichst du MyTransporter: Telefon 0152 3623 0118, E-Mail info@mytransporter.org. Schlüsselübergabe in der Poststraße 60, 71229 Leonberg.",
       webPageType: "ContactPage",
       breadcrumbs: [{ name: "Start", path: "/" }, { name: "Kontakt", path: "/kontakt" }],
     }),
@@ -32,9 +32,9 @@ function KontaktPage() {
               <MapPin className="w-5 h-5 text-foreground" />
             </div>
             <div>
-              <p className="font-medium text-foreground">Adresse</p>
+              <p className="font-medium text-foreground">Abholort aller Transporter</p>
               <p className="text-sm text-muted-foreground">MyTransporter</p>
-              <p className="text-sm text-muted-foreground">Römerstraße 36</p>
+              <p className="text-sm text-muted-foreground">Poststraße 60</p>
               <p className="text-sm text-muted-foreground">71229 Leonberg</p>
             </div>
           </div>
@@ -72,15 +72,9 @@ function KontaktPage() {
 
         <div className="mt-8 p-4 rounded-xl bg-secondary">
           <p className="text-sm text-muted-foreground">
-            Schlüsselabholung und -rückgabe: <span className="text-foreground font-medium">Römerstraße 36, 71229 Leonberg</span>
+            Schlüsselabholung und -rückgabe: <span className="text-foreground font-medium">Poststraße 60, 71229 Leonberg</span>
           </p>
           <p className="text-xs text-muted-foreground mt-1">Öffnungszeiten: 08:00, 22:00 Uhr</p>
-        </div>
-        <div className="mt-4 p-4 rounded-xl bg-secondary">
-          <p className="text-sm text-muted-foreground">
-            Zweiter Abholort (nur VW Crafter, persönliche Übergabe):{" "}
-            <Link to="/transporter-mieten-pforzheim-calw" className="text-foreground font-medium underline">Calwer Straße 29, 75331 Engelsbrand-Grunbach</Link>
-          </p>
         </div>
         <RelatedLinks exclude="/kontakt" />
         <div className="mt-10 flex justify-center text-sm text-muted-foreground">

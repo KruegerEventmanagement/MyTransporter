@@ -156,9 +156,8 @@ function MietratgeberPage() {
 <InFlowAd placement="inFlowBottom" />
         <H2 id="abholung">6. Checkliste Abholung</H2>
         <ul className="mt-3 list-disc space-y-1.5 pl-5 text-muted-foreground">
-          <li>Pünktlich am Abholort aus deiner Buchung sein. Unsere Abholorte: {BUSINESS.leonberg.street},{" "}
-            {BUSINESS.leonberg.postalCode} {BUSINESS.leonberg.locality} sowie für den extra langen Crafter{" "}
-            {BUSINESS.grunbach.street}, {BUSINESS.grunbach.postalCode} {BUSINESS.grunbach.locality}.</li>
+          <li>Pünktlich am Abholort aus deiner Buchung sein. Alle Transporter, auch der extra lange Crafter, werden hier übergeben:{" "}
+            {BUSINESS.leonberg.street}, {BUSINESS.leonberg.postalCode} {BUSINESS.leonberg.locality}.</li>
           <li>Vor Fahrtantritt das Fahrzeug von allen Seiten fotografieren und den Kilometerstand dokumentieren.</li>
           <li>Vorhandene Schäden sofort melden, bevor du losfährst.</li>
           <li>Ladung mit Gurten sichern; schwere Teile nach unten und nah an die Trennwand.</li>

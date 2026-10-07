@@ -20,10 +20,15 @@ import {
   addManualReservationDocument,
   deleteManualReservationDocument,
   listManualNotificationStates,
+  sendManualReservationConfirmation,
+  listCustomerMailStates,
+  type CustomerMailState,
   type ManualReservation,
   type ManualNotificationState,
 } from "@/lib/manual-reservations.functions";
 import { bookingWindowMs } from "@/lib/booking-window";
+import { centsToInput, formatCents, parseEuroToCents } from "@/lib/money-input";
+import { isValidCustomerEmail } from "@/lib/manual-confirmation";
 import { ageOnIsoDate, isValidIsoDate, todayIsoBerlin } from "@/lib/age";
 import { getCalendarSyncStatus, type CalendarSyncStatus } from "@/lib/calendar-status.functions";
 import { calendarStatusView } from "@/lib/calendar-status";
@@ -180,6 +185,10 @@ interface FormState {
   note: string;
   reminderEnabled: boolean;
   notifyCustomer: boolean;
+  price: string;
+  /** Hatte der Termin bereits einen Preis? (dann Pflicht beim Bearbeiten) */
+  hadPrice: boolean;
+  sendConfirmation: boolean;
 }
 
 function emptyForm(day: Date): FormState {
@@ -203,7 +212,10 @@ function emptyForm(day: Date): FormState {
     customerLicenseNumber: "",
     note: "",
     reminderEnabled: true,
-    notifyCustomer: false,
+    notifyCustomer: true,
+    price: "",
+    hadPrice: false,
+    sendConfirmation: true,
   };
 }
 
@@ -218,6 +230,43 @@ function notifyLabel(state?: ManualNotificationState): string {
   if (state.status === "failed")
     return `Benachrichtigung fehlgeschlagen – Wiederholung geplant (Versuch ${state.attempts})`;
   return "Benachrichtigung ausstehend";
+}
+
+/** Kunden-Bestätigung – getrennt von der Owner-Mail. „Versendet“ heißt: vom Anbieter angenommen, nicht zugestellt. */
+function customerMailLabel(m: ManualReservation, st?: CustomerMailState): string {
+  if (!st) return m.total_price_cents == null ? "Kundenbestätigung: noch kein Preis hinterlegt" : "Kundenbestätigung: nicht versendet";
+  const old = st.revision !== m.revision ? " (ältere Fassung)" : "";
+  if (st.status === "sent") return `Kundenbestätigung versendet${old} – vom Mailanbieter angenommen`;
+  if (st.status === "processing") return "Kundenbestätigung wird gerade versendet …";
+  if (st.status === "failed")
+    return `Buchung gespeichert – Bestätigung nicht versendet${old}: ${mailErrorText(st.error_kind)}${st.ambiguous ? " (Annahme unklar)" : ""}`;
+  return "Kundenbestätigung ausstehend";
+}
+
+function canSendConfirmation(m: ManualReservation, st?: CustomerMailState): boolean {
+  if (m.total_price_cents == null || !m.customer_email) return false;
+  if (!st || st.revision !== m.revision) return true;
+  return st.status === "failed" || st.status === "pending";
+}
+
+function mailErrorText(kind: string | null): string {
+  switch (kind) {
+    case "invalid_key":
+      return "Mail-Zugang ungültig (Schlüssel ersetzen)";
+    case "missing_key":
+      return "Mail-Zugang fehlt";
+    case "restricted_key":
+      return "Mail-Schlüssel ohne Senderecht";
+    case "sender_domain":
+      return "Absender-Domain nicht freigegeben";
+    case "timeout":
+      return "Zeitüberschreitung";
+    case "transient":
+    case "network":
+      return "vorübergehende Störung";
+    default:
+      return "Versandfehler";
+  }
 }
 
 /** Heutiger Berliner Kalendertag als Zellen-Datum (unabhängig von der Browser-Zeitzone). */
@@ -236,6 +285,8 @@ export function CalendarAdmin() {
   const [bookingSlots, setBookingSlots] = useState<BookingSlot[]>([]);
   const [manuals, setManuals] = useState<ManualReservation[]>([]);
   const [notifyStates, setNotifyStates] = useState<Record<string, ManualNotificationState>>({});
+  const [customerMail, setCustomerMail] = useState<Record<string, CustomerMailState>>({});
+  const [sendingId, setSendingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [namesError, setNamesError] = useState(false);
@@ -249,6 +300,8 @@ export function CalendarAdmin() {
   const fetchManual = useServerFn(listManualReservations);
   const fetchNotifyStates = useServerFn(listManualNotificationStates);
   const saveManual = useServerFn(upsertManualReservation);
+  const sendConfirmation = useServerFn(sendManualReservationConfirmation);
+  const fetchCustomerMail = useServerFn(listCustomerMailStates);
   const removeManual = useServerFn(deleteManualReservation);
   const fetchDocs = useServerFn(listManualReservationDocuments);
   const addDoc = useServerFn(addManualReservationDocument);
@@ -344,6 +397,15 @@ export function CalendarAdmin() {
         setNotifyStates(latest);
       } catch {
         setNotifyStates({});
+      }
+      try {
+        const ids = manualRows.map((m) => m.id);
+        const rows = ids.length > 0 ? await fetchCustomerMail({ data: { reservationIds: ids } }) : [];
+        const latest: Record<string, CustomerMailState> = {};
+        for (const st of rows) if (!latest[st.reservation_id]) latest[st.reservation_id] = st;
+        setCustomerMail(latest);
+      } catch {
+        setCustomerMail({});
       }
 
       // Kundenname nur über die gespeicherte user_id (Admin-RLS), kein Namensabgleich.
@@ -486,6 +548,9 @@ export function CalendarAdmin() {
       note: m.note ?? "",
       reminderEnabled: m.reminder_enabled,
       notifyCustomer: m.notify_customer,
+      price: centsToInput(m.total_price_cents),
+      hadPrice: m.total_price_cents != null,
+      sendConfirmation: false,
     });
     void loadDocs(m.id);
   };
@@ -517,9 +582,23 @@ export function CalendarAdmin() {
       fail("Das Ende muss nach dem Start liegen");
       return;
     }
-    if (form.notifyCustomer && !form.customerEmail.trim()) {
-      fail("Für die Kunden-Erinnerung wird eine E-Mail-Adresse benötigt");
+    const email = form.customerEmail.trim();
+    if ((form.notifyCustomer || form.sendConfirmation) && !email) {
+      fail("Für Bestätigung/Erinnerung an den Kunden wird eine E-Mail-Adresse benötigt");
       return;
+    }
+    if (email && !isValidCustomerEmail(email)) {
+      fail("Bitte eine gültige E-Mail-Adresse eingeben");
+      return;
+    }
+    let totalPriceCents: number | null = null;
+    if (form.price.trim() || !form.id || form.hadPrice || form.sendConfirmation) {
+      const parsed = parseEuroToCents(form.price);
+      if (!parsed.ok) {
+        fail(parsed.error);
+        return;
+      }
+      totalPriceCents = parsed.cents;
     }
     const birth = form.customerBirthDate.trim();
     if (birth) {
@@ -554,6 +633,7 @@ export function CalendarAdmin() {
           note: form.note.trim() || null,
           reminderEnabled: form.reminderEnabled,
           notifyCustomer: form.notifyCustomer,
+          totalPriceCents,
         },
       });
 
@@ -569,6 +649,8 @@ export function CalendarAdmin() {
           ? `${vehicle.plate} ist blockiert – aber: ${docWarning}`
           : `${vehicle.plate} ist im Zeitraum jetzt blockiert.`,
       });
+      // Bestätigung erst NACH dauerhaft erfolgreichem Speichern.
+      if (form.sendConfirmation) await triggerConfirmation(saved.id);
       setForm(null);
       setStoredDocs([]);
       setPendingDocs([]);
@@ -583,6 +665,34 @@ export function CalendarAdmin() {
       toast.error(msg);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const triggerConfirmation = async (id: string) => {
+    if (sendingId) return; // Doppelklick-Schutz (Server ist zusätzlich idempotent)
+    setSendingId(id);
+    try {
+      const res = await sendConfirmation({ data: { id } });
+      if (res.status === "sent") {
+        toast.success(res.already ? "Bestätigung war bereits versendet" : "Bestätigung an den Kunden versendet", {
+          description: "Vom Mailanbieter angenommen – Zustellung wird nicht garantiert.",
+        });
+      } else if (res.status === "blocked") {
+        toast.error("Buchung gespeichert – Bestätigung nicht versendet", { description: res.reason });
+      } else if (res.status === "in_progress") {
+        toast.message("Bestätigung wird bereits versendet");
+      } else {
+        toast.error("Buchung gespeichert – Bestätigung nicht versendet", {
+          description: mailErrorText(res.kind),
+        });
+      }
+    } catch (e) {
+      toast.error("Buchung gespeichert – Bestätigung nicht versendet", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      setSendingId(null);
+      await load();
     }
   };
 
@@ -723,9 +833,30 @@ export function CalendarAdmin() {
                     <p className="text-xs mt-1">Von: {fmtDateTime(e.start)}</p>
                     <p className="text-xs">Bis: {fmtDateTime(e.end)}</p>
                     {e.kind === "manual" && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {notifyLabel(notifyStates[e.manual.id])}
-                      </p>
+                      <>
+                        <p className="text-xs mt-1">
+                          Gesamtmietpreis:{" "}
+                          {e.manual.total_price_cents == null
+                            ? "nicht hinterlegt"
+                            : formatCents(e.manual.total_price_cents)}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Betreiber: {notifyLabel(notifyStates[e.manual.id])}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {customerMailLabel(e.manual, customerMail[e.manual.id])}
+                        </p>
+                        {canSendConfirmation(e.manual, customerMail[e.manual.id]) ? (
+                          <button
+                            type="button"
+                            disabled={sendingId === e.manual.id}
+                            onClick={() => triggerConfirmation(e.manual.id)}
+                            className="mt-1 rounded-full bg-secondary px-3 py-1 text-xs font-medium disabled:opacity-50"
+                          >
+                            {sendingId === e.manual.id ? "Sende …" : "Bestätigung erneut versuchen / senden"}
+                          </button>
+                        ) : null}
+                      </>
                     )}
                   </div>
                   {e.kind === "manual" ? (
@@ -877,6 +1008,24 @@ export function CalendarAdmin() {
                 placeholder="Vor- und Nachname"
                 className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
               />
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="manual-price" className="text-xs font-medium text-muted-foreground">
+                Gesamtmietpreis in EUR{!form.id || form.hadPrice ? " (Pflicht)" : " (noch nicht hinterlegt)"}
+              </label>
+              <input
+                id="manual-price"
+                inputMode="decimal"
+                value={form.price}
+                maxLength={14}
+                onChange={(ev) => setForm({ ...form, price: ev.target.value })}
+                placeholder="z. B. 129,00"
+                className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Nur die Vereinbarung – es wird keine Zahlung, Rechnung oder „bezahlt“-Markierung ausgelöst.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -1105,6 +1254,15 @@ export function CalendarAdmin() {
               />
               Erinnerungs-E-Mail auch an den Kunden senden
             </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.sendConfirmation}
+                onChange={(ev) => setForm({ ...form, sendConfirmation: ev.target.checked })}
+                className="w-4 h-4 accent-foreground"
+              />
+              {form.id ? "Aktualisierte Buchungsbestätigung an den Kunden senden" : "Buchungsbestätigung an den Kunden senden"}
+            </label>
 
             {conflictWarning && (
               <p className="text-xs rounded-xl border border-foreground px-3 py-2">{conflictWarning}</p>
@@ -1125,7 +1283,7 @@ export function CalendarAdmin() {
                 disabled={saving}
                 className="flex-1 rounded-full bg-foreground text-background py-3 text-sm font-semibold disabled:opacity-50"
               >
-                {saving ? "Speichern…" : "Termin speichern"}
+                {saving ? "Speichern…" : form.sendConfirmation ? "Speichern & Bestätigung senden" : "Termin speichern"}
               </button>
               {form.id && (
                 <button

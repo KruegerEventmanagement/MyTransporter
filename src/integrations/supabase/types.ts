@@ -738,6 +738,71 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_reservation_customer_mails: {
+        Row: {
+          ambiguous: boolean
+          attempts: number
+          created_at: string
+          error_kind: string | null
+          first_attempt_at: string | null
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          lease_until: string | null
+          provider_message_id: string | null
+          recipient_email: string
+          reservation_id: string
+          revision: number
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ambiguous?: boolean
+          attempts?: number
+          created_at?: string
+          error_kind?: string | null
+          first_attempt_at?: string | null
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          lease_until?: string | null
+          provider_message_id?: string | null
+          recipient_email: string
+          reservation_id: string
+          revision: number
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ambiguous?: boolean
+          attempts?: number
+          created_at?: string
+          error_kind?: string | null
+          first_attempt_at?: string | null
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          lease_until?: string | null
+          provider_message_id?: string | null
+          recipient_email?: string
+          reservation_id?: string
+          revision?: number
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_reservation_customer_mails_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "manual_reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manual_reservation_documents: {
         Row: {
           created_at: string
@@ -849,11 +914,13 @@ export type Database = {
           id: string
           note: string | null
           notify_customer: boolean
+          pickup_address: string | null
           reminder_24h_sent_at: string | null
           reminder_30min_sent_at: string | null
           reminder_enabled: boolean
           revision: number
           start_at: string
+          total_price_cents: number | null
           updated_at: string
           vehicle_id: string | null
           vehicle_name: string | null
@@ -874,11 +941,13 @@ export type Database = {
           id?: string
           note?: string | null
           notify_customer?: boolean
+          pickup_address?: string | null
           reminder_24h_sent_at?: string | null
           reminder_30min_sent_at?: string | null
           reminder_enabled?: boolean
           revision?: number
           start_at: string
+          total_price_cents?: number | null
           updated_at?: string
           vehicle_id?: string | null
           vehicle_name?: string | null
@@ -899,11 +968,13 @@ export type Database = {
           id?: string
           note?: string | null
           notify_customer?: boolean
+          pickup_address?: string | null
           reminder_24h_sent_at?: string | null
           reminder_30min_sent_at?: string | null
           reminder_enabled?: boolean
           revision?: number
           start_at?: string
+          total_price_cents?: number | null
           updated_at?: string
           vehicle_id?: string | null
           vehicle_name?: string | null

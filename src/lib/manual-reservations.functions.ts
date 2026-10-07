@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveAccount } from "@/lib/active-account";
 import { isValidIsoDate, todayIsoBerlin } from "@/lib/age";
+import { MAX_PRICE_CENTS } from "@/lib/money-input";
+import { PICKUP_ADDRESS } from "@/lib/seo";
 
 export type ManualReservation = {
   id: string;
@@ -21,6 +23,9 @@ export type ManualReservation = {
   note: string | null;
   reminder_enabled: boolean;
   notify_customer: boolean;
+  total_price_cents: number | null;
+  pickup_address: string | null;
+  revision: number;
   created_at: string;
 };
 
@@ -34,7 +39,7 @@ export type ManualReservationDocument = {
 };
 
 const SELECT_COLUMNS =
-  "id, vehicle_id, vehicle_plate, vehicle_name, start_at, end_at, customer_name, customer_phone, customer_email, customer_birth_date, customer_street, customer_city, customer_id_number, customer_license_number, note, reminder_enabled, notify_customer, created_at";
+  "id, vehicle_id, vehicle_plate, vehicle_name, start_at, end_at, customer_name, customer_phone, customer_email, customer_birth_date, customer_street, customer_city, customer_id_number, customer_license_number, note, reminder_enabled, notify_customer, total_price_cents, pickup_address, revision, created_at";
 
 const DOC_SELECT_COLUMNS = "id, reservation_id, doc_type, file_path, original_name, created_at";
 
@@ -65,6 +70,8 @@ const upsertSchema = z.object({
   note: optionalText(1000),
   reminderEnabled: z.boolean().default(true),
   notifyCustomer: z.boolean().default(false),
+  /** Gesamtmietpreis in ganzen Cent. Pflicht für neue Termine. */
+  totalPriceCents: z.number().int().min(0).max(MAX_PRICE_CENTS).nullable().optional(),
 });
 
 const listSchema = z.object({
@@ -140,7 +147,17 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
       throw new Error("Das Ende muss nach dem Start liegen");
     }
 
-    const payload = {
+    if (!data.id && data.totalPriceCents == null) {
+      throw new Error("Bitte den Gesamtmietpreis eintragen");
+    }
+
+    const payload: {
+      [k: string]: string | number | boolean | null;
+      vehicle_plate: string;
+      start_at: string;
+      end_at: string;
+      customer_name: string;
+    } = {
       vehicle_id: data.vehicleId ?? null,
       vehicle_plate: data.vehiclePlate,
       vehicle_name: data.vehicleName ?? null,
@@ -160,10 +177,20 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
       created_by: context.userId,
     };
 
+    // Preis nur setzen, wenn angegeben – ein bestehender Preis wird nie still entfernt.
+    if (data.totalPriceCents != null) payload.total_price_cents = data.totalPriceCents;
+
     if (data.id) {
+      // Abholort-Snapshot nur ergänzen, nie bestehende Snapshots umschreiben.
+      const { data: cur } = await context.supabase
+        .from("manual_reservations")
+        .select("pickup_address")
+        .eq("id", data.id)
+        .maybeSingle();
+      if (!cur?.pickup_address) payload.pickup_address = PICKUP_ADDRESS;
       const { data: row, error } = await context.supabase
         .from("manual_reservations")
-        .update(payload)
+        .update(payload as never)
         .eq("id", data.id)
         .select(SELECT_COLUMNS)
         .single();
@@ -172,9 +199,10 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
       return row as ManualReservation;
     }
 
+    payload.pickup_address = PICKUP_ADDRESS;
     const { data: row, error } = await context.supabase
       .from("manual_reservations")
-      .insert(payload)
+      .insert(payload as never)
       .select(SELECT_COLUMNS)
       .single();
     if (error) throw new Error(error.message);
@@ -319,4 +347,45 @@ export const listManualNotificationStates = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (rows ?? []) as ManualNotificationState[];
+  });
+
+export type CustomerMailState = {
+  reservation_id: string;
+  revision: number;
+  status: "pending" | "processing" | "sent" | "failed";
+  attempts: number;
+  ambiguous: boolean;
+  error_kind: string | null;
+  last_error: string | null;
+  sent_at: string | null;
+};
+
+/** Kunden-Bestätigung senden (nur nach gespeicherter Reservierung, idempotent je Revision). */
+export const sendManualReservationConfirmation = createServerFn({ method: "POST" })
+  .middleware([requireActiveAccount])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { runCustomerConfirmation, createConfirmationDeps } = await import(
+      "@/lib/manual-confirmation.server"
+    );
+    return runCustomerConfirmation(await createConfirmationDeps(), data.id);
+  });
+
+/** Status der Kunden-Bestätigungen (neueste Revision zuerst). */
+export const listCustomerMailStates = createServerFn({ method: "POST" })
+  .middleware([requireActiveAccount])
+  .inputValidator((input: unknown) =>
+    z.object({ reservationIds: z.array(z.string().uuid()).max(300) }).parse(input),
+  )
+  .handler(async ({ data, context }): Promise<CustomerMailState[]> => {
+    await assertAdmin(context);
+    if (data.reservationIds.length === 0) return [];
+    const { data: rows, error } = await context.supabase
+      .from("manual_reservation_customer_mails")
+      .select("reservation_id, revision, status, attempts, ambiguous, error_kind, last_error, sent_at")
+      .in("reservation_id", data.reservationIds)
+      .order("revision", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as CustomerMailState[];
   });
