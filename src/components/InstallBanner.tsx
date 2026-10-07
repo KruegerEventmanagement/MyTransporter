@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
+import { isTripPath } from "@/lib/active-trip";
 import { Download, X, Share, Plus, MoreVertical } from "lucide-react";
 import {
   Dialog,
@@ -32,6 +34,8 @@ export function InstallBanner() {
   const [visible, setVisible] = useState(false);
   const [platform, setPlatform] = useState<Platform>("desktop");
   const [guideOpen, setGuideOpen] = useState(false);
+  // Während Fahrt/Rückgabe nie über Überschrift oder Bedienelementen.
+  const onTrip = useRouterState({ select: (st) => isTripPath(st.location.pathname) });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
