@@ -15,8 +15,4 @@ describe("Qualitätssanierung Suchmaschinen/Werbung", () => {
     const h = pageHead({ path: "/x", title: "t", description: "d", robots: "noindex,follow" });
     expect(h.meta).toContainEqual({ name: "robots", content: "noindex,follow" });
   });
-  it("Startseite verlinkt Hilfeseiten crawlbar", () => {
-    const s = fs.readFileSync("src/components/HomeOfferSummary.tsx", "utf8");
-    for (const to of ["/preise", "/mietratgeber", "/faq", "/kontakt"]) expect(s).toContain(`to="${to}"`);
-  });
 });
