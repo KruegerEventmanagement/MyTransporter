@@ -1,3 +1,4 @@
+import { BUSINESS_OFFICE } from "@/lib/seo";
 /**
  * Gemeinsame Vorlage für alle Kunden-E-Mails von MyTransporter.
  *
@@ -13,7 +14,7 @@ export const SITE_URL = "https://www.mytransporter.org";
 /** Offizielles MyTransporter-Logo (Wort-/Bildmarke), stabil unter /email-logo.png. */
 export const LOGO_URL = `${SITE_URL}/email-logo.png`;
 
-export const COMPANY_ADDRESS = "MyTransporter · Römerstraße 36 · 71229 Leonberg";
+export const COMPANY_ADDRESS = `MyTransporter · ${BUSINESS_OFFICE.street} · ${BUSINESS_OFFICE.postalCode} ${BUSINESS_OFFICE.locality}`;
 
 /** HTML-Escaping für alle dynamischen Werte. */
 export function esc(value: unknown): string {

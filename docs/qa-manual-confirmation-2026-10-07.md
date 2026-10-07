@@ -21,8 +21,15 @@
 - Web-Build: Exit 0
 - Browser-Prüfung (Google, Awin und Resend blockiert): /, /kontakt, /faq, /transporter-mieten-pforzheim-calw, /mietratgeber → HTTP 200; zeigen „Poststraße 60“, weder „Grunbach“ noch „Römerstraße“.
 
+## Nachtrag Geschäftsadresse (07.10.2026)
+- Zentrale Konstanten in `src/lib/seo.ts`: `BUSINESS_OFFICE`/`BUSINESS_OFFICE_ADDRESS` (Calwer Straße 29, 75331 Engelsbrand-Grunbach) getrennt von `PICKUP_ADDRESS` (Poststraße 60, 71229 Leonberg).
+- Umgestellt: Impressum inkl. Metabeschreibung, AGB-Vertragsparteien, Datenschutz-Verantwortlicher, Kontakt (eigener Block „Geschäftsstelle (keine Fahrzeugabholung)“), Mail-Footer, Kopf/Fuß neu erzeugter Rechnungen und Angebote. Archivierte PDFs unverändert.
+- Strukturierte Daten: AutoRental-Adresse bleibt bewusst der Abhol-/Mietort Leonberg (lokales Geschäft).
+- „Römerstraße 36“ steht nur noch in Test-Fixtures und alten QA-Dokumenten.
+- Danach: Typecheck Exit 0, Vitest 738/738 Exit 0, Web-Build Exit 0. Keine Mails ausgelöst.
+
 ## Offen
 - `RESEND_API_KEY` ist weiterhin ungültig (nicht erneut geprüft): Ein Mailversand ist live erst nach Austausch des Schlüssels möglich.
-- Geschäftsadresse (Impressum, AGB-Kopf, Datenschutz, Rechnungs-/Dokument-PDF, Mail-Fußzeile) wartet auf Bestätigung durch den Eigentümer.
+- AGB §-Gerichtsstand nennt weiterhin „Leonberg“ – rechtliche Entscheidung des Eigentümers, nicht geändert.
 - Admin-Kalender nicht im Browser getestet (es gibt keine Testumgebung ohne Schreibzugriff auf echte Daten). Native-Build in dieser Runde nicht ausgeführt.
 - Nicht veröffentlicht.

@@ -24,7 +24,7 @@ function DatenschutzPage() {
         <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">1. Verantwortlicher</h2>
-            <p>MyTransporter<br />Inhaber: Christian Krüger<br />Römerstraße 36, 71229 Leonberg<br />E-Mail: info@mytransporter.org<br />Telefon: 0152 3623 0118</p>
+            <p>MyTransporter<br />Inhaber: Christian Krüger<br />Calwer Straße 29, 75331 Engelsbrand-Grunbach<br />E-Mail: info@mytransporter.org<br />Telefon: 0152 3623 0118</p>
           </div>
 
           <div>
