@@ -158,6 +158,93 @@ export async function sendEmail(
   return true;
 }
 
+export type DetailedSendResult =
+  | { ok: true; providerId: string }
+  | {
+      ok: false;
+      kind: ResendErrorKind | "missing_key" | "timeout" | "network" | "no_provider_id";
+      /** true = unklar, ob der Anbieter die Mail angenommen hat. */
+      ambiguous: boolean;
+      status: number | null;
+      error: string;
+    };
+
+/**
+ * Versand mit belastbarer Rückmeldung: Erfolg NUR bei 2xx UND Provider-ID.
+ * Keine Admin-Protokollierung hier – der Aufrufer verfolgt den Status selbst.
+ */
+export async function sendEmailDetailed(args: {
+  from: string;
+  to: string;
+  replyTo?: string;
+  subject: string;
+  html: string;
+  text?: string;
+  idempotencyKey: string;
+  timeoutMs?: number;
+  fetchImpl?: typeof fetch;
+}): Promise<DetailedSendResult> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) {
+    return { ok: false, kind: "missing_key", ambiguous: false, status: null, error: "RESEND_API_KEY fehlt" };
+  }
+  const f = args.fetchImpl ?? fetch;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), args.timeoutMs ?? 15_000);
+  try {
+    const body: Record<string, unknown> = {
+      from: args.from,
+      to: args.to,
+      subject: args.subject,
+      html: args.html,
+    };
+    if (args.text) body.text = args.text;
+    if (args.replyTo) body.reply_to = args.replyTo;
+    const res = await f("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": args.idempotencyKey.slice(0, 256),
+      },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    const raw = await res.text();
+    if (!res.ok) {
+      const cls = classifyResendError(res.status, raw);
+      return {
+        ok: false,
+        kind: cls.kind,
+        ambiguous: false,
+        status: res.status,
+        error: `${cls.hint ?? "Versand abgelehnt"} · ${res.status} · ${redactSecrets(raw).slice(0, 300)}`,
+      };
+    }
+    let id = "";
+    try {
+      id = String((JSON.parse(raw) as { id?: unknown }).id ?? "");
+    } catch {
+      /* leer */
+    }
+    if (!id) {
+      return { ok: false, kind: "no_provider_id", ambiguous: true, status: res.status, error: "Antwort ohne Versand-ID" };
+    }
+    return { ok: true, providerId: id };
+  } catch (e) {
+    const aborted = (e as Error)?.name === "AbortError";
+    return {
+      ok: false,
+      kind: aborted ? "timeout" : "network",
+      ambiguous: true,
+      status: null,
+      error: aborted ? "Zeitüberschreitung beim Mailanbieter" : redactSecrets(String((e as Error)?.message ?? e)).slice(0, 300),
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
