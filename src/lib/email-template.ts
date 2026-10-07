@@ -1,3 +1,4 @@
+import { BUSINESS_OFFICE } from "@/lib/seo";
 /**
  * Gemeinsame Vorlage für alle Kunden-E-Mails von MyTransporter.
  *

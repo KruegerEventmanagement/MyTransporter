@@ -26,7 +26,7 @@ function ImpressumPage() {
             <p>MyTransporter</p>
             <p>Inhaber: Christian Krüger</p>
             <p>Calwer Straße 29</p>
-            <p>71229 Leonberg</p>
+            <p>75331 Engelsbrand-Grunbach</p>
           </div>
 
           <div>

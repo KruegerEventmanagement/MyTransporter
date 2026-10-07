@@ -1,3 +1,4 @@
+import { BUSINESS_OFFICE, BUSINESS_OFFICE_ADDRESS } from "@/lib/seo";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { embedBrandLogo } from "@/lib/brand-logo.server";
 import { computeDocTotals, type DocItemInput } from "@/lib/doc-totals";

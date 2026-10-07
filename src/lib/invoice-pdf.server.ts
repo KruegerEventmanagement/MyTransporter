@@ -1,3 +1,4 @@
+import { BUSINESS_OFFICE, BUSINESS_OFFICE_ADDRESS } from "@/lib/seo";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computePlanReturn } from "@/lib/booking-rules";
