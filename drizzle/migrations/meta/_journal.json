@@ -8,6 +8,13 @@
       "when": 1791379910258,
       "tag": "0000_manual_reservation_price_and_customer_mail",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791380645900,
+      "tag": "0001_customer_confirmation_fencing_and_frozen_payload",
+      "breakpoints": true
     }
   ]
 }
