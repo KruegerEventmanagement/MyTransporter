@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791379910258,
+      "tag": "0000_manual_reservation_price_and_customer_mail",
+      "breakpoints": true
+    }
+  ]
+}
