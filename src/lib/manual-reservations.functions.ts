@@ -151,7 +151,13 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
       throw new Error("Bitte den Gesamtmietpreis eintragen");
     }
 
-    const payload: Record<string, unknown> = {
+    const payload: {
+      [k: string]: string | number | boolean | null;
+      vehicle_plate: string;
+      start_at: string;
+      end_at: string;
+      customer_name: string;
+    } = {
       vehicle_id: data.vehicleId ?? null,
       vehicle_plate: data.vehiclePlate,
       vehicle_name: data.vehicleName ?? null,
@@ -184,7 +190,7 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
       if (!cur?.pickup_address) payload.pickup_address = PICKUP_ADDRESS;
       const { data: row, error } = await context.supabase
         .from("manual_reservations")
-        .update(payload)
+        .update(payload as never)
         .eq("id", data.id)
         .select(SELECT_COLUMNS)
         .single();
@@ -196,7 +202,7 @@ export const upsertManualReservation = createServerFn({ method: "POST" })
     payload.pickup_address = PICKUP_ADDRESS;
     const { data: row, error } = await context.supabase
       .from("manual_reservations")
-      .insert(payload)
+      .insert(payload as never)
       .select(SELECT_COLUMNS)
       .single();
     if (error) throw new Error(error.message);
