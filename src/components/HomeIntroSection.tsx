@@ -22,7 +22,7 @@ export function HomeIntroSection() {
         </h1>
         <p className="mt-4 text-muted-foreground leading-relaxed">
           MyTransporter vermietet Transporter direkt in Leonberg – online gebucht, Schlüssel vor Ort
-          in der Römerstraße 36. Viele unserer Kunden kommen aus Stuttgart, Böblingen oder
+          in der Poststraße 60. Viele unserer Kunden kommen aus Stuttgart, Böblingen oder
           Sindelfingen: Abholung und Rückgabe sind immer in Leonberg, nicht in Stuttgart.
           Typische Einsätze sind Umzug, Möbeltransport, Baumarkt-Einkauf und die Abholung von
           Kleinanzeigen.
@@ -34,8 +34,8 @@ export function HomeIntroSection() {
           <li>Kaution {DEPOSIT_EUR} €, Rückgabe vollgetankt</li>
         </ul>
         <p className="mt-5 text-muted-foreground leading-relaxed">
-          Für Pforzheim und Calw gibt es zusätzlich einen extra langen VW Crafter mit persönlicher
-          Schlüsselübergabe in Engelsbrand-Grunbach (24 Stunden {CRAFTER_24.price} €).
+          Für besonders lange Ladung gibt es zusätzlich einen extra langen VW Crafter – ebenfalls
+          mit Abholung in Leonberg (24 Stunden {CRAFTER_24.price} €).
         </p>
         <nav aria-label="Mehr zur Transporter-Miete" className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm">
           <Link to="/preise" className="underline underline-offset-2 text-foreground">Alle Preise</Link>

@@ -5,7 +5,7 @@ const LINKS = [
   { to: "/umzug", label: "Umzug mit Unterstützung" },
   { to: "/langzeitmiete", label: "Langzeitmiete ab 7 Tagen" },
   { to: "/umzugstransporter-mieten", label: "Umzugstransporter auswählen" },
-  { to: "/transporter-mieten-pforzheim-calw", label: "Abholung Engelsbrand-Grunbach (Pforzheim/Calw)" },
+  { to: "/transporter-mieten-pforzheim-calw", label: "Transporter für Pforzheim & Calw (Abholung Leonberg)" },
   { to: "/faq", label: "Häufige Fragen" },
   { to: "/kontakt", label: "Kontakt & Abholung Leonberg" },
 ] as const;

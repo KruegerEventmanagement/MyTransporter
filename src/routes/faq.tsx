@@ -9,7 +9,7 @@ import { BrandHomeLink } from "@/components/BrandHomeLink";
 const FAQS = [
   {
     q: "Wie kann ich einen Transporter bei MyTransporter buchen?",
-    a: "Die Buchung erfolgt komplett online über mytransporter.org. Du wählst Datum, Uhrzeit und Mietdauer (6 Stunden, 24 Stunden oder reine Kilometer-Abrechnung), verifizierst dich mit Führerschein und Ausweis und bezahlst direkt online. Anschließend holst du den Transporter in der Römerstraße 36, 71229 Leonberg ab.",
+    a: "Die Buchung erfolgt komplett online über mytransporter.org. Du wählst Datum, Uhrzeit und Mietdauer (6 Stunden, 24 Stunden oder reine Kilometer-Abrechnung), verifizierst dich mit Führerschein und Ausweis und bezahlst direkt online. Anschließend holst du den Transporter in der Poststraße 60, 71229 Leonberg ab.",
   },
   {
     q: "Was kostet die Transporter-Miete?",
@@ -37,7 +37,7 @@ const FAQS = [
   },
   {
     q: "Wo hole ich den Transporter ab?",
-    a: "Abholung und Rückgabe erfolgen in der Römerstraße 36, 71229 Leonberg, verkehrsgünstig zwischen Stuttgart, Böblingen und Sindelfingen gelegen. Öffnungszeiten: täglich 08:00 bis 22:00 Uhr.",
+    a: "Abholung und Rückgabe erfolgen in der Poststraße 60, 71229 Leonberg, verkehrsgünstig zwischen Stuttgart, Böblingen und Sindelfingen gelegen. Öffnungszeiten: täglich 08:00 bis 22:00 Uhr.",
   },
   {
     q: "Ist im Preis eine Versicherung enthalten?",
@@ -149,7 +149,7 @@ function FaqPage() {
 const SEO_BLOCKS = [
   {
     h: "Transporter mieten in Leonberg",
-    p: "MyTransporter ist deine lokale Transporter-Vermietung in Leonberg. Direkt in der Römerstraße 36 holst du deinen Transporter ab – kurzer L1H1 oder langer L4H2, ideal für Umzüge, Möbeltransporte oder spontane Fahrten in der Region. Buchung online, transparente Festpreise – Details auf der Preisseite.",
+    p: "MyTransporter ist deine lokale Transporter-Vermietung in Leonberg. Direkt in der Poststraße 60 holst du deinen Transporter ab – kurzer L1H1 oder langer L4H2, ideal für Umzüge, Möbeltransporte oder spontane Fahrten in der Region. Buchung online, transparente Festpreise – Details auf der Preisseite.",
   },
   {
     h: "Transporter mieten in Stuttgart & Umgebung",

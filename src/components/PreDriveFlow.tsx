@@ -278,7 +278,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
           </div>
           <h3 className="text-2xl font-bold text-foreground mb-2">Schlüssel abholen</h3>
           <p className="text-muted-foreground mb-2">
-            Komme zur <span className="font-medium text-foreground">Römerstraße 36</span> und nenne einem Mitarbeiter diesen Code:
+            Komme zur <span className="font-medium text-foreground">Poststraße 60</span> und nenne einem Mitarbeiter diesen Code:
           </p>
 
           <div className="my-8 p-6 rounded-2xl bg-primary text-primary-foreground">

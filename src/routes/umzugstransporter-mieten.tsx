@@ -63,8 +63,8 @@ function UmzugstransporterPage() {
             Kleinanzeigen-Abholung. Der <strong className="text-foreground">lange L4H2 mit Hochdach</strong>{" "}
             bietet deutlich mehr Laderaum und Stehhöhe – sinnvoll, wenn eine ganze Wohnung oder
             hohe Schränke transportiert werden. Er kostet {L4H2_SURCHARGE_PER_DAY_EUR} € pro Miettag
-            mehr. Für besonders lange Ladung gibt es zusätzlich einen VW Crafter mit Abholung in{" "}
-            <Link to="/transporter-mieten-pforzheim-calw" className="underline text-foreground">Engelsbrand-Grunbach</Link>.
+            mehr. Für besonders lange Ladung gibt es zusätzlich einen <Link to="/transporter-mieten-pforzheim-calw" className="underline text-foreground">extra langen VW Crafter</Link>,
+            ebenfalls mit Abholung in Leonberg.
           </p>
           <p className="mt-3 text-muted-foreground leading-relaxed">
             Faustregel: Lieber eine Größe mehr als zwei Fahrten. Die genauen Laderaummaße jedes
