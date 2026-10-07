@@ -1,6 +1,5 @@
 import logoImage from "@/assets/logo.png";
 import { MobileTopAd } from "@/components/ads/MobileTopAd";
-import { HouseAdCta } from "@/components/ads/HouseAdCta";
 function goToBooking() {
   window.dispatchEvent(new CustomEvent("mt:go-to-booking-start"));
   document.getElementById("booking")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -10,7 +9,6 @@ export function HeroSection() {
   return (
     <section className="pt-10 pb-6 px-4">
       <MobileTopAd />
-      <HouseAdCta />
       <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
         <button
           type="button"

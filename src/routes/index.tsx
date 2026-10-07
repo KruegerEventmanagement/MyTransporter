@@ -11,7 +11,6 @@ import { Navbar } from "@/components/Navbar";
 
 import { SocialBanner } from "@/components/SocialBanner";
 import { HomeIntroSection } from "@/components/HomeIntroSection";
-import { HomeOfferSummary } from "@/components/HomeOfferSummary";
 import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 
@@ -32,7 +31,6 @@ function Index() {
       <Navbar />
       <AdRails>
         <HeroSection />
-        <HomeOfferSummary />
         <BookingSection />
         <SocialBanner />
         <InFlowAd placement="inFlowBottom" />

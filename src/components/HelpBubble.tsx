@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { HelpCircle, X, Phone, Mail, User } from "lucide-react";
+import { HelpCircle, X, Phone, Mail, User, BookOpen } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 export function HelpBubble() {
   const [open, setOpen] = useState(false);
@@ -63,6 +64,13 @@ export function HelpBubble() {
               <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
               <span className="font-medium truncate">info@mytransporter.org</span>
             </a>
+            <Link
+              to="/mietratgeber"
+              className="flex items-center gap-2.5 text-sm text-foreground rounded-xl bg-secondary px-3 py-2.5 hover:bg-secondary/70"
+            >
+              <BookOpen className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="font-medium">Mietratgeber</span>
+            </Link>
           </div>
         </div>
       )}
