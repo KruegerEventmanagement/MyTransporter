@@ -243,6 +243,12 @@ function customerMailLabel(m: ManualReservation, st?: CustomerMailState): string
   return "Kundenbestätigung ausstehend";
 }
 
+function canSendConfirmation(m: ManualReservation, st?: CustomerMailState): boolean {
+  if (m.total_price_cents == null || !m.customer_email) return false;
+  if (!st || st.revision !== m.revision) return true;
+  return st.status === "failed" || st.status === "pending";
+}
+
 function mailErrorText(kind: string | null): string {
   switch (kind) {
     case "invalid_key":
@@ -840,11 +846,7 @@ export function CalendarAdmin() {
                         <p className="text-xs text-muted-foreground">
                           {customerMailLabel(e.manual, customerMail[e.manual.id])}
                         </p>
-                        {e.manual.total_price_cents != null &&
-                          e.manual.customer_email &&
-                          customerMail[e.manual.id]?.status !== "sent" &&
-                          customerMail[e.manual.id]?.revision !== undefined || 
-                          (e.manual.total_price_cents != null && e.manual.customer_email && !customerMail[e.manual.id]) ? (
+                        {canSendConfirmation(e.manual, customerMail[e.manual.id]) ? (
                           <button
                             type="button"
                             disabled={sendingId === e.manual.id}
