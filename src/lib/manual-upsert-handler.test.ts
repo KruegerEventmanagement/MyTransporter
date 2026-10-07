@@ -6,7 +6,7 @@ vi.mock("@tanstack/react-start", () => {
 });
 vi.mock("@/lib/manual-notifications.server", () => ({ kickManualNotificationOutbox: vi.fn() }));
 vi.mock("@/lib/calendar-sync.server", () => ({ kickCalendarSync: vi.fn() }));
-const run = vi.fn(async (_d: unknown, t: { revision: number }) => ({ status: "failed", kind: "invalid_key", error: "x", ambiguous: false, revision: t.revision }));
+const { run } = vi.hoisted(() => ({ run: vi.fn(async (_d: unknown, t: { revision: number }) => ({ status: "failed", kind: "invalid_key", error: "x", ambiguous: false, revision: t.revision })) }));
 vi.mock("@/lib/manual-confirmation.server", () => ({ runCustomerConfirmation: run, createConfirmationDeps: async () => ({}) }));
 
 import { upsertManualReservation } from "@/lib/manual-reservations.functions";
