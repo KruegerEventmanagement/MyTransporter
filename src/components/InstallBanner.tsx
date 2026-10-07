@@ -94,7 +94,7 @@ export function InstallBanner() {
     setVisible(false);
   };
 
-  if (!visible) return null;
+  if (!visible || onTrip) return null;
 
   const hint =
     platform === "ios-other" ? "In Safari öffnen" : "Auf dem Homescreen speichern";
