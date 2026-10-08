@@ -21,7 +21,7 @@ import retroVideo from "@/assets/videos/mytransporter-retro.mp4.asset.json";
 import retroPoster from "@/assets/videos/mytransporter-retro-poster.jpg.asset.json";
 
 const ENTRY = ["3h", "6h", "24h_300"].map((id) => PLAN_CATALOG.find((p) => p.id === id)!);
-const LONG = ["24h_500", "24h_800"].map((id) => PLAN_CATALOG.find((p) => p.id === id)!);
+const LONG = ["24h_300km", "24h_500", "24h_800"].map((id) => PLAN_CATALOG.find((p) => p.id === id)!);
 const MIN_PRICE = Math.min(...PLAN_CATALOG.map((p) => p.price));
 
 export const Route = createFileRoute("/preise")({
@@ -95,7 +95,7 @@ function PreisePage() {
             ))}
           </div>
 
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
             {LONG.map((p) => (
               <div key={p.id} className="rounded-2xl border border-border bg-card p-5 text-center">
                 <p className="text-sm text-muted-foreground">{p.label}</p>
