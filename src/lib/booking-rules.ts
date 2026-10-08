@@ -6,8 +6,9 @@
  * Der Zahlbetrag wird ausschließlich serverseitig aus diesem Katalog berechnet.
  *
  * Preis-Invariante: Grundtarif + Mehrkilometer ist nie günstiger als ein
- * beworbenes Kilometerpaket. Beispiel L1H1: 24h/480 km (99 €) + 320 km × 0,45 €
- * = 243 € (24h/800-km-Paket 299 €). Kurzzeittarife (3h/6h/24h) = 20 km je Mietstunde.
+ * beworbenes Kilometerpaket. Beispiel L1H1: 24h/150 km (99 €) + 150 km × 0,45 €
+ * = 166,50 € (24h/300-km-Paket 139 €). Stand 08.10.2026: 3h 70, 6h 100, 24h 150/300/500/800,
+ * Mehrtage 100 km je Miettag (2 Tage 200 … 7 Tage 700).
  *
  * Kilometer-Katalogversion: Seit KM_CATALOG_VERSION sind die zeitabhängigen
  * Inklusivkilometer um ein Drittel reduziert (Faktor 2/3). Bestehende Buchungen
@@ -139,25 +140,31 @@ export function extraKmCentsFor(vehicleClass: VehicleClass, days: number): numbe
 const PLAN_TEMPLATES: PlanTemplate[] = [
   {
     id: "3h", label: "3 Stunden Express", shortLabel: "3 h Express",
-    days: 1, durationHours: 3, basePrice: 49, basePriceL4h2: 59, freeKm: 60,
+    days: 1, durationHours: 3, basePrice: 49, basePriceL4h2: 59, freeKm: 70,
     returnRule: "Rückgabe nach 3 Stunden",
     idealFor: "Kurze Transporte, Möbelhaus, Kleinanzeigen-Abholung",
   },
   {
     id: "6h", label: "6 Stunden Umzug Mini", shortLabel: "6 h Mini",
-    days: 1, durationHours: 6, basePrice: 69, basePriceL4h2: 79, freeKm: 120,
+    days: 1, durationHours: 6, basePrice: 69, basePriceL4h2: 79, freeKm: 100,
     returnRule: "Rückgabe nach 6 Stunden",
     idealFor: "Kleine Umzüge, mehrere Fahrten, Entrümpelung",
   },
   {
-    id: "24h_300", label: "24 Stunden Umzugstag", shortLabel: "24 h · 480 km",
-    days: 1, durationHours: 24, basePrice: 99, basePriceL4h2: 109, freeKm: 480,
+    id: "24h_300", label: "24 Stunden Umzugstag", shortLabel: "24 h · 150 km",
+    days: 1, durationHours: 24, basePrice: 99, basePriceL4h2: 109, freeKm: 150,
     returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit",
     idealFor: "Kompletter Umzugstag, stressfreies Be- und Entladen",
     highlight: "popular", highlightLabel: "Beliebtester Tarif",
   },
   {
-    id: "24h_500", label: "24 Stunden Langstrecke", shortLabel: "24 h · 500 km",
+    id: "24h_300km", label: "24 Stunden Langstrecke", shortLabel: "24 h · 300 km",
+    days: 1, durationHours: 24, basePrice: 139, basePriceL4h2: 149, freeKm: 300,
+    returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit",
+    idealFor: "Längere Strecken, Fahrten in die Nachbarregion, mehrere Touren an einem Tag",
+  },
+  {
+    id: "24h_500", label: "24 Stunden Weitstrecke", shortLabel: "24 h · 500 km",
     days: 1, durationHours: 24, basePrice: 189, basePriceL4h2: 199, freeKm: 500,
     returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit",
     idealFor: "Weitere Strecken, größere Abholungen, Transporte außerhalb der Region",
@@ -171,38 +178,38 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
   },
   {
     id: "multi_2d", label: "2 Tage Kurzprojekt", shortLabel: "2 Tage",
-    days: 2, durationHours: 48, basePrice: 189, basePriceL4h2: 209, freeKm: 400,
+    days: 2, durationHours: 48, basePrice: 189, basePriceL4h2: 209, freeKm: 200,
     returnRule: "Rückgabe nach 2 Tagen zur gleichen Uhrzeit",
     idealFor: "Wochenende, kleiner Umzug, Möbeltransport",
   },
   {
     id: "multi_3d", label: "3 Tage Umzug Plus", shortLabel: "3 Tage",
-    days: 3, durationHours: 72, basePrice: 269, basePriceL4h2: 299, freeKm: 600,
+    days: 3, durationHours: 72, basePrice: 269, basePriceL4h2: 299, freeKm: 300,
     returnRule: "Rückgabe nach 3 Tagen zur gleichen Uhrzeit",
     idealFor: "Entspannter Umzug, Abbau, Transport und Aufbau ohne Zeitdruck",
     highlight: "popular", highlightLabel: "Beliebt für Umzüge",
   },
   {
     id: "multi_4d", label: "4 Tage Renovierungs-Tarif", shortLabel: "4 Tage",
-    days: 4, durationHours: 96, basePrice: 339, basePriceL4h2: 379, freeKm: 800,
+    days: 4, durationHours: 96, basePrice: 339, basePriceL4h2: 379, freeKm: 400,
     returnRule: "Rückgabe nach 4 Tagen zur gleichen Uhrzeit",
     idealFor: "Renovierung, Baumarkt, Möbelhaus, Entsorgung",
   },
   {
     id: "multi_5d", label: "5 Tage Projektwoche Mini", shortLabel: "5 Tage",
-    days: 5, durationHours: 120, basePrice: 399, basePriceL4h2: 449, freeKm: 1000,
+    days: 5, durationHours: 120, basePrice: 399, basePriceL4h2: 449, freeKm: 500,
     returnRule: "Rückgabe nach 5 Tagen zur gleichen Uhrzeit",
     idealFor: "Längere Projekte, mehrere Transporte, Firmen oder Umbauten",
   },
   {
     id: "multi_6d", label: "6 Tage Projektwoche", shortLabel: "6 Tage",
-    days: 6, durationHours: 144, basePrice: 449, basePriceL4h2: 509, freeKm: 1200,
+    days: 6, durationHours: 144, basePrice: 449, basePriceL4h2: 509, freeKm: 600,
     returnRule: "Rückgabe nach 6 Tagen zur gleichen Uhrzeit",
     idealFor: "Intensive Umzugswoche, Renovierung, gewerbliche Nutzung",
   },
   {
     id: "multi_7d", label: "7 Tage Wochenmiete", shortLabel: "7 Tage Wochenmiete",
-    days: 7, durationHours: 168, basePrice: 499, basePriceL4h2: 569, freeKm: 1400,
+    days: 7, durationHours: 168, basePrice: 499, basePriceL4h2: 569, freeKm: 700,
     returnRule: "Rückgabe nach 7 Tagen zur gleichen Uhrzeit",
     idealFor: "Komplette Projektwoche, Baustelle, Umzug, Firmen",
     highlight: "best_daily", highlightLabel: "Bester Tagespreis",
@@ -210,9 +217,9 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
 ];
 
 /** Aktuelle Kilometer-Katalogversion (wird in Stripe-Metadata festgehalten). */
-export const KM_CATALOG_VERSION = "km-2026-10-06";
+export const KM_CATALOG_VERSION = "km-2026-10-08";
 /** Vorherige Version (neue km, alte Sätze 0,35/0,29) – Snapshots daraus bleiben gültig. */
-export const PREVIOUS_KM_CATALOG_VERSIONS = ["km-2026-09-30", "km-2026-09-30b"] as const;
+export const PREVIOUS_KM_CATALOG_VERSIONS = ["km-2026-09-30", "km-2026-09-30b", "km-2026-10-06"] as const;
 
 export const KM_CATALOG_OUTDATED_MESSAGE =
   "Tarife wurden aktualisiert. Bitte Seite neu laden und die aktuellen Konditionen prüfen.";
