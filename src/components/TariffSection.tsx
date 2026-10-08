@@ -76,7 +76,7 @@ export function TariffSection() {
             </h3>
             <p className="mt-2 text-sm text-muted-foreground max-w-2xl mx-auto">
               Wenn ein Tag nicht reicht: Buche einen Transporter einfach mehrere Tage
-              und profitiere von günstigeren Tagespreisen. Preise L1H1 / L4H2 / Crafter.
+              zum festen Paketpreis. Preise L1H1 / L4H2 / Crafter.
             </p>
           </div>
 
@@ -87,13 +87,11 @@ export function TariffSection() {
                   <th className="text-left px-4 py-3 font-semibold">Tarif</th>
                   <th className="text-right px-4 py-3 font-semibold">L1H1 / L4H2 / Crafter</th>
                   <th className="text-right px-4 py-3 font-semibold hidden sm:table-cell">Inklusive km</th>
-                  <th className="text-right px-4 py-3 font-semibold">pro Tag</th>
                   <th className="px-2 py-3"></th>
                 </tr>
               </thead>
               <tbody>
                 {MULTI.map((plan) => {
-                  const perDay = (plan.price / plan.days).toFixed(2).replace(".", ",");
                   const highlighted = !!plan.highlightLabel;
                   return (
                     <tr key={plan.id} className={`border-t border-border ${highlighted ? "bg-secondary/30" : ""}`}>
@@ -115,7 +113,6 @@ export function TariffSection() {
                       <td className="px-4 py-3 text-right text-muted-foreground whitespace-nowrap hidden sm:table-cell">
                         {plan.freeKm.toLocaleString("de-DE")} km
                       </td>
-                      <td className="px-4 py-3 text-right text-foreground whitespace-nowrap">{perDay} €</td>
                       <td className="px-2 py-3 text-right">
                         <button
                           type="button"

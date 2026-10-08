@@ -10,32 +10,32 @@ const eur = (planId: string, km: number, c: "l1h1" | "l4h2" | "l5h2" = "l1h1") =
 
 describe("Beispiele L1H1", () => {
   it("24 h", () => {
-    expect([480, 500, 503, 700, 800, 803].map((k) => eur("24h_300", k))).toEqual([99, 108, 109.35, 198, 243, 244.35]);
-    const q = quoteCustomKm("24h_300", "l1h1", 503)!;
-    expect([q.consideredPlanId, q.contractKm, q.surchargeCents, q.rateCents]).toEqual(["24h_300", 503, 1035, 45]);
-    expect(quoteCustomKm("24h_300", "l1h1", 400)!.contractKm).toBe(480);
+    expect([150, 300, 303, 500, 800, 803].map((k) => eur("24h_300", k))).toEqual([99, 139, 140.35, 189, 299, 300.35]);
+    const q = quoteCustomKm("24h_300", "l1h1", 303)!;
+    expect([q.consideredPlanId, q.contractKm, q.surchargeCents, q.rateCents]).toEqual(["24h_300km", 303, 4135, 45]);
+    expect(quoteCustomKm("24h_300", "l1h1", 100)!.contractKm).toBe(150);
   });
   it("Mehrtage/Woche", () => {
-    expect([600, 900, 1200].map((k) => eur("multi_3d", k))).toEqual([269, 404, 539]);
-    expect(eur("multi_3d", 900, "l4h2")).toBe(434);
-    expect(eur("multi_3d", 900, "l5h2")).toBe(450);
-    expect(eur("multi_7d", 1400)).toBe(499);
-    expect(eur("multi_7d", 2000)).toBe(769);
-    expect(quoteCustomKm("multi_7d", "l1h1", 2000)!.rateCents).toBe(45);
+    expect([300, 600, 900].map((k) => eur("multi_3d", k))).toEqual([269, 404, 539]);
+    expect(eur("multi_3d", 600, "l4h2")).toBe(434);
+    expect(eur("multi_3d", 600, "l5h2")).toBe(450);
+    expect(eur("multi_7d", 700)).toBe(499);
+    expect(eur("multi_7d", 1300)).toBe(769);
+    expect(quoteCustomKm("multi_7d", "l1h1", 1300)!.rateCents).toBe(45);
   });
-  it("500/800-Grenzen ±1 km", () => {
-    expect(eur("24h_300", 479)).toBe(99);
-    expect(eur("24h_300", 481)).toBe(99.45);
-    expect(eur("24h_300", 799)).toBe(242.55);
-    expect(eur("24h_300", 801)).toBe(243.45);
+  it("150/300-Grenzen ±1 km", () => {
+    expect(eur("24h_300", 149)).toBe(99);
+    expect(eur("24h_300", 151)).toBe(99.45);
+    expect(eur("24h_300", 299)).toBe(139);
+    expect(eur("24h_300", 301)).toBe(139.45);
   });
 });
 
 describe("Regeln", () => {
   it("≤ enthalten → 0 € Aufschlag, volles Kontingent, keine Gutschrift", () => {
-    for (const k of [0, 100, 480]) {
+    for (const k of [0, 100, 150]) {
       const q = quoteCustomKm("24h_300", "l1h1", k)!;
-      expect([q.surchargeCents, q.contractKm]).toEqual([0, 480]);
+      expect([q.surchargeCents, q.contractKm]).toEqual([0, 150]);
     }
     expect(quoteCustomKm("multi_3d", "l1h1", 0)!.totalRentCents).toBe(26900);
   });
@@ -46,7 +46,7 @@ describe("Regeln", () => {
   });
   it("kein Dauerwechsel: 3h/6h bleiben bei eigenem Satz", () => {
     const q = quoteCustomKm("3h", "l1h1", 167)!;
-    expect([q.consideredPlanId, q.surchargeCents]).toEqual(["3h", 4815]);
+    expect([q.consideredPlanId, q.surchargeCents]).toEqual(["3h", 4365]);
   });
   it("jede Klasse × Tarif: nie negativ, Kontingent ≥ Original, monoton", () => {
     for (const c of VEHICLE_CLASSES) for (const p of planCatalog(c)) {
@@ -79,7 +79,7 @@ describe("Eingabe", () => {
 describe("Anfragerechner (Katalog 0,45 €)", () => {
   it("gleiche Beträge wie vorher", () => {
     const t3 = { startDate: "2026-10-05", startTime: "09:00", endDate: "2026-10-08", endTime: "09:00" };
-    const q = quoteRental({ ...t3, desiredKm: 900 }, "l1h1");
+    const q = quoteRental({ ...t3, desiredKm: 600 }, "l1h1");
     expect(q.ok && q.totalEur).toBe(404);
     const t30 = { ...t3, endDate: "2026-11-04" };
     const l = quoteRental({ ...t30, desiredKm: 2667 }, "l1h1");

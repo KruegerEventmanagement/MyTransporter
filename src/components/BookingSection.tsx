@@ -1463,11 +1463,6 @@ export function BookingSection() {
                     </div>
                   </div>
 
-                  {plan.days > 1 && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      ≈ {(planFromPrice / plan.days).toFixed(2).replace(".", ",")} € pro Tag
-                    </p>
-                  )}
                 </button>
                 );
               })}
