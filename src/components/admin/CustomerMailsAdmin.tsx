@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { listCustomerMails, retryCustomerMail, saveReviewLink } from "@/lib/customer-mails.functions";
-import { outboxStatusLabel } from "@/lib/customer-mail-outbox";
+import { outboxStatusLabel, GOOGLE_REVIEW_URL } from "@/lib/customer-mail-outbox";
 
 type Row = {
   id: string;
@@ -97,11 +97,12 @@ export function CustomerMailsAdmin() {
       <div className="rounded-2xl border border-border p-4 space-y-2">
         <p className="text-sm font-semibold">Google-Bewertungslink</p>
         {!data?.settings?.google_review_url && (
-          <p className="text-xs text-destructive">
-            Kein Bewertungslink hinterlegt – Bewertungsanfragen sind gesperrt. Füge den Link „Bewertung anfordern“ aus deinem Google-Unternehmensprofil ein.
-          </p>
+          <p className="text-xs text-muted-foreground">Standard: verifiziertes Google-Profil {GOOGLE_REVIEW_URL}</p>
         )}
-        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://g.page/r/…/review" className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm" />
+        {!data?.settings?.review_requests_from && (
+          <p className="text-xs text-destructive">Bewertungsanfragen sind noch nicht aktiviert – Speichern startet sie für Buchungen ab jetzt.</p>
+        )}
+        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder={GOOGLE_REVIEW_URL} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm" />
         <button
           type="button"
           className="rounded-full bg-foreground text-background px-4 py-2 text-sm font-semibold"

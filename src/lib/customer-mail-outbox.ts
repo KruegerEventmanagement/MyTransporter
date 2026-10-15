@@ -16,6 +16,15 @@ export const OUTBOX_SIGNATURE = "Christian Krüger\nMyTransporter";
 export const OUTBOX_LEASE_SECONDS = 90;
 /** Resend hält Idempotenz-Schlüssel 24 h – wir bleiben sicher darunter. */
 export const OUTBOX_SAFE_SECONDS = 23 * 3600;
+/** Vom Inhaber verifiziertes öffentliches Google-Profil (CID aus Google-Business-Profile-Mails, 09.10.2026). */
+export const GOOGLE_REVIEW_URL = "https://www.google.com/maps?cid=9407266905378611223";
+export const REVIEW_BUTTON_LABEL = "Bei Google bewerten";
+export const REVIEW_LINK_TEXT = "Google-Profil öffnen";
+
+/** Hinterlegter Link aus den Einstellungen, sonst der zentrale verifizierte Profil-Link. */
+export function effectiveReviewUrl(stored: string | null | undefined): string {
+  return validateGoogleReviewUrl(stored) ?? GOOGLE_REVIEW_URL;
+}
 export const REVIEW_DELAY_MS = 24 * 3600_000;
 
 export type OutboxKind = "invoice" | "review_request" | "reminder_24h" | "reminder_30min";
@@ -170,12 +179,12 @@ export function buildReviewMail(i: ReviewMailInput): FrozenOutboxMail {
   const valid = validateGoogleReviewUrl(i.reviewUrl);
   // Nur die Test-Vorschau darf ohne echten Link gerendert werden (Platzhalter, klar markiert).
   if (!valid && !i.preview) throw new Error("Kein gültiger Google-Bewertungslink hinterlegt");
-  const url = valid ?? APP_ORIGIN;
+  const url = valid ?? GOOGLE_REVIEW_URL;
   const optOut = reviewOptOutUrl(i.optOutToken);
   const prefix = i.preview ? "[TEST – Vorschau] " : "";
   const intro = [
     ...(i.preview
-      ? [`Dies ist eine Test-Vorschau. Keine echte Kundenmail.${valid ? "" : " Der Google-Bewertungslink ist noch nicht hinterlegt – der Button führt deshalb nur zur Startseite."}`]
+      ? [`Dies ist eine Test-Vorschau. Keine echte Kundenmail.`]
       : []),
     "vielen Dank für deine Buchung bei MyTransporter.",
     "Wir sind ein kleines Unternehmen aus Leonberg und lernen aus jeder Rückmeldung. Wenn du magst, teile deine bisherige Erfahrung mit uns in einer ehrlichen Bewertung auf Google – ganz gleich, wie sie ausgefallen ist.",
@@ -185,7 +194,7 @@ export function buildReviewMail(i: ReviewMailInput): FrozenOutboxMail {
     firstName: i.firstName,
     heading: i.preview ? "TEST – Deine Erfahrung mit MyTransporter" : "Deine Erfahrung mit MyTransporter",
     intro,
-    button: { label: "Bewertung auf Google schreiben", url },
+    button: { label: REVIEW_BUTTON_LABEL, url },
     extraHtml: noteBlock(
       `Du möchtest keine Bewertungsanfragen mehr erhalten? <a href="${esc(optOut)}" style="color:#000;">Hier abmelden</a>.`,
     ),
@@ -197,7 +206,7 @@ export function buildReviewMail(i: ReviewMailInput): FrozenOutboxMail {
     "",
     ...intro,
     "",
-    `Bewertung auf Google schreiben: ${url}`,
+    `${REVIEW_LINK_TEXT}: ${url}`,
     "",
     "Wenn etwas nicht gepasst hat, antworte gern direkt auf diese E-Mail – wir kümmern uns.",
     "",

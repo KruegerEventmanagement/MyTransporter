@@ -10,6 +10,7 @@ import {
   processOutboxRow,
   reviewDueAt,
   validateGoogleReviewUrl,
+  effectiveReviewUrl,
   OUTBOX_LEASE_SECONDS,
   OUTBOX_SAFE_SECONDS,
   type FrozenOutboxMail,
@@ -248,8 +249,9 @@ export async function enqueueReviewRequest(source: OutboxSource, sourceId: strin
   const existing = await getRow(source, sourceId, "review_request");
   if (existing) return { state: "queued", rowId: existing.id };
   const s = settings ?? (await loadMailSettings());
-  const url = validateGoogleReviewUrl(s.google_review_url);
-  if (!url || !s.review_requests_from) return { state: "disabled" };
+  const url = effectiveReviewUrl(s.google_review_url);
+  // Start nur nach ausdrücklicher Aktivierung (review_requests_from) – nie rückwirkend.
+  if (!s.review_requests_from) return { state: "disabled" };
   const db = await admin();
   let createdAt: string, email: string, firstName: string | null;
   if (source === "booking") {
@@ -360,7 +362,7 @@ export async function runCustomerMailSweep(): Promise<Record<string, number>> {
   for (const b of await missing("invoice", settings.invoice_outbox_from)) {
     try { if ((await enqueueBookingInvoice(b.id)).state === "queued") stats.invoices_enqueued++; } catch (e) { note("Rechnung", e); }
   }
-  if (settings.review_requests_from && validateGoogleReviewUrl(settings.google_review_url)) {
+  if (settings.review_requests_from) {
     for (const b of await missing("review_request", settings.review_requests_from)) {
       try { if ((await enqueueReviewRequest("booking", b.id, settings)).state === "queued") stats.reviews_enqueued++; } catch (e) { note("Bewertung", e); }
     }
@@ -370,7 +372,7 @@ export async function runCustomerMailSweep(): Promise<Record<string, number>> {
   for (const m of (mi ?? []) as { id: string }[]) {
     try { if ((await enqueueManualInvoice(m.id)).state === "queued") stats.manual_enqueued++; } catch (e) { note("manuelle Rechnung", e); }
   }
-  if (settings.review_requests_from && validateGoogleReviewUrl(settings.google_review_url)) {
+  if (settings.review_requests_from) {
     const { data: mr, error: mrErr } = await db.rpc("customer_mail_missing_manual", { _kind: "review_request", _from: settings.review_requests_from, _limit: 50 });
     if (mrErr) throw new Error(mrErr.message);
     for (const m of (mr ?? []) as { id: string }[]) {
