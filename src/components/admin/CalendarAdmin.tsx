@@ -577,6 +577,7 @@ export function CalendarAdmin() {
       price: centsToInput(m.total_price_cents),
       hadPrice: m.total_price_cents != null,
       sendConfirmation: false,
+      reviewConsent: false,
     });
     void loadDocs(m.id);
   };

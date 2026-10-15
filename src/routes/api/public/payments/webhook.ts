@@ -296,7 +296,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
         const { recordReviewConsent } = await import("@/lib/customer-mail-outbox.server");
         await recordReviewConsent({
           source: "booking", sourceId: booking.id as string, userId, email: session.customer_details?.email ?? null,
-          origin: "online_checkout", version: rc, grantedAt: new Date((session.created ?? Date.now() / 1000) * 1000).toISOString(),
+          origin: "online_checkout", version: rc, grantedAt: new Date().toISOString(),
         });
       } catch (e) {
         console.error("[webhook] Bewertungs-Einwilligung nicht gespeichert", String((e as Error)?.message ?? e).slice(0, 200));
