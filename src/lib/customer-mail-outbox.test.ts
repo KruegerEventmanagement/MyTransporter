@@ -118,7 +118,7 @@ describe("Vorlagen", () => {
     const m = buildReviewMail({ firstName: "Max", to: "a@b.de", reviewUrl: REVIEW, optOutToken: "tok-1" });
     expect(m.html).toContain(REVIEW);
     expect(m.text).toContain("review-opt-out?t=tok-1");
-    expect(m.text).toMatch(/ehrliche Bewertung/);
+    expect(m.text).toMatch(/ehrlichen? Bewertung/);
     expect(`${m.text}`).not.toMatch(/Gutschein|Rabatt|5 Sterne|fünf Sterne/i);
     expect(m.subject).toBe("Deine Erfahrung mit MyTransporter");
     expect(m.text).not.toMatch(/Wie war deine Miete/);
