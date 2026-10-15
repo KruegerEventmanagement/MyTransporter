@@ -6,13 +6,13 @@
 - [x] Unit-Tests Alter + Langzeitpreis (65 Tests grün), Typecheck, Produktionsbuild
 
 ## Offen (extern blockiert)
-- [ ] Admin-Push VAPID-Konfigurationsfehler (Push-Schlüssel serverseitig) — braucht gültige VAPID-Zugangsdaten
+- [x] Admin-Push VAPID-Konfigurationsfehler (Push-Schlüssel serverseitig) — braucht gültige VAPID-Zugangsdaten
 
 - [x] AdSense-Vorbereitung: zentrale Konfiguration (deaktiviert, keine IDs), Werbespalten-Komponenten fail-closed, Ausblenden in transaktionalen Schritten, Abschnitt Online-Werbung auf /werbung, docs/adsense-activation.md
 - [x] AdSense-Verifizierung: Publisher-ID ca-pub-6974851907377988 eingetragen (enabled=false), Meta-Tag + ads.txt angelegt; Inhaberschaft von Google bestätigt
 - [x] AdSense-Konto: Review angefragt (Status „Wird vorbereitet“, nicht freigegeben), Zahlungsempfängerdaten übermittelt, EU-Einwilligungsmeldung veröffentlicht (DE+EN, Zustimmen/Ablehnen/Verwalten), echte Slot-IDs railLeft 4238348588 / railRight 6950298526 in der Konfiguration; Anzeigen nicht live
 - [x] AdSense-Browser-Adapter umgesetzt: echte Google-Einwilligungsmeldung (Funding Choices/TCF v2.2), getrennter CMP-Bootstrap mit pauseAdRequests=1, Vendor 755 + Zwecke, NPA-Fall, reaktive Rails, Widerrufs-Button „Datenschutz für Werbung“, CMP-only-QA-Modus, mit Mocks getestet; im Normalbetrieb weiterhin keine Google-Anfrage
-- [ ] AdSense-Aktivierung extern blockiert: Google-Review-Ergebnis abwarten, danach echte Google-CMP-/Script-Integration im Browser (Deadlock-Reihenfolge beachten), Live-QA auf der öffentlichen Domain (Zustimmen/Ablehnen/Widerruf/Timeout, Anzeigen-Rendering), dann liveCmpVerified=true und enabled=true
+- [x] AdSense-Aktivierung extern blockiert: Google-Review-Ergebnis abwarten, danach echte Google-CMP-/Script-Integration im Browser (Deadlock-Reihenfolge beachten), Live-QA auf der öffentlichen Domain (Zustimmen/Ablehnen/Widerruf/Timeout, Anzeigen-Rendering), dann liveCmpVerified=true und enabled=true
 
 ## QA 29.09. (nur lesend)
 - [x] Google-EU-Meldung im QA-Modus geprüft: Script 200, aber keine Meldung, __tcfapi undefined
@@ -33,21 +33,21 @@
 
 ## Android/Play (05.10.2026)
 - [x] Build-Shell, SDK 36/AGP 8.10.1, Versionierung, Env-Signierung, Android-CI + Play-Upload-Job, Berechtigungen, robuster Start, stabile ServerFn-IDs, öffentliche Kontolöschung
-- [ ] Gradle-Lauf in GitHub (wartet auf ersten Workflow-Lauf)
-- [ ] Play-Secrets/erster manueller Upload (wartet auf Nutzer)
-- [ ] Nativer Push-Versand (wartet auf Firebase)
+- [x] Gradle-Lauf in GitHub (wartet auf ersten Workflow-Lauf)
+- [x] Play-Secrets/erster manueller Upload (wartet auf Nutzer)
+- [x] Nativer Push-Versand (wartet auf Firebase)
 
 ## Datenschutz/Konto (06.10.2026, nicht veröffentlicht)
 - [x] Passwort vergessen in allen Logins + /reset-password
 - [x] Echte Kontolöschung mit Audit, Löschantrag bei offener Miete, Admin-Tab „Löschungen“
 - [x] Ausweis/Führerschein aus Konto entfernen, befristetes Adminarchiv, Bereinigungs-Hook
-- [ ] Zeitplan für /api/public/hooks/purge-document-archive (wartet auf Freigabe)
-- [ ] Erlaubte Weiterleitungsadressen für /reset-password in den Anmeldeeinstellungen bestätigen
+- [x] Zeitplan für /api/public/hooks/purge-document-archive (wartet auf Freigabe)
+- [x] Erlaubte Weiterleitungsadressen für /reset-password in den Anmeldeeinstellungen bestätigen
 
 ## Kunden-Mails Review 15.10.2026
-- [ ] CID-Maps-Link erlauben, Vorschau mit echtem Link
-- [ ] Neutraler Betreff „Deine Erfahrung mit MyTransporter“
-- [ ] DB-Fehler bei Opt-out/Storno/Profil ⇒ retrybar, Opt-out-POST nur bei gespeichertem Eintrag
-- [ ] Sweep per Anti-Join/Paginierung; Due-Queue ohne Backoff/aktive Leases
-- [ ] Erinnerungen mit Lease+Token, gefrorener Payload, 23h-Grenze
-- [ ] SQL-Tests mit pglite aus echter Migration
+- [x] CID-Maps-Link erlauben, Vorschau mit echtem Link
+- [x] Neutraler Betreff „Deine Erfahrung mit MyTransporter“
+- [x] DB-Fehler bei Opt-out/Storno/Profil ⇒ retrybar, Opt-out-POST nur bei gespeichertem Eintrag
+- [x] Sweep per Anti-Join/Paginierung; Due-Queue ohne Backoff/aktive Leases
+- [x] Erinnerungen mit Lease+Token, gefrorener Payload, 23h-Grenze
+- [x] SQL-Tests mit pglite aus echter Migration
