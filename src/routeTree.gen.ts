@@ -44,6 +44,7 @@ import { Route as ApiPublicHooksPurgeDocumentArchiveRouteImport } from './routes
 import { Route as ApiPublicHooksReturnRemindersRouteImport } from './routes/api/public/hooks/return-reminders'
 import { Route as ApiPublicHooksSendBirthdayEmailsRouteImport } from './routes/api/public/hooks/send-birthday-emails'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
+import { Route as ApiPublicHooksSyncDepositRefundsRouteImport } from './routes/api/public/hooks/sync-deposit-refunds'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -232,6 +233,12 @@ const ApiPublicHooksSendRemindersRoute =
     path: '/api/public/hooks/send-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSyncDepositRefundsRoute =
+  ApiPublicHooksSyncDepositRefundsRouteImport.update({
+    id: '/api/public/hooks/sync-deposit-refunds',
+    path: '/api/public/hooks/sync-deposit-refunds',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -275,6 +282,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/return-reminders': typeof ApiPublicHooksReturnRemindersRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
+  '/api/public/hooks/sync-deposit-refunds': typeof ApiPublicHooksSyncDepositRefundsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -313,6 +321,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/return-reminders': typeof ApiPublicHooksReturnRemindersRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
+  '/api/public/hooks/sync-deposit-refunds': typeof ApiPublicHooksSyncDepositRefundsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -352,6 +361,7 @@ export interface FileRoutesById {
   '/api/public/hooks/return-reminders': typeof ApiPublicHooksReturnRemindersRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
+  '/api/public/hooks/sync-deposit-refunds': typeof ApiPublicHooksSyncDepositRefundsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -392,6 +402,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/return-reminders'
     | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
+    | '/api/public/hooks/sync-deposit-refunds'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -430,6 +441,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/return-reminders'
     | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
+    | '/api/public/hooks/sync-deposit-refunds'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -468,6 +480,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/return-reminders'
     | '/api/public/hooks/send-birthday-emails'
     | '/api/public/hooks/send-reminders'
+    | '/api/public/hooks/sync-deposit-refunds'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -507,6 +520,7 @@ export interface RootRouteChildren {
   ApiPublicHooksReturnRemindersRoute: typeof ApiPublicHooksReturnRemindersRoute
   ApiPublicHooksSendBirthdayEmailsRoute: typeof ApiPublicHooksSendBirthdayEmailsRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
+  ApiPublicHooksSyncDepositRefundsRoute: typeof ApiPublicHooksSyncDepositRefundsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -757,6 +771,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSendRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/sync-deposit-refunds': {
+      id: '/api/public/hooks/sync-deposit-refunds'
+      path: '/api/public/hooks/sync-deposit-refunds'
+      fullPath: '/api/public/hooks/sync-deposit-refunds'
+      preLoaderRoute: typeof ApiPublicHooksSyncDepositRefundsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -806,6 +827,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksReturnRemindersRoute: ApiPublicHooksReturnRemindersRoute,
   ApiPublicHooksSendBirthdayEmailsRoute: ApiPublicHooksSendBirthdayEmailsRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
+  ApiPublicHooksSyncDepositRefundsRoute: ApiPublicHooksSyncDepositRefundsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
