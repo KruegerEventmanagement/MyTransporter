@@ -1,0 +1,68 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { requireActiveAccount } from "@/lib/active-account";
+import { validateGoogleReviewUrl } from "@/lib/customer-mail-outbox";
+
+async function assertAdmin(context: { supabase: any; userId: string }) {
+  const { data } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+  if (!data) throw new Error("Nicht berechtigt");
+}
+
+const COLS =
+  "id, source_type, source_id, kind, status, due_at, recipient_email, attempts, ambiguous, error_kind, last_error, blocked_reason, provider_message_id, first_attempt_at, next_attempt_at, sent_at, created_at";
+
+export const listCustomerMails = createServerFn({ method: "POST" })
+  .middleware([requireActiveAccount])
+  .inputValidator((d: unknown) => z.object({ sourceId: z.string().uuid().optional() }).parse(d ?? {}))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    let q = context.supabase.from("customer_mail_outbox").select(COLS).order("created_at", { ascending: false }).limit(100);
+    if (data.sourceId) q = q.eq("source_id", data.sourceId);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    const { data: settings } = await context.supabase
+      .from("customer_mail_settings").select("google_review_url, review_requests_from, invoice_outbox_from").eq("id", true).maybeSingle();
+    return { rows: rows ?? [], settings: settings ?? null };
+  });
+
+export const saveReviewLink = createServerFn({ method: "POST" })
+  .middleware([requireActiveAccount])
+  .inputValidator((d: unknown) => z.object({ url: z.string().max(500) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const trimmed = data.url.trim();
+    const url = trimmed ? validateGoogleReviewUrl(trimmed) : null;
+    if (trimmed && !url) {
+      throw new Error("Bitte den direkten Bewertungslink aus deinem Google-Unternehmensprofil einfügen (g.page/r/…, search.google.com/local/writereview?placeid=… oder maps.app.goo.gl/…).");
+    }
+    const { data: cur } = await context.supabase.from("customer_mail_settings").select("review_requests_from").eq("id", true).maybeSingle();
+    const { error } = await context.supabase.from("customer_mail_settings").update({
+      google_review_url: url,
+      // Start erst ab jetzt – nie rückwirkend für ältere Buchungen.
+      review_requests_from: url ? (cur?.review_requests_from ?? new Date().toISOString()) : cur?.review_requests_from ?? null,
+      updated_at: new Date().toISOString(),
+      updated_by: context.userId,
+    }).eq("id", true);
+    if (error) throw new Error(error.message);
+    return { ok: true, url };
+  });
+
+export const retryCustomerMail = createServerFn({ method: "POST" })
+  .middleware([requireActiveAccount])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), confirmChecked: z.boolean().default(false) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: row, error } = await context.supabase.from("customer_mail_outbox").select("id, status, ambiguous").eq("id", data.id).maybeSingle();
+    if (error || !row) throw new Error("Eintrag nicht gefunden");
+    if (row.status === "sent") throw new Error("Bereits vom Mailanbieter angenommen – kein erneuter Versand.");
+    const unclear = row.status === "needs_review" || row.ambiguous;
+    if (unclear && !data.confirmChecked) {
+      throw new Error("Ergebnis unklar: Bitte erst beim Mailanbieter prüfen, dass die Mail NICHT angekommen ist, und dann bestätigen.");
+    }
+    if (row.status === "failed" || row.status === "needs_review") {
+      const { error: rErr } = await context.supabase.rpc("release_customer_mail_for_retry", { _id: data.id });
+      if (rErr) throw new Error(rErr.message);
+    }
+    const { processOutboxRowById } = await import("@/lib/customer-mail-outbox.server");
+    return await processOutboxRowById(data.id);
+  });

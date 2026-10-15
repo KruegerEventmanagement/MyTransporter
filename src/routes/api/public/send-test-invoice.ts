@@ -3,7 +3,12 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/public/send-test-invoice")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        // Geschützt: früher öffentlich aufrufbar und hätte echte Belege archiviert/versendet.
+        const hookToken = process.env.NOTIFY_HOOK_TOKEN;
+        if (!hookToken || request.headers.get("x-hook-token") !== hookToken) {
+          return new Response("Unauthorized", { status: 401 });
+        }
         // Fest verdrahtet: nur an den Betreiber, Design-Vorschau
         const to = "krueger.christian96@gmx.de";
         const bookingId: string | null = null;

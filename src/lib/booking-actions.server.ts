@@ -190,6 +190,12 @@ export async function reconcileBookingPostActions(
       // Bestätigung wegen eines temporären PDF-Fehlers nicht beilag.
       customer_invoice: async (id) => {
         const res = await ensureInvoiceDeliveredImpl({ bookingId: id });
+        try {
+          const { enqueueReviewRequest } = await import("@/lib/customer-mail-outbox.server");
+          await enqueueReviewRequest("booking", id);
+        } catch (e) {
+          console.warn("[booking-actions] Bewertungsanfrage einreihen fehlgeschlagen", String((e as Error)?.message ?? e).slice(0, 200));
+        }
         // Endzustände der Outbox (storniert/gesperrt) sind dort sichtbar – keine Endlosschleife hier.
         if (!res.sent && (res.reason === "cancelled" || res.reason === "blocked" || res.reason === "before_activation")) return;
         if (!res.sent) throw new Error(`Rechnung nicht versendet (${res.reason ?? "unbekannt"})`);
