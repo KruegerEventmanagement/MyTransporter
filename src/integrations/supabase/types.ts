@@ -545,6 +545,7 @@ export type Database = {
           created_at: string
           due_at: string
           error_kind: string | null
+          expires_at: string | null
           first_attempt_at: string | null
           id: string
           idempotency_key: string
@@ -571,6 +572,7 @@ export type Database = {
           created_at?: string
           due_at: string
           error_kind?: string | null
+          expires_at?: string | null
           first_attempt_at?: string | null
           id?: string
           idempotency_key: string
@@ -597,6 +599,7 @@ export type Database = {
           created_at?: string
           due_at?: string
           error_kind?: string | null
+          expires_at?: string | null
           first_attempt_at?: string | null
           id?: string
           idempotency_key?: string
@@ -1850,6 +1853,20 @@ export type Database = {
         Returns: {
           expires_at: string
           hold_id: string
+        }[]
+      }
+      customer_mail_due_ids: { Args: { _limit: number }; Returns: string[] }
+      customer_mail_missing_bookings: {
+        Args: { _from: string; _kind: string; _limit: number }
+        Returns: {
+          created_at: string
+          id: string
+        }[]
+      }
+      customer_mail_missing_manual: {
+        Args: { _from: string; _kind: string; _limit: number }
+        Returns: {
+          id: string
         }[]
       }
       delete_expired_booking_holds: { Args: never; Returns: undefined }
