@@ -89,6 +89,7 @@ async function insertRow(r: {
   status?: string;
   blocked_reason?: string | null;
   opt_out_token?: string;
+  expires_at?: string | null;
 }): Promise<OutboxRow> {
   const db = await admin();
   const { error } = await db.from("customer_mail_outbox").upsert(
@@ -411,9 +412,8 @@ export async function sendReminderViaOutbox(args: {
     source_type: args.source, source_id: args.sourceId, kind: args.kind, due_at: new Date().toISOString(),
     recipient_email: args.to,
     payload: { from: "MyTransporter <info@mytransporter.org>", to: args.to, reply_to: "info@mytransporter.org", subject: args.subject, html: args.html, text: "", attachment: null },
+    expires_at: args.expiresAt,
   });
-  const db = await admin();
-  await db.from("customer_mail_outbox").update({ expires_at: args.expiresAt } as never).eq("id", row.id).is("expires_at", null);
   const out = await processOutboxRow(await createOutboxDeps(), row);
   const sent = out.status === "sent" || out.status === "accepted_unrecorded" || (out.status === "skipped" && out.reason === "sent");
   const final = sent || out.status === "cancelled" || (out.status === "skipped" && ["needs_review", "expired", "cancelled", "blocked"].includes(out.reason));

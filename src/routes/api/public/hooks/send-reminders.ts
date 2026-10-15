@@ -45,33 +45,36 @@ function startTsOf(b: BookingRow): number {
 type ReminderTable = "bookings" | "manual_reservations";
 
 /**
- * Atomarer Claim (nur ein paralleler Lauf gewinnt), dann Versand mit stabilem
- * Idempotenz-Schlüssel. Bei Fehlschlag wird der Claim freigegeben ⇒ nächster
- * Lauf versucht erneut; derselbe Schlüssel verhindert Doppelversand beim Anbieter.
+ * Erinnerung über die dauerhafte Outbox (Lease + Token, eingefrorener Inhalt,
+ * stabiler Schlüssel, Ablauf zum Abholbeginn). *_sent_at wird erst gesetzt, wenn
+ * der Versand abgeschlossen ist – Fehlschläge bleiben im Erinnerungsfenster retrybar.
  */
-export async function claimAndSendReminder(
+export async function deliverReminder(
   table: ReminderTable,
   id: string,
   kind: ReminderKind,
   to: string | null,
   subject: string,
   html: string,
-): Promise<"sent" | "failed" | "claimed_elsewhere" | "no_email"> {
-  const { data: claimed, error } = await supabaseAdmin.rpc("claim_reminder", { _table: table, _id: id, _kind: kind });
-  if (error || claimed !== true) return "claimed_elsewhere";
-  if (!to) return "no_email";
-  const { sendEmailDetailed } = await import("@/lib/booking-emails.server");
-  const res = await sendEmailDetailed({
-    from: "MyTransporter <info@mytransporter.org>",
-    replyTo: "info@mytransporter.org",
-    to,
-    subject,
-    html,
-    idempotencyKey: `mt-reminder-${kind}-${table}-${id}`,
+  startIso: string,
+): Promise<"sent" | "failed" | "pending" | "no_email" | "closed"> {
+  const column = kind === "24h" ? "reminder_24h_sent_at" : "reminder_30min_sent_at";
+  const markDone = async () => {
+    const { data } = await supabaseAdmin.from(table).update({ [column]: new Date().toISOString() } as never)
+      .eq("id", id).is(column, null).select("id");
+    return (data ?? []).length === 1;
+  };
+  if (!to) return (await markDone()) ? "no_email" : "pending";
+  const { sendReminderViaOutbox } = await import("@/lib/customer-mail-outbox.server");
+  const r = await sendReminderViaOutbox({
+    source: table === "bookings" ? "booking" : "manual",
+    sourceId: id,
+    kind: kind === "24h" ? "reminder_24h" : "reminder_30min",
+    to, subject, html, expiresAt: startIso,
   });
-  if (res.ok) return "sent";
-  await supabaseAdmin.rpc("release_reminder", { _table: table, _id: id, _kind: kind });
-  return "failed";
+  if (!r.done) return "pending";
+  if (!(await markDone())) return "pending"; // anderer Lauf hat bereits abgeschlossen/protokolliert
+  return r.sent ? "sent" : "closed";
 }
 
 function buildEmail(
@@ -150,8 +153,8 @@ async function processBatch(kind: ReminderKind) {
     const email = profile?.email ?? null;
     const { subject, html, title } = buildEmail(kind, b, profile?.first_name);
 
-    const r = await claimAndSendReminder("bookings", b.id, kind, email, subject, html);
-    if (r === "claimed_elsewhere") continue;
+    const r = await deliverReminder("bookings", b.id, kind, email, subject, html, new Date(startTsOf(b)).toISOString());
+    if (r === "pending") continue;
     const sent = r === "sent";
 
     await supabaseAdmin.from("admin_notifications").insert({
@@ -231,7 +234,7 @@ async function processManualBatch(kind: ReminderKind) {
     ].filter(Boolean);
 
     const wantsMail = m.notify_customer && !!m.customer_email;
-    const r = await claimAndSendReminder(
+    const r = await deliverReminder(
         "manual_reservations",
         m.id,
         kind,
@@ -251,8 +254,9 @@ async function processManualBatch(kind: ReminderKind) {
           ],
           button: { label: "MyTransporter öffnen", url: "https://mytransporter.org" },
         }),
+        m.start_at,
       );
-    if (r === "claimed_elsewhere") continue;
+    if (r === "pending") continue;
     const customerMailed: boolean | null = wantsMail ? r === "sent" : null;
 
     await supabaseAdmin.from("admin_notifications").insert({
