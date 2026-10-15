@@ -5,14 +5,16 @@ import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 
 const M3 = readFileSync(new URL("../../drizzle/migrations/0003_customer_mail_outbox.sql", import.meta.url), "utf8");
+const M5 = readFileSync(new URL("../../drizzle/migrations/0005_customer_mail_review_consent_and_safe_retry.sql", import.meta.url), "utf8");
 const M4 = readFileSync(new URL("../../drizzle/migrations/0004_customer_mail_outbox_reminders_queue.sql", import.meta.url), "utf8");
 
 const STUB = `
 CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
 CREATE SCHEMA auth; CREATE SCHEMA cron; CREATE SCHEMA private; CREATE SCHEMA net;
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('test.uid', true), '')::uuid $$;
-CREATE TABLE cron.job (jobname text, schedule text, command text);
-CREATE FUNCTION cron.schedule(n text, s text, c text) RETURNS bigint LANGUAGE sql AS $$ INSERT INTO cron.job VALUES (n,s,c); SELECT 1::bigint $$;
+CREATE TABLE cron.job (jobid serial, jobname text, schedule text, command text, active boolean DEFAULT true);
+CREATE FUNCTION cron.schedule(n text, s text, c text) RETURNS bigint LANGUAGE sql AS $$ INSERT INTO cron.job (jobname, schedule, command) VALUES (n,s,c); SELECT 1::bigint $$;
+CREATE FUNCTION cron.alter_job(job_id bigint, schedule text, active boolean) RETURNS void LANGUAGE sql AS $$ UPDATE cron.job SET schedule = $2, active = $3 WHERE jobid = $1 $$;
 CREATE FUNCTION cron.unschedule(n text) RETURNS boolean LANGUAGE sql AS $$ DELETE FROM cron.job WHERE jobname = n; SELECT true $$;
 CREATE TABLE private.app_config (key text PRIMARY KEY, value text);
 CREATE TABLE net.calls (url text);
@@ -54,6 +56,7 @@ beforeEach(async () => {
   await db.exec(STUB);
   await db.exec(M3);
   await db.exec(M4);
+  await db.exec(M5);
 });
 
 describe("customer_mail_outbox (SQL aus Migration)", () => {
@@ -144,6 +147,31 @@ describe("customer_mail_outbox (SQL aus Migration)", () => {
     await expect(db.query(`SELECT public.release_customer_mail_for_retry($1)`, [id])).rejects.toThrow(/forbidden/);
   });
 
+  it("Admin-Retry: nur eindeutig abgelehnte Versuche, nie unklare/needs_review", async () => {
+    const ADMIN = crypto.randomUUID();
+    await db.query(`INSERT INTO public.user_roles VALUES ($1,'admin')`, [ADMIN]);
+    await db.query(`SELECT set_config('test.uid', $1, false)`, [ADMIN]);
+    const unclear = await row({ status: "failed", ambiguous: true, first_attempt_at: new Date(Date.now() - 25 * 3600_000).toISOString() });
+    await expect(db.query(`SELECT public.release_customer_mail_for_retry($1)`, [unclear])).rejects.toThrow(/retry_not_allowed/);
+    const review = await row({ status: "needs_review" });
+    await expect(db.query(`SELECT public.release_customer_mail_for_retry($1)`, [review])).rejects.toThrow(/retry_not_allowed/);
+    const rejected = await row({ status: "failed", ambiguous: false, next_attempt_at: new Date(Date.now() + 3600_000).toISOString() });
+    await db.query(`SELECT public.release_customer_mail_for_retry($1)`, [rejected]);
+    const r = await get(rejected);
+    expect(r.ambiguous).toBe(false);
+    expect((await claim(rejected)).result).toBe("claimed");
+    expect((await get(unclear)).first_attempt_at).not.toBeNull();
+  });
+
+  it("Bewertungs-Einwilligung: eine je Buchung, unveränderlich", async () => {
+    const sid = crypto.randomUUID();
+    const ins = `INSERT INTO public.review_mail_consents (source_type, source_id, granted, consent_version, consent_text, origin, granted_at) VALUES ('booking',$1,true,'v1','t','online_checkout',now())`;
+    await db.query(ins, [sid]);
+    await expect(db.query(ins, [sid])).rejects.toThrow();
+    await expect(db.query(`UPDATE public.review_mail_consents SET granted=false WHERE source_id=$1`, [sid])).rejects.toThrow(/immutable/);
+    await expect(db.query(`DELETE FROM public.review_mail_consents WHERE source_id=$1`, [sid])).rejects.toThrow(/immutable/);
+  });
+
   it("Stündlicher Job ruft nichts auf, solange nicht aktiviert", async () => {
     await db.query(`INSERT INTO private.app_config VALUES ('notify_hook_token','t'),('notify_hook_url','https://x/api/public/hooks/a')`);
     await db.query(`SELECT private.run_customer_mail_hook()`);
@@ -151,6 +179,7 @@ describe("customer_mail_outbox (SQL aus Migration)", () => {
     await db.query(`INSERT INTO private.app_config VALUES ('customer_mail_hook_enabled','true')`);
     await db.query(`SELECT private.run_customer_mail_hook()`);
     expect((await db.query<{ url: string }>(`SELECT url FROM net.calls`)).rows[0]!.url).toBe("https://x/api/public/hooks/process-customer-mails");
-    expect((await db.query<{ schedule: string }>(`SELECT schedule FROM cron.job WHERE jobname='mt-process-customer-mails'`)).rows[0]!.schedule).toBe("7 * * * *");
+    const job = (await db.query<{ schedule: string; active: boolean }>(`SELECT schedule, active FROM cron.job WHERE jobname='mt-process-customer-mails'`)).rows[0]!;
+    expect(job).toEqual({ schedule: "*/5 * * * *", active: false });
   });
 });

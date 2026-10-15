@@ -16,7 +16,7 @@ import {
   type OutboxRow,
 } from "@/lib/customer-mail-outbox";
 import { LOGO_URL } from "@/lib/email-template";
-import { isConfirmationOutdated, sendEmailDetailed, type DetailedSendResult } from "@/lib/booking-emails.server";
+import { classifyResendError, isConfirmationOutdated, sendEmailDetailed, type DetailedSendResult } from "@/lib/booking-emails.server";
 import { berlinWallToIso } from "@/lib/customer-mail-outbox.server";
 
 const REVIEW = "https://www.google.com/maps?cid=9407266905378611223";
@@ -124,6 +124,8 @@ describe("Vorlagen", () => {
     expect(m.text).toMatch(/ehrlichen? Bewertung/);
     expect(`${m.text}`).not.toMatch(/Gutschein|Rabatt|5 Sterne|fünf Sterne/i);
     expect(m.subject).toBe("Deine Erfahrung mit MyTransporter");
+    expect(m.headers?.["List-Unsubscribe"]).toBe("<https://mytransporter.org/api/public/review-opt-out?t=tok-1>");
+    expect(m.headers?.["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
     expect(m.html).toContain("Bei Google bewerten");
     expect(m.text).toContain("Google-Profil öffnen: https://www.google.com/maps?cid=9407266905378611223");
     expect(m.text).not.toMatch(/Wie war deine Miete/);
@@ -191,12 +193,32 @@ describe("Versandablauf", () => {
     expect(state.status).toBe("scheduled");
   });
   it("Storno/Abmeldung/gelöschtes Konto bricht Bewertungsanfrage ab", async () => {
-    for (const reason of ["Buchung storniert", "Empfänger hat widersprochen", "Konto gelöscht/inaktiv"]) {
+    for (const reason of ["Keine Einwilligung für Bewertungsmail", "Buchung storniert", "Empfänger hat widersprochen", "Konto gelöscht/inaktiv"]) {
       const { deps, state } = fakeDeps(async () => ({ ok: true, providerId: "x" }), { precheck: async () => reason });
       const out = await processOutboxRow(deps, { ...invoiceRow(), kind: "review_request" });
       expect(out).toEqual({ status: "cancelled", reason });
       expect(state.sends).toBe(0);
     }
+  });
+});
+
+describe("409-Idempotenz", () => {
+  it("laufender Versand vs. Schlüssel mit anderem Inhalt werden unterschieden", () => {
+    expect(classifyResendError(409, JSON.stringify({ name: "concurrent_idempotent_requests" })).kind).toBe("idempotency_in_progress");
+    expect(classifyResendError(409, JSON.stringify({ name: "invalid_idempotent_request" })).kind).toBe("idempotency_mismatch");
+  });
+  it("409 gilt als unklar ⇒ kein Blindversand", async () => {
+    const f = (async () => new Response(JSON.stringify({ name: "invalid_idempotent_request", message: "x" }), { status: 409 })) as unknown as typeof fetch;
+    process.env.RESEND_API_KEY = "re_x_123456789";
+    const r = await sendEmailDetailed({ from: "a", to: "b@c.de", subject: "s", html: "h", idempotencyKey: "k", fetchImpl: f });
+    expect(r.ok === false && r.ambiguous).toBe(true);
+  });
+  it("Kopfzeilen werden übertragen", async () => {
+    const calls: RequestInit[] = [];
+    const f = (async (_u: string, i: RequestInit) => { calls.push(i); return new Response(JSON.stringify({ id: "re_1" }), { status: 200 }); }) as unknown as typeof fetch;
+    process.env.RESEND_API_KEY = "re_x_123456789";
+    await sendEmailDetailed({ from: "a", to: "b@c.de", subject: "s", html: "h", idempotencyKey: "k", headers: { "List-Unsubscribe": "<u>" }, fetchImpl: f });
+    expect(JSON.parse(String(calls[0].body)).headers["List-Unsubscribe"]).toBe("<u>");
   });
 });
 
