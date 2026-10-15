@@ -35,10 +35,12 @@ import { Route as BuchungBookingIdRouteImport } from './routes/buchung.$bookingI
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as TripBookingIdRouteImport } from './routes/trip.$bookingId'
 import { Route as ApiPublicResendBookingMailsRouteImport } from './routes/api/public/resend-booking-mails'
+import { Route as ApiPublicReviewOptOutRouteImport } from './routes/api/public/review-opt-out'
 import { Route as ApiPublicSendTestInvoiceRouteImport } from './routes/api/public/send-test-invoice'
 import { Route as ApiPublicHealthAutomationsRouteImport } from './routes/api/public/health/automations'
 import { Route as ApiPublicHooksNotifyAdminRouteImport } from './routes/api/public/hooks/notify-admin'
 import { Route as ApiPublicHooksProcessCalendarSyncRouteImport } from './routes/api/public/hooks/process-calendar-sync'
+import { Route as ApiPublicHooksProcessCustomerMailsRouteImport } from './routes/api/public/hooks/process-customer-mails'
 import { Route as ApiPublicHooksProcessManualNotificationsRouteImport } from './routes/api/public/hooks/process-manual-notifications'
 import { Route as ApiPublicHooksPurgeDocumentArchiveRouteImport } from './routes/api/public/hooks/purge-document-archive'
 import { Route as ApiPublicHooksReturnRemindersRouteImport } from './routes/api/public/hooks/return-reminders'
@@ -179,6 +181,11 @@ const ApiPublicResendBookingMailsRoute =
     path: '/api/public/resend-booking-mails',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicReviewOptOutRoute = ApiPublicReviewOptOutRouteImport.update({
+  id: '/api/public/review-opt-out',
+  path: '/api/public/review-opt-out',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicSendTestInvoiceRoute =
   ApiPublicSendTestInvoiceRouteImport.update({
     id: '/api/public/send-test-invoice',
@@ -201,6 +208,12 @@ const ApiPublicHooksProcessCalendarSyncRoute =
   ApiPublicHooksProcessCalendarSyncRouteImport.update({
     id: '/api/public/hooks/process-calendar-sync',
     path: '/api/public/hooks/process-calendar-sync',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksProcessCustomerMailsRoute =
+  ApiPublicHooksProcessCustomerMailsRouteImport.update({
+    id: '/api/public/hooks/process-customer-mails',
+    path: '/api/public/hooks/process-customer-mails',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksProcessManualNotificationsRoute =
@@ -273,10 +286,12 @@ export interface FileRoutesByFullPath {
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/resend-booking-mails': typeof ApiPublicResendBookingMailsRoute
+  '/api/public/review-opt-out': typeof ApiPublicReviewOptOutRoute
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
+  '/api/public/hooks/process-customer-mails': typeof ApiPublicHooksProcessCustomerMailsRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
   '/api/public/hooks/purge-document-archive': typeof ApiPublicHooksPurgeDocumentArchiveRoute
   '/api/public/hooks/return-reminders': typeof ApiPublicHooksReturnRemindersRoute
@@ -312,10 +327,12 @@ export interface FileRoutesByTo {
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/resend-booking-mails': typeof ApiPublicResendBookingMailsRoute
+  '/api/public/review-opt-out': typeof ApiPublicReviewOptOutRoute
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
+  '/api/public/hooks/process-customer-mails': typeof ApiPublicHooksProcessCustomerMailsRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
   '/api/public/hooks/purge-document-archive': typeof ApiPublicHooksPurgeDocumentArchiveRoute
   '/api/public/hooks/return-reminders': typeof ApiPublicHooksReturnRemindersRoute
@@ -352,10 +369,12 @@ export interface FileRoutesById {
   '/checkout/return': typeof CheckoutReturnRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/resend-booking-mails': typeof ApiPublicResendBookingMailsRoute
+  '/api/public/review-opt-out': typeof ApiPublicReviewOptOutRoute
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
   '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
+  '/api/public/hooks/process-customer-mails': typeof ApiPublicHooksProcessCustomerMailsRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
   '/api/public/hooks/purge-document-archive': typeof ApiPublicHooksPurgeDocumentArchiveRoute
   '/api/public/hooks/return-reminders': typeof ApiPublicHooksReturnRemindersRoute
@@ -393,10 +412,12 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/trip/$bookingId'
     | '/api/public/resend-booking-mails'
+    | '/api/public/review-opt-out'
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/process-calendar-sync'
+    | '/api/public/hooks/process-customer-mails'
     | '/api/public/hooks/process-manual-notifications'
     | '/api/public/hooks/purge-document-archive'
     | '/api/public/hooks/return-reminders'
@@ -432,10 +453,12 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/trip/$bookingId'
     | '/api/public/resend-booking-mails'
+    | '/api/public/review-opt-out'
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/process-calendar-sync'
+    | '/api/public/hooks/process-customer-mails'
     | '/api/public/hooks/process-manual-notifications'
     | '/api/public/hooks/purge-document-archive'
     | '/api/public/hooks/return-reminders'
@@ -471,10 +494,12 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/trip/$bookingId'
     | '/api/public/resend-booking-mails'
+    | '/api/public/review-opt-out'
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
     | '/api/public/hooks/process-calendar-sync'
+    | '/api/public/hooks/process-customer-mails'
     | '/api/public/hooks/process-manual-notifications'
     | '/api/public/hooks/purge-document-archive'
     | '/api/public/hooks/return-reminders'
@@ -511,10 +536,12 @@ export interface RootRouteChildren {
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   TripBookingIdRoute: typeof TripBookingIdRoute
   ApiPublicResendBookingMailsRoute: typeof ApiPublicResendBookingMailsRoute
+  ApiPublicReviewOptOutRoute: typeof ApiPublicReviewOptOutRoute
   ApiPublicSendTestInvoiceRoute: typeof ApiPublicSendTestInvoiceRoute
   ApiPublicHealthAutomationsRoute: typeof ApiPublicHealthAutomationsRoute
   ApiPublicHooksNotifyAdminRoute: typeof ApiPublicHooksNotifyAdminRoute
   ApiPublicHooksProcessCalendarSyncRoute: typeof ApiPublicHooksProcessCalendarSyncRoute
+  ApiPublicHooksProcessCustomerMailsRoute: typeof ApiPublicHooksProcessCustomerMailsRoute
   ApiPublicHooksProcessManualNotificationsRoute: typeof ApiPublicHooksProcessManualNotificationsRoute
   ApiPublicHooksPurgeDocumentArchiveRoute: typeof ApiPublicHooksPurgeDocumentArchiveRoute
   ApiPublicHooksReturnRemindersRoute: typeof ApiPublicHooksReturnRemindersRoute
@@ -708,6 +735,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicResendBookingMailsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/review-opt-out': {
+      id: '/api/public/review-opt-out'
+      path: '/api/public/review-opt-out'
+      fullPath: '/api/public/review-opt-out'
+      preLoaderRoute: typeof ApiPublicReviewOptOutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/send-test-invoice': {
       id: '/api/public/send-test-invoice'
       path: '/api/public/send-test-invoice'
@@ -734,6 +768,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hooks/process-calendar-sync'
       fullPath: '/api/public/hooks/process-calendar-sync'
       preLoaderRoute: typeof ApiPublicHooksProcessCalendarSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/process-customer-mails': {
+      id: '/api/public/hooks/process-customer-mails'
+      path: '/api/public/hooks/process-customer-mails'
+      fullPath: '/api/public/hooks/process-customer-mails'
+      preLoaderRoute: typeof ApiPublicHooksProcessCustomerMailsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/process-manual-notifications': {
@@ -815,11 +856,14 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutReturnRoute: CheckoutReturnRoute,
   TripBookingIdRoute: TripBookingIdRoute,
   ApiPublicResendBookingMailsRoute: ApiPublicResendBookingMailsRoute,
+  ApiPublicReviewOptOutRoute: ApiPublicReviewOptOutRoute,
   ApiPublicSendTestInvoiceRoute: ApiPublicSendTestInvoiceRoute,
   ApiPublicHealthAutomationsRoute: ApiPublicHealthAutomationsRoute,
   ApiPublicHooksNotifyAdminRoute: ApiPublicHooksNotifyAdminRoute,
   ApiPublicHooksProcessCalendarSyncRoute:
     ApiPublicHooksProcessCalendarSyncRoute,
+  ApiPublicHooksProcessCustomerMailsRoute:
+    ApiPublicHooksProcessCustomerMailsRoute,
   ApiPublicHooksProcessManualNotificationsRoute:
     ApiPublicHooksProcessManualNotificationsRoute,
   ApiPublicHooksPurgeDocumentArchiveRoute:
