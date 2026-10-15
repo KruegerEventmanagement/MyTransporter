@@ -145,7 +145,7 @@ export async function sendEmail(
     idempotencyKey: idempotencyKey ?? `mt-${crypto.randomUUID()}`,
   });
   if (res.ok) return true;
-  console.error("Mailversand fehlgeschlagen", res.kind, res.status, res.error);
+  console.error("Resend send failed", res.kind, res.status, res.error);
   try {
     await supabaseAdmin.from("admin_notifications").insert({
       type: "email_failed",

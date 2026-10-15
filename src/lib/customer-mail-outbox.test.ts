@@ -85,7 +85,7 @@ describe("Fälligkeit & Link", () => {
   });
   it("Bestätigungen älter als 23 h werden nicht nachgesendet", () => {
     const now = new Date("2026-10-15T12:00:00Z");
-    expect(isConfirmationOutdated("2026-10-14T12:30:00Z", now)).toBe(false);
+    expect(isConfirmationOutdated("2026-10-14T13:30:00Z", now)).toBe(false);
     expect(isConfirmationOutdated("2026-10-14T12:00:00Z", now)).toBe(true);
   });
 });
