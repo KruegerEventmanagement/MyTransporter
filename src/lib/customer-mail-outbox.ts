@@ -25,6 +25,9 @@ export const REVIEW_LINK_TEXT = "Google-Profil öffnen";
 export function effectiveReviewUrl(stored: string | null | undefined): string {
   return validateGoogleReviewUrl(stored) ?? GOOGLE_REVIEW_URL;
 }
+export const REVIEW_CONSENT_VERSION = "review-mail-v1-2026-10-15";
+export const REVIEW_CONSENT_TEXT =
+  "Ja, MyTransporter darf mir 24 Stunden nach dieser Buchung einmalig eine E-Mail mit der Bitte um eine freiwillige Google-Bewertung senden. Ich kann jederzeit widersprechen (Abmeldelink in der E-Mail oder an info@mytransporter.org).";
 export const REVIEW_DELAY_MS = 24 * 3600_000;
 
 export type OutboxKind = "invoice" | "review_request" | "reminder_24h" | "reminder_30min";
@@ -38,6 +41,8 @@ export type FrozenOutboxMail = {
   html: string;
   text: string;
   attachment?: { archive_id: string; filename: string } | null;
+  /** Zusätzliche Kopfzeilen, z. B. List-Unsubscribe (One-Click). */
+  headers?: Record<string, string>;
 };
 
 export function outboxIdempotencyKey(source: OutboxSource, sourceId: string, kind: OutboxKind): string {
@@ -220,6 +225,7 @@ export function buildReviewMail(i: ReviewMailInput): FrozenOutboxMail {
     to: i.to,
     reply_to: OUTBOX_REPLY_TO,
     subject: `${prefix}Deine Erfahrung mit MyTransporter`,
+    headers: { "List-Unsubscribe": `<${optOut}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
     html,
     text,
     attachment: null,
@@ -265,7 +271,7 @@ export type OutboxOutcome =
 
 export function retrySecondsFor(kind: string): number {
   if (kind === "invalid_key" || kind === "restricted_key" || kind === "sender_domain" || kind === "missing_key") return 3600;
-  if (kind === "transient") return 600;
+  if (kind === "transient" || kind === "idempotency_in_progress") return 600;
   return 900;
 }
 
@@ -348,7 +354,7 @@ export function outboxStatusLabel(status: string, ambiguous: boolean): string {
     case "sent":
       return "Vom Mailanbieter angenommen";
     case "failed":
-      return ambiguous ? "Ergebnis unklar – wird sicher wiederholt" : "Fehlgeschlagen – wird wiederholt";
+      return ambiguous ? "Ergebnis unklar – wird nur mit gleichem Schlüssel wiederholt" : "Fehlgeschlagen – wird wiederholt";
     case "needs_review":
       return "Prüfung nötig";
     case "blocked":

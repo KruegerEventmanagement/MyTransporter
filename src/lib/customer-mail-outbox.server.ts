@@ -105,7 +105,42 @@ async function insertRow(r: {
 
 export type EnqueueResult =
   | { state: "queued"; rowId: string }
-  | { state: "legacy_sent" | "before_activation" | "cancelled" | "blocked" | "disabled" | "not_found" };
+  | { state: "legacy_sent" | "before_activation" | "cancelled" | "blocked" | "disabled" | "not_found" | "no_consent" };
+
+/** Aktuelle, dokumentierte Einwilligung für genau diese Buchung. DB-Fehler ⇒ Fehler (nie „ja“). */
+export async function hasReviewConsent(source: OutboxSource, sourceId: string): Promise<boolean> {
+  const db = await admin();
+  const { data, error } = await db
+    .from("review_mail_consents").select("granted").eq("source_type", source).eq("source_id", sourceId).maybeSingle();
+  if (error) throw new Error(`Einwilligung nicht prüfbar: ${error.message}`);
+  return data?.granted === true;
+}
+
+/** Einwilligung dokumentieren (idempotent, unveränderlich). Nur bei aktiver Zustimmung. */
+export async function recordReviewConsent(r: {
+  source: OutboxSource;
+  sourceId: string;
+  userId?: string | null;
+  email?: string | null;
+  origin: "online_checkout" | "admin_manual";
+  version: string;
+  recordedBy?: string | null;
+  grantedAt: string;
+}): Promise<void> {
+  const { REVIEW_CONSENT_TEXT, REVIEW_CONSENT_VERSION } = await import("@/lib/customer-mail-outbox");
+  if (r.version !== REVIEW_CONSENT_VERSION) throw new Error("Unbekannte Einwilligungsversion");
+  const db = await admin();
+  const { error } = await db.from("review_mail_consents").upsert(
+    {
+      source_type: r.source, source_id: r.sourceId, user_id: r.userId ?? null,
+      email_lower: r.email ? r.email.trim().toLowerCase() : null, granted: true,
+      consent_version: r.version, consent_text: REVIEW_CONSENT_TEXT, origin: r.origin,
+      recorded_by: r.recordedBy ?? null, granted_at: r.grantedAt,
+    } as never,
+    { onConflict: "source_type,source_id", ignoreDuplicates: true },
+  );
+  if (error) throw new Error(error.message);
+}
 
 /** Rechnung zu einer bezahlten Onlinebuchung (PDF aus dem Belegarchiv). */
 export async function enqueueBookingInvoice(bookingId: string): Promise<EnqueueResult> {
@@ -271,6 +306,7 @@ export async function enqueueReviewRequest(source: OutboxSource, sourceId: strin
   }
   if (new Date(createdAt) < new Date(s.review_requests_from)) return { state: "before_activation" };
   if (!email.includes("@") || (await isOptedOut(email))) return { state: "cancelled" };
+  if (!(await hasReviewConsent(source, sourceId))) return { state: "no_consent" };
   const token = crypto.randomUUID();
   const payload = buildReviewMail({ firstName, to: email, reviewUrl: url, optOutToken: token });
   const row = await insertRow({
@@ -299,6 +335,7 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
         if (!r) return "Termin gelöscht";
       }
       if (row.kind !== "review_request") return null;
+      if (!(await hasReviewConsent(row.source_type, row.source_id))) return "Keine Einwilligung für Bewertungsmail";
       if (row.recipient_email && (await isOptedOut(row.recipient_email))) return "Empfänger hat widersprochen";
       return null;
     },
@@ -325,7 +362,7 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
       sendEmailDetailed({
         from: mail.from, to: mail.to, replyTo: mail.reply_to, subject: mail.subject, html: mail.html, text: mail.text,
         attachments: att && mail.attachment ? [{ filename: mail.attachment.filename, content: att }] : undefined,
-        idempotencyKey: key, timeoutMs: 20_000,
+        headers: mail.headers, idempotencyKey: key, timeoutMs: 20_000,
       }),
     complete: async (id, tok, pid) => {
       const { data, error } = await db.rpc("complete_customer_mail", { _id: id, _lease_token: tok, _provider_id: pid });

@@ -12,6 +12,7 @@ import { de } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { FuelInfoNote } from "./FuelInfoNote";
 import { createBookingCheckout } from "@/lib/payments.functions";
+import { REVIEW_CONSENT_TEXT } from "@/lib/customer-mail-outbox";
 import { KM_CATALOG_VERSION } from "@/lib/booking-rules";
 import { previewCoupon, type CouponPreview } from "@/lib/birthday.functions";
 import { ageOn, MIN_DRIVER_AGE } from "@/lib/birthday";
@@ -152,6 +153,7 @@ function withAuthTimeout<T>(promise: PromiseLike<T>): Promise<T> {
 export function BookingSection() {
   const [step, setStep] = useState(0);
   const [liabilityAccepted, setLiabilityAccepted] = useState(false);
+  const [reviewConsent, setReviewConsent] = useState(false);
   const [range, setRange] = useState<{ from?: Date; to?: Date } | undefined>();
   const [startHour, setStartHour] = useState<number | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -2127,6 +2129,18 @@ export function BookingSection() {
                     </span>
                   </span>
                 </label>
+                <label className="mt-4 flex items-start gap-3 text-left rounded-2xl border border-border bg-background p-4 cursor-pointer">
+                  <Checkbox
+                    checked={reviewConsent}
+                    onCheckedChange={(v) => setReviewConsent(v === true)}
+                    className="mt-1"
+                    aria-label="Einwilligung Bewertungs-E-Mail"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground block mb-1">Freiwillig: Bitte um Bewertung</span>
+                    {REVIEW_CONSENT_TEXT} Für die Buchung ist das nicht nötig.
+                  </span>
+                </label>
               <FuelInfoNote freeKm={selectedPlanEntry ? contractKmShown : undefined} className="mt-4" />
 
               {/* Gutscheincode (z. B. Geburtstagsvorteil) – Prüfung erfolgt serverseitig */}
@@ -2232,6 +2246,7 @@ export function BookingSection() {
                          returnUrl: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
                          environment: getStripeEnvironment(),
                           addonIds: selectedAddonIds,
+                          reviewConsent,
                           vehiclePlate: displayVehicle.plate || null,
                           vehicleName: displayVehicle.name || null,
                           vehicleClass,

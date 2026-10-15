@@ -288,6 +288,22 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
     .select("id")
     .single();
 
+  if (!insertError && booking) {
+    // Einwilligung serverseitig mit Buchungsabschluss dokumentieren – nie aus Clientflag allein.
+    const rc = (session.metadata as Record<string, string> | null)?.reviewConsent;
+    if (rc) {
+      try {
+        const { recordReviewConsent } = await import("@/lib/customer-mail-outbox.server");
+        await recordReviewConsent({
+          source: "booking", sourceId: booking.id as string, userId, email: session.customer_details?.email ?? null,
+          origin: "online_checkout", version: rc, grantedAt: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.error("[webhook] Bewertungs-Einwilligung nicht gespeichert", String((e as Error)?.message ?? e).slice(0, 200));
+      }
+    }
+  }
+
   if (insertError || !booking) {
     // Exactly-once: paralleler Webhook-Retry hat die Buchung schon angelegt
     // (Unique-Index auf stripe_payment_intent_id). Kein Fehler, kein Duplikat.

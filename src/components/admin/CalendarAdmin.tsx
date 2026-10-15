@@ -193,6 +193,7 @@ interface FormState {
   /** Hatte der Termin bereits einen Preis? (dann Pflicht beim Bearbeiten) */
   hadPrice: boolean;
   sendConfirmation: boolean;
+  reviewConsent: boolean;
 }
 
 function newRequestId(): string {
@@ -224,6 +225,7 @@ function emptyForm(day: Date): FormState {
     price: "",
     hadPrice: false,
     sendConfirmation: true,
+    reviewConsent: false,
   };
 }
 
@@ -575,6 +577,7 @@ export function CalendarAdmin() {
       price: centsToInput(m.total_price_cents),
       hadPrice: m.total_price_cents != null,
       sendConfirmation: false,
+      reviewConsent: false,
     });
     void loadDocs(m.id);
   };
@@ -665,6 +668,7 @@ export function CalendarAdmin() {
           notifyCustomer: form.notifyCustomer,
           totalPriceCents,
           sendConfirmation: form.sendConfirmation,
+          reviewConsent: form.reviewConsent,
           createRequestId: form.id ? undefined : form.createRequestId,
         },
       });
@@ -1300,6 +1304,15 @@ export function CalendarAdmin() {
                 className="w-4 h-4 accent-foreground"
               />
               Erinnerungs-E-Mail auch an den Kunden senden
+            </label>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.reviewConsent}
+                onChange={(ev) => setForm({ ...form, reviewConsent: ev.target.checked })}
+                className="w-4 h-4 mt-0.5 accent-foreground"
+              />
+              Kunde hat ausdrücklich eingewilligt: einmalige Bewertungs-E-Mail 24 h nach Buchung (freiwillig, wird mit Zeitpunkt dokumentiert)
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input

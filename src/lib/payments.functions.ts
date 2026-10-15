@@ -51,7 +51,9 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     kmCatalog?: string;
     /** Optionales individuelles Kilometerpaket: gewünschte GESAMT-km (sonst null). */
     customKm?: number | null;
+    reviewConsent?: boolean;
   }) => {
+    if (data.reviewConsent !== undefined && typeof data.reviewConsent !== "boolean") throw new Error("Ungültige Einwilligung");
     if (data.customKm != null && (!Number.isSafeInteger(data.customKm) || data.customKm < 0 || data.customKm > CUSTOM_KM_MAX)) {
       throw new Error("Ungültige Kilometerangabe");
     }

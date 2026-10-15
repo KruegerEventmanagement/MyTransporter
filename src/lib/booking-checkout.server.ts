@@ -1,3 +1,4 @@
+import { REVIEW_CONSENT_VERSION } from "@/lib/customer-mail-outbox";
 /**
  * Produktionslogik der Buchungs-Checkout-Serverfunktion (aus dem Handler
  * ausgelagert, damit Tests den echten Ablauf mit gemocktem Stripe/Backend prüfen).
@@ -39,6 +40,8 @@ export type BookingCheckoutInput = {
   couponCode?: string | null;
   kmCatalog?: string;
   customKm?: number | null;
+  /** Freiwillige Einwilligung in genau eine Bewertungsmail (nicht vorausgewählt). */
+  reviewConsent?: boolean;
 };
 
 type Ctx = { supabase: { from: (t: string) => any }; userId: string };
@@ -175,6 +178,7 @@ export async function runBookingCheckout(data: BookingCheckoutInput, context: Ct
           planId,
           vehicleClass,
           kmCatalog: KM_CATALOG_VERSION,
+          ...(data.reviewConsent === true && { reviewConsent: REVIEW_CONSENT_VERSION }),
           ...(planEntry && {
             freeKm: String(kmPackage ? kmPackage.contractKm : planEntry.freeKm),
             kmPriceCents: String(kmPackage ? kmPackage.rateCents : planEntry.extraKmCents),

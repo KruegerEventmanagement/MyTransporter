@@ -1343,6 +1343,51 @@ export type Database = {
         }
         Relationships: []
       }
+      review_mail_consents: {
+        Row: {
+          consent_text: string
+          consent_version: string
+          created_at: string
+          email_lower: string | null
+          granted: boolean
+          granted_at: string
+          id: string
+          origin: string
+          recorded_by: string | null
+          source_id: string
+          source_type: string
+          user_id: string | null
+        }
+        Insert: {
+          consent_text: string
+          consent_version: string
+          created_at?: string
+          email_lower?: string | null
+          granted: boolean
+          granted_at: string
+          id?: string
+          origin: string
+          recorded_by?: string | null
+          source_id: string
+          source_type: string
+          user_id?: string | null
+        }
+        Update: {
+          consent_text?: string
+          consent_version?: string
+          created_at?: string
+          email_lower?: string | null
+          granted?: boolean
+          granted_at?: string
+          id?: string
+          origin?: string
+          recorded_by?: string | null
+          source_id?: string
+          source_type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       trip_photos: {
         Row: {
           booking_id: string

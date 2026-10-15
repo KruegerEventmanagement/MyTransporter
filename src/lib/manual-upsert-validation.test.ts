@@ -15,6 +15,7 @@ const base: UpsertInput = {
   reminderEnabled: true,
   notifyCustomer: false,
   sendConfirmation: false,
+  reviewConsent: false,
   totalPriceCents: 12900,
 };
 

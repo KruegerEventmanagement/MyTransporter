@@ -26,7 +26,8 @@ export const Route = createFileRoute("/api/public/review-opt-out")({
       },
       POST: async ({ request }) => {
         const form = await request.formData().catch(() => null);
-        const t = String(form?.get("t") ?? "");
+        // One-Click (RFC 8058): Token in der URL, Body "List-Unsubscribe=One-Click".
+        const t = String(form?.get("t") ?? new URL(request.url).searchParams.get("t") ?? "");
         if (!UUID.test(t)) return page("<p>Dieser Link ist ungültig.</p>", 400);
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: row, error: rowErr } = await supabaseAdmin

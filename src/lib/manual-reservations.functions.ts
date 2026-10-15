@@ -76,6 +76,8 @@ const upsertSchema = z.object({
   totalPriceCents: z.number().int().min(0).max(MAX_PRICE_CENTS).nullable().optional(),
   /** Kunden-Buchungsbestätigung für die gespeicherte Fassung senden. */
   sendConfirmation: z.boolean().default(false),
+  /** Kunde hat der einen Bewertungsmail ausdrücklich zugestimmt (vom Admin dokumentiert). */
+  reviewConsent: z.boolean().default(false),
   /** Stabile Kennung je Anlage-Vorgang – schützt vor Doppelanlage bei Retry. */
   createRequestId: z.string().uuid().optional(),
 });
@@ -252,6 +254,7 @@ export async function performManualUpsert(
       if (error) throw new Error(error.message);
       await kickOutbox(data.id);
       const saved = row as ManualReservation;
+      await recordManualConsent(saved, data, context.userId);
       return {
         reservation: saved,
         deduplicated: false,
@@ -287,11 +290,26 @@ export async function performManualUpsert(
     }
     const saved = row as ManualReservation;
     await kickOutbox(saved.id);
+    await recordManualConsent(saved, data, context.userId);
     return {
       reservation: saved,
       deduplicated: false,
       confirmation: data.sendConfirmation ? await confirmSaved(saved.id, saved.revision) : null,
     };
+}
+
+async function recordManualConsent(saved: ManualReservation, data: { reviewConsent?: boolean; customerEmail?: string | null }, adminId: string) {
+  if (!data.reviewConsent || !data.customerEmail) return;
+  try {
+    const { recordReviewConsent } = await import("@/lib/customer-mail-outbox.server");
+    const { REVIEW_CONSENT_VERSION } = await import("@/lib/customer-mail-outbox");
+    await recordReviewConsent({
+      source: "manual", sourceId: saved.id, email: data.customerEmail, origin: "admin_manual",
+      version: REVIEW_CONSENT_VERSION, recordedBy: adminId, grantedAt: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.warn("[manual] Bewertungs-Einwilligung nicht gespeichert", String((e as Error)?.message ?? e).slice(0, 200));
+  }
 }
 
 export const upsertManualReservation = createServerFn({ method: "POST" })
