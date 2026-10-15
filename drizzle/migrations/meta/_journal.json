@@ -43,6 +43,13 @@
       "when": 1792079314598,
       "tag": "0005_customer_mail_review_consent_and_safe_retry",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792101176550,
+      "tag": "0006_customer_mail_return_reminder_kind",
+      "breakpoints": true
     }
   ]
 }
