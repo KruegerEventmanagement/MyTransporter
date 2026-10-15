@@ -301,6 +301,7 @@ export type Database = {
           start_km: number | null
           status: string
           stripe_customer_id: string | null
+          stripe_environment: string | null
           stripe_payment_intent_id: string | null
           stripe_payment_method_id: string | null
           tank_level_end: string | null
@@ -353,6 +354,7 @@ export type Database = {
           start_km?: number | null
           status?: string
           stripe_customer_id?: string | null
+          stripe_environment?: string | null
           stripe_payment_intent_id?: string | null
           stripe_payment_method_id?: string | null
           tank_level_end?: string | null
@@ -405,6 +407,7 @@ export type Database = {
           start_km?: number | null
           status?: string
           stripe_customer_id?: string | null
+          stripe_environment?: string | null
           stripe_payment_intent_id?: string | null
           stripe_payment_method_id?: string | null
           tank_level_end?: string | null
@@ -532,6 +535,89 @@ export type Database = {
           version?: number
         }
         Relationships: []
+      }
+      deposit_settlements: {
+        Row: {
+          booking_id: string
+          confirmed_at: string | null
+          created_at: string
+          deduct_cents: number
+          deposit_cents: number
+          environment: string
+          failure_reason: string | null
+          fee_cents: number
+          id: string
+          idempotency_key: string
+          kind: string
+          last_synced_at: string | null
+          payment_intent_id: string
+          refund_cents: number
+          refund_id: string | null
+          refund_status: string | null
+          request_key: string | null
+          requested_at: string
+          requested_by: string | null
+          status: string
+          stripe_called_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          confirmed_at?: string | null
+          created_at?: string
+          deduct_cents?: number
+          deposit_cents: number
+          environment: string
+          failure_reason?: string | null
+          fee_cents?: number
+          id?: string
+          idempotency_key: string
+          kind: string
+          last_synced_at?: string | null
+          payment_intent_id: string
+          refund_cents: number
+          refund_id?: string | null
+          refund_status?: string | null
+          request_key?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          stripe_called_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          confirmed_at?: string | null
+          created_at?: string
+          deduct_cents?: number
+          deposit_cents?: number
+          environment?: string
+          failure_reason?: string | null
+          fee_cents?: number
+          id?: string
+          idempotency_key?: string
+          kind?: string
+          last_synced_at?: string | null
+          payment_intent_id?: string
+          refund_cents?: number
+          refund_id?: string | null
+          refund_status?: string | null
+          request_key?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          stripe_called_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deposit_settlements_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       document_archive: {
         Row: {
