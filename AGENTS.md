@@ -19,3 +19,4 @@
 - Passwort-Reset nur über src/lib/password-reset.ts (immer https://mytransporter.org/reset-password, neutrale Antwort nur bei angenommenem Versand) und /reset-password, das nur Sitzungen mit AMR recovery freischaltet; damit nie localhost/App-Shell als Mailziel.
 - Eigenwerbung/AdSense ab Wizard-Schritt 1 aus.
 - Kundenbestätigung manueller Termine nur via manual-confirmation.server.ts (Absicht im Save, Payload je Revision eingefroren, Fencing-RPCs, Erfolg nur mit Provider-ID); Abholort = PICKUP_ADDRESS, nicht Geschäftsadresse.
+- Kunden-Mails (Rechnung-PDF, Bewertungsanfrage 24 h nach Buchung, Erinnerungen) nur über customer_mail_outbox (src/lib/customer-mail-outbox*.ts): eingefrorener Inhalt, Claim/Lease/Fencing-RPCs, Erfolg nur mit Provider-ID, nach 23 h needs_review; Altbestand vor invoice_outbox_from nie automatisch; Stundenjob nur mit customer_mail_hook_enabled; damit kein Doppel- oder Blindversand.
