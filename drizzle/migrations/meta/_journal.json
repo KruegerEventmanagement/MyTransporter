@@ -22,6 +22,13 @@
       "when": 1792076702066,
       "tag": "0002_deposit_settlements",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792077955214,
+      "tag": "0003_customer_mail_outbox",
+      "breakpoints": true
     }
   ]
 }

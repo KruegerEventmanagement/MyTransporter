@@ -536,6 +536,114 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_mail_outbox: {
+        Row: {
+          ambiguous: boolean
+          archive_id: string | null
+          attempts: number
+          blocked_reason: string | null
+          created_at: string
+          due_at: string
+          error_kind: string | null
+          first_attempt_at: string | null
+          id: string
+          idempotency_key: string
+          kind: string
+          last_error: string | null
+          lease_token: string | null
+          lease_until: string | null
+          next_attempt_at: string | null
+          opt_out_token: string
+          payload: Json | null
+          provider_message_id: string | null
+          recipient_email: string | null
+          sent_at: string | null
+          source_id: string
+          source_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ambiguous?: boolean
+          archive_id?: string | null
+          attempts?: number
+          blocked_reason?: string | null
+          created_at?: string
+          due_at: string
+          error_kind?: string | null
+          first_attempt_at?: string | null
+          id?: string
+          idempotency_key: string
+          kind: string
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          next_attempt_at?: string | null
+          opt_out_token?: string
+          payload?: Json | null
+          provider_message_id?: string | null
+          recipient_email?: string | null
+          sent_at?: string | null
+          source_id: string
+          source_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ambiguous?: boolean
+          archive_id?: string | null
+          attempts?: number
+          blocked_reason?: string | null
+          created_at?: string
+          due_at?: string
+          error_kind?: string | null
+          first_attempt_at?: string | null
+          id?: string
+          idempotency_key?: string
+          kind?: string
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          next_attempt_at?: string | null
+          opt_out_token?: string
+          payload?: Json | null
+          provider_message_id?: string | null
+          recipient_email?: string | null
+          sent_at?: string | null
+          source_id?: string
+          source_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      customer_mail_settings: {
+        Row: {
+          google_review_url: string | null
+          id: boolean
+          invoice_outbox_from: string
+          review_requests_from: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          google_review_url?: string | null
+          id?: boolean
+          invoice_outbox_from?: string
+          review_requests_from?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          google_review_url?: string | null
+          id?: boolean
+          invoice_outbox_from?: string
+          review_requests_from?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       deposit_settlements: {
         Row: {
           booking_id: string
@@ -661,6 +769,24 @@ export type Database = {
           source_document_id?: string
           storage_path?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      email_opt_outs: {
+        Row: {
+          created_at: string
+          email_lower: string
+          scope: string
+        }
+        Insert: {
+          created_at?: string
+          email_lower: string
+          scope: string
+        }
+        Update: {
+          created_at?: string
+          email_lower?: string
+          scope?: string
         }
         Relationships: []
       }
@@ -1628,6 +1754,10 @@ export type Database = {
         Args: { _id: string; _lease_seconds: number; _safe_seconds: number }
         Returns: Json
       }
+      claim_customer_mail: {
+        Args: { _id: string; _lease_seconds: number; _safe_seconds: number }
+        Returns: Json
+      }
       claim_mail_test: {
         Args: {
           _admin: string
@@ -1664,6 +1794,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      claim_reminder: {
+        Args: { _id: string; _kind: string; _table: string }
+        Returns: boolean
+      }
       complete_account_deletion_lease: {
         Args: { _booking_count: number; _token: string; _uid: string }
         Returns: string
@@ -1689,6 +1823,10 @@ export type Database = {
         Returns: boolean
       }
       complete_customer_confirmation: {
+        Args: { _id: string; _lease_token: string; _provider_id: string }
+        Returns: boolean
+      }
+      complete_customer_mail: {
         Args: { _id: string; _lease_token: string; _provider_id: string }
         Returns: boolean
       }
@@ -1766,6 +1904,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      fail_customer_mail: {
+        Args: {
+          _ambiguous: boolean
+          _error: string
+          _id: string
+          _kind: string
+          _lease_token: string
+          _retry_seconds: number
+        }
+        Returns: boolean
+      }
       fail_manual_notification:
         | {
             Args: { _error: string; _id: string; _retry_in_seconds?: number }
@@ -1829,6 +1978,14 @@ export type Database = {
       plan_end_at: {
         Args: { _plan_id: string; _start: string }
         Returns: string
+      }
+      release_customer_mail_for_retry: {
+        Args: { _id: string }
+        Returns: boolean
+      }
+      release_reminder: {
+        Args: { _id: string; _kind: string; _table: string }
+        Returns: undefined
       }
       release_retained_storage_ownership: {
         Args: { _uid: string }
