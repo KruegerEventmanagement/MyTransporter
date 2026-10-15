@@ -1,3 +1,4 @@
+import { RETURN_NOTICE_TITLE, RETURN_NOTICE_FAST, RETURN_NOTICE_SLOW, DEPOSIT_BANK_NOTE } from "@/lib/return-notice";
 import { isPhysicalAddon } from "@/lib/custom-km";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computePlanReturn } from "@/lib/booking-rules";
@@ -389,6 +390,7 @@ export async function sendBookingConfirmationImpl(data: {
         "Du bekommst eine Erinnerung 24 Stunden vorher und nochmal 30 Minuten vor Start.",
         "Über den Button oben kommst du jederzeit zu deiner Buchung.",
       ]) +
+      noteBlock(`<strong>${RETURN_NOTICE_TITLE}:</strong> ${RETURN_NOTICE_FAST} ${RETURN_NOTICE_SLOW} ${DEPOSIT_BANK_NOTE} Wir erinnern dich vor Mietende per E-Mail.`) +
       noteBlock(
         `<strong>Stornierung:</strong> Du kannst deine Fahrt jederzeit im <a href="${profilUrl}" style="color:#000;">Profil</a> stornieren. Bis 13 Stunden vor Abfahrt ist das kostenlos.${cancellationTable()}<br />Die Kaution wird in jedem Fall vollständig zurückerstattet.`,
       ),

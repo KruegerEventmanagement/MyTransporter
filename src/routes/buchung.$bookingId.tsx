@@ -305,7 +305,7 @@ function BookingDetailPage() {
                     {booking.deposit_released_at && (
                       <>, ausgelöst am {format(new Date(booking.deposit_released_at), "dd.MM.yyyy HH:mm", { locale: de })} Uhr</>
                     )}
-                    . Gutschrift erfolgt je nach Bank innerhalb von 3-10 Werktagen.
+                    . Gutschrift erfolgt je nach Bank innerhalb von 1–10 Werktagen.
                   </p>
                 )}
               </>

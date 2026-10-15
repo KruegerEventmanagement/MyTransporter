@@ -6,6 +6,7 @@ import { getBookingBySessionId } from "@/lib/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { trackPurchase } from "@/lib/analytics";
 import { BrandHomeLink } from "@/components/BrandHomeLink";
+import { DepositReturnNotice } from "@/components/DepositReturnNotice";
 
 export const Route = createFileRoute("/checkout/return")({
   head: () => privateHead("Zahlung wird bestätigt, MyTransporter"),
@@ -84,7 +85,8 @@ function CheckoutReturn() {
               <AlertCircle className="w-10 h-10 text-foreground" />
             </div>
             <h1 className="text-3xl font-bold text-foreground mb-2">Hoppla</h1>
-            <p className="text-muted-foreground mb-8">{error}</p>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <DepositReturnNotice className="mb-8" />
             <a
               href="/"
               className="inline-flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02]"
@@ -103,6 +105,7 @@ function CheckoutReturn() {
                 ? "Deine Buchung wird gerade angelegt, einen Moment bitte…"
                 : "Deine Buchung wird vorbereitet, einen Moment bitte…"}
             </p>
+            <DepositReturnNotice className="mt-6" />
           </>
         )}
       </div>

@@ -1,5 +1,6 @@
 const POINTS = [
   "Kaution 200 € – wird nach ordnungsgemäßer Rückgabe zurückerstattet",
+  "Fahrt nach dem Abstellen mit allen Rückgabe-Fotos inkl. Tankbeleg beenden: Kaution kommt schneller zurück, keine Bearbeitungspauschale. Ohne Fotos bis zu 10 Werktage und 30 € Bearbeitungspauschale",
   "Führerschein und Ausweis erforderlich",
   "Übergabe mit Fotos und Protokoll",
   "Umzugspaket für 29 € oder Fahrer / Umzugshelfer für 25 € pro Stunde (ab 3 Stunden) optional dazubuchbar",
