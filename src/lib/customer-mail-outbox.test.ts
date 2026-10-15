@@ -8,6 +8,7 @@ import {
   processOutboxRow,
   reviewDueAt,
   validateGoogleReviewUrl,
+  effectiveReviewUrl,
   outboxIdempotencyKey,
   OUTBOX_FROM,
   type OutboxClaim,
@@ -78,6 +79,8 @@ describe("Fälligkeit & Link", () => {
     expect(validateGoogleReviewUrl("http://g.page/r/CabcdefGHIJ123/review")).toBeNull();
     expect(validateGoogleReviewUrl("")).toBeNull();
     expect(() => buildReviewMail({ firstName: null, to: "a@b.de", reviewUrl: "", optOutToken: "x" })).toThrow();
+    expect(validateGoogleReviewUrl("https://search.google.com/local/writereview?cid=9407266905378611223")).toBeNull();
+    expect(effectiveReviewUrl(null)).toBe("https://www.google.com/maps?cid=9407266905378611223");
   });
   it("bestätigter Maps-Profillink mit CID wird akzeptiert, Varianten mit Query/Redirect nicht", () => {
     const real = "https://www.google.com/maps?cid=9407266905378611223";
@@ -121,6 +124,8 @@ describe("Vorlagen", () => {
     expect(m.text).toMatch(/ehrlichen? Bewertung/);
     expect(`${m.text}`).not.toMatch(/Gutschein|Rabatt|5 Sterne|fünf Sterne/i);
     expect(m.subject).toBe("Deine Erfahrung mit MyTransporter");
+    expect(m.html).toContain("Bei Google bewerten");
+    expect(m.text).toContain("Google-Profil öffnen: https://www.google.com/maps?cid=9407266905378611223");
     expect(m.text).not.toMatch(/Wie war deine Miete/);
     expect(m.text).toContain("vielen Dank für deine Buchung");
   });

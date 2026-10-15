@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveAccount } from "@/lib/active-account";
-import { validateGoogleReviewUrl } from "@/lib/customer-mail-outbox";
+import { validateGoogleReviewUrl, GOOGLE_REVIEW_URL } from "@/lib/customer-mail-outbox";
 
 async function assertAdmin(context: { supabase: any; userId: string }) {
   const { data } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
@@ -31,15 +31,15 @@ export const saveReviewLink = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const trimmed = data.url.trim();
-    const url = trimmed ? validateGoogleReviewUrl(trimmed) : null;
-    if (trimmed && !url) {
+    const url = validateGoogleReviewUrl(trimmed || GOOGLE_REVIEW_URL);
+    if (!url) {
       throw new Error("Bitte den direkten Bewertungslink aus deinem Google-Unternehmensprofil einfügen (g.page/r/…, search.google.com/local/writereview?placeid=… oder maps.app.goo.gl/…).");
     }
     const { data: cur } = await context.supabase.from("customer_mail_settings").select("review_requests_from").eq("id", true).maybeSingle();
     const { error } = await context.supabase.from("customer_mail_settings").update({
       google_review_url: url,
       // Start erst ab jetzt – nie rückwirkend für ältere Buchungen.
-      review_requests_from: url ? (cur?.review_requests_from ?? new Date().toISOString()) : cur?.review_requests_from ?? null,
+      review_requests_from: cur?.review_requests_from ?? new Date().toISOString(),
       updated_at: new Date().toISOString(),
       updated_by: context.userId,
     }).eq("id", true);
