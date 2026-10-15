@@ -172,6 +172,7 @@ async function applyRefund(d: Deps, row: SettlementRow, refund: RefundLike): Pro
 export async function executeSettlement(d: Deps, input: SettlementRow, opts: { mayCreate: boolean }): Promise<SettlementRow> {
   let row = input;
   if (isTerminal(row.status) && row.status !== "succeeded") return row;
+  if (row.kind === "legacy" && !row.refund_id) return row; // nur manuelle Prüfung
   const at = nowIso(d);
 
   if (row.refund_cents === 0 && row.kind !== "legacy") {
