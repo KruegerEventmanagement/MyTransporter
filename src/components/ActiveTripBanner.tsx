@@ -3,6 +3,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { useActiveTrip } from "@/hooks/useActiveTrip";
 import { isTripPath } from "@/lib/active-trip";
+import { ReturnReminderDialog } from "@/components/ReturnReminderDialog";
 
 /** Höhe der Leiste ohne Safe Area. Seite, Navbar, Hinweise und Toasts rücken per --mt-trip-bar nach unten. */
 export const BAR_PX = 44;
@@ -47,6 +48,11 @@ export function ActiveTripBanner() {
     };
   }, [visible]);
 
-  if (!visible || !trip) return null;
-  return <ActiveTripBannerView bookingId={trip.id} />;
+  if (!trip) return null;
+  return (
+    <>
+      {visible && <ActiveTripBannerView bookingId={trip.id} />}
+      <ReturnReminderDialog bookingId={trip.id} endMs={trip.endMs} returning={trip.returning} />
+    </>
+  );
 }

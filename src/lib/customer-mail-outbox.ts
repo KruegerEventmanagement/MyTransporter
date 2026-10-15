@@ -30,7 +30,7 @@ export const REVIEW_CONSENT_TEXT =
   "Ja, MyTransporter darf mir 24 Stunden nach dieser Buchung einmalig eine E-Mail mit der Bitte um eine freiwillige Google-Bewertung senden. Ich kann jederzeit widersprechen (Abmeldelink in der E-Mail oder an info@mytransporter.org).";
 export const REVIEW_DELAY_MS = 24 * 3600_000;
 
-export type OutboxKind = "invoice" | "review_request" | "reminder_24h" | "reminder_30min";
+export type OutboxKind = "invoice" | "review_request" | "reminder_24h" | "reminder_30min" | "return_reminder";
 export type OutboxSource = "booking" | "manual";
 
 export type FrozenOutboxMail = {

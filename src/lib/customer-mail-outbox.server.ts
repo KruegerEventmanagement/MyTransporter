@@ -441,7 +441,7 @@ export async function runCustomerMailSweep(): Promise<Record<string, number>> {
 export async function sendReminderViaOutbox(args: {
   source: OutboxSource;
   sourceId: string;
-  kind: "reminder_24h" | "reminder_30min";
+  kind: "reminder_24h" | "reminder_30min" | "return_reminder";
   to: string;
   subject: string;
   html: string;
