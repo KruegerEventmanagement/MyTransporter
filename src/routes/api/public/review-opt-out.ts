@@ -29,13 +29,16 @@ export const Route = createFileRoute("/api/public/review-opt-out")({
         const t = String(form?.get("t") ?? "");
         if (!UUID.test(t)) return page("<p>Dieser Link ist ungültig.</p>", 400);
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: row } = await supabaseAdmin
+        const { data: row, error: rowErr } = await supabaseAdmin
           .from("customer_mail_outbox").select("id, recipient_email").eq("opt_out_token", t).maybeSingle();
+        if (rowErr) return page("<p>Das hat gerade nicht geklappt. Bitte versuche es später erneut.</p>", 503);
         if (!row?.recipient_email) return page("<p>Dieser Link ist ungültig oder abgelaufen.</p>", 404);
-        await supabaseAdmin.from("email_opt_outs").upsert(
+        const { error: upErr } = await supabaseAdmin.from("email_opt_outs").upsert(
           { email_lower: row.recipient_email.trim().toLowerCase(), scope: "review_request" },
           { onConflict: "email_lower,scope", ignoreDuplicates: true },
         );
+        // Erfolg nur, wenn der Widerspruch wirklich gespeichert ist.
+        if (upErr) return page("<p>Das hat gerade nicht geklappt. Bitte versuche es später erneut oder schreib an info@mytransporter.org.</p>", 503);
         await supabaseAdmin.from("customer_mail_outbox")
           .update({ status: "cancelled", blocked_reason: "Empfänger hat widersprochen" } as never)
           .eq("kind", "review_request").eq("recipient_email", row.recipient_email).in("status", ["scheduled", "failed"]);

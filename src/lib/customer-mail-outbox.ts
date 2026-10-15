@@ -18,7 +18,7 @@ export const OUTBOX_LEASE_SECONDS = 90;
 export const OUTBOX_SAFE_SECONDS = 23 * 3600;
 export const REVIEW_DELAY_MS = 24 * 3600_000;
 
-export type OutboxKind = "invoice" | "review_request";
+export type OutboxKind = "invoice" | "review_request" | "reminder_24h" | "reminder_30min";
 export type OutboxSource = "booking" | "manual";
 
 export type FrozenOutboxMail = {
@@ -61,6 +61,14 @@ export function validateGoogleReviewUrl(raw: string | null | undefined): string 
   if (host === "search.google.com" && u.pathname === "/local/writereview" && /^[A-Za-z0-9_-]{10,}$/.test(u.searchParams.get("placeid") ?? ""))
     return u.toString();
   if (host === "maps.app.goo.gl" && /^\/[A-Za-z0-9]{6,}$/.test(u.pathname)) return u.toString();
+  // Maps-Unternehmensprofil per numerischer CID – ausschließlich ?cid=…, keine Query/Redirect-Parameter.
+  if ((host === "www.google.com" || host === "google.com") && (u.pathname === "/maps" || u.pathname === "/maps/")) {
+    const keys = [...u.searchParams.keys()];
+    const cid = u.searchParams.get("cid") ?? "";
+    if (keys.length === 1 && keys[0] === "cid" && /^[0-9]{5,20}$/.test(cid) && !u.username && !u.password && !u.hash) {
+      return `https://www.google.com/maps?cid=${cid}`;
+    }
+  }
   return null;
 }
 
@@ -169,13 +177,13 @@ export function buildReviewMail(i: ReviewMailInput): FrozenOutboxMail {
     ...(i.preview
       ? [`Dies ist eine Test-Vorschau. Keine echte Kundenmail.${valid ? "" : " Der Google-Bewertungslink ist noch nicht hinterlegt – der Button führt deshalb nur zur Startseite."}`]
       : []),
-    "vielen Dank, dass du bei MyTransporter gebucht hast.",
-    "Wir sind ein kleines Unternehmen aus Leonberg und lernen aus jeder Rückmeldung. Wenn du magst, schreib uns eine ehrliche Bewertung auf Google – ganz gleich, wie deine Erfahrung war.",
+    "vielen Dank für deine Buchung bei MyTransporter.",
+    "Wir sind ein kleines Unternehmen aus Leonberg und lernen aus jeder Rückmeldung. Wenn du magst, teile deine bisherige Erfahrung mit uns in einer ehrlichen Bewertung auf Google – ganz gleich, wie sie ausgefallen ist.",
     "Die Bewertung ist freiwillig und dauert nur eine Minute.",
   ];
   const html = renderEmail({
     firstName: i.firstName,
-    heading: i.preview ? "TEST – Wie war deine Miete?" : "Wie war deine Miete?",
+    heading: i.preview ? "TEST – Deine Erfahrung mit MyTransporter" : "Deine Erfahrung mit MyTransporter",
     intro,
     button: { label: "Bewertung auf Google schreiben", url },
     extraHtml: noteBlock(
@@ -202,7 +210,7 @@ export function buildReviewMail(i: ReviewMailInput): FrozenOutboxMail {
     from: OUTBOX_FROM,
     to: i.to,
     reply_to: OUTBOX_REPLY_TO,
-    subject: `${prefix}Wie war deine Miete bei MyTransporter?`,
+    subject: `${prefix}Deine Erfahrung mit MyTransporter`,
     html,
     text,
     attachment: null,
@@ -226,7 +234,7 @@ export type OutboxRow = {
 
 export type OutboxClaim =
   | { result: "claimed"; lease_token: string; prior_ambiguous: boolean }
-  | { result: "sent" | "cancelled" | "blocked" | "needs_review" | "no_payload" | "not_due" | "in_progress" | "backoff" | "not_found" };
+  | { result: "sent" | "cancelled" | "blocked" | "needs_review" | "no_payload" | "not_due" | "in_progress" | "backoff" | "expired" | "not_found" };
 
 export type OutboxDeps = {
   /** null = darf gesendet werden, sonst Grund für Abbruch (Storno, Abmeldung, gelöschtes Konto). */
@@ -254,7 +262,13 @@ export function retrySecondsFor(kind: string): number {
 
 export async function processOutboxRow(deps: OutboxDeps, row: OutboxRow): Promise<OutboxOutcome> {
   if (row.status === "sent") return { status: "skipped", reason: "sent" };
-  const stop = await deps.precheck(row);
+  let stop: string | null;
+  try {
+    stop = await deps.precheck(row);
+  } catch (e) {
+    // Nicht prüfbar (z. B. DB-Fehler bei Abmeldung/Storno) ⇒ NICHT senden, nichts verändern, später erneut.
+    return { status: "failed", kind: "precheck", error: String((e as Error)?.message ?? e).slice(0, 200), ambiguous: false };
+  }
   if (stop) {
     if (row.status !== "processing") {
       await deps.cancel(row.id, stop);
