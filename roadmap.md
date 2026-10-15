@@ -43,3 +43,11 @@
 - [x] Ausweis/Führerschein aus Konto entfernen, befristetes Adminarchiv, Bereinigungs-Hook
 - [ ] Zeitplan für /api/public/hooks/purge-document-archive (wartet auf Freigabe)
 - [ ] Erlaubte Weiterleitungsadressen für /reset-password in den Anmeldeeinstellungen bestätigen
+
+## Kunden-Mails Review 15.10.2026
+- [ ] CID-Maps-Link erlauben, Vorschau mit echtem Link
+- [ ] Neutraler Betreff „Deine Erfahrung mit MyTransporter“
+- [ ] DB-Fehler bei Opt-out/Storno/Profil ⇒ retrybar, Opt-out-POST nur bei gespeichertem Eintrag
+- [ ] Sweep per Anti-Join/Paginierung; Due-Queue ohne Backoff/aktive Leases
+- [ ] Erinnerungen mit Lease+Token, gefrorener Payload, 23h-Grenze
+- [ ] SQL-Tests mit pglite aus echter Migration
