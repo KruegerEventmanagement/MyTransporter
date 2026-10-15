@@ -54,12 +54,14 @@ async function isActive(userId: string): Promise<boolean> {
 
 async function isOptedOut(email: string): Promise<boolean> {
   const db = await admin();
-  const { data } = await db
+  const { data, error } = await db
     .from("email_opt_outs")
     .select("email_lower")
     .eq("email_lower", email.trim().toLowerCase())
     .eq("scope", "review_request")
     .maybeSingle();
+  // Nicht prüfbar ⇒ Fehler (Aufrufer bricht ab, bleibt retrybar) – nie als „nicht abgemeldet“ werten.
+  if (error) throw new Error(`Abmeldestatus nicht prüfbar: ${error.message}`);
   return !!data;
 }
 
@@ -87,6 +89,7 @@ async function insertRow(r: {
   status?: string;
   blocked_reason?: string | null;
   opt_out_token?: string;
+  expires_at?: string | null;
 }): Promise<OutboxRow> {
   const db = await admin();
   const { error } = await db.from("customer_mail_outbox").upsert(
@@ -129,7 +132,8 @@ export async function enqueueBookingInvoice(bookingId: string): Promise<EnqueueR
   if (new Date(b.created_at) < new Date(settings.invoice_outbox_from)) return { state: "before_activation" };
   if (!BOOKED.includes(b.status)) return { state: "cancelled" };
 
-  const { data: p } = await db.from("profiles").select("email, first_name").eq("id", b.user_id).maybeSingle();
+  const { data: p, error: pErr } = await db.from("profiles").select("email, first_name").eq("id", b.user_id).maybeSingle();
+  if (pErr) throw new Error(`Profil nicht lesbar: ${pErr.message}`);
   const email = p?.email?.trim() ?? "";
   if (!email || !(await isActive(b.user_id))) {
     await insertRow({
@@ -249,14 +253,17 @@ export async function enqueueReviewRequest(source: OutboxSource, sourceId: strin
   const db = await admin();
   let createdAt: string, email: string, firstName: string | null;
   if (source === "booking") {
-    const { data: b } = await db.from("bookings").select("id, user_id, created_at, status").eq("id", sourceId).maybeSingle();
+    const { data: b, error: bErr } = await db.from("bookings").select("id, user_id, created_at, status").eq("id", sourceId).maybeSingle();
+    if (bErr) throw new Error(bErr.message);
     if (!b) return { state: "not_found" };
     if (!BOOKED.includes(b.status)) return { state: "cancelled" };
     if (!(await isActive(b.user_id))) return { state: "cancelled" };
-    const { data: p } = await db.from("profiles").select("email, first_name").eq("id", b.user_id).maybeSingle();
+    const { data: p, error: pErr } = await db.from("profiles").select("email, first_name").eq("id", b.user_id).maybeSingle();
+    if (pErr) throw new Error(pErr.message);
     createdAt = b.created_at; email = p?.email?.trim() ?? ""; firstName = p?.first_name ?? null;
   } else {
-    const { data: r } = await db.from("manual_reservations").select("id, created_at, customer_email, customer_name, confirmation_requested").eq("id", sourceId).maybeSingle();
+    const { data: r, error: rErr } = await db.from("manual_reservations").select("id, created_at, customer_email, customer_name, confirmation_requested").eq("id", sourceId).maybeSingle();
+    if (rErr) throw new Error(rErr.message);
     if (!r || !r.confirmation_requested) return { state: "not_found" };
     createdAt = r.created_at; email = (r.customer_email ?? "").trim(); firstName = r.customer_name ?? null;
   }
@@ -277,16 +284,19 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
   const { ISSUED_DOCUMENTS_BUCKET } = await import("@/lib/document-archive.server");
   return {
     precheck: async (row) => {
-      if (row.kind !== "review_request") return null;
+      if (row.kind === "invoice") return null;
       if (row.source_type === "booking") {
-        const { data: b } = await db.from("bookings").select("status, user_id").eq("id", row.source_id).maybeSingle();
+        const { data: b, error } = await db.from("bookings").select("status, user_id").eq("id", row.source_id).maybeSingle();
+        if (error) throw new Error(error.message);
         if (!b) return "Buchung nicht gefunden";
         if (!BOOKED.includes(b.status)) return "Buchung storniert";
         if (!(await isActive(b.user_id))) return "Konto gelöscht/inaktiv";
       } else {
-        const { data: r } = await db.from("manual_reservations").select("id").eq("id", row.source_id).maybeSingle();
+        const { data: r, error } = await db.from("manual_reservations").select("id").eq("id", row.source_id).maybeSingle();
+        if (error) throw new Error(error.message);
         if (!r) return "Termin gelöscht";
       }
+      if (row.kind !== "review_request") return null;
       if (row.recipient_email && (await isOptedOut(row.recipient_email))) return "Empfänger hat widersprochen";
       return null;
     },
@@ -335,64 +345,77 @@ export async function processOutboxRowById(rowId: string): Promise<OutboxOutcome
   return processOutboxRow(await createOutboxDeps(), data as unknown as OutboxRow);
 }
 
-/** Stündlicher Nachholer: fehlende Einträge anlegen, fällige (auch verpasste) Zeilen verarbeiten. */
-export async function runCustomerMailSweep(now = new Date()): Promise<Record<string, number>> {
+/** Stündlicher Nachholer: fehlende Einträge per Anti-Join anlegen, bearbeitbare fällige Zeilen verarbeiten. */
+export async function runCustomerMailSweep(): Promise<Record<string, number>> {
   const db = await admin();
   const settings = await loadMailSettings();
-  const stats: Record<string, number> = { invoices_enqueued: 0, reviews_enqueued: 0, processed: 0, sent: 0, failed: 0 };
+  const stats: Record<string, number> = { invoices_enqueued: 0, reviews_enqueued: 0, manual_enqueued: 0, processed: 0, sent: 0, failed: 0 };
+  const note = (what: string, e: unknown) => console.warn(`[outbox] ${what}`, String((e as Error)?.message ?? e).slice(0, 200));
 
-  const { data: recent } = await db
-    .from("bookings").select("id, created_at").in("status", BOOKED)
-    .gte("created_at", settings.invoice_outbox_from).order("created_at", { ascending: true }).limit(200);
-  const ids = (recent ?? []).map((b) => b.id);
-  const { data: have } = ids.length
-    ? await db.from("customer_mail_outbox").select("source_id, kind").eq("source_type", "booking").in("source_id", ids)
-    : { data: [] as { source_id: string; kind: string }[] };
-  const hasKind = (id: string, k: string) => (have ?? []).some((h) => h.source_id === id && h.kind === k);
-
-  for (const b of recent ?? []) {
-    if (!hasKind(b.id, "invoice")) {
-      try {
-        const r = await enqueueBookingInvoice(b.id);
-        if (r.state === "queued") stats.invoices_enqueued++;
-      } catch (e) {
-        console.warn("[outbox] Rechnung einreihen fehlgeschlagen", String((e as Error)?.message ?? e).slice(0, 200));
-      }
+  const missing = async (kind: OutboxKind, from: string) => {
+    const { data, error } = await db.rpc("customer_mail_missing_bookings", { _kind: kind, _from: from, _limit: 50 });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as { id: string }[];
+  };
+  for (const b of await missing("invoice", settings.invoice_outbox_from)) {
+    try { if ((await enqueueBookingInvoice(b.id)).state === "queued") stats.invoices_enqueued++; } catch (e) { note("Rechnung", e); }
+  }
+  if (settings.review_requests_from && validateGoogleReviewUrl(settings.google_review_url)) {
+    for (const b of await missing("review_request", settings.review_requests_from)) {
+      try { if ((await enqueueReviewRequest("booking", b.id, settings)).state === "queued") stats.reviews_enqueued++; } catch (e) { note("Bewertung", e); }
     }
-    if (!hasKind(b.id, "review_request") && settings.review_requests_from && new Date(b.created_at) >= new Date(settings.review_requests_from)) {
-      try {
-        const r = await enqueueReviewRequest("booking", b.id, settings);
-        if (r.state === "queued") stats.reviews_enqueued++;
-      } catch (e) {
-        console.warn("[outbox] Bewertung einreihen fehlgeschlagen", String((e as Error)?.message ?? e).slice(0, 200));
-      }
+  }
+  const { data: mi, error: miErr } = await db.rpc("customer_mail_missing_manual", { _kind: "invoice", _from: settings.invoice_outbox_from, _limit: 50 });
+  if (miErr) throw new Error(miErr.message);
+  for (const m of (mi ?? []) as { id: string }[]) {
+    try { if ((await enqueueManualInvoice(m.id)).state === "queued") stats.manual_enqueued++; } catch (e) { note("manuelle Rechnung", e); }
+  }
+  if (settings.review_requests_from && validateGoogleReviewUrl(settings.google_review_url)) {
+    const { data: mr, error: mrErr } = await db.rpc("customer_mail_missing_manual", { _kind: "review_request", _from: settings.review_requests_from, _limit: 50 });
+    if (mrErr) throw new Error(mrErr.message);
+    for (const m of (mr ?? []) as { id: string }[]) {
+      try { if ((await enqueueReviewRequest("manual", m.id, settings)).state === "queued") stats.manual_enqueued++; } catch (e) { note("manuelle Bewertung", e); }
     }
   }
 
-  // Manuelle Kundenbuchungen mit angenommener Bestätigung.
-  const { data: manual } = await db
-    .from("manual_reservation_customer_mails").select("reservation_id").eq("status", "sent")
-    .gte("created_at", settings.invoice_outbox_from).limit(200);
-  for (const m of manual ?? []) {
-    try {
-      await enqueueManualInvoice(m.reservation_id);
-      if (settings.review_requests_from) await enqueueReviewRequest("manual", m.reservation_id, settings);
-    } catch (e) {
-      console.warn("[outbox] manueller Eintrag fehlgeschlagen", String((e as Error)?.message ?? e).slice(0, 200));
+  const { data: ids, error: dErr } = await db.rpc("customer_mail_due_ids", { _limit: 25 });
+  if (dErr) throw new Error(dErr.message);
+  const list = ((ids ?? []) as unknown as string[]).map((x) => (typeof x === "string" ? x : (x as { id: string }).id));
+  if (list.length) {
+    const { data: rows, error } = await db.from("customer_mail_outbox").select(ROW_COLS).in("id", list);
+    if (error) throw new Error(error.message);
+    const deps = await createOutboxDeps();
+    for (const row of (rows ?? []) as unknown as OutboxRow[]) {
+      const out = await processOutboxRow(deps, row);
+      stats.processed++;
+      if (out.status === "sent" || out.status === "accepted_unrecorded") stats.sent++;
+      if (out.status === "failed") stats.failed++;
     }
-  }
-
-  const nowIso = now.toISOString();
-  const { data: due } = await db
-    .from("customer_mail_outbox").select(ROW_COLS)
-    .in("status", ["scheduled", "failed", "processing"]).lte("due_at", nowIso)
-    .order("due_at", { ascending: true }).limit(25);
-  const deps = await createOutboxDeps();
-  for (const row of (due ?? []) as unknown as OutboxRow[]) {
-    const out = await processOutboxRow(deps, row);
-    stats.processed++;
-    if (out.status === "sent" || out.status === "accepted_unrecorded") stats.sent++;
-    if (out.status === "failed") stats.failed++;
   }
   return stats;
+}
+
+/**
+ * Erinnerung über die Outbox: eingefrorener Inhalt, Lease + Token, 23-h-Grenze,
+ * Ablauf zum Abholbeginn. true = abgeschlossen (angenommen oder endgültig beendet).
+ */
+export async function sendReminderViaOutbox(args: {
+  source: OutboxSource;
+  sourceId: string;
+  kind: "reminder_24h" | "reminder_30min";
+  to: string;
+  subject: string;
+  html: string;
+  expiresAt: string;
+}): Promise<{ done: boolean; sent: boolean }> {
+  const row = await insertRow({
+    source_type: args.source, source_id: args.sourceId, kind: args.kind, due_at: new Date().toISOString(),
+    recipient_email: args.to,
+    payload: { from: "MyTransporter <info@mytransporter.org>", to: args.to, reply_to: "info@mytransporter.org", subject: args.subject, html: args.html, text: "", attachment: null },
+    expires_at: args.expiresAt,
+  });
+  const out = await processOutboxRow(await createOutboxDeps(), row);
+  const sent = out.status === "sent" || out.status === "accepted_unrecorded" || (out.status === "skipped" && out.reason === "sent");
+  const final = sent || out.status === "cancelled" || (out.status === "skipped" && ["needs_review", "expired", "cancelled", "blocked"].includes(out.reason));
+  return { done: final, sent };
 }

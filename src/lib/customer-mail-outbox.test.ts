@@ -18,7 +18,7 @@ import { LOGO_URL } from "@/lib/email-template";
 import { isConfirmationOutdated, sendEmailDetailed, type DetailedSendResult } from "@/lib/booking-emails.server";
 import { berlinWallToIso } from "@/lib/customer-mail-outbox.server";
 
-const REVIEW = "https://g.page/r/CabcdefGHIJ123/review";
+const REVIEW = "https://www.google.com/maps?cid=9407266905378611223";
 
 function invoiceRow(): OutboxRow {
   return {
@@ -79,6 +79,16 @@ describe("Fälligkeit & Link", () => {
     expect(validateGoogleReviewUrl("")).toBeNull();
     expect(() => buildReviewMail({ firstName: null, to: "a@b.de", reviewUrl: "", optOutToken: "x" })).toThrow();
   });
+  it("bestätigter Maps-Profillink mit CID wird akzeptiert, Varianten mit Query/Redirect nicht", () => {
+    const real = "https://www.google.com/maps?cid=9407266905378611223";
+    expect(validateGoogleReviewUrl(real)).toBe(real);
+    expect(validateGoogleReviewUrl("https://www.google.com/maps?cid=9407266905378611223&q=x")).toBeNull();
+    expect(validateGoogleReviewUrl("https://www.google.com/maps?cid=abc")).toBeNull();
+    expect(validateGoogleReviewUrl("https://www.google.com/maps?q=MyTransporter")).toBeNull();
+    expect(validateGoogleReviewUrl("https://www.google.com/url?cid=9407266905378611223")).toBeNull();
+    expect(validateGoogleReviewUrl("https://user:pw@www.google.com/maps?cid=9407266905378611223")).toBeNull();
+    expect(validateGoogleReviewUrl("https://www.google.com.evil.de/maps?cid=9407266905378611223")).toBeNull();
+  });
   it("Berlin-Wandzeit wird DST-korrekt umgerechnet", () => {
     expect(berlinWallToIso("2026-07-01", 10)).toBe("2026-07-01T08:00:00.000Z");
     expect(berlinWallToIso("2026-12-01", 10)).toBe("2026-12-01T09:00:00.000Z");
@@ -108,8 +118,11 @@ describe("Vorlagen", () => {
     const m = buildReviewMail({ firstName: "Max", to: "a@b.de", reviewUrl: REVIEW, optOutToken: "tok-1" });
     expect(m.html).toContain(REVIEW);
     expect(m.text).toContain("review-opt-out?t=tok-1");
-    expect(m.text).toMatch(/ehrliche Bewertung/);
+    expect(m.text).toMatch(/ehrlichen? Bewertung/);
     expect(`${m.text}`).not.toMatch(/Gutschein|Rabatt|5 Sterne|fünf Sterne/i);
+    expect(m.subject).toBe("Deine Erfahrung mit MyTransporter");
+    expect(m.text).not.toMatch(/Wie war deine Miete/);
+    expect(m.text).toContain("vielen Dank für deine Buchung");
   });
 });
 
@@ -160,6 +173,17 @@ describe("Versandablauf", () => {
     const { deps, state } = fakeDeps(async () => ({ ok: true, providerId: "x" }), { claim: async () => ({ result: "needs_review" }) });
     expect((await processOutboxRow(deps, invoiceRow())).status).toBe("skipped");
     expect(state.sends).toBe(0);
+  });
+  it("Abmeldestatus nicht prüfbar (DB-Fehler) ⇒ kein Versand, keine Änderung", async () => {
+    const cancel = vi.fn();
+    const { deps, state } = fakeDeps(async () => ({ ok: true, providerId: "x" }), {
+      precheck: async () => { throw new Error("db down"); }, cancel,
+    });
+    const out = await processOutboxRow(deps, { ...invoiceRow(), kind: "review_request" });
+    expect(out.status).toBe("failed");
+    expect(state.sends).toBe(0);
+    expect(cancel).not.toHaveBeenCalled();
+    expect(state.status).toBe("scheduled");
   });
   it("Storno/Abmeldung/gelöschtes Konto bricht Bewertungsanfrage ab", async () => {
     for (const reason of ["Buchung storniert", "Empfänger hat widersprochen", "Konto gelöscht/inaktiv"]) {
