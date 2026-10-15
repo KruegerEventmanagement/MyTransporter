@@ -34,6 +34,7 @@ import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
 import { CalendarAdmin } from "@/components/admin/CalendarAdmin";
 import { DocumentBuilder } from "@/components/admin/DocumentBuilder";
 import { IssuedDocumentsArchive } from "@/components/admin/IssuedDocumentsArchive";
+import { CustomerMailsAdmin, BookingMailStatus } from "@/components/admin/CustomerMailsAdmin";
 import { BirthdayAdmin } from "@/components/admin/BirthdayAdmin";
 import { useServerFn } from "@tanstack/react-start";
 import { chargeBookingExtra, settleDeposit } from "@/lib/payments.functions";
@@ -709,6 +710,7 @@ function AdminDashboard() {
 
         {tab === "documents" && (
           <div className="space-y-8">
+            <CustomerMailsAdmin />
             <IssuedDocumentsArchive />
             <DocumentBuilder />
           </div>
@@ -1038,6 +1040,7 @@ function CustomerDetail({
                       )}
 
                       <SettlementPanel booking={b} onChanged={onReloadBookings} />
+                      <BookingMailStatus sourceId={b.id} />
 
                       {b.status === "returning" && (
                         <button

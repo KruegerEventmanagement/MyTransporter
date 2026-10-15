@@ -42,24 +42,36 @@ function startTsOf(b: BookingRow): number {
   return utcGuess - offset;
 }
 
-async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL || "MyTransporter <noreply@mytransporter.org>";
-  if (!apiKey) return false;
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ from, to, subject, html }),
-    });
-    return res.ok;
-  } catch (e) {
-    console.error("Resend send failed", e);
-    return false;
-  }
+type ReminderTable = "bookings" | "manual_reservations";
+
+/**
+ * Atomarer Claim (nur ein paralleler Lauf gewinnt), dann Versand mit stabilem
+ * Idempotenz-Schlüssel. Bei Fehlschlag wird der Claim freigegeben ⇒ nächster
+ * Lauf versucht erneut; derselbe Schlüssel verhindert Doppelversand beim Anbieter.
+ */
+export async function claimAndSendReminder(
+  table: ReminderTable,
+  id: string,
+  kind: ReminderKind,
+  to: string | null,
+  subject: string,
+  html: string,
+): Promise<"sent" | "failed" | "claimed_elsewhere" | "no_email"> {
+  const { data: claimed, error } = await supabaseAdmin.rpc("claim_reminder", { _table: table, _id: id, _kind: kind });
+  if (error || claimed !== true) return "claimed_elsewhere";
+  if (!to) return "no_email";
+  const { sendEmailDetailed } = await import("@/lib/booking-emails.server");
+  const res = await sendEmailDetailed({
+    from: "MyTransporter <info@mytransporter.org>",
+    replyTo: "info@mytransporter.org",
+    to,
+    subject,
+    html,
+    idempotencyKey: `mt-reminder-${kind}-${table}-${id}`,
+  });
+  if (res.ok) return "sent";
+  await supabaseAdmin.rpc("release_reminder", { _table: table, _id: id, _kind: kind });
+  return "failed";
 }
 
 function buildEmail(
@@ -69,7 +81,7 @@ function buildEmail(
 ): { subject: string; html: string; title: string } {
   const dateStr = new Date(`${b.start_date}T${String(b.start_hour).padStart(2, "0")}:00:00`)
     .toLocaleString("de-DE", { dateStyle: "full", timeStyle: "short" });
-  const tripUrl = `https://www.mytransporter.org/trip/${b.id}`;
+  const tripUrl = `https://mytransporter.org/trip/${b.id}`;
   const rows = [
     { label: "Fahrzeug", value: `${b.vehicle_name} · ${b.vehicle_plate}` },
     { label: "Tarif", value: b.plan_label },
@@ -135,11 +147,12 @@ async function processBatch(kind: ReminderKind) {
       .select("email, first_name")
       .eq("id", b.user_id)
       .maybeSingle();
-    const email = profile?.email;
+    const email = profile?.email ?? null;
     const { subject, html, title } = buildEmail(kind, b, profile?.first_name);
 
-    let sent = false;
-    if (email) sent = await sendEmail(email, subject, html);
+    const r = await claimAndSendReminder("bookings", b.id, kind, email, subject, html);
+    if (r === "claimed_elsewhere") continue;
+    const sent = r === "sent";
 
     await supabaseAdmin.from("admin_notifications").insert({
       type: kind === "24h" ? "reminder_24h" : "reminder_30min",
@@ -148,13 +161,6 @@ async function processBatch(kind: ReminderKind) {
       booking_id: b.id,
       user_id: b.user_id,
     });
-
-    const nowIso = new Date().toISOString();
-    if (kind === "24h") {
-      await supabaseAdmin.from("bookings").update({ reminder_24h_sent_at: nowIso }).eq("id", b.id);
-    } else {
-      await supabaseAdmin.from("bookings").update({ reminder_30min_sent_at: nowIso }).eq("id", b.id);
-    }
 
     processed++;
   }
@@ -224,10 +230,12 @@ async function processManualBatch(kind: ReminderKind) {
       m.note,
     ].filter(Boolean);
 
-    let customerMailed: boolean | null = null;
-    if (m.notify_customer && m.customer_email) {
-      customerMailed = await sendEmail(
-        m.customer_email,
+    const wantsMail = m.notify_customer && !!m.customer_email;
+    const r = await claimAndSendReminder(
+        "manual_reservations",
+        m.id,
+        kind,
+        wantsMail ? m.customer_email : null,
         kind === "24h"
           ? "MyTransporter · Erinnerung an deinen Termin morgen"
           : "MyTransporter · Dein Termin startet in Kürze",
@@ -241,10 +249,11 @@ async function processManualBatch(kind: ReminderKind) {
             { label: "Beginn", value: `${when} Uhr` },
             { label: "Ende", value: `${fmtBerlin(m.end_at)} Uhr` },
           ],
-          button: { label: "MyTransporter öffnen", url: "https://www.mytransporter.org" },
+          button: { label: "MyTransporter öffnen", url: "https://mytransporter.org" },
         }),
       );
-    }
+    if (r === "claimed_elsewhere") continue;
+    const customerMailed: boolean | null = wantsMail ? r === "sent" : null;
 
     await supabaseAdmin.from("admin_notifications").insert({
       type: kind === "24h" ? "manual_reminder_24h" : "manual_reminder_30min",
@@ -254,14 +263,6 @@ async function processManualBatch(kind: ReminderKind) {
         (customerMailed === null ? "" : customerMailed ? " (Kunden-E-Mail gesendet)" : " (Kunden-E-Mail fehlgeschlagen)"),
     });
 
-    await supabaseAdmin
-      .from("manual_reservations")
-      .update(
-        kind === "24h"
-          ? { reminder_24h_sent_at: new Date().toISOString() }
-          : { reminder_30min_sent_at: new Date().toISOString() },
-      )
-      .eq("id", m.id);
 
 
     processed++;

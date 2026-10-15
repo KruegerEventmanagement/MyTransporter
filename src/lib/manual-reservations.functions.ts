@@ -110,7 +110,19 @@ async function confirmSaved(id: string, revision: number) {
     const { runCustomerConfirmation, createConfirmationDeps } = await import(
       "@/lib/manual-confirmation.server"
     );
-    return await runCustomerConfirmation(await createConfirmationDeps(), { reservationId: id, revision });
+    const out = await runCustomerConfirmation(await createConfirmationDeps(), { reservationId: id, revision });
+    if (out.status === "sent" || out.status === "accepted_unrecorded") {
+      // Rechnung (offen) + spätere Bewertungsanfrage einreihen; Fehler blockieren nie das Speichern.
+      try {
+        const m = await import("@/lib/customer-mail-outbox.server");
+        const inv = await m.enqueueManualInvoice(id);
+        if (inv.state === "queued") await m.processOutboxRowById(inv.rowId);
+        await m.enqueueReviewRequest("manual", id);
+      } catch (e) {
+        console.warn("[manual] Rechnung/Bewertung einreihen fehlgeschlagen", String((e as Error)?.message ?? e).slice(0, 200));
+      }
+    }
+    return out;
   } catch (e) {
     // Speichern ist bereits erfolgreich – Versandfehler nie als Speicherfehler melden.
     return {

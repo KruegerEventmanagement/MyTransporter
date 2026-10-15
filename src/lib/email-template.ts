@@ -11,6 +11,8 @@ import { BUSINESS_OFFICE } from "@/lib/seo";
 
 export const SUPPORT_EMAIL = "info@mytransporter.org";
 export const SITE_URL = "https://www.mytransporter.org";
+/** Kanonische Origin für Links in Mails (www leitet hierher um). */
+export const APP_ORIGIN = "https://mytransporter.org";
 /** Offizielles MyTransporter-Logo (Wort-/Bildmarke), stabil unter /email-logo.png. */
 export const LOGO_URL = `${SITE_URL}/email-logo.png`;
 
@@ -52,6 +54,8 @@ export interface EmailOptions {
   outro?: string[];
   /** Grußformel unterdrücken (z. B. bei rein interner Mail). */
   omitSignature?: boolean;
+  /** Persönliche Grußzeile(n) statt „Dein MyTransporter-Team“ (Zeilen mit \n). */
+  signature?: string;
 }
 
 const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
@@ -108,11 +112,14 @@ function button(btn: EmailOptions["button"]): string {
 
 /** Erzeugt das vollständige, mailclient-sichere HTML-Dokument. */
 export function renderEmail(opts: EmailOptions): string {
+  const sigName = opts.signature
+    ? opts.signature.split("\n").map((l) => esc(l)).join("<br />")
+    : "Dein MyTransporter-Team";
   const signature = opts.omitSignature
     ? ""
     : `
         <p style="margin:24px 0 0;font-family:${FONT};font-size:15px;line-height:1.6;color:#1a1a1a;">
-          Herzliche Grüße<br />Dein MyTransporter-Team
+          Herzliche Grüße<br />${sigName}
         </p>`;
 
   return `<!DOCTYPE html>
