@@ -159,12 +159,16 @@ export function reviewOptOutUrl(token: string): string {
 }
 
 export function buildReviewMail(i: ReviewMailInput): FrozenOutboxMail {
-  const url = validateGoogleReviewUrl(i.reviewUrl);
-  if (!url) throw new Error("Kein gültiger Google-Bewertungslink hinterlegt");
+  const valid = validateGoogleReviewUrl(i.reviewUrl);
+  // Nur die Test-Vorschau darf ohne echten Link gerendert werden (Platzhalter, klar markiert).
+  if (!valid && !i.preview) throw new Error("Kein gültiger Google-Bewertungslink hinterlegt");
+  const url = valid ?? APP_ORIGIN;
   const optOut = reviewOptOutUrl(i.optOutToken);
   const prefix = i.preview ? "[TEST – Vorschau] " : "";
   const intro = [
-    ...(i.preview ? ["Dies ist eine Test-Vorschau. Keine echte Kundenmail."] : []),
+    ...(i.preview
+      ? [`Dies ist eine Test-Vorschau. Keine echte Kundenmail.${valid ? "" : " Der Google-Bewertungslink ist noch nicht hinterlegt – der Button führt deshalb nur zur Startseite."}`]
+      : []),
     "vielen Dank, dass du bei MyTransporter gebucht hast.",
     "Wir sind ein kleines Unternehmen aus Leonberg und lernen aus jeder Rückmeldung. Wenn du magst, schreib uns eine ehrliche Bewertung auf Google – ganz gleich, wie deine Erfahrung war.",
     "Die Bewertung ist freiwillig und dauert nur eine Minute.",
