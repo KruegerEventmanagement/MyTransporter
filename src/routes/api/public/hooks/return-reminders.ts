@@ -24,7 +24,14 @@ export const Route = createFileRoute("/api/public/hooks/return-reminders")({
             now: () => Date.now(),
             formatEnd: formatBerlin,
           });
-          return Response.json({ ok: true, ...r });
+          let mail = { due: 0, sent: 0 };
+          try {
+            const { processReturnReminderMails } = await import("@/lib/return-reminder-mail.server");
+            mail = await processReturnReminderMails();
+          } catch (e) {
+            console.error("return-reminder mails failed", e instanceof Error ? e.message : "unknown");
+          }
+          return Response.json({ ok: true, ...r, mailDue: mail.due, mailSent: mail.sent });
         } catch (e) {
           console.error("return-reminders failed", e instanceof Error ? e.message : "unknown");
           return Response.json({ ok: false }, { status: 500 });
