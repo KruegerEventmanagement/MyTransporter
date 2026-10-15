@@ -173,6 +173,16 @@ export async function reconcileBookingPostActions(
       new_booking_notification: createNewBookingNotification,
       customer_confirmation_invoice: async (id) => {
         const res = await sendBookingConfirmationImpl({ bookingId: id });
+        if (!res.sent && res.reason === "outdated") {
+          // Bewusst kein Nachversand alter Bestätigungen/Abholcodes; Admin wird informiert.
+          await supabaseAdmin.from("admin_notifications").insert({
+            type: "email_failed",
+            title: "Bestätigung nicht nachgesendet (veraltet)",
+            body: `Buchung ${id}: Bestätigung älter als 23 h – kein automatischer Nachversand.`,
+            booking_id: id,
+          });
+          return;
+        }
         if (!res.sent)
           throw new Error(`Kundenbestätigung nicht versendet (${res.reason ?? "unbekannt"})`);
       },
@@ -180,6 +190,8 @@ export async function reconcileBookingPostActions(
       // Bestätigung wegen eines temporären PDF-Fehlers nicht beilag.
       customer_invoice: async (id) => {
         const res = await ensureInvoiceDeliveredImpl({ bookingId: id });
+        // Endzustände der Outbox (storniert/gesperrt) sind dort sichtbar – keine Endlosschleife hier.
+        if (!res.sent && (res.reason === "cancelled" || res.reason === "blocked" || res.reason === "before_activation")) return;
         if (!res.sent) throw new Error(`Rechnung nicht versendet (${res.reason ?? "unbekannt"})`);
       },
       admin_booking_email: async (id) => {
