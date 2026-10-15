@@ -112,6 +112,10 @@ export function redactSecrets(s: string): string {
   return s.replace(/re_[A-Za-z0-9_]{8,}/g, "re_***").replace(/Bearer\s+\S+/gi, "Bearer ***");
 }
 
+/**
+ * Einheitlicher Versand für Buchungsmails: nutzt sendEmailDetailed (Timeout,
+ * Erfolg nur mit Provider-ID, redigierte Fehler) und protokolliert Fehler für den Admin.
+ */
 export async function sendEmail(
   to: string,
   subject: string,
@@ -119,43 +123,31 @@ export async function sendEmail(
   attachments?: Attachment[],
   /** Stabiler Schlüssel pro Buchung/Aktion – verhindert Doppelversand bei Netzwerk-Ambiguität. */
   idempotencyKey?: string,
+  opts: { from?: string; replyTo?: string; text?: string } = {},
 ): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.warn("RESEND_API_KEY missing, Buchungsbestätigung wird nicht versendet");
-    return false;
-  }
-  const from = getFrom();
   const safeTo = isValidEmailish(to, 320) ? to : DEFAULT_ADMIN_EMAIL;
-  const body: Record<string, unknown> = { from, to: safeTo, subject, html };
-  if (attachments && attachments.length > 0) body.attachments = attachments;
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-  };
-  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey.slice(0, 256);
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers,
-
-    body: JSON.stringify(body),
+  const res = await sendEmailDetailed({
+    from: opts.from ?? getFrom(),
+    to: safeTo,
+    replyTo: opts.replyTo,
+    subject,
+    html,
+    text: opts.text,
+    attachments,
+    idempotencyKey: idempotencyKey ?? `mt-${crypto.randomUUID()}`,
   });
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error("Resend send failed", res.status, redactSecrets(errText).slice(0, 400));
-    const cls = classifyResendError(res.status, errText);
-    try {
-      await supabaseAdmin.from("admin_notifications").insert({
-        type: "email_failed",
-        title: "E-Mail-Versand fehlgeschlagen",
-        body: `${cls.hint ? `${cls.hint} · ` : ""}${subject} → ${safeTo} · ${res.status} · ${redactSecrets(errText).slice(0, 400)}`,
-      });
-    } catch {
-      /* Protokollierung ist optional */
-    }
-    return false;
+  if (res.ok) return true;
+  console.error("Mailversand fehlgeschlagen", res.kind, res.status, res.error);
+  try {
+    await supabaseAdmin.from("admin_notifications").insert({
+      type: "email_failed",
+      title: "E-Mail-Versand fehlgeschlagen",
+      body: `${subject} → ${safeTo} · ${res.kind}${res.ambiguous ? " (Ergebnis unklar)" : ""} · ${res.error}`.slice(0, 900),
+    });
+  } catch {
+    /* Protokollierung ist optional */
   }
-  return true;
+  return false;
 }
 
 export type DetailedSendResult =
@@ -180,6 +172,7 @@ export async function sendEmailDetailed(args: {
   subject: string;
   html: string;
   text?: string;
+  attachments?: Attachment[];
   idempotencyKey: string;
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
@@ -200,6 +193,7 @@ export async function sendEmailDetailed(args: {
     };
     if (args.text) body.text = args.text;
     if (args.replyTo) body.reply_to = args.replyTo;
+    if (args.attachments && args.attachments.length > 0) body.attachments = args.attachments;
     const res = await f("https://api.resend.com/emails", {
       method: "POST",
       headers: {
