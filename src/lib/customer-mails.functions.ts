@@ -49,20 +49,18 @@ export const saveReviewLink = createServerFn({ method: "POST" })
 
 export const retryCustomerMail = createServerFn({ method: "POST" })
   .middleware([requireActiveAccount])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), confirmChecked: z.boolean().default(false) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { data: row, error } = await context.supabase.from("customer_mail_outbox").select("id, status, ambiguous").eq("id", data.id).maybeSingle();
     if (error || !row) throw new Error("Eintrag nicht gefunden");
     if (row.status === "sent") throw new Error("Bereits vom Mailanbieter angenommen – kein erneuter Versand.");
-    const unclear = row.status === "needs_review" || row.ambiguous;
-    if (unclear && !data.confirmChecked) {
-      throw new Error("Ergebnis unklar: Bitte erst beim Mailanbieter prüfen, dass die Mail NICHT angekommen ist, und dann bestätigen.");
+    // Unklare Ergebnisse dürfen nicht per Knopf neu gesendet werden (Gefahr Doppelversand).
+    if (row.status !== "failed" || row.ambiguous) {
+      throw new Error("Ergebnis unklar/Prüfung nötig – kein erneuter Versand per Knopf. Bitte beim Mailanbieter klären.");
     }
-    if (row.status === "failed" || row.status === "needs_review") {
-      const { error: rErr } = await context.supabase.rpc("release_customer_mail_for_retry", { _id: data.id });
-      if (rErr) throw new Error(rErr.message);
-    }
+    const { error: rErr } = await context.supabase.rpc("release_customer_mail_for_retry", { _id: data.id });
+    if (rErr) throw new Error(rErr.message);
     const { processOutboxRowById } = await import("@/lib/customer-mail-outbox.server");
     return await processOutboxRowById(data.id);
   });

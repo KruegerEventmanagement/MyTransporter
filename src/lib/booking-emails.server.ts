@@ -80,6 +80,8 @@ export type ResendErrorKind =
   | "restricted_key"
   | "sender_domain"
   | "transient"
+  | "idempotency_in_progress"
+  | "idempotency_mismatch"
   | "other";
 
 /** Ordnet einen Resend-Fehler anhand von name/message ein – nicht pauschal nach Status. */
@@ -95,6 +97,14 @@ export function classifyResendError(
     message = typeof j.message === "string" ? j.message.toLowerCase() : "";
   } catch {
     message = bodyText.toLowerCase();
+  }
+  // 409: gleicher Schlüssel läuft noch (sicher später erneut) vs. Schlüssel mit anderem Inhalt
+  // bereits benutzt (früherer Versuch evtl. angenommen ⇒ nie blind neu senden).
+  if (name === "concurrent_idempotent_requests") {
+    return { kind: "idempotency_in_progress", hint: "Gleicher Versand läuft noch beim Mailanbieter" };
+  }
+  if (name === "invalid_idempotent_request") {
+    return { kind: "idempotency_mismatch", hint: "Versandschlüssel bereits mit anderem Inhalt benutzt – Prüfung nötig" };
   }
   if (name === "invalid_api_key" || /api key is invalid/.test(message)) {
     return { kind: "invalid_key", hint: "Mail-Zugang abgelehnt (Schlüssel ungültig) – RESEND_API_KEY prüfen/ersetzen" };
@@ -181,6 +191,7 @@ export async function sendEmailDetailed(args: {
   html: string;
   text?: string;
   attachments?: Attachment[];
+  headers?: Record<string, string>;
   idempotencyKey: string;
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
@@ -202,6 +213,7 @@ export async function sendEmailDetailed(args: {
     if (args.text) body.text = args.text;
     if (args.replyTo) body.reply_to = args.replyTo;
     if (args.attachments && args.attachments.length > 0) body.attachments = args.attachments;
+    if (args.headers && Object.keys(args.headers).length > 0) body.headers = args.headers;
     const res = await f("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -219,7 +231,7 @@ export async function sendEmailDetailed(args: {
         ok: false,
         kind: cls.kind,
         // 5xx: Annahme durch den Anbieter ist nicht ausgeschlossen.
-        ambiguous: res.status >= 500,
+        ambiguous: res.status >= 500 || cls.kind === "idempotency_in_progress" || cls.kind === "idempotency_mismatch",
         status: res.status,
         error: `${cls.hint ?? "Versand abgelehnt"} · ${res.status} · ${redactSecrets(raw).slice(0, 300)}`,
       };

@@ -25,7 +25,7 @@ const fmt = (iso: string | null) =>
 const KIND: Record<string, string> = { invoice: "Rechnung (PDF)", review_request: "Bewertungsanfrage" };
 
 function MailRow({ r, onRetry }: { r: Row; onRetry: (r: Row) => void }) {
-  const canRetry = r.status === "failed" || r.status === "needs_review";
+  const canRetry = r.status === "failed" && !r.ambiguous;
   return (
     <li className="rounded-xl border border-border p-3 text-xs space-y-1">
       <div className="flex justify-between gap-2">
@@ -41,7 +41,7 @@ function MailRow({ r, onRetry }: { r: Row; onRetry: (r: Row) => void }) {
       {(r.last_error || r.blocked_reason) && <p className="text-muted-foreground break-words">{r.blocked_reason ?? r.last_error}</p>}
       {canRetry && (
         <button type="button" onClick={() => onRetry(r)} className="rounded-full bg-foreground text-background px-3 py-1 font-semibold">
-          {r.status === "needs_review" || r.ambiguous ? "Geprüft – erneut senden" : "Erneut senden"}
+          Erneut senden
         </button>
       )}
     </li>
@@ -57,10 +57,8 @@ function useMails(sourceId?: string) {
   }, [list, sourceId]);
   useEffect(load, [load]);
   const onRetry = async (r: Row) => {
-    const unclear = r.status === "needs_review" || r.ambiguous;
-    if (unclear && !window.confirm("Ergebnis war unklar. Hast du beim Mailanbieter geprüft, dass diese Mail NICHT versendet wurde?")) return;
     try {
-      const out = await retry({ data: { id: r.id, confirmChecked: unclear } });
+      const out = await retry({ data: { id: r.id } });
       toast.message(`Ergebnis: ${(out as { status: string }).status}`);
     } catch (e) {
       toast.error(String((e as Error)?.message ?? e));
