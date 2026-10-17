@@ -19,4 +19,4 @@
 - Passwort-Reset nur über src/lib/password-reset.ts (immer https://mytransporter.org/reset-password, neutrale Antwort nur bei angenommenem Versand) und /reset-password, das nur Sitzungen mit AMR recovery freischaltet; damit nie localhost/App-Shell als Mailziel.
 - Eigenwerbung/AdSense ab Wizard-Schritt 1 aus.
 - Kundenbestätigung manueller Termine nur via manual-confirmation.server.ts (Absicht im Save, Payload je Revision eingefroren, Fencing-RPCs, Erfolg nur mit Provider-ID); Abholort = PICKUP_ADDRESS, nicht Geschäftsadresse.
-- Mail: mail-provider.server.ts; Gmail blocked pending verified binding. Fenced intents; retry new only; check revision/request.
+- Mail: mail-provider.server.ts; Gmail gated on verified binding. Fenced intents; retry new only; revision/request checks.

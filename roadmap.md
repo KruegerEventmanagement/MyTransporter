@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Gmail-Vorbereitung 17.10.2026
-- [x] Versandabstraktion und gesperrte Gmail-Option mit MIME vorbereitet; Regressionstests prüfen.
+- [x] Versandabstraktion und gesperrte Gmail-Option mit MIME vorbereitet; 807 Tests und automatische Typ-/Buildprüfung bestanden, kein Versand/Publish.
 - [ ] Extern blockiert: Gmail-App-Verbindung für info@mytransporter.org erstellen, verknüpfen und Konto/Berechtigungen prüfen; erst danach sichere providergebundene Aktivierung separat freigeben.
 
 ## Buchungsmails 17.10.2026
