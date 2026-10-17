@@ -212,7 +212,7 @@ export async function runManualNotificationOutbox(
 /** Echte Abhängigkeiten (Datenbank, Resend, Web-Push). */
 export async function createOutboxDeps(): Promise<OutboxDeps> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { sendEmail } = await import("@/lib/booking-emails.server");
+  const { sendEmailDetailed } = await import("@/lib/mail-provider.server");
   const { pushToAdmins } = await import("@/lib/push.functions");
 
   const rpcBool = async (fn: string, args: Record<string, unknown>): Promise<boolean> => {
@@ -247,8 +247,10 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
         _retry_in_seconds: retryInSeconds,
         _lease_token: leaseToken,
       }),
-    sendMail: ({ to, subject, html, idempotencyKey }) =>
-      sendEmail(to, subject, html, undefined, idempotencyKey),
+    sendMail: async ({ to, subject, html, idempotencyKey }) => {
+      const result = await sendEmailDetailed({ provider: "gmail", from: "Christian Krüger – MyTransporter <info@mytransporter.org>", replyTo: "info@mytransporter.org", to, subject, html, idempotencyKey });
+      return result.ok;
+    },
     push: (args) => pushToAdmins(args) as Promise<{ sent?: number }>,
   };
 }

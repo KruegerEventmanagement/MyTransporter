@@ -13,8 +13,8 @@ export const DEPOSIT_RETURN_NOTICE = `${RETURN_NOTICE_FAST} ${RETURN_NOTICE_SLOW
 
 /** Pop-up erscheint ab 60 min vor Mietende. */
 export const RETURN_POPUP_LEAD_MS = 60 * 60_000;
-/** E-Mail-Erinnerung 60 min vor Mietende; Nachholfenster bis Mietende. */
-export const RETURN_MAIL_LEAD_MS = 60 * 60_000;
+/** E-Mail-Erinnerung 30 min vor Mietende; Nachholfenster bis Mietende. */
+export const RETURN_MAIL_LEAD_MS = 30 * 60_000;
 
 export type ReturnPopupPhase = "soon" | "overdue" | null;
 
@@ -25,7 +25,7 @@ export function returnPopupPhase(nowMs: number, endMs: number, returning: boolea
   return null;
 }
 
-/** Mail fällig zwischen Ende−60 min und Ende (danach übernimmt Pop-up/Push). */
+/** Mail fällig zwischen Ende−30 min und Ende (danach übernimmt Pop-up/Push). */
 export function returnMailDue(nowMs: number, endMs: number): boolean {
-  return nowMs >= endMs - RETURN_MAIL_LEAD_MS && nowMs < endMs;
+  return Number.isFinite(nowMs) && Number.isFinite(endMs) && nowMs >= endMs - RETURN_MAIL_LEAD_MS && nowMs < endMs;
 }

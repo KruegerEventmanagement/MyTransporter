@@ -595,6 +595,7 @@ export type Database = {
           last_error: string | null
           lease_token: string | null
           lease_until: string | null
+          mail_provider: string
           next_attempt_at: string | null
           opt_out_token: string
           payload: Json | null
@@ -622,6 +623,7 @@ export type Database = {
           last_error?: string | null
           lease_token?: string | null
           lease_until?: string | null
+          mail_provider?: string
           next_attempt_at?: string | null
           opt_out_token?: string
           payload?: Json | null
@@ -649,6 +651,7 @@ export type Database = {
           last_error?: string | null
           lease_token?: string | null
           lease_until?: string | null
+          mail_provider?: string
           next_attempt_at?: string | null
           opt_out_token?: string
           payload?: Json | null
@@ -965,6 +968,60 @@ export type Database = {
           },
         ]
       }
+      mail_provider_attempts: {
+        Row: {
+          ambiguous: boolean
+          attempts: number
+          created_at: string
+          error_kind: string | null
+          error_status: number | null
+          idempotency_key: string
+          last_error: string | null
+          lease_token: string | null
+          lease_until: string | null
+          next_attempt_at: string | null
+          payload_hash: string
+          provider: string
+          provider_message_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ambiguous?: boolean
+          attempts?: number
+          created_at?: string
+          error_kind?: string | null
+          error_status?: number | null
+          idempotency_key: string
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          next_attempt_at?: string | null
+          payload_hash: string
+          provider: string
+          provider_message_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ambiguous?: boolean
+          attempts?: number
+          created_at?: string
+          error_kind?: string | null
+          error_status?: number | null
+          idempotency_key?: string
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          next_attempt_at?: string | null
+          payload_hash?: string
+          provider?: string
+          provider_message_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mail_test_runs: {
         Row: {
           admin_id: string
@@ -1007,6 +1064,7 @@ export type Database = {
           last_error: string | null
           lease_token: string | null
           lease_until: string | null
+          mail_provider: string
           next_attempt_at: string | null
           payload: Json | null
           provider_message_id: string | null
@@ -1029,6 +1087,7 @@ export type Database = {
           last_error?: string | null
           lease_token?: string | null
           lease_until?: string | null
+          mail_provider?: string
           next_attempt_at?: string | null
           payload?: Json | null
           provider_message_id?: string | null
@@ -1051,6 +1110,7 @@ export type Database = {
           last_error?: string | null
           lease_token?: string | null
           lease_until?: string | null
+          mail_provider?: string
           next_attempt_at?: string | null
           payload?: Json | null
           provider_message_id?: string | null
@@ -1873,6 +1933,10 @@ export type Database = {
         Args: { _id: string; _lease_seconds: number; _safe_seconds: number }
         Returns: Json
       }
+      claim_gmail_attempt: {
+        Args: { _hash: string; _key: string }
+        Returns: Json
+      }
       claim_mail_test: {
         Args: {
           _admin: string
@@ -1943,6 +2007,10 @@ export type Database = {
       }
       complete_customer_mail: {
         Args: { _id: string; _lease_token: string; _provider_id: string }
+        Returns: boolean
+      }
+      complete_gmail_attempt: {
+        Args: { _key: string; _provider_id: string; _token: string }
         Returns: boolean
       }
       complete_manual_notification:
@@ -2041,6 +2109,16 @@ export type Database = {
           _kind: string
           _lease_token: string
           _retry_seconds: number
+        }
+        Returns: boolean
+      }
+      fail_gmail_attempt: {
+        Args: {
+          _ambiguous: boolean
+          _key: string
+          _kind: string
+          _status: number
+          _token: string
         }
         Returns: boolean
       }

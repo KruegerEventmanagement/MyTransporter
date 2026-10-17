@@ -23,7 +23,7 @@ import {
 import { APP_ORIGIN } from "@/lib/email-template";
 
 const BOOKED = ["paid", "active", "in_progress", "picked_up", "returning", "completed"];
-const ROW_COLS = "id, source_type, source_id, kind, status, idempotency_key, recipient_email, payload";
+const ROW_COLS = "id, source_type, source_id, kind, status, idempotency_key, recipient_email, payload, mail_provider";
 
 async function admin() {
   return (await import("@/integrations/supabase/client.server")).supabaseAdmin;
@@ -94,7 +94,7 @@ async function insertRow(r: {
 }): Promise<OutboxRow> {
   const db = await admin();
   const { error } = await db.from("customer_mail_outbox").upsert(
-    { ...r, idempotency_key: outboxIdempotencyKey(r.source_type, r.source_id, r.kind) } as never,
+    { ...r, mail_provider: "gmail", idempotency_key: outboxIdempotencyKey(r.source_type, r.source_id, r.kind) } as never,
     { onConflict: "source_type,source_id,kind", ignoreDuplicates: true },
   );
   if (error) throw new Error(error.message);
@@ -358,11 +358,11 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
       for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
       return btoa(bin);
     },
-    send: (mail, att, key) =>
+    send: (mail, att, key, provider) =>
       sendEmailDetailed({
         from: mail.from, to: mail.to, replyTo: mail.reply_to, subject: mail.subject, html: mail.html, text: mail.text,
         attachments: att && mail.attachment ? [{ filename: mail.attachment.filename, content: att }] : undefined,
-        headers: mail.headers, idempotencyKey: key, timeoutMs: 20_000,
+        provider, headers: mail.headers, idempotencyKey: key, timeoutMs: 20_000,
       }),
     complete: async (id, tok, pid) => {
       const { data, error } = await db.rpc("complete_customer_mail", { _id: id, _lease_token: tok, _provider_id: pid });
@@ -445,12 +445,14 @@ export async function sendReminderViaOutbox(args: {
   to: string;
   subject: string;
   html: string;
+  text?: string;
+  dueAt?: string;
   expiresAt: string;
 }): Promise<{ done: boolean; sent: boolean }> {
   const row = await insertRow({
-    source_type: args.source, source_id: args.sourceId, kind: args.kind, due_at: new Date().toISOString(),
+    source_type: args.source, source_id: args.sourceId, kind: args.kind, due_at: args.dueAt ?? new Date().toISOString(),
     recipient_email: args.to,
-    payload: { from: "MyTransporter <info@mytransporter.org>", to: args.to, reply_to: "info@mytransporter.org", subject: args.subject, html: args.html, text: "", attachment: null },
+    payload: { from: "Christian Krüger – MyTransporter <info@mytransporter.org>", to: args.to, reply_to: "info@mytransporter.org", subject: args.subject, html: args.html, text: args.text ?? "", attachment: null },
     expires_at: args.expiresAt,
   });
   const out = await processOutboxRow(await createOutboxDeps(), row);

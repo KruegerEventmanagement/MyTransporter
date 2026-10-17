@@ -86,10 +86,7 @@ export const sendAdminDocument = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
 
-    const apiKey = process.env["RESEND_API_KEY"];
-    if (!apiKey) throw new Error("E-Mail-Versand ist nicht konfiguriert");
-
-    const { pdfBase64, filename } = await renderAndArchive(data.doc, context.userId);
+    const { pdfBase64, filename, archiveId } = await renderAndArchive(data.doc, context.userId);
 
     const { renderEmail, esc } = await import("@/lib/email-template");
     const html = renderEmail({
@@ -100,22 +97,13 @@ export const sendAdminDocument = createServerFn({ method: "POST" })
       outro: ["Das zugehörige Dokument findest du im Anhang dieser E-Mail."],
     });
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: "MyTransporter <info@mytransporter.org>",
-        to: data.to,
-        subject: data.subject,
-        html,
-        attachments: [{ filename, content: pdfBase64 }],
-      }),
+    const { sendEmailDetailed } = await import("@/lib/mail-provider.server");
+    const result = await sendEmailDetailed({ provider: "gmail",
+      from: "Christian Krüger – MyTransporter <info@mytransporter.org>", replyTo: "info@mytransporter.org",
+      to: data.to, subject: data.subject, html, text: data.message,
+      attachments: [{ filename, content: pdfBase64 }], idempotencyKey: `admin-document-${archiveId}`,
     });
-    if (!res.ok) {
-      const text = await res.text();
-      console.error(`Resend failed [${res.status}]: ${text}`);
-      throw new Error(`E-Mail konnte nicht gesendet werden (${res.status})`);
-    }
+    if (!result.ok) throw new Error(result.ambiguous ? "Versandergebnis unklar – nicht erneut senden" : result.error);
     return { ok: true, filename };
   });
 

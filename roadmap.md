@@ -1,5 +1,12 @@
 # Roadmap
 
+## Mail-Automationsumfang 17.10.2026
+- [ ] Gmail-Verbindung/Konto prüfen; serverseitigen Adapter mit providergebundenen Sperren vorbereiten, Versand aus.
+- [ ] Rückgabe-Mail auf 30 Minuten setzen, Pflichtfotos konkretisieren; keine vergangenen Erinnerungen.
+- [ ] Bestehende Bestätigung/Rechnung/Review und Nachholbarkeit prüfen; nur Zähler, keine Replays.
+- [ ] Bestehende Einwilligung/DOB/Coupons lesend prüfen; Geburtstagswerbung nicht in Buchungsmails implementieren (separater Marketingdienst nötig).
+- [ ] Job-Infrastruktur ohne Doppeljobs prüfen, Tests und QA-Bericht abschließen; nicht veröffentlichen.
+
 ## Gmail-Vorbereitung 17.10.2026
 - [x] Versandabstraktion und gesperrte Gmail-Option mit MIME vorbereitet; 807 Tests und automatische Typ-/Buildprüfung bestanden, kein Versand/Publish.
 - [ ] Extern blockiert: Gmail-App-Verbindung für info@mytransporter.org erstellen, verknüpfen und Konto/Berechtigungen prüfen; erst danach sichere providergebundene Aktivierung separat freigeben.

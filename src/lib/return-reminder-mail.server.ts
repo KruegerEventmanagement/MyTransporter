@@ -1,5 +1,5 @@
 /**
- * Rückgabe-Erinnerung per E-Mail 60 min vor Mietende – genau einmal je Buchung
+ * Rückgabe-Erinnerung per E-Mail 30 min vor Mietende – genau einmal je Buchung
  * über die Kunden-Mail-Outbox (eindeutig je Buchung+Art, Lease/Fencing, Erfolg nur mit Provider-ID).
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -7,7 +7,8 @@ import { isLegacyOpenTrip } from "@/lib/active-trip";
 import { REMINDER_STATUSES } from "@/lib/return-reminder";
 import { resolveTripWindow, formatBerlin } from "@/lib/trip-time";
 import { renderEmail, noteBlock, APP_ORIGIN } from "@/lib/email-template";
-import { returnMailDue, RETURN_NOTICE_FAST, RETURN_NOTICE_SLOW, DEPOSIT_BANK_NOTE } from "@/lib/return-notice";
+import { DOCUMENTATION_FEE_EUR } from "@/lib/documentation-fee";
+import { returnMailDue, RETURN_NOTICE_FAST, DEPOSIT_BANK_NOTE } from "@/lib/return-notice";
 
 const MAIL_STATUSES = ["paid", ...REMINDER_STATUSES];
 
@@ -16,9 +17,9 @@ export function buildReturnReminderMail(a: { firstName: string | null; endText: 
   const html = renderEmail({
     firstName: a.firstName,
     heading: "Deine Rückgabe steht an",
-    intro: [`deine Miete (${a.vehicle}) endet am ${a.endText} Uhr.`, RETURN_NOTICE_FAST],
+    intro: [`deine Miete (${a.vehicle}) endet am ${a.endText} Uhr. Bitte bring das Fahrzeug rechtzeitig zurück und schließe anschließend die Rückgabe in der App ab.`, "Bitte dokumentiere außen vorn, hinten, links und rechts sowie den Innenraum. Dazu gehören ein Tachofoto mit Kilometerstand und Tankanzeige bei eingeschalteter Zündung sowie der Tankbeleg.", RETURN_NOTICE_FAST],
     button: { label: "Zur Rückgabe mit Fotos", url: a.url },
-    extraHtml: noteBlock(`${RETURN_NOTICE_SLOW} ${DEPOSIT_BANK_NOTE}`),
+    extraHtml: noteBlock(`Vollständige Rückgabedokumentation ist nötig. Fehlende oder nicht verwertbare Pflichtfotos können nach manueller Prüfung eine Bearbeitungspauschale für fehlende Fahrzeugdokumentation von ${DOCUMENTATION_FEE_EUR} € auslösen. Technische Kamera-, Upload- oder Netzfehler lösen diese Pauschale nicht aus. ${DEPOSIT_BANK_NOTE}`),
   });
   return { subject, html };
 }
@@ -36,10 +37,12 @@ export async function processReturnReminderMails(nowMs = Date.now()): Promise<{ 
     if (isLegacyOpenTrip(b)) continue;
     const { endMs } = resolveTripWindow(b);
     if (!returnMailDue(nowMs, endMs)) continue;
-    const { data: existing } = await supabaseAdmin
+    const { data: existing, error: existingError } = await supabaseAdmin
       .from("customer_mail_outbox").select("id").eq("source_type", "booking").eq("source_id", b.id).eq("kind", "return_reminder").maybeSingle();
+    if (existingError) throw new Error("Versandstatus nicht prüfbar");
     if (existing) continue;
-    const { data: p } = await supabaseAdmin.from("profiles").select("email, first_name").eq("id", b.user_id).maybeSingle();
+    const { data: p, error: profileError } = await supabaseAdmin.from("profiles").select("email, first_name").eq("id", b.user_id).maybeSingle();
+    if (profileError) throw new Error("Profil nicht prüfbar");
     if (!p?.email) continue;
     due++;
     const mail = buildReturnReminderMail({
