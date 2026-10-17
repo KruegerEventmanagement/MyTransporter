@@ -202,6 +202,7 @@ export async function reconcileBookingPostActions(
       },
       admin_booking_email: async (id) => {
         const res = await sendAdminBookingNotificationImpl({ bookingId: id });
+        if (!res.sent && res.reason === "outdated") return;
         if (!res.sent)
           throw new Error(`Admin-Buchungsmail nicht versendet (${res.reason ?? "unbekannt"})`);
       },

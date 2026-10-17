@@ -8,7 +8,7 @@
  * - Claim/Abschluss/Fehler über DB-Funktionen mit Fencing-Token. Vor dem externen
  *   Aufruf gilt der Versuch als „unklar“; nach Ablauf des sicheren
  *   Idempotenzfensters (23 h) wird ein unklarer Versuch NICHT wiederholt.
- * - Kein Trigger, kein Cron, kein Massen-Replay.
+ * - Atomarer Intent-Snapshot; begrenzte Wiederholungen, kein Altbestands-Replay.
  */
 import {
   buildCustomerConfirmation,
@@ -43,7 +43,7 @@ export type ReservationForMail = ConfirmationInput & { confirmationRequested: bo
 
 export type ClaimResult =
   | { result: "claimed"; lease_token: string; prior_ambiguous: boolean }
-  | { result: "sent" | "in_progress" | "needs_review" | "no_payload" | "not_found" };
+  | { result: "sent" | "in_progress" | "backoff" | "needs_review" | "no_payload" | "not_found" };
 
 export type ConfirmationDeps = {
   loadReservation: (id: string) => Promise<ReservationForMail | null>;
@@ -74,10 +74,12 @@ export const LEASE_SECONDS = 60;
 export const SAFE_IDEMPOTENCY_SECONDS = 23 * 3600;
 
 export function freezeMail(input: ConfirmationInput): FrozenMail {
+  const email = input.customerEmail?.trim();
+  if (!email) throw new Error("Kunden-E-Mail fehlt");
   const m = buildCustomerConfirmation(input);
   return {
     from: CONFIRMATION_FROM,
-    to: input.customerEmail!.trim(),
+    to: email,
     reply_to: CONFIRMATION_REPLY_TO,
     subject: m.subject,
     html: m.html,
@@ -107,10 +109,12 @@ export async function runCustomerConfirmation(
     }
     const blocker = confirmationBlocker(res);
     if (blocker) return { status: "blocked", reason: blocker };
+    const recipient = res.customerEmail?.trim();
+    if (!recipient) return { status: "blocked", reason: "Kunden-E-Mail fehlt" };
     row = await deps.insertRow({
       reservation_id: reservationId,
       revision,
-      recipient_email: res.customerEmail!.trim(),
+      recipient_email: recipient,
       idempotency_key: confirmationIdempotencyKey(reservationId, revision),
       payload: freezeMail(res),
     });
@@ -120,6 +124,7 @@ export async function runCustomerConfirmation(
   const claim = await deps.claim(row.id);
   if (claim.result === "sent") return { status: "sent", already: true, revision };
   if (claim.result === "in_progress") return { status: "in_progress", revision };
+  if (claim.result === "backoff") return { status: "in_progress", revision };
   if (claim.result === "needs_review") return { status: "needs_review", revision };
   if (claim.result !== "claimed") return { status: "blocked", reason: `Versand nicht möglich (${claim.result})` };
 
@@ -161,7 +166,7 @@ export async function runCustomerConfirmation(
   return { status: "failed", kind: fail.kind, error: fail.error, ambiguous, revision };
 }
 
-export async function createConfirmationDeps(): Promise<ConfirmationDeps> {
+export async function createConfirmationDeps(snapshot?: ReservationForMail): Promise<ConfirmationDeps> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { sendEmailDetailed } = await import("@/lib/booking-emails.server");
   const T = "manual_reservation_customer_mails";
@@ -180,6 +185,14 @@ export async function createConfirmationDeps(): Promise<ConfirmationDeps> {
 
   return {
     loadReservation: async (id) => {
+      if (snapshot?.reservationId === id) return snapshot;
+      const { data: intent, error: intentError } = await supabaseAdmin.from("booking_email_intents")
+        .select("snapshot").eq("source_type", "manual").eq("source_id", id).order("revision", { ascending: false }).limit(1).maybeSingle();
+      if (intentError) throw new Error(intentError.message);
+      if (intent) {
+        const { manualIntentSnapshot } = await import("@/lib/booking-email-recovery.server");
+        return manualIntentSnapshot(intent.snapshot as Record<string, unknown>);
+      }
       const { data, error } = await supabaseAdmin
         .from("manual_reservations")
         .select(

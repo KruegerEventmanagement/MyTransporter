@@ -1,10 +1,10 @@
 import { RETURN_NOTICE_TITLE, RETURN_NOTICE_FAST, RETURN_NOTICE_SLOW, DEPOSIT_BANK_NOTE } from "@/lib/return-notice";
 import { isPhysicalAddon } from "@/lib/custom-km";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { computePlanReturn } from "@/lib/booking-rules";
 import { pushToAdmins } from "@/lib/push.functions";
 import { renderEmail, noteBlock, listBlock, rawListBlock, esc } from "@/lib/email-template";
 import { bookingWindowMs } from "@/lib/booking-window";
+import { loadBookingEmailSnapshot, sendDurableBookingMail } from "@/lib/booking-email-recovery.server";
 import {
   formatBerlin,
   LABEL_BOOKING_ID,
@@ -109,6 +109,9 @@ export function classifyResendError(
   }
   if (name === "invalid_api_key" || /api key is invalid/.test(message)) {
     return { kind: "invalid_key", hint: "Mail-Zugang abgelehnt (Schlüssel ungültig) – RESEND_API_KEY prüfen/ersetzen" };
+  }
+  if (/quota|daily.*limit|monthly.*limit|billing|payment.required|credits.*exhaust/.test(`${name} ${message}`)) {
+    return { kind: "other", hint: "Mailanbieter meldet ein Versandlimit oder Zahlungsproblem – Konto prüfen" };
   }
   if (name === "restricted_api_key" || /restricted to only send|restricted api key/.test(message)) {
     return { kind: "restricted_key", hint: "Mail-Schlüssel ohne nötige Berechtigung – Schlüsselrechte in Resend prüfen" };
@@ -316,30 +319,31 @@ export async function sendBookingConfirmationImpl(data: {
   bookingId: string;
   force?: boolean;
 }): Promise<{ sent: boolean; invoiceAttached?: boolean; reason?: string }> {
-  const { data: booking, error } = await supabaseAdmin
+  const { data: current, error } = await supabaseAdmin
     .from("bookings")
     .select(
       "id, user_id, created_at, vehicle_name, vehicle_plate, plan_id, plan_label, start_date, start_hour, pickup_code, addons, addons_total_cents",
     )
     .eq("id", data.bookingId)
     .maybeSingle();
-  if (error || !booking) throw new Error("Buchung nicht gefunden");
+  if (error || !current) throw new Error("Buchung nicht gefunden");
+  const snapshot = await loadBookingEmailSnapshot(data.bookingId);
+  const booking = (snapshot ?? current) as typeof current;
   // Nie überholte Bestätigungen/alte Abholcodes nachsenden (außerhalb des sicheren Idempotenzfensters).
-  if (isConfirmationOutdated(booking.created_at, new Date())) return { sent: false, reason: "outdated" };
+  if (!snapshot && isConfirmationOutdated(booking.created_at, new Date())) return { sent: false, reason: "outdated" };
 
-  const { data: profile } = await supabaseAdmin
+  const { data: profile, error: profileError } = await supabaseAdmin
     .from("profiles")
     .select("email, first_name")
     .eq("id", booking.user_id)
     .maybeSingle();
+  if (profileError) throw new Error(`Profil nicht lesbar: ${profileError.message}`);
   const email = profile?.email;
   if (!email) return { sent: false, reason: "no_email" };
 
-  const greeting = profile?.first_name ? `Hallo ${profile.first_name},` : "Hallo,";
-  const startStr = fmtDate(booking.start_date, booking.start_hour);
-  const startDateObj = new Date(`${booking.start_date}T00:00:00`);
-  const returnDateObj = computePlanReturn(booking.plan_id, startDateObj, booking.start_hour);
-  const returnStr = fmtDateObj(returnDateObj);
+  const window = bookingWindowMs(booking.plan_id, booking.start_date, booking.start_hour);
+  const startStr = formatBerlin(new Date(window.start).toISOString());
+  const returnStr = formatBerlin(new Date(window.end).toISOString());
   const tripUrl = `https://mytransporter.org/trip/${booking.id}`;
   const profilUrl = `https://mytransporter.org/profil`;
 
@@ -399,16 +403,12 @@ export async function sendBookingConfirmationImpl(data: {
   // Die Rechnung kommt als eigene E-Mail über die Kunden-Mail-Outbox (genau einmal,
   // mit archiviertem PDF). So kann die Bestätigung schnell raus und es gibt kein
   // Duplikat zwischen Anhang und separatem Rechnungsversand.
-  const sent = await sendEmail(
-    email,
-    `MyTransporter · Buchungsbestätigung für ${startStr} Uhr`,
-    html,
-    undefined,
-    `booking-confirmation-${booking.id}`,
-    { from: PERSONAL_FROM, replyTo: DEFAULT_ADMIN_EMAIL },
-  );
+  const delivery = await sendDurableBookingMail(booking.id, "booking_confirmation", {
+    from: PERSONAL_FROM, to: email, reply_to: DEFAULT_ADMIN_EMAIL,
+    subject: `MyTransporter · Buchungsbestätigung für ${startStr} Uhr`, html, text: "", attachment: null,
+  });
 
-  if (sent) {
+  if (delivery.sent) {
     await logActionSuccess({
       bookingId: booking.id,
       userId: booking.user_id,
@@ -418,7 +418,7 @@ export async function sendBookingConfirmationImpl(data: {
     });
   }
 
-  return { sent, invoiceAttached: false, ...(sent ? {} : { reason: "send_failed" }) };
+  return { ...delivery, invoiceAttached: false };
 }
 
 /**
@@ -443,21 +443,27 @@ export async function sendAdminBookingNotificationImpl(data: {
   bookingId: string;
   force?: boolean;
 }): Promise<{ sent: boolean; reason?: string }> {
-  const { data: booking } = await supabaseAdmin
+  const { data: current, error: bookingError } = await supabaseAdmin
     .from("bookings")
     .select(
-      "id, user_id, vehicle_name, vehicle_plate, plan_id, plan_label, plan_price, start_date, start_hour, pickup_code, addons, addons_total_cents",
+      "id, user_id, created_at, vehicle_name, vehicle_plate, plan_id, plan_label, plan_price, start_date, start_hour, pickup_code, addons, addons_total_cents",
     )
     .eq("id", data.bookingId)
     .maybeSingle();
-  if (!booking) return { sent: false, reason: "booking_not_found" };
+  if (bookingError) throw new Error(bookingError.message);
+  if (!current) return { sent: false, reason: "booking_not_found" };
+  if (isConfirmationOutdated(current.created_at, new Date()) && !(await loadBookingEmailSnapshot(data.bookingId))) return { sent: false, reason: "outdated" };
+  const snapshot = await loadBookingEmailSnapshot(data.bookingId);
+  const booking = (snapshot ?? current) as typeof current;
 
-  const { data: profile } = await supabaseAdmin
+
+  const { data: profile, error: profileError } = await supabaseAdmin
     .from("profiles")
     .select("email, first_name, last_name, phone")
     .eq("id", booking.user_id)
     .maybeSingle();
 
+  if (profileError) throw new Error(`Profil nicht lesbar: ${profileError.message}`);
   const startStr = fmtDate(booking.start_date, booking.start_hour);
   // Explizite Start-/Endzeit aus der gemeinsamen Buchungsfenster-Logik (DST-sicher)
   const windowMs = bookingWindowMs(booking.plan_id, booking.start_date, booking.start_hour);
@@ -502,13 +508,10 @@ export async function sendAdminBookingNotificationImpl(data: {
         </p>
       </div>`;
 
-  const sent = await sendEmail(
-    getAdminEmail(),
-    `🚐 Neue Buchung · ${customerName} · ${startStr}`,
-    html,
-    undefined,
-    `admin-booking-${booking.id}`,
-  );
+  const delivery = await sendDurableBookingMail(booking.id, "admin_booking", {
+    from: getFrom(), to: DEFAULT_ADMIN_EMAIL, reply_to: DEFAULT_ADMIN_EMAIL,
+    subject: `🚐 Neue Buchung · ${customerName} · ${startStr}`, html, text: "", attachment: null,
+  });
 
   // Push an alle Admin-Geräte. Ein Push-Fehler darf die erfolgreich
   // versendete Admin-E-Mail NICHT in einen Fehlzustand versetzen.
@@ -519,7 +522,7 @@ export async function sendAdminBookingNotificationImpl(data: {
     tag: `booking-${booking.id}`,
   }).catch((e) => console.warn("Admin-Push (Buchung) fehlgeschlagen:", e));
 
-  if (sent) {
+  if (delivery.sent) {
     await logActionSuccess({
       bookingId: booking.id,
       userId: booking.user_id,
@@ -529,5 +532,5 @@ export async function sendAdminBookingNotificationImpl(data: {
     });
   }
 
-  return { sent, ...(sent ? {} : { reason: "send_failed" }) };
+  return delivery;
 }

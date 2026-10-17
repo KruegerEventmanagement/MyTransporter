@@ -213,6 +213,48 @@ export type Database = {
           },
         ]
       }
+      booking_email_intents: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          next_attempt_at: string
+          revision: number
+          snapshot: Json
+          source_id: string
+          source_type: string
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          next_attempt_at?: string
+          revision?: number
+          snapshot: Json
+          source_id: string
+          source_type: string
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          next_attempt_at?: string
+          revision?: number
+          snapshot?: Json
+          source_id?: string
+          source_type?: string
+          status?: string
+        }
+        Relationships: []
+      }
       booking_holds: {
         Row: {
           created_at: string
@@ -965,6 +1007,7 @@ export type Database = {
           last_error: string | null
           lease_token: string | null
           lease_until: string | null
+          next_attempt_at: string | null
           payload: Json | null
           provider_message_id: string | null
           recipient_email: string
@@ -986,6 +1029,7 @@ export type Database = {
           last_error?: string | null
           lease_token?: string | null
           lease_until?: string | null
+          next_attempt_at?: string | null
           payload?: Json | null
           provider_message_id?: string | null
           recipient_email: string
@@ -1007,6 +1051,7 @@ export type Database = {
           last_error?: string | null
           lease_token?: string | null
           lease_until?: string | null
+          next_attempt_at?: string | null
           payload?: Json | null
           provider_message_id?: string | null
           recipient_email?: string
@@ -1692,6 +1737,28 @@ export type Database = {
       booking_calendar_payload: {
         Args: { _row: Database["public"]["Tables"]["bookings"]["Row"] }
         Returns: Json
+      }
+      booking_email_due_intents: {
+        Args: { _limit: number }
+        Returns: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          next_attempt_at: string
+          revision: number
+          snapshot: Json
+          source_id: string
+          source_type: string
+          status: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "booking_email_intents"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       bookings_locked_fields_unchanged: {
         Args: {

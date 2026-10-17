@@ -328,7 +328,7 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
         if (error) throw new Error(error.message);
         if (!b) return "Buchung nicht gefunden";
         if (!BOOKED.includes(b.status)) return "Buchung storniert";
-        if (!(await isActive(b.user_id))) return "Konto gelöscht/inaktiv";
+        if (row.kind !== "admin_booking" && !(await isActive(b.user_id))) return "Konto gelöscht/inaktiv";
       } else {
         const { data: r, error } = await db.from("manual_reservations").select("id").eq("id", row.source_id).maybeSingle();
         if (error) throw new Error(error.message);
