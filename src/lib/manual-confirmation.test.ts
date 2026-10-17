@@ -21,7 +21,7 @@ import {
   type FrozenMail,
   type ReservationForMail,
 } from "@/lib/manual-confirmation.server";
-import { sendEmailDetailed } from "@/lib/booking-emails.server";
+import { sendViaResend as sendEmailDetailed } from "@/lib/resend-mail-provider.server";
 import { OWNER_CALENDAR_EMAIL } from "@/lib/manual-notifications";
 import { PICKUP_ADDRESS } from "@/lib/seo";
 

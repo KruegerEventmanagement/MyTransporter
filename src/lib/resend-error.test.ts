@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+// Exercise the retained Resend adapter in isolation, not the disabled runtime fallback.
+vi.mock("@/lib/mail-provider.server", async () => {
+  const { sendViaResend } = await import("@/lib/resend-mail-provider.server");
+  return { sendEmailDetailed: sendViaResend };
+});
 const inserts: Array<Record<string, unknown>> = [];
 vi.mock("@/integrations/supabase/client.server", () => ({
   supabaseAdmin: {

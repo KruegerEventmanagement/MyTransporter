@@ -54,6 +54,10 @@ describe('Gmail durable adapter', () => {
     expect(await sendGmailWithDeps(args, deps)).toMatchObject({ ok: false, kind: 'no_provider_id', ambiguous: true });
     expect(deps.complete).not.toHaveBeenCalled();
   });
+  it('lost completion fence cannot become accepted', async () => {
+    const { deps } = harness(new Response('{"id":"18abcdef12345678"}'), { complete: async () => false });
+    expect(await sendGmailWithDeps(args, deps)).toMatchObject({ ok: false, ambiguous: true });
+  });
   it('completion crash preserves unknown acceptance for manual reconciliation', async () => {
     const { deps } = harness(new Response('{"id":"18abcdef12345678"}'), { complete: async () => { throw new Error('DB'); } });
     expect(await sendGmailWithDeps(args, deps)).toMatchObject({ ok: false, ambiguous: true });

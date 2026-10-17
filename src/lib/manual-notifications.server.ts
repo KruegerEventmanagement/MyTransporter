@@ -212,7 +212,7 @@ export async function runManualNotificationOutbox(
 /** Echte Abhängigkeiten (Datenbank, Resend, Web-Push). */
 export async function createOutboxDeps(): Promise<OutboxDeps> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { sendEmailDetailed } = await import("@/lib/mail-provider.server");
+  const { sendEmail } = await import("@/lib/booking-emails.server");
   const { pushToAdmins } = await import("@/lib/push.functions");
 
   const rpcBool = async (fn: string, args: Record<string, unknown>): Promise<boolean> => {
@@ -247,10 +247,10 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
         _retry_in_seconds: retryInSeconds,
         _lease_token: leaseToken,
       }),
-    sendMail: async ({ to, subject, html, idempotencyKey }) => {
-      const result = await sendEmailDetailed({ provider: "gmail", from: "Christian Krüger – MyTransporter <info@mytransporter.org>", replyTo: "info@mytransporter.org", to, subject, html, idempotencyKey });
-      return result.ok;
-    },
+    // Legacy owner/calendar attempts are not migrated to Gmail implicitly.
+    // Shared Resend runtime remains gated until each old attempt is reviewed.
+    sendMail: ({ to, subject, html, idempotencyKey }) =>
+      sendEmail(to, subject, html, undefined, idempotencyKey),
     push: (args) => pushToAdmins(args) as Promise<{ sent?: number }>,
   };
 }
