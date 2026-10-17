@@ -1,5 +1,9 @@
 # Roadmap
 
+## Gmail-Vorbereitung 17.10.2026
+- [ ] Versandabstraktion und Gmail-Nachrichtenformat ohne Umschaltung vorbereiten; Regressionstests prüfen.
+- [ ] Extern blockiert: Gmail-App-Verbindung für info@mytransporter.org erstellen, verknüpfen und Konto/Berechtigungen prüfen; erst danach sichere providergebundene Aktivierung separat freigeben.
+
 ## Buchungsmails 17.10.2026
 - [x] Nachprüfung: überholte manuelle Bestätigungen und historische Online-Statuswechsel gesperrt; 798 Regressionstests bestanden.
 - [x] Produktionsfehler getrennt nach Kunden-/Admin-/Owner-Mail belegt.
