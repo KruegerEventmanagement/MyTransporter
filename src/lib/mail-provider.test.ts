@@ -8,11 +8,11 @@ const args: MailSendArgs = { from: 'MyTransporter <info@mytransporter.org>', to:
   headers: { 'List-Unsubscribe': '<https://mytransporter.org/unsubscribe>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } };
 afterEach(() => vi.unstubAllEnvs());
 describe('provider preparation', () => {
-  it('keeps Resend even if an environment variable requests Gmail', async () => {
+  it('environment cannot enable legacy Resend fallback', async () => {
     vi.stubEnv('MAIL_PROVIDER', 'gmail'); vi.stubEnv('RESEND_API_KEY', 'mock-key');
     const f = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => new Response('{"id":"resend-id"}'));
-    expect(await sendEmailDetailed({ ...args, fetchImpl: f })).toEqual({ ok: true, providerId: 'resend-id' });
-    expect(f.mock.calls[0]?.[0]).toBe('https://api.resend.com/emails');
+    expect(await sendEmailDetailed({ ...args, fetchImpl: f })).toMatchObject({ ok: false, kind: 'provider_not_ready' });
+    expect(f).not.toHaveBeenCalled();
   });
   it('blocks Gmail without any network call', async () => {
     const f = vi.fn();
@@ -24,7 +24,7 @@ describe('provider preparation', () => {
   it('never falls back to Gmail on Resend failure', async () => {
     vi.stubEnv('RESEND_API_KEY', 'mock-key');
     const f = vi.fn(async () => new Response('{"name":"invalid_api_key"}', { status: 401 }));
-    expect(await sendEmailDetailed({ ...args, fetchImpl: f })).toMatchObject({ ok: false, kind: 'invalid_key' });
+    expect(await resendMailProvider.send({ ...args, fetchImpl: f })).toMatchObject({ ok: false, kind: 'invalid_key' });
     expect(f).toHaveBeenCalledTimes(1);
   });
   it('encodes owner identity, UTF-8 and archived PDF bytes', async () => {

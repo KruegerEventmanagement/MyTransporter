@@ -247,6 +247,8 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
         _retry_in_seconds: retryInSeconds,
         _lease_token: leaseToken,
       }),
+    // Legacy owner/calendar attempts are not migrated to Gmail implicitly.
+    // Shared Resend runtime remains gated until each old attempt is reviewed.
     sendMail: ({ to, subject, html, idempotencyKey }) =>
       sendEmail(to, subject, html, undefined, idempotencyKey),
     push: (args) => pushToAdmins(args) as Promise<{ sent?: number }>,

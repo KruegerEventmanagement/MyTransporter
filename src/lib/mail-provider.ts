@@ -2,6 +2,7 @@
 export type MailSendArgs = {
   from: string; to: string; replyTo?: string; subject: string; html: string; text?: string;
   attachments?: { filename: string; content: string }[]; headers?: Record<string, string>;
+  provider?: "resend" | "gmail";
   idempotencyKey: string; timeoutMs?: number; fetchImpl?: typeof fetch;
 };
 export type ResendErrorKind =

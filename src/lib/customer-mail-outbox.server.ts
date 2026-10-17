@@ -23,7 +23,7 @@ import {
 import { APP_ORIGIN } from "@/lib/email-template";
 
 const BOOKED = ["paid", "active", "in_progress", "picked_up", "returning", "completed"];
-const ROW_COLS = "id, source_type, source_id, kind, status, idempotency_key, recipient_email, payload";
+const ROW_COLS = "id, source_type, source_id, kind, status, idempotency_key, recipient_email, payload, mail_provider";
 
 async function admin() {
   return (await import("@/integrations/supabase/client.server")).supabaseAdmin;
@@ -94,7 +94,7 @@ async function insertRow(r: {
 }): Promise<OutboxRow> {
   const db = await admin();
   const { error } = await db.from("customer_mail_outbox").upsert(
-    { ...r, idempotency_key: outboxIdempotencyKey(r.source_type, r.source_id, r.kind) } as never,
+    { ...r, mail_provider: "gmail", idempotency_key: outboxIdempotencyKey(r.source_type, r.source_id, r.kind) } as never,
     { onConflict: "source_type,source_id,kind", ignoreDuplicates: true },
   );
   if (error) throw new Error(error.message);
@@ -147,13 +147,14 @@ export async function enqueueBookingInvoice(bookingId: string): Promise<EnqueueR
   const existing = await getRow("booking", bookingId, "invoice");
   if (existing) return { state: "queued", rowId: existing.id };
   const db = await admin();
-  const { data: legacy } = await db
+  const { data: legacy, error: legacyError } = await db
     .from("admin_notifications")
     .select("id")
     .eq("booking_id", bookingId)
     .eq("title", "Rechnung versendet")
     .limit(1)
     .maybeSingle();
+  if (legacyError) throw new Error("Bisheriger Rechnungsversand nicht prüfbar");
   if (legacy) return { state: "legacy_sent" };
 
   const { data: b, error } = await db
@@ -324,15 +325,22 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
     precheck: async (row) => {
       if (row.kind === "invoice") return null;
       if (row.source_type === "booking") {
-        const { data: b, error } = await db.from("bookings").select("status, user_id").eq("id", row.source_id).maybeSingle();
+        const { data: b, error } = await db.from("bookings").select("status, user_id, start_date, start_hour, plan_id, vehicle_name").eq("id", row.source_id).maybeSingle();
         if (error) throw new Error(error.message);
         if (!b) return "Buchung nicht gefunden";
         if (!BOOKED.includes(b.status)) return "Buchung storniert";
         if (row.kind !== "admin_booking" && !(await isActive(b.user_id))) return "Konto gelöscht/inaktiv";
+        if (row.kind === "return_reminder") {
+          const { resolveTripWindow } = await import("@/lib/trip-time");
+          const { endMs } = resolveTripWindow(b);
+          if (!Number.isFinite(endMs) || Date.now() >= endMs) return "Rückgabe-Erinnerung abgelaufen";
+          if (["returning", "completed", "return_pending"].includes(b.status)) return "Rückgabe bereits gemeldet";
+        }
       } else {
-        const { data: r, error } = await db.from("manual_reservations").select("id").eq("id", row.source_id).maybeSingle();
+        const { data: r, error } = await db.from("manual_reservations").select("id, confirmation_requested, end_at").eq("id", row.source_id).maybeSingle();
         if (error) throw new Error(error.message);
         if (!r) return "Termin gelöscht";
+        if (row.kind === "return_reminder" && (!r.confirmation_requested || Date.now() >= new Date(r.end_at).getTime())) return "Rückgabe-Erinnerung abgelaufen/zurückgezogen";
       }
       if (row.kind !== "review_request") return null;
       if (!(await hasReviewConsent(row.source_type, row.source_id))) return "Keine Einwilligung für Bewertungsmail";
@@ -340,8 +348,9 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
       return null;
     },
     cancel: async (id, reason) => {
-      await db.from("customer_mail_outbox").update({ status: "cancelled", blocked_reason: reason } as never)
+      const { error } = await db.from("customer_mail_outbox").update({ status: "cancelled", blocked_reason: reason } as never)
         .eq("id", id).in("status", ["scheduled", "failed"]);
+      if (error) throw new Error("Mailabbruch nicht gespeichert");
     },
     claim: async (id) => {
       const { data, error } = await db.rpc("claim_customer_mail", { _id: id, _lease_seconds: OUTBOX_LEASE_SECONDS, _safe_seconds: OUTBOX_SAFE_SECONDS });
@@ -358,11 +367,11 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
       for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
       return btoa(bin);
     },
-    send: (mail, att, key) =>
+    send: (mail, att, key, provider) =>
       sendEmailDetailed({
         from: mail.from, to: mail.to, replyTo: mail.reply_to, subject: mail.subject, html: mail.html, text: mail.text,
         attachments: att && mail.attachment ? [{ filename: mail.attachment.filename, content: att }] : undefined,
-        headers: mail.headers, idempotencyKey: key, timeoutMs: 20_000,
+        provider, headers: mail.headers, idempotencyKey: key, timeoutMs: 20_000,
       }),
     complete: async (id, tok, pid) => {
       const { data, error } = await db.rpc("complete_customer_mail", { _id: id, _lease_token: tok, _provider_id: pid });
@@ -445,12 +454,14 @@ export async function sendReminderViaOutbox(args: {
   to: string;
   subject: string;
   html: string;
+  text?: string;
+  dueAt?: string;
   expiresAt: string;
 }): Promise<{ done: boolean; sent: boolean }> {
   const row = await insertRow({
-    source_type: args.source, source_id: args.sourceId, kind: args.kind, due_at: new Date().toISOString(),
+    source_type: args.source, source_id: args.sourceId, kind: args.kind, due_at: args.dueAt ?? new Date().toISOString(),
     recipient_email: args.to,
-    payload: { from: "MyTransporter <info@mytransporter.org>", to: args.to, reply_to: "info@mytransporter.org", subject: args.subject, html: args.html, text: "", attachment: null },
+    payload: { from: "Christian Krüger – MyTransporter <info@mytransporter.org>", to: args.to, reply_to: "info@mytransporter.org", subject: args.subject, html: args.html, text: args.text ?? "", attachment: null },
     expires_at: args.expiresAt,
   });
   const out = await processOutboxRow(await createOutboxDeps(), row);

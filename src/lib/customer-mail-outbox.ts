@@ -243,6 +243,7 @@ export type OutboxRow = {
   kind: OutboxKind;
   status: string;
   idempotency_key: string;
+  mail_provider?: "gmail" | "resend";
   recipient_email: string | null;
   payload: FrozenOutboxMail | null;
 };
@@ -257,7 +258,7 @@ export type OutboxDeps = {
   cancel: (rowId: string, reason: string) => Promise<void>;
   claim: (rowId: string) => Promise<OutboxClaim>;
   loadAttachment: (archiveId: string) => Promise<string>;
-  send: (mail: FrozenOutboxMail, attachmentBase64: string | null, idempotencyKey: string) => Promise<DetailedSendResult>;
+  send: (mail: FrozenOutboxMail, attachmentBase64: string | null, idempotencyKey: string, provider?: "gmail" | "resend") => Promise<DetailedSendResult>;
   complete: (rowId: string, leaseToken: string, providerId: string) => Promise<boolean>;
   fail: (rowId: string, leaseToken: string, kind: string, error: string, ambiguous: boolean, retrySeconds: number) => Promise<boolean>;
 };
@@ -315,7 +316,7 @@ export async function processOutboxRow(deps: OutboxDeps, row: OutboxRow): Promis
 
   let result: DetailedSendResult;
   try {
-    result = await deps.send(mail, attachment, row.idempotency_key);
+    result = await deps.send(mail, attachment, row.idempotency_key, row.mail_provider ?? "resend");
   } catch (e) {
     result = { ok: false, kind: "network", ambiguous: true, status: null, error: String((e as Error)?.message ?? e).slice(0, 300) };
   }

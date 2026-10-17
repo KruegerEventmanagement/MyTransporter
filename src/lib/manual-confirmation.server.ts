@@ -35,6 +35,7 @@ export type CustomerMailRow = {
   revision: number;
   recipient_email: string;
   idempotency_key: string;
+  mail_provider?: "gmail" | "resend";
   status: "pending" | "processing" | "sent" | "failed";
   payload: FrozenMail | null;
 };
@@ -54,12 +55,13 @@ export type ConfirmationDeps = {
     revision: number;
     recipient_email: string;
     idempotency_key: string;
+  mail_provider?: "gmail" | "resend";
     payload: FrozenMail;
   }) => Promise<CustomerMailRow>;
   claim: (rowId: string) => Promise<ClaimResult>;
   complete: (rowId: string, leaseToken: string, providerId: string) => Promise<boolean>;
   fail: (rowId: string, leaseToken: string, kind: string, error: string, ambiguous: boolean) => Promise<boolean>;
-  send: (mail: FrozenMail, idempotencyKey: string) => Promise<DetailedSendResult>;
+  send: (mail: FrozenMail, idempotencyKey: string, provider?: "gmail" | "resend") => Promise<DetailedSendResult>;
 };
 
 export type ConfirmationOutcome =
@@ -135,7 +137,7 @@ export async function runCustomerConfirmation(
   const token = claim.lease_token;
   let result: DetailedSendResult;
   try {
-    result = await deps.send(row.payload, row.idempotency_key);
+    result = await deps.send(row.payload, row.idempotency_key, row.mail_provider ?? "resend");
   } catch (e) {
     result = {
       ok: false,
@@ -174,7 +176,7 @@ export async function createConfirmationDeps(snapshot?: ReservationForMail): Pro
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { sendEmailDetailed } = await import("@/lib/booking-emails.server");
   const T = "manual_reservation_customer_mails";
-  const COLS = "id, reservation_id, revision, recipient_email, idempotency_key, status, payload";
+  const COLS = "id, reservation_id, revision, recipient_email, idempotency_key, status, payload, mail_provider";
 
   const getRow = async (reservationId: string, revision: number) => {
     const { data, error } = await supabaseAdmin
@@ -233,7 +235,7 @@ export async function createConfirmationDeps(snapshot?: ReservationForMail): Pro
     insertRow: async (r) => {
       const { error } = await supabaseAdmin
         .from(T)
-        .upsert(r as never, { onConflict: "reservation_id,revision", ignoreDuplicates: true });
+        .upsert({ ...r, mail_provider: "gmail" } as never, { onConflict: "reservation_id,revision", ignoreDuplicates: true });
       if (error) throw new Error(error.message);
       const row = await getRow(r.reservation_id, r.revision);
       if (!row) throw new Error("Versandeintrag nicht gefunden");
@@ -268,9 +270,9 @@ export async function createConfirmationDeps(snapshot?: ReservationForMail): Pro
       if (error) throw new Error(error.message);
       return data === true;
     },
-    send: (mail, key) =>
+    send: (mail, key, provider) =>
       sendEmailDetailed({
-        from: mail.from,
+        provider, from: mail.from,
         to: mail.to,
         replyTo: mail.reply_to,
         subject: mail.subject,

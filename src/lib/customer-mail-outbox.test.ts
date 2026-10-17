@@ -16,7 +16,8 @@ import {
   type OutboxRow,
 } from "@/lib/customer-mail-outbox";
 import { LOGO_URL } from "@/lib/email-template";
-import { classifyResendError, isConfirmationOutdated, sendEmailDetailed, type DetailedSendResult } from "@/lib/booking-emails.server";
+import { classifyResendError, isConfirmationOutdated, type DetailedSendResult } from "@/lib/booking-emails.server";
+import { sendViaResend as sendEmailDetailed } from "@/lib/resend-mail-provider.server";
 import { berlinWallToIso } from "@/lib/customer-mail-outbox.server";
 
 const REVIEW = "https://www.google.com/maps?cid=9407266905378611223";

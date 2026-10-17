@@ -21,7 +21,7 @@ export async function sendDurableBookingMail(id: string, kind: "booking_confirma
   const key = kind === "booking_confirmation" ? `booking-confirmation-${id}` : `admin-booking-${id}`;
   const { error } = await store.from("customer_mail_outbox").upsert({
     source_type: "booking", source_id: id, kind, due_at: new Date().toISOString(),
-    recipient_email: mail.to, payload: mail as never, idempotency_key: key,
+    mail_provider: "gmail", recipient_email: mail.to, payload: mail as never, idempotency_key: key,
   }, { onConflict: "source_type,source_id,kind", ignoreDuplicates: true });
   if (error) throw new Error(error.message);
   const { data, error: readError } = await store.from("customer_mail_outbox").select("*")
@@ -53,16 +53,16 @@ export async function runBookingEmailRecovery(): Promise<{ processed: number; co
   const { data, error } = await store.rpc("booking_email_due_intents", { _limit: 5 });
   if (error) throw new Error(error.message);
   const stats = { processed: 0, completed: 0, failed: 0 };
-  await Promise.all((data ?? []).map(async (intent) => {
+  for (const intent of data ?? []) {
     stats.processed++;
     let done = false;
     let failure = "Versand noch offen";
     try {
       if (intent.source_type === "booking") {
         const { reconcileBookingPostActions } = await import("@/lib/booking-actions.server");
-        await reconcileBookingPostActions(intent.source_id, ["customer_confirmation_invoice", "admin_booking_email"]);
+        await reconcileBookingPostActions(intent.source_id, ["customer_confirmation_invoice", "customer_invoice", "admin_booking_email"]);
         const { data: actions, error: actionError } = await store.from("booking_actions").select("status")
-          .eq("booking_id", intent.source_id).in("action_key", ["customer_confirmation_invoice", "admin_booking_email"]);
+          .eq("booking_id", intent.source_id).in("action_key", ["customer_confirmation_invoice", "customer_invoice", "admin_booking_email"]);
         if (actionError) throw new Error(actionError.message);
         done = actions?.length === 2 && actions.every((a) => a.status === "succeeded");
         if (!done) {
@@ -80,6 +80,12 @@ export async function runBookingEmailRecovery(): Promise<{ processed: number; co
         if (!exists) done = true;
         else {
           const snapshot = manualIntentSnapshot(intent.snapshot as Record<string, unknown>);
+          // Invoice is an independent durable action, not contingent on the
+          // confirmation provider succeeding in this invocation.
+          try {
+            const { enqueueManualInvoice } = await import("@/lib/customer-mail-outbox.server");
+            await enqueueManualInvoice(intent.source_id);
+          } catch { stats.failed++; }
           const result = await runCustomerConfirmation(await createConfirmationDeps(snapshot), { reservationId: intent.source_id, revision: intent.revision });
           done = result.status === "sent" || result.status === "needs_review";
           if (result.status === "needs_review") failure = "Unklarer Versand außerhalb des sicheren Wiederholungsfensters – manuelle Prüfung nötig";
@@ -96,6 +102,6 @@ export async function runBookingEmailRecovery(): Promise<{ processed: number; co
     }).eq("id", intent.id).eq("status", "pending");
     if (writeError) throw new Error(writeError.message);
     if (done) stats.completed++; else stats.failed++;
-  }));
+  }
   return stats;
 }

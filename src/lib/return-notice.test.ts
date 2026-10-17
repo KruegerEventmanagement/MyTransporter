@@ -10,10 +10,13 @@ describe("Rückgabe-Hinweis", () => {
     expect(returnPopupPhase(end, end, false)).toBe("overdue");
     expect(returnPopupPhase(end, end, true)).toBeNull();
   });
-  it("Mail nur im Fenster Ende−60 min bis Ende", () => {
-    expect(returnMailDue(end - 61 * M, end)).toBe(false);
-    expect(returnMailDue(end - 60 * M, end)).toBe(true);
+  it("Mail nur im Fenster Ende−30 min bis Ende", () => {
+    expect(returnMailDue(end - 31 * M, end)).toBe(false);
+    expect(returnMailDue(end - 30 * M, end)).toBe(true);
+    expect(returnMailDue(end - 30 * M - 1, end)).toBe(false);
     expect(returnMailDue(end, end)).toBe(false);
+    expect(returnMailDue(end + M, end)).toBe(false);
+    expect(returnMailDue(NaN, end)).toBe(false);
   });
   it("Text nennt 10 Werktage und 30 €", () => {
     expect(DEPOSIT_RETURN_NOTICE).toContain("bis zu 10 Werktage");
