@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Buchungsmails 17.10.2026
+- [x] Nachprüfung: überholte manuelle Bestätigungen und historische Online-Statuswechsel gesperrt; 798 Regressionstests bestanden.
 - [x] Produktionsfehler getrennt nach Kunden-/Admin-/Owner-Mail belegt.
 - [x] Dauerhafte Versandabsicht, unveränderliche Inhalte und sichere Wiederholungen ergänzt (kein Altbestands-Replay).
 - [x] 794 Tests, automatische Typ-/Buildprüfung und QA-Bericht abgeschlossen.

@@ -64,6 +64,13 @@
       "when": 1792256580929,
       "tag": "0008_email_intent_ignore_non_confirmation_updates",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792256942546,
+      "tag": "0009_guard_obsolete_booking_email_intents",
+      "breakpoints": true
     }
   ]
 }

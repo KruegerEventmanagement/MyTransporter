@@ -16,10 +16,19 @@ async function setup() {
   `);
   await db.exec(migration);
   await db.exec(readFileSync(new URL("../../drizzle/migrations/0008_email_intent_ignore_non_confirmation_updates.sql", import.meta.url), "utf8"));
+  await db.exec(readFileSync(new URL("../../drizzle/migrations/0009_guard_obsolete_booking_email_intents.sql", import.meta.url), "utf8"));
   return db;
 }
 
 describe("atomic email intents (real migration, isolated database)", () => {
+  it("a historical status transition cannot enqueue a fresh confirmation with obsolete codes", async () => {
+    const db = await setup();
+    const id = crypto.randomUUID();
+    await db.query(`INSERT INTO bookings(id,status,created_at) VALUES($1,'cancelled',now()-interval '24 hours')`, [id]);
+    await db.query(`UPDATE bookings SET status='paid' WHERE id=$1`, [id]);
+    expect((await db.query(`SELECT * FROM booking_email_intents`)).rows).toHaveLength(0);
+    await db.close();
+  }, 15000);
   it("an unrelated update of a pre-existing requested reservation does not replay its confirmation", async () => {
     const db = await setup();
     // Simulate a historical reservation that predates installation of the intent trigger.

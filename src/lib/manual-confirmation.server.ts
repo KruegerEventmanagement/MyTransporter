@@ -46,6 +46,7 @@ export type ClaimResult =
   | { result: "sent" | "in_progress" | "backoff" | "needs_review" | "no_payload" | "not_found" };
 
 export type ConfirmationDeps = {
+  eligibility?: (id: string, revision: number) => Promise<string | null>;
   loadReservation: (id: string) => Promise<ReservationForMail | null>;
   getRow: (reservationId: string, revision: number) => Promise<CustomerMailRow | null>;
   insertRow: (r: {
@@ -97,6 +98,9 @@ export async function runCustomerConfirmation(
 ): Promise<ConfirmationOutcome> {
   const { reservationId, revision } = target;
   let row = await deps.getRow(reservationId, revision);
+  if (row?.status === "sent") return { status: "sent", already: true, revision };
+  const stopped = await deps.eligibility?.(reservationId, revision);
+  if (stopped) return { status: "blocked", reason: stopped };
 
   if (!row) {
     const res = await deps.loadReservation(reservationId);
@@ -184,6 +188,15 @@ export async function createConfirmationDeps(snapshot?: ReservationForMail): Pro
   };
 
   return {
+    eligibility: async (id, revision) => {
+      const { data, error } = await supabaseAdmin.from("manual_reservations")
+        .select("revision,confirmation_requested").eq("id", id).maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) return "Reservierung gelöscht";
+      if (data.revision !== revision) return "Bestätigung überholt – aktuelle Fassung prüfen";
+      if (!data.confirmation_requested) return "Bestätigung zurückgezogen";
+      return null;
+    },
     loadReservation: async (id) => {
       if (snapshot?.reservationId === id) return snapshot;
       const { data: intent, error: intentError } = await supabaseAdmin.from("booking_email_intents")

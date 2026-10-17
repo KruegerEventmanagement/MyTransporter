@@ -163,6 +163,13 @@ describe("runCustomerConfirmation", () => {
     expect(await runCustomerConfirmation(deps, TARGET)).toMatchObject({ status: "sent", already: true });
     expect(sent).toHaveLength(1);
   });
+  it.each(["Bestätigung überholt", "Bestätigung zurückgezogen", "Reservierung gelöscht"])("%s sperrt auch einen eingefrorenen Retry", async (reason) => {
+    const { deps, sent } = makeDeps();
+    await deps.insertRow({ reservation_id: base.reservationId, revision: 3, recipient_email: "kunde@example.de", idempotency_key: "k", payload: freezeMail(base) });
+    deps.eligibility = async () => reason;
+    expect(await runCustomerConfirmation(deps, TARGET)).toEqual({ status: "blocked", reason });
+    expect(sent).toHaveLength(0);
+  });
   it("ohne angeforderte Bestätigung oder für veraltete Revision kein Versand", async () => {
     const a = makeDeps({}, { confirmationRequested: false });
     expect((await runCustomerConfirmation(a.deps, TARGET)).status).toBe("blocked");
