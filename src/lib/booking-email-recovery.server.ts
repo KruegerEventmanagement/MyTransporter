@@ -60,9 +60,9 @@ export async function runBookingEmailRecovery(): Promise<{ processed: number; co
     try {
       if (intent.source_type === "booking") {
         const { reconcileBookingPostActions } = await import("@/lib/booking-actions.server");
-        await reconcileBookingPostActions(intent.source_id, ["customer_confirmation_invoice", "admin_booking_email"]);
+        await reconcileBookingPostActions(intent.source_id, ["customer_confirmation_invoice", "customer_invoice", "admin_booking_email"]);
         const { data: actions, error: actionError } = await store.from("booking_actions").select("status")
-          .eq("booking_id", intent.source_id).in("action_key", ["customer_confirmation_invoice", "admin_booking_email"]);
+          .eq("booking_id", intent.source_id).in("action_key", ["customer_confirmation_invoice", "customer_invoice", "admin_booking_email"]);
         if (actionError) throw new Error(actionError.message);
         done = actions?.length === 2 && actions.every((a) => a.status === "succeeded");
         if (!done) {

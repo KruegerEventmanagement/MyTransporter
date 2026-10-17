@@ -51,7 +51,7 @@ export async function sendGmailWithDeps(args: MailSendArgs, deps: GmailDeps): Pr
       return failure('no_provider_id', true, res.status, 'Gmail-Antwort ohne gültige Nachrichten-ID');
     }
     // Completion failure does not authorize resend. Ledger remains ambiguous.
-    await deps.complete(args.idempotencyKey, token, id);
+    if (!(await deps.complete(args.idempotencyKey, token, id))) return failure('network', true, null, 'Gmail-Annahme ohne bestätigten Protokolleintrag – manuelle Prüfung nötig');
     return { ok: true, providerId: id };
   } catch {
     if (token) {

@@ -9,8 +9,10 @@ export const resendMailProvider: MailProvider = {
 export const preparedGmailMailProvider: MailProvider = {
   id: 'gmail', supportsProviderIdempotency: false, send: sendViaGmail,
 };
+export const RESEND_FALLBACK_RELEASED = false;
 export function sendEmailDetailed(args: MailSendArgs): Promise<DetailedSendResult> {
   if (args.provider === 'gmail') return preparedGmailMailProvider.send(args);
   // Resend only for explicit/legacy Resend bindings, never Gmail fallback.
+  if (!RESEND_FALLBACK_RELEASED) return Promise.resolve({ ok: false, kind: 'provider_not_ready', ambiguous: false, status: null, error: 'Alter Resend-Versand deaktiviert; Altversuche gesondert prüfen' });
   return resendMailProvider.send(args);
 }

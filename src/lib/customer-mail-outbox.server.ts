@@ -147,13 +147,14 @@ export async function enqueueBookingInvoice(bookingId: string): Promise<EnqueueR
   const existing = await getRow("booking", bookingId, "invoice");
   if (existing) return { state: "queued", rowId: existing.id };
   const db = await admin();
-  const { data: legacy } = await db
+  const { data: legacy, error: legacyError } = await db
     .from("admin_notifications")
     .select("id")
     .eq("booking_id", bookingId)
     .eq("title", "Rechnung versendet")
     .limit(1)
     .maybeSingle();
+  if (legacyError) throw new Error("Bisheriger Rechnungsversand nicht prüfbar");
   if (legacy) return { state: "legacy_sent" };
 
   const { data: b, error } = await db
@@ -324,15 +325,22 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
     precheck: async (row) => {
       if (row.kind === "invoice") return null;
       if (row.source_type === "booking") {
-        const { data: b, error } = await db.from("bookings").select("status, user_id").eq("id", row.source_id).maybeSingle();
+        const { data: b, error } = await db.from("bookings").select("status, user_id, start_date, start_hour, plan_id, vehicle_name").eq("id", row.source_id).maybeSingle();
         if (error) throw new Error(error.message);
         if (!b) return "Buchung nicht gefunden";
         if (!BOOKED.includes(b.status)) return "Buchung storniert";
         if (row.kind !== "admin_booking" && !(await isActive(b.user_id))) return "Konto gelöscht/inaktiv";
+        if (row.kind === "return_reminder") {
+          const { resolveTripWindow } = await import("@/lib/trip-time");
+          const { endMs } = resolveTripWindow(b);
+          if (!Number.isFinite(endMs) || Date.now() >= endMs) return "Rückgabe-Erinnerung abgelaufen";
+          if (["returning", "completed", "return_pending"].includes(b.status)) return "Rückgabe bereits gemeldet";
+        }
       } else {
-        const { data: r, error } = await db.from("manual_reservations").select("id").eq("id", row.source_id).maybeSingle();
+        const { data: r, error } = await db.from("manual_reservations").select("id, confirmation_requested, end_at").eq("id", row.source_id).maybeSingle();
         if (error) throw new Error(error.message);
         if (!r) return "Termin gelöscht";
+        if (row.kind === "return_reminder" && (!r.confirmation_requested || Date.now() >= new Date(r.end_at).getTime())) return "Rückgabe-Erinnerung abgelaufen/zurückgezogen";
       }
       if (row.kind !== "review_request") return null;
       if (!(await hasReviewConsent(row.source_type, row.source_id))) return "Keine Einwilligung für Bewertungsmail";
@@ -340,8 +348,9 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
       return null;
     },
     cancel: async (id, reason) => {
-      await db.from("customer_mail_outbox").update({ status: "cancelled", blocked_reason: reason } as never)
+      const { error } = await db.from("customer_mail_outbox").update({ status: "cancelled", blocked_reason: reason } as never)
         .eq("id", id).in("status", ["scheduled", "failed"]);
+      if (error) throw new Error("Mailabbruch nicht gespeichert");
     },
     claim: async (id) => {
       const { data, error } = await db.rpc("claim_customer_mail", { _id: id, _lease_seconds: OUTBOX_LEASE_SECONDS, _safe_seconds: OUTBOX_SAFE_SECONDS });

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-/** Geschützter stündlicher Nachholer der Kunden-Mail-Outbox (Rechnung, Bewertungsanfrage). */
+/** Prepared five-minute sweep; schedule stays inactive until release. */
 export const Route = createFileRoute("/api/public/hooks/process-customer-mails")({
   server: {
     handlers: {
