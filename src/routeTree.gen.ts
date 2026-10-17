@@ -39,6 +39,7 @@ import { Route as ApiPublicReviewOptOutRouteImport } from './routes/api/public/r
 import { Route as ApiPublicSendTestInvoiceRouteImport } from './routes/api/public/send-test-invoice'
 import { Route as ApiPublicHealthAutomationsRouteImport } from './routes/api/public/health/automations'
 import { Route as ApiPublicHooksNotifyAdminRouteImport } from './routes/api/public/hooks/notify-admin'
+import { Route as ApiPublicHooksProcessBookingEmailsRouteImport } from './routes/api/public/hooks/process-booking-emails'
 import { Route as ApiPublicHooksProcessCalendarSyncRouteImport } from './routes/api/public/hooks/process-calendar-sync'
 import { Route as ApiPublicHooksProcessCustomerMailsRouteImport } from './routes/api/public/hooks/process-customer-mails'
 import { Route as ApiPublicHooksProcessManualNotificationsRouteImport } from './routes/api/public/hooks/process-manual-notifications'
@@ -204,6 +205,12 @@ const ApiPublicHooksNotifyAdminRoute =
     path: '/api/public/hooks/notify-admin',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksProcessBookingEmailsRoute =
+  ApiPublicHooksProcessBookingEmailsRouteImport.update({
+    id: '/api/public/hooks/process-booking-emails',
+    path: '/api/public/hooks/process-booking-emails',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksProcessCalendarSyncRoute =
   ApiPublicHooksProcessCalendarSyncRouteImport.update({
     id: '/api/public/hooks/process-calendar-sync',
@@ -290,6 +297,7 @@ export interface FileRoutesByFullPath {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
+  '/api/public/hooks/process-booking-emails': typeof ApiPublicHooksProcessBookingEmailsRoute
   '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
   '/api/public/hooks/process-customer-mails': typeof ApiPublicHooksProcessCustomerMailsRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
@@ -331,6 +339,7 @@ export interface FileRoutesByTo {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
+  '/api/public/hooks/process-booking-emails': typeof ApiPublicHooksProcessBookingEmailsRoute
   '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
   '/api/public/hooks/process-customer-mails': typeof ApiPublicHooksProcessCustomerMailsRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
@@ -373,6 +382,7 @@ export interface FileRoutesById {
   '/api/public/send-test-invoice': typeof ApiPublicSendTestInvoiceRoute
   '/api/public/health/automations': typeof ApiPublicHealthAutomationsRoute
   '/api/public/hooks/notify-admin': typeof ApiPublicHooksNotifyAdminRoute
+  '/api/public/hooks/process-booking-emails': typeof ApiPublicHooksProcessBookingEmailsRoute
   '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
   '/api/public/hooks/process-customer-mails': typeof ApiPublicHooksProcessCustomerMailsRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
@@ -416,6 +426,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
+    | '/api/public/hooks/process-booking-emails'
     | '/api/public/hooks/process-calendar-sync'
     | '/api/public/hooks/process-customer-mails'
     | '/api/public/hooks/process-manual-notifications'
@@ -457,6 +468,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
+    | '/api/public/hooks/process-booking-emails'
     | '/api/public/hooks/process-calendar-sync'
     | '/api/public/hooks/process-customer-mails'
     | '/api/public/hooks/process-manual-notifications'
@@ -498,6 +510,7 @@ export interface FileRouteTypes {
     | '/api/public/send-test-invoice'
     | '/api/public/health/automations'
     | '/api/public/hooks/notify-admin'
+    | '/api/public/hooks/process-booking-emails'
     | '/api/public/hooks/process-calendar-sync'
     | '/api/public/hooks/process-customer-mails'
     | '/api/public/hooks/process-manual-notifications'
@@ -540,6 +553,7 @@ export interface RootRouteChildren {
   ApiPublicSendTestInvoiceRoute: typeof ApiPublicSendTestInvoiceRoute
   ApiPublicHealthAutomationsRoute: typeof ApiPublicHealthAutomationsRoute
   ApiPublicHooksNotifyAdminRoute: typeof ApiPublicHooksNotifyAdminRoute
+  ApiPublicHooksProcessBookingEmailsRoute: typeof ApiPublicHooksProcessBookingEmailsRoute
   ApiPublicHooksProcessCalendarSyncRoute: typeof ApiPublicHooksProcessCalendarSyncRoute
   ApiPublicHooksProcessCustomerMailsRoute: typeof ApiPublicHooksProcessCustomerMailsRoute
   ApiPublicHooksProcessManualNotificationsRoute: typeof ApiPublicHooksProcessManualNotificationsRoute
@@ -763,6 +777,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksNotifyAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-booking-emails': {
+      id: '/api/public/hooks/process-booking-emails'
+      path: '/api/public/hooks/process-booking-emails'
+      fullPath: '/api/public/hooks/process-booking-emails'
+      preLoaderRoute: typeof ApiPublicHooksProcessBookingEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/process-calendar-sync': {
       id: '/api/public/hooks/process-calendar-sync'
       path: '/api/public/hooks/process-calendar-sync'
@@ -860,6 +881,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSendTestInvoiceRoute: ApiPublicSendTestInvoiceRoute,
   ApiPublicHealthAutomationsRoute: ApiPublicHealthAutomationsRoute,
   ApiPublicHooksNotifyAdminRoute: ApiPublicHooksNotifyAdminRoute,
+  ApiPublicHooksProcessBookingEmailsRoute:
+    ApiPublicHooksProcessBookingEmailsRoute,
   ApiPublicHooksProcessCalendarSyncRoute:
     ApiPublicHooksProcessCalendarSyncRoute,
   ApiPublicHooksProcessCustomerMailsRoute:

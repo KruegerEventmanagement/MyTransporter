@@ -283,6 +283,11 @@ export const Route = createFileRoute("/api/public/hooks/send-reminders")({
         const provided =
           new URL(request.url).searchParams.get("token") ?? request.headers.get("x-hook-token") ?? "";
         if (!token || provided !== token) return new Response("Unauthorized", { status: 401 });
+        let bookingEmails: Record<string, number> | { failed: boolean };
+        try {
+          const { runBookingEmailRecovery } = await import("@/lib/booking-email-recovery.server");
+          bookingEmails = await runBookingEmailRecovery();
+        } catch { bookingEmails = { failed: true }; }
         try {
           const r24 = await processBatch("24h");
           const r30 = await processBatch("30min");
@@ -298,6 +303,7 @@ export const Route = createFileRoute("/api/public/hooks/send-reminders")({
           return new Response(
             JSON.stringify({
               ok: true,
+              booking_emails: bookingEmails,
               reminders_24h: r24,
               reminders_30min: r30,
               manual_24h: m24,

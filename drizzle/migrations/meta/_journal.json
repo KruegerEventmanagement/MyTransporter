@@ -50,6 +50,20 @@
       "when": 1792101176550,
       "tag": "0006_customer_mail_return_reminder_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792256254223,
+      "tag": "0007_booking_email_intents_and_recovery",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792256580929,
+      "tag": "0008_email_intent_ignore_non_confirmation_updates",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,11 @@
 # Roadmap
 
+## Buchungsmails 17.10.2026
+- [x] Produktionsfehler getrennt nach Kunden-/Admin-/Owner-Mail belegt.
+- [x] Dauerhafte Versandabsicht, unveränderliche Inhalte und sichere Wiederholungen ergänzt (kein Altbestands-Replay).
+- [x] 794 Tests, automatische Typ-/Buildprüfung und QA-Bericht abgeschlossen.
+- [ ] Extern blockiert: gültigen RESEND_API_KEY sicher ersetzen; Resend-Domain/Quota im Eigentümerkonto bestätigen; geprüften Code veröffentlichen.
+
 ## Erledigt
 - [x] Registrierung: Pflichtfeld Geburtsdatum, Mindestalter 25 (kalendergenau), Speicherung in user_metadata + profiles, Admin-Mail mit Geburtsdatum/Alter
 - [x] Neue Nav-Kategorie „Langzeitmiete" + Route /langzeitmiete mit animiertem Preisrechner (ab 7 Tagen, 10 % Rabatt, Kaution separat)
