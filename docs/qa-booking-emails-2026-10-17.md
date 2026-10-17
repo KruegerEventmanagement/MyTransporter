@@ -35,5 +35,5 @@
 - All provider tests use mocks and synthetic recipients; migration tests run against isolated PGlite, not production bookings.
 - New recovery endpoint returns 401 without the hook token; public homepage still renders.
 - Backend verification: intent table empty after migration; no real booking/payment/customer mail/replay initiated.
-- Automatic harness typecheck/production build reported `build OK`. Full-suite results are recorded in the completion message.
+- Automatic harness typecheck/production build reported `build OK`; full suite: 67 files, 794 tests passed.
 - Live inbox delivery is deliberately not tested. Provider acceptance does not establish delivery. Runtime secret/domain prerequisites and publication remain external blockers; this is not a claim that emails already work in production.

@@ -1,9 +1,10 @@
 # Roadmap
 
 ## Buchungsmails 17.10.2026
-- [ ] Produktionsfehler getrennt nach Kunden-/Admin-/Owner-Mail belegen.
-- [ ] Dauerhafte Versandabsicht, unveränderliche Inhalte und sichere Wiederholungen ergänzen (kein Altbestands-Replay).
-- [ ] Isolierte Tests und QA-Bericht; Versandzugang und Veröffentlichung als externe Voraussetzungen benennen.
+- [x] Produktionsfehler getrennt nach Kunden-/Admin-/Owner-Mail belegt.
+- [x] Dauerhafte Versandabsicht, unveränderliche Inhalte und sichere Wiederholungen ergänzt (kein Altbestands-Replay).
+- [x] 794 Tests, automatische Typ-/Buildprüfung und QA-Bericht abgeschlossen.
+- [ ] Extern blockiert: gültigen RESEND_API_KEY sicher ersetzen; Resend-Domain/Quota im Eigentümerkonto bestätigen; geprüften Code veröffentlichen.
 
 ## Erledigt
 - [x] Registrierung: Pflichtfeld Geburtsdatum, Mindestalter 25 (kalendergenau), Speicherung in user_metadata + profiles, Admin-Mail mit Geburtsdatum/Alter
