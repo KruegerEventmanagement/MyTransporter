@@ -32,6 +32,8 @@
 
 ## Verification scope
 
+- Follow-up review: migration 0009 excludes historical online transitions older than the existing 23-hour confirmation safety window. Manual retries now check the current revision/request flag even with an already-frozen payload; withdrawn/deleted/superseded intents stop without a send or success log. This intentionally prioritizes not sending obsolete confirmations over retrying withdrawn revisions.
+
 - All provider tests use mocks and synthetic recipients; migration tests run against isolated PGlite, not production bookings.
 - New recovery endpoint returns 401 without the hook token; public homepage still renders.
 - Backend verification: intent table empty after migration; no real booking/payment/customer mail/replay initiated.
