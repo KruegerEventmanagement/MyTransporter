@@ -1,15 +1,17 @@
 # Roadmap
 
 ## Mail-Automationsumfang 17.10.2026
-- [ ] Gmail-Verbindung/Konto prüfen; serverseitigen Adapter mit providergebundenen Sperren vorbereiten, Versand aus.
-- [ ] Rückgabe-Mail auf 30 Minuten setzen, Pflichtfotos konkretisieren; keine vergangenen Erinnerungen.
-- [ ] Bestehende Bestätigung/Rechnung/Review und Nachholbarkeit prüfen; nur Zähler, keine Replays.
-- [ ] Bestehende Einwilligung/DOB/Coupons lesend prüfen; Geburtstagswerbung nicht in Buchungsmails implementieren (separater Marketingdienst nötig).
-- [ ] Job-Infrastruktur ohne Doppeljobs prüfen, Tests und QA-Bericht abschließen; nicht veröffentlichen.
+- [x] Gmail verknüpft; read-only Profil bestätigt info@mytransporter.org und Sendeberechtigung; Adapter mit unabhängigem Gmail-Fencing, Versandfreigabe aus.
+- [x] Rückgabemail ab Ende−30 Minuten für Online/angeforderte manuelle Kundenmieten, konkrete Pflichtfotos, Ablaufprüfung; keine vergangenen Erinnerungen.
+- [x] Bestehende Bestätigung/Rechnung/Review geprüft; unabhängige Rechnungs-Recovery ergänzt, Nachholzähler nur gelesen; keine Replays.
+- [x] DOB/Einwilligung/Coupons geprüft; Geburtstagsversand gesperrt, vorhandene Couponvalidierung unverändert.
+- [x] Vorhandene Jobs bewahrt, keine Doppeljobs/Replay; Kundenmail-Cron und Review-Start bleiben inaktiv.
+- [x] 831 Tests inkl. tatsächlicher Gmail-Migration; automatische Typ-/Buildprüfung und QA-Bericht.
+- [ ] Extern blockiert: Geburtstagspromotion benötigt separaten Marketingdienst; kein Geburtstagsversand über App-Mails.
+- [ ] Freigabe offen: unabhängiger Code-Review, sichere Entscheidung je altem Resend-Auftrag, Gmail-Sendefreigabe und Veröffentlichung; keine echte Versand-End-to-End-Prüfung erfolgt.
 
 ## Gmail-Vorbereitung 17.10.2026
-- [x] Versandabstraktion und gesperrte Gmail-Option mit MIME vorbereitet; 807 Tests und automatische Typ-/Buildprüfung bestanden, kein Versand/Publish.
-- [ ] Extern blockiert: Gmail-App-Verbindung für info@mytransporter.org erstellen, verknüpfen und Konto/Berechtigungen prüfen; erst danach sichere providergebundene Aktivierung separat freigeben.
+- [x] Gmail-App-Verbindung erstellt, verknüpft und Konto/Berechtigungen lesend bestätigt; Aktivierung weiterhin gesperrt.
 
 ## Buchungsmails 17.10.2026
 - [x] Nachprüfung: überholte manuelle Bestätigungen und historische Online-Statuswechsel gesperrt; 798 Regressionstests bestanden.

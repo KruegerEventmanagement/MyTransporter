@@ -53,7 +53,7 @@ export async function runBookingEmailRecovery(): Promise<{ processed: number; co
   const { data, error } = await store.rpc("booking_email_due_intents", { _limit: 5 });
   if (error) throw new Error(error.message);
   const stats = { processed: 0, completed: 0, failed: 0 };
-  await Promise.all((data ?? []).map(async (intent) => {
+  for (const intent of data ?? []) {
     stats.processed++;
     let done = false;
     let failure = "Versand noch offen";
@@ -102,6 +102,6 @@ export async function runBookingEmailRecovery(): Promise<{ processed: number; co
     }).eq("id", intent.id).eq("status", "pending");
     if (writeError) throw new Error(writeError.message);
     if (done) stats.completed++; else stats.failed++;
-  }));
+  }
   return stats;
 }
