@@ -85,6 +85,7 @@ export async function runBookingEmailRecovery(): Promise<{ processed: number; co
           if (result.status === "needs_review") failure = "Unklarer Versand außerhalb des sicheren Wiederholungsfensters – manuelle Prüfung nötig";
           if (result.status === "failed") failure = `${result.kind}: ${result.error}`;
           if (result.status === "blocked") failure = result.reason;
+          if (result.status === "blocked" && /überholt|zurückgezogen|gelöscht/.test(result.reason)) done = true;
         }
       }
     } catch (e) { failure = String((e as Error)?.message ?? e).slice(0, 500); }
