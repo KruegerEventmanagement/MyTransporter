@@ -17,7 +17,7 @@ CREATE TABLE public.bookings (id uuid PRIMARY KEY, status text, deposit numeric,
   return_reported_at timestamptz, start_date date, start_hour int, plan_id text, extra_charge_status text,
   extra_charge_cents int, extra_charge_intent_id text, extra_km_charge_cents int, extra_charge_claimed_at timestamptz);
 CREATE TABLE public.manual_reservations (id uuid PRIMARY KEY, end_at timestamptz);
-CREATE TABLE public.deposit_settlements (booking_id uuid, kind text, status text);
+CREATE TABLE public.deposit_settlements (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), booking_id uuid, kind text, status text);
 CREATE TABLE public.admin_notifications (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), type text, title text, body text, booking_id uuid, read boolean DEFAULT false);
 CREATE TABLE public.customer_mail_settings (id boolean PRIMARY KEY);
 INSERT INTO public.customer_mail_settings (id) VALUES (true);
