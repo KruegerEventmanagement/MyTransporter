@@ -97,3 +97,5 @@
 - [x] Sweep per Anti-Join/Paginierung; Due-Queue ohne Backoff/aktive Leases
 - [x] Erinnerungen mit Lease+Token, gefrorener Payload, 23h-Grenze
 - [x] SQL-Tests mit pglite aus echter Migration
+
+- [x] Kautionsabschluss (Offene Kautionen, Abzüge, Adminhinweis/Tagesdigest, Kundenmail) 18.10.2026, nicht veröffentlicht
