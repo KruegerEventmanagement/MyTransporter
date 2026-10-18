@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Betreiberauftrag Bewertungsbestand 18.10.2026
+- [x] Daniel Konrad: beide Gmail-Belege geprüft, Review-Suche/Outbox ohne Treffer; ausschließlich daniel.o.konrad@gmail.com gespeichert (Revision 2), Quellen dokumentiert; keine Bewertungsmail/Rechnung gesendet.
 - [x] Neue außerhalb der Website eingeholte Zustimmung als heutige Betreiberbestätigung dokumentiert, nicht als beobachteten Kunden-/Checkout-Consent.
 - [x] Rainer/Reiner Schmutnig (rainerrene11@web.de) dauerhaft als Betreiber-Ausschluss festgehalten; keine fingierte Kundenabmeldung gespeichert.
 - [x] Bestand, vorhandene Consents, Opt-outs und Fatihs bereits erfolgreiche Bewertungsmail lesend geprüft; keine Rechnungen/Buchungen verändert.
