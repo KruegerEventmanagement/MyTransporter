@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   priceItems, computeTotals, documentationFeeAllowed, buildCustomerClosingMail, buildAdminReviewMail,
-  resolveRefund, depositReminderDueAt, shouldSendClosingMail,
+  resolveRefund, depositReminderDueAt, shouldSendClosingMail, effectiveTotals, adjustmentCents, reminderCandidates,
   payoutSentence, digestSourceId, berlinDateAndHour, photoChecklist, type ReviewFacts,
 } from "./deposit-review";
 import { requestDepositSettlement, syncOpenSettlements, type Deps, type SettlementRow, type BookingRow, type RefundLike } from "./deposit-settlement.server";
@@ -382,5 +382,35 @@ describe("48h-Kautionserinnerung", () => {
     expect(shouldSendClosingMail(null)).toBe(false);
     expect(shouldSendClosingMail({ send_closing_mail: false })).toBe(false);
     expect(shouldSendClosingMail({ send_closing_mail: true })).toBe(true);
+  });
+});
+
+describe("Erinnerungskandidaten (Auswahl vor dem Limit)", () => {
+  const from = Date.parse("2026-10-18T00:00:00Z");
+  const now = Date.parse("2026-10-22T12:00:00Z");
+  const row = (id: string, endMs: number, over: object = {}) => ({ source: "booking" as const, id, name: id, endMs, returnReportedMs: null, skip: false, ...over });
+  it("mehrwöchige Miete, die vor Aktivierung begann und danach endet, wird erfasst", () => {
+    const end = Date.parse("2026-10-20T10:00:00Z"); // Start 10.10. ist egal, das Ende zählt
+    expect(reminderCandidates([row("a", end)], from, now, new Set())).toHaveLength(1);
+  });
+  it("bereits beanspruchte Versionen verhungern spätere Fälle nicht (26+ fällig)", () => {
+    const end = Date.parse("2026-10-20T10:00:00Z");
+    const claimed = new Set<string>();
+    const rows = [];
+    for (let i = 0; i < 30; i++) {
+      const id = `b${i}`;
+      if (i < 25) claimed.add(`booking:${id}:${new Date(end).toISOString()}`);
+      rows.push(row(id, end));
+    }
+    const out = reminderCandidates(rows, from, now, claimed, 25);
+    expect(out).toHaveLength(5);
+    expect(out.map((c) => c.id)).toEqual(["b25", "b26", "b27", "b28", "b29"]);
+  });
+  it("spätere Rückgabe verschiebt, Storno/erledigt/0 € überspringt", () => {
+    const end = Date.parse("2026-10-20T10:00:00Z");
+    const lateReturn = row("c", end, { returnReportedMs: now - 3600_000 }); // erst in 47h fällig
+    expect(reminderCandidates([lateReturn], from, now, new Set())).toHaveLength(0);
+    expect(reminderCandidates([row("d", end, { skip: true })], from, now, new Set())).toHaveLength(0);
+    expect(reminderCandidates([row("e", from - 86400_000)], from, now, new Set())).toHaveLength(0); // vor Aktivierung beendet
   });
 });
