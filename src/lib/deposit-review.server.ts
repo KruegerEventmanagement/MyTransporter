@@ -312,10 +312,12 @@ export function payoutStateFor(ctx: DepositContext): PayoutState | null {
   return null;
 }
 
-/** Friert genau eine Kundenmail je Vorgang ein; nie bei bekanntem Bounce, nie ohne realen Zahlungsstand. */
-export async function ensureClosingMail(source: Source, id: string): Promise<"queued" | "exists" | "not_ready" | "no_email" | "bounced"> {
+/** Friert genau eine Kundenmail je Vorgang ein; nie bei bekanntem Bounce, nie ohne realen Zahlungsstand,
+ *  nie ohne ausdrücklich eingeschaltete Mailwahl im Entwurf. */
+export async function ensureClosingMail(source: Source, id: string): Promise<"queued" | "exists" | "not_ready" | "no_email" | "bounced" | "disabled"> {
   const ctx = await loadDepositContext(source, id);
   if (ctx.closingMail) return "exists";
+  if (!shouldSendClosingMail(ctx.review)) return "disabled";
   const payout = payoutStateFor(ctx);
   if (!payout) return "not_ready";
   if (!ctx.email) return "no_email";
@@ -327,7 +329,7 @@ export async function ensureClosingMail(source: Source, id: string): Promise<"qu
       depositCents: r.final_deposit_cents!, totalCents: r.final_deduct_total_cents!, appliedCents: r.final_deduct_applied_cents!,
       outstandingCents: r.final_outstanding_cents!, refundCents: r.final_refund_cents!,
     },
-    items: priceItemsFrozen(r.items), message: r.customer_message, payout, channel: source === "booking" ? "stripe" : "manual",
+    items: priceItemsFrozen(r.items), message: r.customer_message, adjustment: r.adjustment_reason ?? null, payout, channel: source === "booking" ? "stripe" : "manual",
   });
   const { insertRow, processOutboxRowById } = await import("@/lib/customer-mail-outbox.server");
   const row = await insertRow({ source_type: source, source_id: id, kind: "deposit_closing", due_at: new Date().toISOString(), recipient_email: ctx.email, payload: mail });
