@@ -1,6 +1,18 @@
 # Versandfreie Vorbereitung und Korrektur der Versandgrenze
 
-Stand: 18.10.2026, ab 15:29 UTC. Nutzerauftrag: KEINE Versandversuche, keine Grenzumgehung. Zusätzliche Sends **0**, neue Gmail-Sende-IDs **keine**.
+## Aktueller Status: externer Versand gemeldet und abgeschlossen nachregistriert
+
+Am 18.10.2026 meldet der Betreiber **26 zusätzliche externe Bewertungsanfragen**, gesendet 15:40:17–15:41:49 UTC über den **unabhängigen nativen ChatGPT-Gmail-Connector**, nicht durch Lovable. Laut Betreiber wurden alle 26 Nachrichten mittels `batch_read_email` aus SENT nachgelesen; die abschließende Betreffsuche fand genau 26 Nachrichten und die Review-Suche an Rainer 0. Dies ist ein übermittelter externer Nachweis, keine in diesem Auftrag erneut ausgeführte Gmail-Prüfung und keine Aussage über Zustellung im Empfängerpostfach.
+
+Exakte Nachweise: `external-sends.json`; lesbarer Abschlussbericht: `external-send-audit.md`. 25 `prepared`-Kontakte plus Tanja `separate_contact` entsprechen exakt `recipients.csv`. **26 tatsächliche Nachrichten / 26 unterschiedliche Gmail-IDs / 27 logische Buchungsquellen**: Michaels zwei Buchungen sind mit derselben einzigen Nachricht verknüpft. Die vorhandene Outbox wurde ausschließlich direkt mit `status='sent'` ergänzt, ohne Payload, Hash, interne Provider-Attempts, Lease oder offenen Auftrag. Historische Vorbereitung und Entwürfe bleiben unverändert nachvollziehbar.
+
+Bestätigte tatsächliche Header laut Betreiber: festes From/Reply-To, Betreff „Danke für deine Buchung! Wie war deine Erfahrung?“, genau ein To, kein CC/BCC. **Kein tatsächlicher List-Unsubscribe-Header**: der native externe Connector unterstützt keine benutzerdefinierten Header. Sichtbare Mailto-Abmeldung und Antwortmöglichkeit vorhanden; keine HTTP-Tokens erfunden. Das frühere Manifest enthält nur vorgeschlagene Entwurfsheader, nicht tatsächlich versendete Header. Textversion laut Betreiber lediglich auf normale Leerzeilen verdichtet.
+
+**Lovable-Sends in diesem Nachweisauftrag: 0.** Keine Jobs gestartet, keine Rechnungen/Zahlungen erzeugt, keine Veröffentlichung oder Änderung der Versandgates/Einwilligungen/Sperren. Rainer/Fatih nicht erneut, beide Tatjana-Prüffälle und fünf fehlende Adressen weiterhin offen.
+
+## Historischer Stand vor dem externen Versand
+
+Stand: 18.10.2026, ab 15:29 UTC, vor 15:40 UTC. Damaliger Nutzerauftrag: KEINE Versandversuche, keine Grenzumgehung. Damals zusätzliche Sends **0**, neue Gmail-Sende-IDs **keine**. Die folgenden Prüfungen dokumentieren diesen historischen Vorbereitungsstand, nicht den heutigen Gesamtversandstatus.
 
 ## Tatsächliche Quelle, Scope und beobachteter Status
 

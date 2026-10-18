@@ -14,7 +14,7 @@
 - [x] Neue außerhalb der Website eingeholte Zustimmung als heutige Betreiberbestätigung dokumentiert, nicht als beobachteten Kunden-/Checkout-Consent.
 - [x] Rainer/Reiner Schmutnig (rainerrene11@web.de) dauerhaft als Betreiber-Ausschluss festgehalten; keine fingierte Kundenabmeldung gespeichert.
 - [x] Bestand, vorhandene Consents, Opt-outs und Fatihs bereits erfolgreiche Bewertungsmail lesend geprüft; keine Rechnungen/Buchungen verändert.
-- [x] Kein Sammelversand: aktueller Auftrag nur Vorbereitung, 0 Sends; früheren pauschalen Gmail-Plattformblock korrigiert.
+- [x] Historische Lovable-Vorbereitung: 0 Sends; später extern 26 Sends laut Betreiber, siehe Nachweisabschnitt oben; früheren pauschalen Gmail-Plattformblock korrigiert.
 - [ ] Identität/Personendublette beider Tatjana-Profile extern ungeklärt; paid/aktive Konten, eine Telefonnummer entspricht Betreiber. Keine pauschale Testannahme.
 
 ## Autorisierter Einzel-Nachversand 18.10.2026
