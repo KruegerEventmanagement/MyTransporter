@@ -530,6 +530,7 @@ function AdminDashboard() {
         }}
         onConfirmReturn={confirmReturn}
         onReloadBookings={loadAll}
+        onOpenDeposit={(bookingId) => openDeposit("booking", bookingId)}
       />
     );
   }
@@ -913,12 +914,14 @@ function CustomerDetail({
   onBack,
   onConfirmReturn,
   onReloadBookings,
+  onOpenDeposit,
 }: {
   customer: { id: string; profile: Profile | undefined; bookings: Booking[] };
   initialBookingId?: string | null;
   onBack: () => void;
   onConfirmReturn: (id: string) => Promise<void>;
   onReloadBookings: () => Promise<void>;
+  onOpenDeposit: (bookingId: string) => void;
 }) {
   const [photos, setPhotos] = useState<TripPhoto[]>([]);
   const [gps, setGps] = useState<GpsPoint[]>([]);
@@ -1465,7 +1468,7 @@ function SettlementPanel({
         ) : (
           <p className="text-xs text-muted-foreground">
             Abrechnung mit Positionen, Mailvorschau und bewusstem Abschluss im Bereich{" "}
-            <a href={`/admin?kaution=booking:${booking.id}`} className="underline font-semibold">Offene Kautionen</a>.
+            <button type="button" onClick={() => onOpenDeposit(booking.id)} className="underline font-semibold">Offene Kautionen</button>.
           </p>
         )}
       </div>
