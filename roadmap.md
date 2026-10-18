@@ -1,15 +1,16 @@
 # Roadmap
 
 ## Betreiberauftrag Bewertungsbestand 18.10.2026
-- [ ] Versandfreie Klärung: tatsächliche Regelquelle/Scope von beobachteter Ablehnung oder Freigabe unterscheiden und früheren pauschalen Gmail-Blockbefund korrigieren.
-- [ ] Vollständige deduplizierte Online-/manuelle Empfängervorbereitung einschließlich Daniel, Tatjana-Prüfung und separatem storniertem Kontakt Tanja; fünf fehlende Adressen dokumentieren.
-- [ ] HTML-/Textentwürfe im bestehenden Rechnungsdesign mit funktionierender Abmeldemöglichkeit prüfen, ohne Sendeaufträge anzulegen.
-- [ ] Rainers administrative Review-Sperre technisch setzen und Provenienz auditieren; bestehende Opt-outs/Consents bewahren.
+- [x] Versandfreie Klärung: App-Mail-Kampagnengrenze dokumentiert; Gmail-Block/Human-Approval nicht beobachtet, früheren Befund korrigiert.
+- [x] Empfängervorbereitung: 25 reguläre Kontakte inkl. Daniel, Tanja separat, 2 Tatjana-Prüffälle, 5 fehlende Adressen dokumentiert.
+- [x] 28 HTML-/Textentwurfspaare im Rechnungsdesign mit Mailto-Abmeldung/List-Unsubscribe geprüft (Desktop/390px); keine Sendeaufträge, 29 Schutztests bestanden, build OK.
+- [x] Rainers administrative Review-Sperre technisch gesetzt/nachgelesen (15:31:20 UTC), Betreiberquelle auditiert; vorhandene Opt-outs/Consents bewahrt.
 - [x] Daniel Konrad: beide Gmail-Belege geprüft, Review-Suche/Outbox ohne Treffer; ausschließlich daniel.o.konrad@gmail.com gespeichert (Revision 2), Quellen dokumentiert; keine Bewertungsmail/Rechnung gesendet.
 - [x] Neue außerhalb der Website eingeholte Zustimmung als heutige Betreiberbestätigung dokumentiert, nicht als beobachteten Kunden-/Checkout-Consent.
 - [x] Rainer/Reiner Schmutnig (rainerrene11@web.de) dauerhaft als Betreiber-Ausschluss festgehalten; keine fingierte Kundenabmeldung gespeichert.
 - [x] Bestand, vorhandene Consents, Opt-outs und Fatihs bereits erfolgreiche Bewertungsmail lesend geprüft; keine Rechnungen/Buchungen verändert.
-- [ ] Extern blockiert: nachträglicher Sammelversand benötigt separaten Marketing-Maildienst. Keine zusätzlichen Mails, Outbox-Einträge oder globale Review-Aktivierung.
+- [x] Kein Sammelversand: aktueller Auftrag nur Vorbereitung, 0 Sends; früheren pauschalen Gmail-Plattformblock korrigiert.
+- [ ] Identität/Personendublette beider Tatjana-Profile extern ungeklärt; paid/aktive Konten, eine Telefonnummer entspricht Betreiber. Keine pauschale Testannahme.
 
 ## Autorisierter Einzel-Nachversand 18.10.2026
 - [x] Fehlenden customer_mail_hook_enabled-Freischalter gesetzt; Jobfunktion erzeugte HTTP-ID 72215, Live-Antwort 200/ok:true, kein Versand; 14 SQL-Tests bestanden.
