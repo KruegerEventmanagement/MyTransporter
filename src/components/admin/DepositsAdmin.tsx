@@ -47,6 +47,9 @@ export function DepositsAdmin({ initial }: { initial?: { source: "booking" | "ma
   const backToList = () => {
     window.history.pushState(null, "", "/admin?kaution=list");
     setOpen(null);
+    // pushState feuert selbst kein popstate: ohne dieses Ereignis bliebe der
+    // Elterncache (depositDeepLink) auf der alten Buchung stehen.
+    window.dispatchEvent(new PopStateEvent("popstate"));
     reload();
   };
 
