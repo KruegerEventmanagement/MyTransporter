@@ -482,7 +482,12 @@ export function buildCustomerClosingMail(i: CustomerMailInput): FrozenOutboxMail
       value: `${eur(it.line_cents)}: ${it.customer_text}${it.reason ? `. ${it.reason}` : ""}`,
     })),
     { label: "Abzug gesamt", value: eur(t.totalCents) },
-    ...(i.adjustment ? [{ label: "Anpassung", value: i.adjustment }] : []),
+    ...(i.adjustment
+      ? [{
+          label: i.adjustment.cents < 0 ? "Kulanz" : "Zusätzlicher Abzug",
+          value: `${i.adjustment.cents < 0 ? `${eur(-i.adjustment.cents)} erlassen` : eur(i.adjustment.cents)}: ${i.adjustment.reason}`,
+        }]
+      : []),
     { label: "Verrechnet mit Kaution", value: eur(t.appliedCents) },
     { label: "Rückzahlung", value: eur(t.refundCents) },
     ...(t.outstandingCents > 0 ? [{ label: "Offener Restbetrag", value: eur(t.outstandingCents) }] : []),
