@@ -23,6 +23,7 @@ CREATE TABLE public.manual_reservations (id uuid PRIMARY KEY, end_at timestamptz
 CREATE TABLE public.deposit_settlements (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), booking_id uuid, kind text, status text);
 CREATE TABLE public.admin_notifications (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), type text, title text, body text, booking_id uuid, read boolean DEFAULT false);
 CREATE TABLE public.customer_mail_settings (id boolean PRIMARY KEY);
+CREATE TABLE public.customer_mail_outbox (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), kind text, source_type text, source_id uuid);
 INSERT INTO public.customer_mail_settings (id) VALUES (true);
 CREATE FUNCTION public.local_start_at(d date, h int) RETURNS timestamptz LANGUAGE sql IMMUTABLE AS $$ SELECT (d + make_interval(hours => h))::timestamptz $$;
 CREATE FUNCTION public.plan_end_at(s timestamptz, p text) RETURNS timestamptz LANGUAGE sql IMMUTABLE AS $$ SELECT s + interval '3 hours' $$;
