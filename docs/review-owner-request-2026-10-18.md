@@ -10,7 +10,7 @@ Der Betreiber bestätigt: „Ich habe von allen die Zustimmung mit der Bewertung
 
 Rainer/Reiner Schmutnig, E-Mail `rainerrene11@web.de`, darf keine Bewertungsmail erhalten. Die Bezeichnung „Rainer Schmuttnick“ im Auftrag meint laut Betreiber denselben Kunden. Frühere manuelle Buchung: `6ea99f1a-0f5c-4fd4-8aa7-0a043a1902ec`. Vom Betreiber benannte Gmail-Belege: `1a0ceefb9e894833`, `1a0d008a34fc8725`, `1a0d44923b2fa002`; diese Identitätsbelege wurden in dieser Prüfung nicht erneut geöffnet.
 
-Dies ist eine Betreiberanweisung, keine Kundenabmeldung. Der Ausschluss ist in der dauerhaften Projektanweisung festgehalten, aber es wurde kein neuer technischer Sperrdatensatz angelegt. Der globale Bewertungsversand bleibt deaktiviert. Vor einer späteren Aktivierung muss der Ausschluss zusätzlich im jeweiligen Versandsystem wirksam hinterlegt werden.
+Dies ist eine Betreiberanweisung, keine Kundenabmeldung. Ergänzung 18.10.2026 15:31:20.219937 UTC: administrative Sperre für `rainerrene11@web.de`, Scope `review_request`, direkt in `email_opt_outs` eingefügt und nachgelesen. Kein Aufruf der Kunden-Abmeldeseite, kein Kundenklick/Widerspruch behauptet. Die Tabelle selbst enthält nur Adresse, Scope und Zeitpunkt; dieser Auditbericht und das autorisierte Datenänderungsprotokoll halten die Betreiberquelle fest. Bestehende Sperren wurden durch `ON CONFLICT DO NOTHING` bewahrt. Reguläre Review-Prüfungen berücksichtigen diese Sperre unabhängig von Buchungsquelle; ein externer späterer Versand müsste dieselbe Sperre übernehmen.
 
 ## Lesender Bestandsbefund
 
@@ -30,7 +30,7 @@ Dies ist eine Betreiberanweisung, keine Kundenabmeldung. Der Ausschluss ist in d
 
 **Zusätzliche Mails: 0. Neue Gmail-IDs: keine.**
 
-Der verlangte nachträgliche Versand derselben Bewertungsanfrage an den gesamten Kundenbestand ist eine Empfängerlisten-Kampagne. Lovable-App-Mails unterstützen keinen solchen Marketing-Sammelversand, auch nicht nach Betreiberbestätigung von Einwilligungen oder durch Aufteilung in Gmail-Einzelaufrufe. Für den Versand ist ein separater Marketing-Maildienst erforderlich.
+Korrektur vom 18.10.2026: Die dokumentierte Kampagnengrenze des eingebauten Lovable-App-Maildienstes wurde zuvor unbelegt auf den unabhängigen Gmail-Connector ausgedehnt. Es liegt keine zurückgegebene Gmail-Kampagnenablehnung und kein beobachteter offener Human-Approval vor. Ein separater Marketingdienst ist eine Empfehlung für Kampagnen, kein für unabhängiges Gmail belegtes Plattformgebot. Jetzt ausdrücklich nur Vorbereitung gemäß Nutzerauftrag; kein Versandversuch.
 
 Keine neuen Outbox-Zeilen, keine neuen Rechnungen, keine Buchungsänderungen, keine Providerwechsel, keine Änderung bestehender Consents/Opt-outs, keine Veröffentlichung. Der gewünschte Text wurde nicht versendet; HTML/Logo/Abmeldelink wurden nicht als neue Versandvorschau abschließend geprüft.
 
@@ -42,5 +42,9 @@ Keine neuen Outbox-Zeilen, keine neuen Rechnungen, keine Buchungsänderungen, ke
 - Unmittelbare Gmail-Suche `in:sent to:daniel.o.konrad@gmail.com (Bewertung OR Erfahrung OR Bewertungsanfrage)` ergab 0 Treffer. Reguläre Review-Outbox für Adresse bzw. Reservierung hatte 0 Zeilen. Dies ist ein Suchbefund, keine absolute Garantie gegen anders formulierte frühere Nachrichten.
 - Reguläre Kontaktkorrektur erhöht die Revision von 1 auf 2 und erhält die bestehenden Änderungs-/Kalendermechanismen. `confirmation_requested` bleibt false; kein Kundenbestätigungsauftrag wurde ausdrücklich angelegt, kein Bewertungsversand und keine Rechnung ausgelöst.
 - Nachlesen bestätigt: keine `booking_email_intents` für Daniel. Der bestehende Änderungstrigger erzeugte automatisch die Betreiberbenachrichtigung `a1336e3f-4985-4b29-b05d-0d18e87ddfd7`, Revision 2, Status pending. Diese wurde nicht manuell verarbeitet; ein späterer regulärer Betreiber-/Kalenderabgleich ist möglich und wird nicht als Kundenzustellung ausgegeben.
-- Keine Datenmigration oder Programmänderung, keine Veröffentlichung. **Zusätzliche Bewertungs-/Rechnungsmails weiterhin 0; keine neuen Gmail-Sende-IDs.** Der Sammelversand bleibt blockiert durch den erforderlichen separaten Marketing-Maildienst.
+- Keine Datenmigration oder Programmänderung, keine Veröffentlichung. **Zusätzliche Bewertungs-/Rechnungsmails weiterhin 0; keine neuen Gmail-Sende-IDs.** Der früher behauptete Gmail-Plattformblock war nicht belegt; siehe aktuellen Prüfbericht.
 - Laut Betreiber wurden für Simon Leifels, Tobias Unkler, Ali Kocaaslan, Suzan Ay und Sandra Wünsche keine Google-Contacts-Kontakte gefunden; seine Gmail-Suche für die letzten beiden läuft noch. Nicht unabhängig geprüft, keine Adressen ergänzt oder erraten.
+
+## Abschließende versandfreie Vorbereitung 18.10.2026
+
+Aktueller vollständiger Bericht: `docs/review-preparation-2026-10-18/audit.md`. Empfänger und Entscheidungen: `recipients.csv` im selben Ordner. Dieser aktuelle Bericht ersetzt die vorläufigen Identitäts-/Versandgrenzenbefunde oben. 25 reguläre vorbereitete Kontakte, 1 separat stornierter Kontakt, 2 Tatjana-Identitätsprüffälle, 5 fehlende Adressen; insgesamt 28 HTML-/Textentwurfspaare. Fatih, Betreiber und Rainer ausgeschlossen. Keine neuen Versandaufträge, keine Zahlung/Rechnung, keine globale Aktivierung, keine Veröffentlichung.
