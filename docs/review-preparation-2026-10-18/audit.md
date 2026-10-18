@@ -2,6 +2,8 @@
 
 ## Aktueller Status: externer Versand gemeldet und abgeschlossen nachregistriert
 
+Ergebnisergänzung laut Betreiber/Root: **26 Gmail-Annahmen/SENT, 1 bekannter dauerhafter Zustellfehler (Claudia Seuffert), 25 ohne bislang bekannte Fehlermeldung; keine Zustellbestätigung für diese 25.** DSN `1a14faccb704cd89`, 18.10.2026 15:41:26 UTC, failed/5.1.1, iCloud `550 5.1.1 user does not exist`, Bezug Original `1a14facbde08bb05`. DSN-Quelle im bestehenden abgeschlossenen Nachweis annotiert; keine automatische Wiederholung, kein Opt-out fingiert, Original-ID erhalten. Details und Grenze des fehlenden adressweiten Bounce-Schutzes in `external-send-audit.md`.
+
 Am 18.10.2026 meldet der Betreiber **26 zusätzliche externe Bewertungsanfragen**, gesendet 15:40:17–15:41:49 UTC über den **unabhängigen nativen ChatGPT-Gmail-Connector**, nicht durch Lovable. Laut Betreiber wurden alle 26 Nachrichten mittels `batch_read_email` aus SENT nachgelesen; die abschließende Betreffsuche fand genau 26 Nachrichten und die Review-Suche an Rainer 0. Dies ist ein übermittelter externer Nachweis, keine in diesem Auftrag erneut ausgeführte Gmail-Prüfung und keine Aussage über Zustellung im Empfängerpostfach.
 
 Exakte Nachweise: `external-sends.json`; lesbarer Abschlussbericht: `external-send-audit.md`. 25 `prepared`-Kontakte plus Tanja `separate_contact` entsprechen exakt `recipients.csv`. **26 tatsächliche Nachrichten / 26 unterschiedliche Gmail-IDs / 27 logische Buchungsquellen**: Michaels zwei Buchungen sind mit derselben einzigen Nachricht verknüpft. Die vorhandene Outbox wurde ausschließlich direkt mit `status='sent'` ergänzt, ohne Payload, Hash, interne Provider-Attempts, Lease oder offenen Auftrag. Historische Vorbereitung und Entwürfe bleiben unverändert nachvollziehbar.
