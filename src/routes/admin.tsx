@@ -815,10 +815,7 @@ function AdminDashboard() {
                       setAlertNotification(null);
                       await supabase.from("admin_notifications").update({ read: true }).eq("id", id);
                       setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-                      const target = `/admin?kaution=${m[1]}:${m[2]}`;
-                      window.history.pushState(null, "", target);
-                      setDepositDeepLink({ source: m[1].toLowerCase() as "booking" | "manual", id: m[2] });
-                      setTab("deposits");
+                      openDeposit(m[1].toLowerCase() as "booking" | "manual", m[2]);
                     }}
                     className="rounded-full bg-foreground text-background px-8 py-4 text-base font-semibold flex items-center justify-center gap-2"
                   >
@@ -826,26 +823,28 @@ function AdminDashboard() {
                   </button>
                 ) : null;
               })()}
-              <button
-                onClick={async () => {
-                  const id = alertNotification.id;
-                  setAlertNotification(null);
-                  await supabase.from("admin_notifications").update({ read: true }).eq("id", id);
-                  setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-                }}
-                className="rounded-full bg-foreground text-background px-8 py-4 text-base font-semibold flex items-center justify-center gap-2"
-              >
-                <Check className="w-5 h-5" /> Bestätigen
-              </button>
+              {alertNotification.type !== "deposit_reminder" && (
+                <button
+                  onClick={async () => {
+                    const id = alertNotification.id;
+                    setAlertNotification(null);
+                    await supabase.from("admin_notifications").update({ read: true }).eq("id", id);
+                    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+                  }}
+                  className="rounded-full bg-foreground text-background px-8 py-4 text-base font-semibold flex items-center justify-center gap-2"
+                >
+                  <Check className="w-5 h-5" /> Bestätigen
+                </button>
+              )}
               {alertNotification.type === "deposit_reminder" && (
                 <button
-                  onClick={() => setAlertNotification(null)}
+                  onClick={() => { dismissedAlerts.current.add(alertNotification.id); setAlertNotification(null); }}
                   className="rounded-full bg-secondary px-8 py-4 text-base font-semibold"
                 >
                   Später
                 </button>
               )}
-              {alertNotification.booking_id && (
+              {alertNotification.type !== "deposit_reminder" && alertNotification.booking_id && (
                 <button
                   onClick={() => {
                     const bookingId = alertNotification.booking_id!;
