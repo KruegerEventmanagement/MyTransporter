@@ -2,7 +2,7 @@
 
 - Kamera/Foto-Helfer liegen in src/lib/image-capture.ts; alle Aufnahmen nutzen sie, damit kein stiller null/0-px-Fehler entsteht.
 - Fahrtfotos speichern über src/lib/trip-photo-store.ts (Upload + bestätigter DB-Eintrag, signierte Vorschau); trip-photos.ts bleibt für bestehende Leser.
-- Sichtbare Seitenköpfe verwenden BrandHomeLink für das offizielle, zur Startseite verlinkte Logo; dadurch bleibt die Rücknavigation markenkonsistent und ohne doppelte Logos.
+- Page headers use BrandHomeLink for the official home-linked logo, keeping navigation consistent without duplicate logos.
 - Component tests use jsdom file comments and mocked services from src/test/.
 - Inklusivkilometer sind versioniert (KM_CATALOG_VERSION, LEGACY_FREE_KM, resolveCheckoutKmSnapshot, bookingFreeKm in booking-rules.ts); Altbuchungen und alte Stripe-Sessions dürfen nie mit gekürztem Neukatalog abgerechnet werden.
 - Pflicht-Abschluss von Fahrten gilt erst ab TRIP_COMPLETION_REQUIRED_FROM (src/lib/active-trip.ts, isLegacyOpenTrip); ältere offene Buchungen gelten nur in der Anzeige als verfallen (kein Banner, keine Erinnerung, kein Rückgabeablauf), Daten bleiben unverändert, damit Altfälle Kunden nicht dauerhaft blockieren.
@@ -19,4 +19,4 @@
 - Passwort-Reset nur über src/lib/password-reset.ts (immer https://mytransporter.org/reset-password, neutrale Antwort nur bei angenommenem Versand) und /reset-password, das nur Sitzungen mit AMR recovery freischaltet; damit nie localhost/App-Shell als Mailziel.
 - Eigenwerbung/AdSense ab Wizard-Schritt 1 aus.
 - Kundenbestätigung manueller Termine nur via manual-confirmation.server.ts (Absicht im Save, Payload je Revision eingefroren, Fencing-RPCs, Erfolg nur mit Provider-ID); Abholort = PICKUP_ADDRESS, nicht Geschäftsadresse.
-- Mail: immutable provider binding + Gmail fence; unknown sends never replay; release off to avoid duplicates.
+- Mail: immutable provider + Gmail fence; archive backfill uses same key, legacy rows untouched; unknown sends never replay.

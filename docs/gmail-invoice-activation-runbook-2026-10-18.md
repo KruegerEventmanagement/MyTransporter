@@ -57,4 +57,30 @@ Alle anderen Buchungen: keine dokumentierte Einwilligung → keine Bewertungsmai
 - TEST 1/2 ohne Anhang: Gmail-ID 1a14f7c7485ea49b. TEST 2/2 mit Muster-PDF: Gmail-ID 1a14f7d3e69b8a14. Beide nur an info@mytransporter.org; From „Christian Krüger – MyTransporter" <info@mytransporter.org>, Reply-To info@mytransporter.org, multipart/mixed mit text/plain+text/html, Anhang TEST-Muster-kein-Beleg.pdf (974 B) nachgelesen.
 - `GMAIL_SEND_RELEASED = true`, Resend bleibt aus. `invoice_outbox_from` = 2026-10-18 14:50:22 UTC. Veröffentlichung angefordert, Cron `mt-process-customer-mails` aktiv (5 Min.).
 - Alt-Aufträge bleiben gesperrt; der wartende Bestätigungsauftrag zu Ali (manuell 65774a2c) ist an den abgeschalteten alten Weg gebunden und wird nicht über Gmail gesendet.
-- Nachversand der 12 Rechnungen und Fatihs Bewertungsanfrage: noch NICHT ausgeführt, wartet auf Betreiber-Freigabe.
+- Nachversand am 18.10.2026 ausgeführt; Ergebnisse unten.
+
+## Nachversand ausgeführt 18.10.2026
+
+Alle zwölf Rechnungen individuell nach erneuter Prüfung von paid-Status, aktivem Konto, Profil-/Belegempfänger, Archiv-Erstfassung und Versandstatus gesendet; keine neue Rechnung/Zahlung. Alle 13 Nachrichten in Gmail nachgelesen, From/Reply-To korrekt. Gmail-Annahme ist kein Nachweis der Zustellung im Empfängerpostfach.
+
+| Empfänger | Rechnung | Gmail-ID | Status |
+|---|---|---|---|
+| raik.schnabel@gmail.com | MT-202610-B82259 | 1a14f9009aef0a31 | sent, nachgelesen |
+| alexanderays@googlemail.com | MT-202610-B071E0 | 1a14f905cbcdfb5b | sent, nachgelesen |
+| rzell@gmx.de | MT-202610-E8D7E5 | 1a14f90688331c8e | sent, nachgelesen |
+| r.type.zx@gmail.com | MT-202610-6DC643 | 1a14f9079468e58e | sent, nachgelesen |
+| franzi.zp@web.de | MT-202610-A70572 | 1a14f90873ea7dfb | sent, nachgelesen |
+| christian.popi@freenet.de | MT-202610-080808 | 1a14f90929dba4b5 | sent, nachgelesen |
+| serissa.matejka@web.de | MT-202610-5CE9B0 | 1a14f909c9965d2e | sent, nachgelesen |
+| mi-nagy@t-online.de | MT-202610-E28CEB | 1a14f90aabdef1ae | sent, nachgelesen |
+| sabrina-nadine@gmx.de | MT-202610-CB5644 | 1a14f90b63f38fd7 | sent, nachgelesen |
+| fatih.cirak61@googlemail.com | MT-202610-14C3FC | 1a14f90c3819957f | sent, nachgelesen |
+| ckerzinger@web.de | MT-202610-962092 | 1a14f90d12f90205 | sent, nachgelesen |
+| sabritrad0@gmail.com | MT-202610-4F8AC2 | 1a14f90e5d77ba71 | sent, nachgelesen |
+| fatih.cirak61@googlemail.com | Bewertungsanfrage Fatih | 1a14f90f70148f6b | sent, nachgelesen |
+
+- Neun neue Gmail-Rechnungsoutboxzeilen und Fatihs Review stehen auf sent. Drei alte Resend-Zeilen bleiben blocked und unverändert: individueller autorisierter Versand über sendViaGmail mit demselben logischen Idempotenzschlüssel und mail_provider_attempts-Fence; separate Rechnung-versendet-Protokolle enthalten Gmail-ID/Archiv. Nicht umetikettieren oder replayen.
+- Alle archivierten PDFs unverändert; erster Gmail-Anhang (Raik, 278286 Bytes) heruntergeladen und bytegleich zum Archiv. Alle zwölf Anhänge application/pdf.
+- Fatih: Einwilligung, kein Opt-out, vergangenes Mietende und 24h-Abstand geprüft; bestätigte CID-URL und List-Unsubscribe nachgelesen. review_requests_from bleibt NULL. Ali, Jochen und Tanja ausgeschlossen.
+- Live mytransporter.org HTTP 200; geschützter Rechnungsjob HTTP 200, ok:true, processed:0, failed:0; ohne Token HTTP 401. Cron job 8 aktiv alle fünf Minuten, letzte drei Ausführungen erfolgreich. Keine pauschale Review-Aktivierung.
+- MIME-Korrektur: src/lib/gmail-mail-format.ts, Test src/lib/mail-provider.test.ts. 33 gezielte Tests bestanden, automatische Buildprüfung build OK. Veröffentlichung der MIME-Korrektur folgt gesondert.
