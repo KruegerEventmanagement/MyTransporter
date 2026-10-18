@@ -764,7 +764,7 @@ function AdminDashboard() {
             <h2 className="text-3xl font-bold mb-3">{alertNotification.title}</h2>
             {alertNotification.body && (
               <p className="text-base text-muted-foreground mb-6 whitespace-pre-line">
-                {alertNotification.body}
+                {alertNotification.body.replace(/\s*\[kaution:(booking|manual):[0-9a-f-]{36}\]/i, "")}
               </p>
             )}
             <p className="text-xs text-muted-foreground mb-6">
