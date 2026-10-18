@@ -52,3 +52,9 @@ Nr. 10–12 am 18.10.2026 einmalig mit regulärem Renderer + archiveIssuedDocume
 Rückwirkend jetzt: **nur Fatih (14c3fc50)** – Einwilligung online 17.10., Miete 17.10. (3h) vorbei, keine Abmeldung.
 Noch nicht rückwirkend: d7d37bfa (Jochen, Miete 20.10.) und 65774a2c (Ali, manuell, Miete bis 25.10.) – erst regulär nach Mietende.
 Alle anderen Buchungen: keine dokumentierte Einwilligung → keine Bewertungsmail. Einwilligungen/Abmeldungen unverändert.
+
+## Aktivierung durchgeführt 18.10.2026
+- TEST 1/2 ohne Anhang: Gmail-ID 1a14f7c7485ea49b. TEST 2/2 mit Muster-PDF: Gmail-ID 1a14f7d3e69b8a14. Beide nur an info@mytransporter.org; From „Christian Krüger – MyTransporter" <info@mytransporter.org>, Reply-To info@mytransporter.org, multipart/mixed mit text/plain+text/html, Anhang TEST-Muster-kein-Beleg.pdf (974 B) nachgelesen.
+- `GMAIL_SEND_RELEASED = true`, Resend bleibt aus. `invoice_outbox_from` = 2026-10-18 14:50:22 UTC. Veröffentlichung angefordert, Cron `mt-process-customer-mails` aktiv (5 Min.).
+- Alt-Aufträge bleiben gesperrt; der wartende Bestätigungsauftrag zu Ali (manuell 65774a2c) ist an den abgeschalteten alten Weg gebunden und wird nicht über Gmail gesendet.
+- Nachversand der 12 Rechnungen und Fatihs Bewertungsanfrage: noch NICHT ausgeführt, wartet auf Betreiber-Freigabe.
