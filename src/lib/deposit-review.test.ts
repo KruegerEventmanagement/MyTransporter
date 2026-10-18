@@ -414,3 +414,14 @@ describe("Erinnerungskandidaten (Auswahl vor dem Limit)", () => {
     expect(reminderCandidates([row("e", from - 86400_000)], from, now, new Set())).toHaveLength(0); // vor Aktivierung beendet
   });
 });
+
+describe("Dokumentationspauschale: nachgereichte Fotos", () => {
+  it("alle Pflichtnachweise vorhanden + alter 'nicht bereitgestellt'-Hinweis => keine Pauschale", () => {
+    const f = { ...facts(), missingTags: [] as string[], exceptions: [{ type: "not_provided", tag: "post_fuel_receipt" }] };
+    expect(documentationFeeAllowed(f as never).allowed).toBe(false);
+  });
+  it("fehlende Nachweise + 'nicht bereitgestellt' => Pauschale zulässig", () => {
+    const f = { ...facts(), missingTags: ["post_fuel_receipt"], exceptions: [{ type: "not_provided", tag: "post_fuel_receipt" }] };
+    expect(documentationFeeAllowed(f as never).allowed).toBe(true);
+  });
+});
