@@ -139,21 +139,32 @@ function AdminDashboard() {
     // Nur Navigation: Deep Link öffnet die Ansicht, löst nie eine Geldaktion aus.
     // Reagiert auch auf Query-Wechsel bei bereits geöffnetem Admin (z. B. Push-Klick).
     const readDeepLink = () => {
-      const q = new URLSearchParams(window.location.search);
-      const k = q.get("kaution");
-      if (k) {
-        const [src, id] = k.split(":");
-        if ((src === "booking" || src === "manual") && /^[0-9a-f-]{36}$/i.test(id ?? "")) {
-          setDepositDeepLink({ source: src, id });
-          setTab("deposits");
-          return;
-        }
+      const link = parseAdminDeepLink(window.location.search);
+      if (link?.kind === "deposit") {
+        // Kautionsansicht hat Vorrang: ein offenes Kundenprofil darf sie nicht verdecken.
+        setDepositDeepLink({ source: link.source, id: link.id });
+        setSelectedCustomer(null);
+        setInitialBookingId(null);
+        setTab("deposits");
+        return;
       }
-      const kunde = q.get("kunde");
-      if (kunde && /^[0-9a-f-]{36}$/i.test(kunde)) {
-        setSelectedCustomer(kunde);
+      if (link?.kind === "deposit-list") {
+        setDepositDeepLink(null);
+        setSelectedCustomer(null);
+        setInitialBookingId(null);
+        setTab("deposits");
+        return;
+      }
+      if (link?.kind === "customer") {
+        setSelectedCustomer(link.id);
+        setDepositDeepLink(null);
         setTab("customers");
+        return;
       }
+      // Kein Deep-Link (z. B. Browser-Zurück auf /admin): Auswahl zurücksetzen.
+      setDepositDeepLink(null);
+      setSelectedCustomer(null);
+      setInitialBookingId(null);
     };
     readDeepLink();
     window.addEventListener("popstate", readDeepLink);
