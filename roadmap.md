@@ -1,6 +1,10 @@
 # Roadmap
 
 ## Betreiberauftrag Bewertungsbestand 18.10.2026
+- [ ] Versandfreie Klärung: tatsächliche Regelquelle/Scope von beobachteter Ablehnung oder Freigabe unterscheiden und früheren pauschalen Gmail-Blockbefund korrigieren.
+- [ ] Vollständige deduplizierte Online-/manuelle Empfängervorbereitung einschließlich Daniel, Tatjana-Prüfung und separatem storniertem Kontakt Tanja; fünf fehlende Adressen dokumentieren.
+- [ ] HTML-/Textentwürfe im bestehenden Rechnungsdesign mit funktionierender Abmeldemöglichkeit prüfen, ohne Sendeaufträge anzulegen.
+- [ ] Rainers administrative Review-Sperre technisch setzen und Provenienz auditieren; bestehende Opt-outs/Consents bewahren.
 - [x] Daniel Konrad: beide Gmail-Belege geprüft, Review-Suche/Outbox ohne Treffer; ausschließlich daniel.o.konrad@gmail.com gespeichert (Revision 2), Quellen dokumentiert; keine Bewertungsmail/Rechnung gesendet.
 - [x] Neue außerhalb der Website eingeholte Zustimmung als heutige Betreiberbestätigung dokumentiert, nicht als beobachteten Kunden-/Checkout-Consent.
 - [x] Rainer/Reiner Schmutnig (rainerrene11@web.de) dauerhaft als Betreiber-Ausschluss festgehalten; keine fingierte Kundenabmeldung gespeichert.
