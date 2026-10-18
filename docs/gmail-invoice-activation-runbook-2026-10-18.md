@@ -31,15 +31,15 @@ Jeweils: Status paid, Empfänger = Profil-E-Mail (Beleg-E-Mail abgeglichen), kei
 
 | # | Buchung | Kunde | Rechnungsnr. | Archiv-ID | Gesamt |
 |---|---|---|---|---|---|
-| 1 | b82259a2 | Raik | MT-202610-B82259 | (Erstfassung vorhanden) | 269,00 € |
-| 2 | b071e0a5 | Alexander | MT-202610-B071E0 | (Erstfassung vorhanden) | 275,00 € |
-| 3 | e8d7e5b5 | Roland | MT-202610-E8D7E5 | (Erstfassung vorhanden) | 295,00 € |
-| 4 | 6dc6434d | Oleksandr | MT-202610-6DC643 | (Erstfassung vorhanden) | 249,00 € |
-| 5 | a70572c3 | Franziska | MT-202610-A70572 | (Erstfassung vorhanden) | 269,00 € |
-| 6 | 08080872 | Christian | MT-202610-080808 | (Erstfassung vorhanden) | 279,00 € |
-| 7 | 5ce9b09f | Serissa | MT-202610-5CE9B0 | (Erstfassung vorhanden) | 279,00 € |
-| 8 | e28cebad | Michael | MT-202610-E28CEB | (Erstfassung vorhanden) | 279,00 € |
-| 9 | cb5644d6 | Sabrina | MT-202610-CB5644 | (Erstfassung vorhanden) | 249,00 € |
+| 1 | b82259a2 | Raik | MT-202610-B82259 | 98b831fd-2abd-4659-a89e-7d2f08d099b9 | 269,00 € |
+| 2 | b071e0a5 | Alexander | MT-202610-B071E0 | efdfbe63-4182-46a9-89b2-999279c968ce | 275,00 € |
+| 3 | e8d7e5b5 | Roland | MT-202610-E8D7E5 | 42cec7d8-eb5d-40d2-933d-76b7c6122388 | 295,00 € |
+| 4 | 6dc6434d | Oleksandr | MT-202610-6DC643 | bc3979b3-12b1-4000-bb91-926d1b26ce69 | 249,00 € |
+| 5 | a70572c3 | Franziska | MT-202610-A70572 | 317f0116-d171-4e76-97fc-5d3d3454760b | 269,00 € |
+| 6 | 08080872 | Christian | MT-202610-080808 | 33401471-f082-4b49-8c01-007ab6694ed8 | 279,00 € |
+| 7 | 5ce9b09f | Serissa | MT-202610-5CE9B0 | 439adff1-5e9f-4606-bf62-2885a456cec7 | 279,00 € |
+| 8 | e28cebad | Michael | MT-202610-E28CEB | 3e8c29e2-cb3a-4ab3-afa1-15f5df2111a7 | 279,00 € |
+| 9 | cb5644d6 | Sabrina | MT-202610-CB5644 | 912d7862-07d5-4826-8138-110187647483 | 249,00 € |
 | 10 | 14c3fc50 | Fatih | MT-202610-14C3FC | 20d84331-74a8-4a57-a5b3-15cd7a7f1d35 | 249,00 € (49 Miete + 200 Kaution) |
 | 11 | 96209254 | Celine | MT-202610-962092 | 70e4ce1e-fa10-4460-85f4-5cf66175c476 | 269,00 € (69 + 200) |
 | 12 | 4f8ac252 | Sabri | MT-202610-4F8AC2 | 88add76a-9730-4df3-83b4-58fec26a121a | 269,00 € (69 + 200) |
