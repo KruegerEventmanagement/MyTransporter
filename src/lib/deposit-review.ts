@@ -436,8 +436,9 @@ export type CustomerMailInput = {
   totals: Totals;
   items: PricedItem[];
   message: string | null;
-  /** Begründete Anpassung, wenn der Rückzahlungsbetrag vom Vorschlag abweicht. */
-  adjustment: string | null;
+  /** Bezifferte, begründete Anpassung, wenn der Rückzahlungsbetrag vom Vorschlag abweicht
+   *  (cents < 0 = Kulanz/Erlass, cents > 0 = zusätzlicher Abzug). */
+  adjustment: { cents: number; reason: string } | null;
   payout: PayoutState;
   /** Karte/Original-Zahlung (Stripe) vs. manuell. */
   channel: "stripe" | "manual";
