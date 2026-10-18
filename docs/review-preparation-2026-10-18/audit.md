@@ -63,3 +63,7 @@ Wirksamkeit: `src/lib/customer-mail-outbox.server.ts` prüft normalisierte Adres
 ## Unveränderte Schutzgrenzen
 
 Keine neue Rechnung oder Zahlung, keine Buchungsänderung, keine Outbox-/Provider-Attempt-Zeile, keine Consent-Umschreibung, keine Sender-/Provider-Umschaltung, keine Job-/Cron-/Gate-Aktivierung, keine Veröffentlichung. Einzige fachliche Liveänderung in diesem Auftrag: Rainers autorisierte administrative Review-Sperre. **0 zusätzliche Sends.**
+
+## Prüfung
+
+28 Entwurfspaare lokal gerendert; eindeutige/valide Adressen, Text ohne Gedankenstriche, Google-Link und Mailto-Abmeldung kontrolliert. Desktop 1280×1800 und mobil 390×844 geprüft, offizielles Logo geladen (1920 px Quelldatei), keine horizontale Überlagerung. 29 vorhandene Outbox-/Kontoschutztests bestanden; zusätzlicher Vorbereitungstest `src/lib/review-preparation.test.ts` deckt konkrete Rainer-/Fatih-/Daniel-/Tanja-/Michael-/fehlende-Adressen-Regeln ab. Automatisches Buildsignal zuletzt `build OK`. Live-Review-Outbox abschließend weiterhin 1 Zeile/1 sent (Fatih), Rainers Sperre nachgelesen. Kein Versand-End-to-End ausgeführt, weil ausdrücklich untersagt.
