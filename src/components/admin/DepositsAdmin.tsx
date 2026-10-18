@@ -16,12 +16,8 @@ const emptySel = (): Record<DeductionType, Sel> =>
   Object.fromEntries(TYPES.map((t) => [t, { checked: false, quantity: "1", amount: "", reason: "" }])) as Record<DeductionType, Sel>;
 
 function toCents(v: string): number | null {
-  try {
-    const c = parseEuroToCents(v);
-    return typeof c === "number" && Number.isSafeInteger(c) && c >= 0 ? c : null;
-  } catch {
-    return null;
-  }
+  const r = parseEuroToCents(v);
+  return r.ok && r.cents >= 0 ? r.cents : null;
 }
 
 export function DepositsAdmin({ initial }: { initial?: { source: "booking" | "manual"; id: string } | null }) {

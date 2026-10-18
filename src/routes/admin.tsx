@@ -30,6 +30,7 @@ import {
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { AdminLogin } from "@/components/admin/AdminLogin";
+import { DepositsAdmin } from "@/components/admin/DepositsAdmin";
 import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
 import { CalendarAdmin } from "@/components/admin/CalendarAdmin";
 import { DocumentBuilder } from "@/components/admin/DocumentBuilder";
@@ -127,12 +128,21 @@ interface AdminNotification {
   created_at: string;
 }
 
-type Tab = "customers" | "bookings" | "calendar" | "vehicles" | "documents" | "birthdays" | "notifications" | "privacy";
+type Tab = "deposits" | "customers" | "bookings" | "calendar" | "vehicles" | "documents" | "birthdays" | "notifications" | "privacy";
 
 function AdminDashboard() {
   const [authReady, setAuthReady] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [tab, setTab] = useState<Tab>("customers");
+  const [depositDeepLink, setDepositDeepLink] = useState<{ source: "booking" | "manual"; id: string } | null>(null);
+  useEffect(() => {
+    // Nur Navigation: Deep Link öffnet die Ansicht, löst nie eine Geldaktion aus.
+    const k = new URLSearchParams(window.location.search).get("kaution");
+    if (!k) return;
+    const [src, id] = k.split(":");
+    if ((src === "booking" || src === "manual") && /^[0-9a-f-]{36}$/i.test(id ?? "")) setDepositDeepLink({ source: src, id });
+    setTab("deposits");
+  }, []);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
@@ -544,6 +554,9 @@ function AdminDashboard() {
           <TabButton active={tab === "bookings"} onClick={() => setTab("bookings")}>
             <Car className="w-4 h-4" /> Buchungen
           </TabButton>
+          <TabButton active={tab === "deposits"} onClick={() => setTab("deposits")}>
+            <Wallet className="w-4 h-4" /> Offene Kautionen
+          </TabButton>
           <TabButton active={tab === "calendar"} onClick={() => setTab("calendar")}>
             <CalendarDays className="w-4 h-4" /> Kalender
           </TabButton>
@@ -704,6 +717,8 @@ function AdminDashboard() {
             )}
           </>
         )}
+
+        {tab === "deposits" && <DepositsAdmin initial={depositDeepLink} />}
 
         {tab === "calendar" && <CalendarAdmin />}
 
@@ -1370,62 +1385,10 @@ function SettlementPanel({
             )}
           </div>
         ) : (
-          <>
-            <label className="block">
-              <span className="text-xs text-muted-foreground">Abzug von Kaution (€)</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0"
-                max={(depositCents / 100).toFixed(2)}
-                value={deductEuro}
-                onChange={(e) => setDeductEuro(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
-              />
-            </label>
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Einbehalten</span>
-              <strong>{(deductCents / 100).toFixed(2)} €</strong>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Erstattung an Kunden</span>
-              <strong>{(refundCents / 100).toFixed(2)} €</strong>
-            </div>
-
-            {!confirm ? (
-              <button
-                onClick={() => setConfirm(true)}
-                disabled={busy}
-                className="w-full rounded-full bg-foreground text-background py-2.5 text-sm font-semibold disabled:opacity-50"
-              >
-                Kaution abrechnen
-              </button>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-xs text-center">
-                  Wirklich <strong>{(deductCents / 100).toFixed(2)} €</strong> einbehalten und{" "}
-                  <strong>{(refundCents / 100).toFixed(2)} €</strong> erstatten?
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setConfirm(false)}
-                    disabled={busy}
-                    className="rounded-full bg-background border border-border py-2 text-sm font-semibold"
-                  >
-                    Abbrechen
-                  </button>
-                  <button
-                    onClick={handleSettle}
-                    disabled={busy}
-                    className="rounded-full bg-foreground text-background py-2 text-sm font-semibold disabled:opacity-50"
-                  >
-                    {busy ? "…" : "Bestätigen"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
+          <p className="text-xs text-muted-foreground">
+            Abrechnung mit Positionen, Mailvorschau und bewusstem Abschluss im Bereich{" "}
+            <a href={`/admin?kaution=booking:${booking.id}`} className="underline font-semibold">Offene Kautionen</a>.
+          </p>
         )}
       </div>
     </div>
