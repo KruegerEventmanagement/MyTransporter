@@ -7,6 +7,7 @@
 import {
   priceItems, computeTotals, photoChecklist, buildAdminReviewMail, buildDigestMail, buildCustomerClosingMail,
   digestSourceId, berlinDateAndHour, DIGEST_HOUR_BERLIN, documentationFeeAllowed, eur, ADMIN_RECIPIENT, MAX_MESSAGE,
+  bookingDepositState, closingMailStillValid, adminMailStillValid, safePhotoRows,
   type PricedItem, type ReviewFacts, type Totals, type PayoutState, type DigestEntry
 } from "@/lib/deposit-review";
 import { resolveTripWindow } from "@/lib/trip-time";
@@ -67,6 +68,7 @@ export async function loadDepositContext(source: Source, id: string): Promise<De
     const present = (must(await d.rpc("trip_confirmed_photo_types", { _booking_id: id }), "Fotos") ?? []) as string[];
     const photos = must(await d.from("trip_photos").select("photo_type, photo_url").eq("booking_id", id).order("created_at"), "Fotos") as { photo_type: string; photo_url: string }[];
     const checklist = photoChecklist(present);
+    const safePhotos = safePhotoRows(id, photos, present);
     const required = requiredReturnTagsV2();
     const missing = required.filter((t) => !checklist.find((c) => c.tag === t)?.present);
     const exceptions = (b.return_exceptions && typeof b.return_exceptions === "object" ? b.return_exceptions : {}) as Record<string, string>;
@@ -90,7 +92,7 @@ export async function loadDepositContext(source: Source, id: string): Promise<De
       priceLine: `${eur(Math.round(Number(b.plan_price) * 100))} (${b.plan_label}) · ${b.stripe_payment_intent_id ? "online bezahlt" : "Zahlung nicht verknüpft"}`,
       status: b.status, depositCents, depositLine: `${eur(depositCents)} · Status ${b.deposit_status}`,
       stripe: { paymentIntentId: b.stripe_payment_intent_id, environment: b.stripe_environment }, depositStatus: b.deposit_status,
-      facts, checklist, photos, issues, docFee: documentationFeeAllowed(facts),
+      facts, checklist, photos: safePhotos, issues, docFee: documentationFeeAllowed(facts),
       extraKm: { km: b.extra_km ?? null, cents: b.extra_km_charge_cents ?? null, alreadyPaid: b.extra_charge_status === "succeeded" },
       review, settlements, closingMail: closing, knownBounce: email ? await hasPermanentBounce(email) : false,
     };
@@ -129,7 +131,7 @@ export async function listOpenDeposits() {
   const bookings = must(await d.from("bookings").select("id, user_id, status, vehicle_name, vehicle_plate, plan_id, start_date, start_hour, deposit, deposit_status, return_reported_at").in("status", ["paid", "active", "in_progress", "picked_up", "returning", "return_pending", "completed"]).gte("start_date", since).limit(500), "Buchungen") as any[];
   const manual = must(await d.from("manual_reservations").select("id, customer_name, vehicle_name, vehicle_plate, start_at, end_at").lte("end_at", nowIso).gte("end_at", `${since}T00:00:00Z`).limit(300), "Termine") as any[];
   const reviews = must(await d.from("deposit_reviews").select("source_type, source_id, status, manual_payout_status, settlement_id"), "Prüfungen") as any[];
-  const settl = must(await d.from("deposit_settlements").select("booking_id, status, kind"), "Erstattungen") as any[];
+  const settl = must(await d.from("deposit_settlements").select("id, booking_id, status, kind"), "Erstattungen") as any[];
   const revMap = new Map(reviews.map((r) => [`${r.source_type}:${r.source_id}`, r]));
   const ids = [...new Set(bookings.map((b) => b.user_id))];
   const profiles = ids.length ? (must(await d.from("profiles").select("id, first_name, last_name").in("id", ids), "Profile") as any[]) : [];
@@ -139,14 +141,7 @@ export async function listOpenDeposits() {
     const { endMs } = resolveTripWindow(b);
     if (!(b.return_reported_at || endMs <= Date.now())) continue;
     const r = revMap.get(`booking:${b.id}`);
-    const s = settl.filter((x) => x.booking_id === b.id && !["failed", "canceled"].includes(x.status));
-    const open = s.find((x) => ["processing", "pending", "requires_action", "needs_review"].includes(x.status));
-    let state: string | null = null;
-    if (open) state = open.status === "pending" ? "Stripe ausstehend" : open.status === "needs_review" ? "Manuell prüfen" : `Stripe: ${open.status}`;
-    else if (r?.status === "finalized" && !r.settlement_id) state = "Abschluss: Rückzahlung fortsetzen";
-    else if (r?.status === "finalized") state = null;
-    else if (b.deposit_status === "released" || s.length) state = null;
-    else state = r ? "Entwurf" : "Ungeprüft";
+    const state = bookingDepositState(r ?? null, settl.filter((x) => x.booking_id === b.id), b.deposit_status);
     if (state) out.push({ source: "booking", id: b.id, name: pName.get(b.user_id) ?? "Unbekannt", vehicle: `${b.vehicle_name} · ${b.vehicle_plate}`, endMs, state, returned: !!b.return_reported_at });
   }
   for (const m of manual) {
@@ -325,10 +320,26 @@ function priceItemsFrozen(items: unknown): PricedItem[] {
 
 export async function depositMailPrecheck(row: OutboxRow): Promise<string | null> {
   if (row.kind === "deposit_digest") return null;
-  const d = await db();
-  const rev = must(await d.from("deposit_reviews").select("status").eq("source_type", row.source_type).eq("source_id", row.source_id).maybeSingle(), "Prüfung") as any;
-  if (row.kind === "deposit_review_admin") return rev?.status === "finalized" ? "Kaution bereits abgeschlossen" : null;
-  if (rev?.status !== "finalized") return "Kaution nicht abgeschlossen";
+  const source = row.source_type as Source;
+  let ctx: DepositContext;
+  try {
+    ctx = await loadDepositContext(source, row.source_id);
+  } catch (e) {
+    if (/nicht gefunden/.test(String((e as Error)?.message))) return "Quelle gelöscht";
+    throw e;
+  }
+  const text = (row.payload as { text?: string } | null)?.text ?? "";
+  if (row.kind === "deposit_review_admin") {
+    return adminMailStillValid({
+      bookingStatus: ctx.status, depositStatus: ctx.depositStatus, reviewFinalized: ctx.review?.status === "finalized",
+      endMs: ctx.endMs, returnReportedMs: ctx.returnReportedMs, nowMs: Date.now(), frozenText: text,
+    });
+  }
+  const stop = closingMailStillValid({
+    reviewFinalized: ctx.review?.status === "finalized", payout: payoutStateFor(ctx),
+    refundCents: ctx.review?.final_refund_cents ?? null, frozenText: text,
+  });
+  if (stop) return stop;
   if (row.recipient_email && (await hasPermanentBounce(row.recipient_email))) return "Adresse dauerhaft unzustellbar (bekannter Bounce)";
   return null;
 }
