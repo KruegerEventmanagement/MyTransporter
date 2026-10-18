@@ -41,7 +41,8 @@ export async function buildGmailRaw(args: MailSendArgs): Promise<string> {
     if (!filename || /["\\]/.test(filename)) throw new Error('Ungültiger Anhangname');
     if (!content || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(content)) throw new Error('Ungültige Anhangdaten');
     const encoded = encodeURIComponent(filename).replace(/['()*]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
-    lines.push(`--${mixed}`, 'Content-Type: application/octet-stream',
+    const mimeType = /\.pdf$/i.test(filename) ? 'application/pdf' : 'application/octet-stream';
+    lines.push(`--${mixed}`, `Content-Type: ${mimeType}`,
       `Content-Disposition: attachment; filename*=UTF-8''${encoded}`, 'Content-Transfer-Encoding: base64', '', wrap(content));
   }
   lines.push(`--${mixed}--`, '');

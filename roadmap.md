@@ -1,5 +1,12 @@
 # Roadmap
 
+## Autorisierter Einzel-Nachversand 18.10.2026
+- [ ] PDF-MIME korrigieren und gezielt testen, archivierte Dateien unverändert.
+- [ ] Zwölf Rechnungen einzeln mit aktuellen Statusprüfungen und Gmail-Fence nachsenden; alte Providerbindungen erhalten.
+- [ ] Erste Gmail-Nachricht samt PDF nachlesen, danach übrige einzeln abarbeiten.
+- [ ] Fatihs eingewilligte, vergangene Miete einzeln prüfen und Bewertungsmail senden; globale Review-Aktivierung aus lassen.
+- [ ] Veröffentlichung und erfolgreichen geschützten Live-Job prüfen, Ergebnisse dokumentieren.
+
 ## Mail-Automationsumfang 17.10.2026
 - [x] Gmail verknüpft; read-only Profil bestätigt info@mytransporter.org und Sendeberechtigung; Adapter mit unabhängigem Gmail-Fencing, Versandfreigabe aus.
 - [x] Rückgabemail ab Ende−30 Minuten für Online/angeforderte manuelle Kundenmieten, konkrete Pflichtfotos, Ablaufprüfung; keine vergangenen Erinnerungen.

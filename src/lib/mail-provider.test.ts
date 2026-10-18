@@ -35,11 +35,18 @@ describe('provider preparation', () => {
     const name = btoa(String.fromCharCode(...new TextEncoder().encode('Christian Krüger – MyTransporter')));
     expect(mime).toContain(`From: =?UTF-8?B?${name}?= <info@mytransporter.org>`);
     expect(mime).toContain('JVBERi0xLjc=');
+    expect(mime).toContain('Content-Type: application/pdf');
     expect(mime).toContain("filename*=UTF-8''Rechnung-Kr%C3%BCger.pdf");
     expect(mime).toContain('List-Unsubscribe-Post: List-Unsubscribe=One-Click');
     expect(raw).not.toMatch(/[+/=]/);
     expect(await buildGmailRaw(args)).toBe(raw);
     expect(await buildGmailRaw({ ...args, idempotencyKey: 'different' })).not.toBe(raw);
+  });
+  it('keeps non-PDF attachments as binary files', async () => {
+    const raw = await buildGmailRaw({ ...args, attachments: [{ filename: 'data.bin', content: 'YWJj' }] });
+    const mime = atob(raw.replace(/-/g, '+').replace(/_/g, '/'));
+    expect(mime).toContain('Content-Type: application/octet-stream');
+    expect(mime).not.toContain('Content-Type: application/pdf');
   });
   it.each([{ to: 'victim@example.org\r\nBcc: other@example.org' }, { subject: 's\r\nFrom: attacker' },
     { headers: { Bcc: 'other@example.org' } }, { attachments: [{ filename: 'x\r\ny.pdf', content: 'JVBE' }] },
