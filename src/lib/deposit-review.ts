@@ -190,7 +190,7 @@ export function priceItems(raw: unknown, facts: ReviewFacts, opts: { frozen?: bo
           line = amount;
           break;
         }
-        if (facts.extraKmAlreadyPaid) throw new Error("Mehrkilometer wurden bereits separat bezahlt");
+        if (facts.extraKmAlreadyPaid) throw new Error("Mehrkilometer wurden bereits separat eingezogen oder der Einzug läuft");
         if (!isCents(facts.extraKmChargeCents) || !facts.extraKmChargeCents) throw new Error("Keine Mehrkilometer-Forderung gespeichert");
         line = facts.extraKmChargeCents;
         amount = line;
@@ -513,4 +513,16 @@ export function draftKey(items: DraftItem[], message: string | null | undefined)
     .map((i) => ({ t: i.type, q: i.type === "late_return" ? i.quantity ?? null : null, a: i.type === "extra_km" ? null : i.amount_cents ?? null, r: (i.reason ?? "").trim() }))
     .sort((a, b) => (a.t + a.r).localeCompare(b.t + b.r));
   return JSON.stringify({ i: norm, m: (message ?? "").trim() });
+}
+
+/** Ordnet den mit der Kaution verrechneten Betrag den Positionen in Reihenfolge zu (nur tatsächlich Zugeordnetes gilt als verrechnet). */
+export function allocateApplied(items: PricedItem[], appliedCents: number): Partial<Record<DeductionType, number>> {
+  let left = appliedCents;
+  const out: Partial<Record<DeductionType, number>> = {};
+  for (const it of items) {
+    const part = Math.min(it.line_cents, Math.max(0, left));
+    out[it.type] = (out[it.type] ?? 0) + part;
+    left -= part;
+  }
+  return out;
 }

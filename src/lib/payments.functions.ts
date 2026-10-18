@@ -185,52 +185,49 @@ async function assertAdmin(supabase: {
   if (!data) throw new Error("Nicht autorisiert");
 }
 
-/** Bucht Mehrkilometer (oder beliebigen Restbetrag) off-session von der gespeicherten Karte ab. */
+/**
+ * Mehrkilometer separat von der gespeicherten Karte: nur die gespeicherte Forderung,
+ * atomar gegen Kautionsverrechnung gesperrt, stabiler Key (src/lib/extra-charge.server.ts).
+ */
 export const chargeBookingExtra = createServerFn({ method: "POST" })
   .middleware([requireActiveAccount])
-  .inputValidator((data: { bookingId: string; amountCents: number; description?: string; environment: StripeEnv }) => {
+  .inputValidator((data: { bookingId: string; amountCents: number; description?: string; environment?: StripeEnv }) => {
     if (!data.bookingId) throw new Error("bookingId fehlt");
-    if (!Number.isInteger(data.amountCents) || data.amountCents < 50) {
-      throw new Error("Betrag muss mindestens 0,50 € sein");
-    }
-    if (data.amountCents > 500_00) throw new Error("Betrag zu hoch (max. 500 €)");
-    assertStripeEnvironment(data.environment);
-    return data;
+    if (!Number.isSafeInteger(data.amountCents) || data.amountCents < 50 || data.amountCents > 500_00) throw new Error("Betrag ungültig");
+    return { bookingId: data.bookingId, amountCents: data.amountCents, description: String(data.description ?? "Mehrkilometer").slice(0, 200) };
   })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase as never, context.userId);
-    const { data: booking, error } = await supabaseAdmin
-      .from("bookings")
-      .select("stripe_customer_id, stripe_payment_method_id, extra_charge_status")
-      .eq("id", data.bookingId)
-      .maybeSingle();
-    if (error || !booking) throw new Error("Buchung nicht gefunden");
-    if (booking.extra_charge_status === "succeeded") {
-      throw new Error("Mehrkilometer wurden bereits abgebucht");
-    }
-    if (!booking.stripe_customer_id || !booking.stripe_payment_method_id) {
-      throw new Error("Keine gespeicherte Zahlungsmethode für diese Buchung");
-    }
-    const stripe = createStripeClient(data.environment);
-    const intent = await stripe.paymentIntents.create({
-      amount: data.amountCents,
-      currency: "eur",
-      customer: booking.stripe_customer_id,
-      payment_method: booking.stripe_payment_method_id,
-      off_session: true,
-      confirm: true,
-      description: data.description ?? "Mehrkilometer / Zusatzkosten",
-      metadata: { bookingId: data.bookingId, kind: "extra_km" },
-    });
-    await supabaseAdmin
-      .from("bookings")
-      .update({
-        extra_charge_intent_id: intent.id,
-        extra_charge_status: intent.status,
-        extra_charge_cents: data.amountCents,
-      })
-      .eq("id", data.bookingId);
-    return { status: intent.status, intentId: intent.id };
+    const { runExtraCharge } = await import("@/lib/extra-charge.server");
+    const db = supabaseAdmin as unknown as { from: (t: string) => any; rpc: (f: string, a: Record<string, unknown>) => any };
+    return runExtraCharge(
+      {
+        claim: async (id, amount) => {
+          const { data: r, error } = await db.rpc("claim_extra_charge", { _booking_id: id, _amount_cents: amount });
+          if (error) throw new Error(error.message);
+          return r;
+        },
+        getCard: async (id) => {
+          const { data: b, error } = await db.from("bookings").select("stripe_customer_id, stripe_payment_method_id, stripe_environment").eq("id", id).maybeSingle();
+          if (error || !b) throw new Error("Buchung nicht gefunden");
+          return { customer: b.stripe_customer_id, paymentMethod: b.stripe_payment_method_id, environment: b.stripe_environment };
+        },
+        createIntent: async (env, p, key) => {
+          const pi = await createStripeClient(env).paymentIntents.create(
+            { amount: p.amount, currency: "eur", customer: p.customer, payment_method: p.payment_method, off_session: true, confirm: true, description: p.description, metadata: { bookingId: p.bookingId, kind: "extra_km" } },
+            { idempotencyKey: key },
+          );
+          return { id: pi.id, status: pi.status };
+        },
+        record: async (id, patch) => {
+          const { error } = await db.from("bookings").update(patch).eq("id", id);
+          if (error) throw new Error("Status nicht gespeichert");
+        },
+      },
+      data.bookingId,
+      data.amountCents,
+      data.description,
+    );
   });
 
 /**
@@ -247,6 +244,8 @@ export const settleDeposit = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase as never, context.userId);
+    const { data: rev } = await supabaseAdmin.from("deposit_reviews").select("id").eq("source_type", "booking").eq("source_id", data.bookingId).maybeSingle();
+    if (rev) throw new Error("Für diese Buchung existiert eine Kautionsprüfung: bitte dort unter „Offene Kautionen“ abschließen");
     const { requestDepositSettlement } = await import("@/lib/deposit-settlement.server");
     const { productionDeps } = await import("@/lib/deposit-settlement-deps.server");
     const { settlement } = await requestDepositSettlement(productionDeps(), {
