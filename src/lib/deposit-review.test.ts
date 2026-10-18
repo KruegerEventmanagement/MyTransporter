@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   priceItems, computeTotals, documentationFeeAllowed, buildCustomerClosingMail, buildAdminReviewMail,
+  resolveRefund, depositReminderDueAt, shouldSendClosingMail,
   payoutSentence, digestSourceId, berlinDateAndHour, photoChecklist, type ReviewFacts,
 } from "./deposit-review";
 import { requestDepositSettlement, syncOpenSettlements, type Deps, type SettlementRow, type BookingRow, type RefundLike } from "./deposit-settlement.server";
@@ -55,7 +56,7 @@ describe("Zeitzone und Checkliste", () => {
 });
 
 describe("Mails", () => {
-  const base = { to: "k@example.com", firstName: "Anna", vehicle: "Fiat · LEO 1", startMs: Date.parse("2026-10-26T08:00:00Z"), endMs: Date.parse("2026-10-27T08:00:00Z"), message: null, channel: "stripe" as const };
+  const base = { to: "k@example.com", firstName: "Anna", vehicle: "Fiat · LEO 1", startMs: Date.parse("2026-10-26T08:00:00Z"), endMs: Date.parse("2026-10-27T08:00:00Z"), message: null, adjustment: null, channel: "stripe" as const };
   it("pending heißt beauftragt, nicht zurückgezahlt", () => {
     const s = payoutSentence({ kind: "stripe_pending" }, 17000, "stripe");
     expect(s).toMatch(/beauftragt/);
@@ -225,7 +226,7 @@ describe("Review-Korrekturen", () => {
 
   it("5: eingefrorene pending-Kundenmail nach Fehlschlag nicht senden", () => {
     const items = priceItems([], facts());
-    const m = buildCustomerClosingMail({ to: "k@x.de", firstName: null, vehicle: "V", startMs: 0, endMs: 1, totals: computeTotals(20000, items), items, message: null, payout: { kind: "stripe_pending" }, channel: "stripe" });
+    const m = buildCustomerClosingMail({ to: "k@x.de", firstName: null, vehicle: "V", startMs: 0, endMs: 1, totals: computeTotals(20000, items), items, message: null, adjustment: null, payout: { kind: "stripe_pending" }, channel: "stripe" });
     expect(closingMailStillValid({ reviewFinalized: true, payout: null, refundCents: 20000, frozenText: m.text })).toMatch(/fehlgeschlagen/);
     expect(closingMailStillValid({ reviewFinalized: true, payout: { kind: "stripe_pending" }, refundCents: 20000, frozenText: m.text })).toBeNull();
     expect(closingMailStillValid({ reviewFinalized: true, payout: { kind: "stripe_pending" }, refundCents: 15000, frozenText: m.text })).toMatch(/Betrag/);
@@ -295,5 +296,68 @@ describe("Mehrkilometer separat (Karte)", () => {
     const t = computeTotals(20000, items);
     expect(allocateApplied(items, t.appliedCents)).toEqual({ damage: 19000, extra_km: 1000 });
     expect(t.outstandingCents).toBe(1250);
+  });
+});
+
+describe("Mietverlängerung und freier Rückzahlungsbetrag", () => {
+  it("Mietverlängerung braucht Begründung und vereinbarten Betrag, kein automatischer Tarif", () => {
+    expect(() => priceItems([{ type: "extension", amount_cents: 4900 }], facts())).toThrow(/Begründung/);
+    expect(() => priceItems([{ type: "extension", reason: "1 Tag verlängert", amount_cents: 0 }], facts())).toThrow(/Betrag/);
+    const it1 = priceItems([{ type: "extension", reason: "1 Tag verlängert", amount_cents: 4900 }], facts())[0];
+    expect(it1.line_cents).toBe(4900);
+    expect(it1.customer_text).toMatch(/vereinbarten Betrag/);
+  });
+  it("Rückzahlung gleich Vorschlag braucht keine Begründung", () => {
+    const t = computeTotals(20000, priceItems([{ type: "smoking" }], facts()));
+    expect(resolveRefund(t, 10000, null)).toEqual({ refundCents: 10000, appliedCents: 10000, reason: null });
+    expect(resolveRefund(t, null, null).refundCents).toBe(10000);
+  });
+  it("abweichender Betrag braucht Begründung (Kulanz oder zusätzlicher Abzug)", () => {
+    const t = computeTotals(20000, priceItems([{ type: "smoking" }], facts()));
+    expect(() => resolveRefund(t, 15000, null)).toThrow(/begründen/);
+    expect(() => resolveRefund(t, 15000, "ab")).toThrow(/begründen/);
+    const r = resolveRefund(t, 15000, "Kulanz aus Kulanzgründen");
+    expect(r).toEqual({ refundCents: 15000, appliedCents: 5000, reason: "Kulanz aus Kulanzgründen" });
+  });
+  it("lehnt negative, dezimale und über der Kaution liegende Beträge ab", () => {
+    const t = computeTotals(20000, []);
+    for (const v of [-1, 1.5, 20001]) expect(() => resolveRefund(t, v, "Grund genug")).toThrow(/ungültig/);
+  });
+  it("draftKey erkennt geänderten Betrag, Begründung und Mailwahl", () => {
+    const items = [{ type: "smoking" as const }];
+    const a = draftKey(items, null, { refundCents: null, reason: null, sendMail: false });
+    expect(draftKey(items, null, { refundCents: 15000, reason: "Kulanz", sendMail: false })).not.toBe(a);
+    expect(draftKey(items, null, { refundCents: null, reason: null, sendMail: true })).not.toBe(a);
+    expect(draftKey(items, null, { refundCents: null, reason: null, sendMail: false })).toBe(a);
+  });
+  it("Kundenmail zeigt die begründete Anpassung", () => {
+    const items = priceItems([{ type: "extension", reason: "1 Tag verlängert", amount_cents: 4900 }], facts());
+    const t = computeTotals(20000, items);
+    const m = buildCustomerClosingMail({ to: "k@x.de", firstName: "Ali", vehicle: "V", startMs: 0, endMs: 1, totals: { ...t, appliedCents: 9900, refundCents: 10100 }, items, message: null, adjustment: "Kulanz: 50,00 € erlassen", payout: { kind: "preview" }, channel: "manual" });
+    expect(m.text).toContain("Anpassung: Kulanz: 50,00 € erlassen");
+    expect(m.text).toContain("Rückzahlung: 101,00 €");
+    expect(m.text).toContain("1 Tag verlängert");
+  });
+});
+
+describe("48h-Kautionserinnerung", () => {
+  const end = Date.parse("2026-10-20T10:00:00Z");
+  it("fällig exakt nach 48 Stunden, nicht bei 47:59", () => {
+    const due = depositReminderDueAt(end, null);
+    expect(due).toBe(end + 48 * 3600_000);
+    expect(end + 47 * 3600_000 + 59 * 60_000 >= due).toBe(false);
+    expect(end + 48 * 3600_000 >= due).toBe(true);
+  });
+  it("später gemeldete Rückgabe verschiebt die Erinnerung", () => {
+    const ret = end + 26 * 3600_000;
+    expect(depositReminderDueAt(end, ret)).toBe(ret + 48 * 3600_000);
+  });
+  it("frühere Rückgabe ändert das Mietende nicht", () => {
+    expect(depositReminderDueAt(end, end - 3600_000)).toBe(end + 48 * 3600_000);
+  });
+  it("Kundenmail nur bei ausdrücklich eingeschalteter Mailwahl", () => {
+    expect(shouldSendClosingMail(null)).toBe(false);
+    expect(shouldSendClosingMail({ send_closing_mail: false })).toBe(false);
+    expect(shouldSendClosingMail({ send_closing_mail: true })).toBe(true);
   });
 });

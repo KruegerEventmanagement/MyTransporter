@@ -5,6 +5,7 @@ import {
   listOpenDepositsFn, getDepositReviewFn, saveDepositDraftFn, previewDepositMailFn, recordManualDepositFn,
   finalizeDepositFn, continueDepositFn, refreshDepositFn, confirmManualPayoutFn,
 } from "@/lib/deposit-review.functions";
+import { getCalendarEntryDetails, type CalendarEntryDetails } from "@/lib/calendar-details.functions";
 import { DEDUCTION_DEFS, PHOTO_CHECKLIST, SETTLEMENT_STATE_DE, MAIL_STATE_DE, berlinStamp, draftKey, eur, type DeductionType, type DraftItem } from "@/lib/deposit-review";
 import { parseEuroToCents } from "@/lib/money-input";
 import { resolveTripPhotoUrl } from "@/lib/trip-photos";
@@ -19,6 +20,19 @@ function toCents(v: string): number | null {
   const r = parseEuroToCents(v);
   return r.ok && r.cents >= 0 ? r.cents : null;
 }
+const toEuro = (c: number) => (c / 100).toFixed(2).replace(".", ",");
+
+/** Verständliche deutsche Bezeichnungen für alle Fahrtfotos (Übergabe + Rückgabe). */
+function photoLabel(tag: string): string {
+  const post = PHOTO_CHECKLIST.find((p) => p.tag === tag);
+  if (post) return `Rückgabe: ${post.label}`;
+  if (tag === "post_odometer") return "Rückgabe: Tacho";
+  if (tag.startsWith("pre_")) {
+    const base = PHOTO_CHECKLIST.find((p) => p.tag === `post_${tag.slice(4)}`);
+    return `Übergabe: ${base?.label ?? tag.slice(4)}`;
+  }
+  return tag;
+}
 
 export function DepositsAdmin({ initial }: { initial?: { source: "booking" | "manual"; id: string } | null }) {
   const list = useServerFn(listOpenDepositsFn);
@@ -26,6 +40,8 @@ export function DepositsAdmin({ initial }: { initial?: { source: "booking" | "ma
   const [open, setOpen] = useState<{ source: "booking" | "manual"; id: string } | null>(initial ?? null);
   const reload = () => list().then(setItems).catch((e) => toast.error(e instanceof Error ? e.message : "Laden fehlgeschlagen"));
   useEffect(() => { reload(); }, []);
+  // Deep-Link-Wechsel (z. B. Push-Klick bei bereits geöffnetem Admin) öffnet die neue Kautionsansicht.
+  useEffect(() => { if (initial) setOpen(initial); }, [initial?.source, initial?.id]);
 
   if (open) return <DepositDetail source={open.source} id={open.id} onBack={() => { setOpen(null); reload(); }} />;
   return (
@@ -57,7 +73,9 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
   const cont = useServerFn(continueDepositFn);
   const refresh = useServerFn(refreshDepositFn);
   const confirmPayout = useServerFn(confirmManualPayoutFn);
+  const getDetails = useServerFn(getCalendarEntryDetails);
   const [ctx, setCtx] = useState<any>(null);
+  const [details, setDetails] = useState<CalendarEntryDetails | null>(null);
   const [sel, setSel] = useState(emptySel());
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -67,20 +85,34 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
   const [depAmount, setDepAmount] = useState("");
   const [depMethod, setDepMethod] = useState("cash");
   const [payMethod, setPayMethod] = useState("cash");
+  const [refundInput, setRefundInput] = useState("");
+  const [refundTouched, setRefundTouched] = useState(false);
+  const [adjustReason, setAdjustReason] = useState("");
+  const [sendMail, setSendMail] = useState(false);
 
   const load = async () => {
     const c = await get({ data: { source, id } });
     setCtx(c);
     const s = emptySel();
     for (const it of (c.review?.items ?? []) as DraftItem[]) {
-      s[it.type] = { checked: true, quantity: String(it.quantity ?? 1), amount: it.amount_cents != null ? (it.amount_cents / 100).toFixed(2).replace(".", ",") : "", reason: it.reason ?? "" };
+      s[it.type] = { checked: true, quantity: String(it.quantity ?? 1), amount: it.amount_cents != null ? toEuro(it.amount_cents) : "", reason: it.reason ?? "" };
     }
     setSel(s);
     setMsg(c.review?.customer_message ?? "");
-    setSavedKey(c.review ? draftKey((c.review.items ?? []) as DraftItem[], c.review.customer_message) : null);
+    setSendMail(c.review?.send_closing_mail === true);
+    setAdjustReason(c.review?.adjustment_reason ?? "");
+    setRefundTouched(false);
+    setRefundInput(c.review?.refund_override_cents != null ? toEuro(c.review.refund_override_cents) : "");
+    setSavedKey(c.review ? draftKey((c.review.items ?? []) as DraftItem[], c.review.customer_message, {
+      refundCents: c.review.refund_override_cents ?? null,
+      reason: c.review.adjustment_reason ?? null,
+      sendMail: c.review.send_closing_mail === true,
+    }) : null);
     const urls: Record<string, string> = {};
-    await Promise.all((c.photos ?? []).filter((p: any) => p.photo_type.startsWith("post_") || p.photo_type === "tank_receipt").map(async (p: any) => { urls[p.photo_url] = await resolveTripPhotoUrl(p.photo_url); }));
+    await Promise.all((c.photos ?? []).map(async (p: any) => { urls[p.photo_url] = await resolveTripPhotoUrl(p.photo_url); }));
     setPhotoUrls(urls);
+    // Ausweis, Führerschein und weitere Dokumente über den sicheren, ID-basierten Adminweg.
+    getDetails({ data: { kind: source, id } }).then(setDetails).catch(() => setDetails(null));
   };
   useEffect(() => { load().catch((e) => toast.error(e instanceof Error ? e.message : "Laden fehlgeschlagen")); }, [source, id]);
 
@@ -102,11 +134,6 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
     return { items: out, error: null };
   }, [sel]);
 
-  const currentKey = draftItems.error ? null : draftKey(draftItems.items, msg);
-  const dirty = savedKey == null || currentKey !== savedKey;
-  // Jede Änderung macht die Vorschau ungültig.
-  useEffect(() => { setMail(null); }, [currentKey]);
-
   if (!ctx) return <p className="text-sm text-muted-foreground">Lädt …</p>;
   const finalized = ctx.review?.status === "finalized";
   const dep: number | null = ctx.depositCents;
@@ -119,9 +146,29 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
     return toCents(s.amount) ?? 0;
   };
   const total = TYPES.filter((t) => sel[t].checked).reduce((s, t) => s + lineOf(t), 0);
+  const suggestedRefund = dep == null ? 0 : Math.max(0, dep - Math.min(total, dep));
   const applied = dep == null ? 0 : Math.min(total, dep);
-  const refund = dep == null ? 0 : dep - applied;
   const outstanding = total - applied;
+
+  // Frei bestätigter Rückzahlungsbetrag: Vorschlag = Kaution minus Abzüge, editierbar.
+  const refundCents = refundTouched ? toCents(refundInput) : suggestedRefund;
+  const deviates = refundCents != null && refundCents !== suggestedRefund;
+  const refundError =
+    refundCents == null ? "Rückzahlungsbetrag ungültig"
+    : dep != null && refundCents > dep ? "Rückzahlung darf die erhaltene Kaution nicht übersteigen"
+    : deviates && adjustReason.trim().length < 3 ? "Abweichender Betrag: bitte die Anpassung begründen (z. B. Kulanz oder zusätzlicher Abzug)"
+    : null;
+  const refund = finalized ? ctx.review.final_refund_cents : (refundCents ?? 0);
+
+  const adjust = {
+    refundCents: refundTouched ? refundCents : null,
+    reason: adjustReason.trim() || null,
+    sendMail,
+  };
+  const currentKey = draftItems.error || refundError ? null : draftKey(draftItems.items, msg, adjust);
+  const dirty = savedKey == null || currentKey !== savedKey;
+  // Jede Änderung macht die Vorschau ungültig.
+  useEffect(() => { setMail(null); }, [currentKey]);
 
   const run = async (fn: () => Promise<unknown>, ok?: string) => {
     setBusy(true);
@@ -129,25 +176,45 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
   };
   const doSave = () => run(async () => {
     if (draftItems.error) throw new Error(draftItems.error);
-    await save({ data: { source, id, revision: ctx.review?.revision ?? null, items: draftItems.items, message: msg } });
+    if (refundError) throw new Error(refundError);
+    await save({ data: { source, id, revision: ctx.review?.revision ?? null, items: draftItems.items, message: msg, adjust } });
     await load();
   }, "Entwurf gespeichert (kein Geld bewegt, keine Mail)");
   const doPreview = () => run(async () => {
     if (draftItems.error) throw new Error(draftItems.error);
-    const p = await preview({ data: { source, id, items: draftItems.items, message: msg } });
+    if (refundError) throw new Error(refundError);
+    const p = await preview({ data: { source, id, items: draftItems.items, message: msg, adjust } });
     setMail({ html: p.html, subject: p.subject, to: p.to });
   });
   const setT = (t: DeductionType, patch: Partial<Sel>) => setSel((s) => ({ ...s, [t]: { ...s[t], ...patch } }));
   const settlement = ctx.settlements?.find((s: any) => s.id === ctx.review?.settlement_id);
 
+  const docLink = (d: { label: string; signedUrl: string | null; fileState: string; removedByUser: boolean } | null) =>
+    !d ? null : (
+      <li key={d.label}>
+        {d.signedUrl ? (
+          <a href={d.signedUrl} target="_blank" rel="noreferrer" className="underline">{d.label}</a>
+        ) : (
+          <span>{d.label} ({d.removedByUser ? "vom Kunden entfernt" : d.fileState === "path_rejected" ? "Zuordnung ungültig" : "nicht verfügbar"})</span>
+        )}
+      </li>
+    );
+
   return (
     <div className="space-y-4">
       <button onClick={onBack} className="text-sm underline">← Offene Kautionen</button>
       <div className="rounded-2xl border border-border bg-card p-4 space-y-1 text-sm">
-        <h2 className="text-lg font-semibold">{ctx.customerName}</h2>
+        <h2 className="text-2xl font-bold">{ctx.customerName}</h2>
+        <p className="text-sm font-semibold text-muted-foreground">Kaution</p>
+        {ctx.userId && <p><a className="underline text-xs" href={`/admin?kunde=${ctx.userId}`}>Zum Kundenprofil</a></p>}
         <p>{ctx.bookingRef} · {ctx.vehicle}</p>
         <p>Beginn {berlinStamp(ctx.startMs)} · Ende {berlinStamp(ctx.endMs)}</p>
         <p>Rückgabe: {ctx.returnReportedMs ? `gemeldet ${berlinStamp(ctx.returnReportedMs)}` : "noch nicht bestätigt"}</p>
+        {details?.customer && (
+          <p className="text-xs text-muted-foreground">
+            {[details.customer.email, details.customer.phone, details.customer.address].filter(Boolean).join(" · ")}
+          </p>
+        )}
         <p>Miete: {ctx.priceLine}</p>
         <p>Kaution: <strong>{ctx.depositLine}</strong></p>
         {ctx.knownBounce && <p className="font-semibold">Achtung: E-Mail-Adresse dauerhaft unzustellbar, keine Kundenmail.</p>}
@@ -160,14 +227,32 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
           <ul className="grid grid-cols-2 gap-1 text-sm">
             {PHOTO_CHECKLIST.map((p) => { const c = ctx.checklist.find((x: any) => x.tag === p.tag); return <li key={p.tag}>{c?.present ? "✓" : "✗"} {p.label}</li>; })}
           </ul>
+        </div>
+      )}
+      {ctx.photos.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+          <h3 className="text-sm font-semibold">Alle Fahrtfotos</h3>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {ctx.photos.filter((p: any) => photoUrls[p.photo_url]).map((p: any) => (
               <a key={p.photo_url} href={photoUrls[p.photo_url]} target="_blank" rel="noreferrer" className="block">
-                <img src={photoUrls[p.photo_url]} alt={p.photo_type} className="aspect-square w-full object-cover rounded-lg border border-border" loading="lazy" />
-                <span className="text-[10px] text-muted-foreground">{p.photo_type}</span>
+                <img src={photoUrls[p.photo_url]} alt={photoLabel(p.photo_type)} className="aspect-square w-full object-cover rounded-lg border border-border" loading="lazy" />
+                <span className="text-[10px] text-muted-foreground">{photoLabel(p.photo_type)}</span>
               </a>
             ))}
           </div>
+        </div>
+      )}
+      {details && (details.documents.license.front || details.documents.license.back || details.documents.id.front || details.documents.id.back || details.documents.others.length > 0) && (
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-1 text-sm">
+          <h3 className="text-sm font-semibold">Kundendokumente</h3>
+          <ul className="list-disc pl-5 space-y-1">
+            {docLink(details.documents.license.front)}
+            {docLink(details.documents.license.back)}
+            {docLink(details.documents.id.front)}
+            {docLink(details.documents.id.back)}
+            {details.documents.others.map((d) => docLink(d))}
+          </ul>
+          <p className="text-[10px] text-muted-foreground">Links sind kurzlebig signiert und laufen nach wenigen Minuten ab.</p>
         </div>
       )}
       {ctx.issues.length > 0 && (
@@ -190,6 +275,7 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
 
       <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
         <h3 className="text-sm font-semibold">Abzugspositionen {finalized && "(abgeschlossen)"}</h3>
+        <p className="text-xs text-muted-foreground">Nichts ist vorausgewählt. Bei jedem angeklickten Punkt steht, was abgezogen wird.</p>
         {TYPES.map((t) => {
           const def = DEDUCTION_DEFS[t]; const s = sel[t];
           const disabled = finalized || (t === "extra_km" && (!ctx.extraKm.cents || ctx.extraKm.alreadyPaid)) || (t === "documentation_fee" && !ctx.docFee.allowed && !s.checked);
@@ -204,8 +290,8 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
               {s.checked && !finalized && (
                 <div className="grid gap-2">
                   {def.mode === "per_unit" && <input value={s.quantity} onChange={(e) => setT(t, { quantity: e.target.value })} inputMode="numeric" placeholder={def.unitLabel} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />}
-                  {(def.mode === "free" || def.mode === "amount_plus_fee") && <input value={s.amount} onChange={(e) => setT(t, { amount: e.target.value })} inputMode="decimal" placeholder={def.mode === "amount_plus_fee" ? "Tatsächliche Tankkosten in €" : "Betrag in €"} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />}
-                  <input value={s.reason} onChange={(e) => setT(t, { reason: e.target.value })} placeholder={def.reasonRequired ? "Begründung (Pflicht, für Kunden sichtbar)" : "Begründung (optional, für Kunden sichtbar)"} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+                  {(def.mode === "free" || def.mode === "amount_plus_fee") && <input value={s.amount} onChange={(e) => setT(t, { amount: e.target.value })} inputMode="decimal" placeholder={def.mode === "amount_plus_fee" ? "Tatsächliche Tankkosten in €" : t === "extension" ? "Vereinbarter Betrag in €" : "Betrag in €"} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />}
+                  <input value={s.reason} onChange={(e) => setT(t, { reason: e.target.value })} placeholder={t === "extension" ? "Begründung (Pflicht), z. B. 1 Tag verlängert" : def.reasonRequired ? "Begründung (Pflicht, für Kunden sichtbar)" : "Begründung (optional, für Kunden sichtbar)"} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
                 </div>
               )}
             </div>
@@ -215,13 +301,36 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
         <div className="text-sm space-y-1">
           <div className="flex justify-between"><span>Kaution</span><strong>{dep == null ? "nicht erfasst" : eur(dep)}</strong></div>
           <div className="flex justify-between"><span>Abzug gesamt</span><strong>{eur(finalized ? ctx.review.final_deduct_total_cents : total)}</strong></div>
-          <div className="flex justify-between"><span>Rückzahlung</span><strong>{eur(finalized ? ctx.review.final_refund_cents : refund)}</strong></div>
           {(finalized ? ctx.review.final_outstanding_cents : outstanding) > 0 && <div className="flex justify-between"><span>Offene Restforderung (keine automatische Abbuchung)</span><strong>{eur(finalized ? ctx.review.final_outstanding_cents : outstanding)}</strong></div>}
         </div>
+        {!finalized && dep != null && (
+          <div className="rounded-xl border border-border p-3 space-y-2">
+            <label className="text-sm font-semibold">Wie viel Kaution möchtest du zurückzahlen?</label>
+            <div className="flex items-center gap-2">
+              <input
+                value={refundTouched ? refundInput : toEuro(suggestedRefund)}
+                onChange={(e) => { setRefundTouched(true); setRefundInput(e.target.value); }}
+                inputMode="decimal"
+                className="w-32 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              />
+              <span className="text-xs text-muted-foreground">Vorschlag: {eur(suggestedRefund)} (Kaution minus Abzüge)</span>
+            </div>
+            {deviates && (
+              <input value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder="Begründung der Anpassung (Pflicht), z. B. Kulanz oder zusätzlicher Abzug" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+            )}
+            {refundError && refundTouched && <p className="text-xs font-semibold">{refundError}</p>}
+          </div>
+        )}
+        {!finalized && (
+          <label className="flex items-start gap-2 text-sm rounded-xl bg-secondary p-3">
+            <input type="checkbox" checked={sendMail} onChange={(e) => setSendMail(e.target.checked)} className="mt-1" />
+            <span>Möchtest du zusätzlich eine automatische E-Mail an den Kunden senden? Sie erklärt freundlich die angeklickten Punkte und den Rückzahlungsbetrag.</span>
+          </label>
+        )}
         {!finalized && (
           <div className="grid grid-cols-2 gap-2">
             <button disabled={busy} onClick={doSave} className="rounded-full border border-border py-2 text-sm font-semibold">Entwurf speichern</button>
-            <button disabled={busy || dep == null || dirty} title={dirty ? "Erst speichern" : undefined} onClick={doPreview} className="rounded-full border border-border py-2 text-sm font-semibold">Mailvorschau</button>
+            <button disabled={busy || dep == null || dirty || !sendMail} title={dirty ? "Erst speichern" : !sendMail ? "Kundenmail ist ausgeschaltet" : undefined} onClick={doPreview} className="rounded-full border border-border py-2 text-sm font-semibold">Mailvorschau</button>
           </div>
         )}
       </div>
@@ -236,10 +345,10 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
       {!finalized && ctx.review && dep != null && (
         <div className="rounded-2xl border-2 border-foreground p-4 space-y-2">
           <h3 className="text-sm font-semibold">Kaution abschließen</h3>
-          <p className="text-sm">Abschluss für <strong>{ctx.customerName}</strong> mit Rückzahlung <strong>{eur(refund)}</strong>{source === "booking" ? " auf die Originalzahlung (nur Kautionsanteil)" : " (manuell, separate Bestätigung)"}. Gilt für den zuletzt gespeicherten Entwurf.</p>
+          <p className="text-sm">Abschluss für <strong>{ctx.customerName}</strong> mit Rückzahlung <strong>{eur(refund)}</strong>{source === "booking" ? " auf die Originalzahlung (nur Kautionsanteil)" : " (manuell, separate Bestätigung)"}. Gilt für den zuletzt gespeicherten Entwurf.{sendMail ? " Die Kundenmail ist eingeschaltet." : " Es wird keine Kundenmail gesendet."}</p>
           {dirty && <p className="text-xs font-semibold">Ungespeicherte Änderungen: bitte zuerst „Entwurf speichern“. Abgeschlossen wird nur der gespeicherte Entwurf.</p>}
           <button disabled={busy || dirty} onClick={() => run(async () => { setCtx(await finalize({ data: { source, id, revision: ctx.review.revision, confirmName: ctx.customerName, confirmRefundCents: refund } })); }, "Abschluss gespeichert")} className="w-full rounded-full bg-foreground text-background py-2.5 text-sm font-semibold disabled:opacity-50">
-            {refund === 0 ? `Kaution von ${ctx.customerName} vollständig einbehalten und abschließen` : source === "manual" ? `Abschließen: ${eur(refund)} an ${ctx.customerName} manuell auszuzahlen` : `${eur(refund)} an ${ctx.customerName} zurückzahlen und abschließen`}
+            {refund === 0 ? `Kaution von ${ctx.customerName} vollständig einbehalten und abschließen` : source === "manual" ? `Abschließen: ${eur(refund)} an ${ctx.customerName} manuell auszahlen` : `${eur(refund)} an ${ctx.customerName} zurückzahlen und abschließen`}
           </button>
         </div>
       )}
@@ -252,7 +361,7 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
           ) : (
             <p>Manuelle Rückzahlung: {ctx.review.manual_payout_status === "confirmed" ? `bestätigt (${ctx.review.manual_payout_method})` : ctx.review.manual_payout_status === "open" ? "offen" : "nicht erforderlich"}</p>
           )}
-          <p>Kundenmail: {ctx.closingMail ? `${MAIL_STATE_DE[ctx.closingMail.status] ?? ctx.closingMail.status}${ctx.closingMail.blocked_reason ? ` · ${ctx.closingMail.blocked_reason}` : ""}` : "noch nicht erstellt (erst bei bestätigtem oder beauftragtem Zahlungsstand)"}</p>
+          <p>Kundenmail: {ctx.review.send_closing_mail === false ? "vom Admin ausgeschaltet" : ctx.closingMail ? `${MAIL_STATE_DE[ctx.closingMail.status] ?? ctx.closingMail.status}${ctx.closingMail.blocked_reason ? ` · ${ctx.closingMail.blocked_reason}` : ""}` : "noch nicht erstellt (erst bei bestätigtem oder beauftragtem Zahlungsstand)"}</p>
           <div className="flex flex-wrap gap-2">
             {source === "booking" && !settlement && <button disabled={busy} onClick={() => run(async () => setCtx(await cont({ data: { source, id } })), "Fortgesetzt")} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">Rückzahlung fortsetzen (gleicher Auftrag)</button>}
             {source === "booking" && settlement?.status === "processing" && <button disabled={busy} onClick={() => run(async () => setCtx(await cont({ data: { source, id } })), "Erneut versucht")} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">Erneut versuchen (gleicher Key)</button>}

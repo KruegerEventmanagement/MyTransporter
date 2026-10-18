@@ -5,10 +5,11 @@
  * Mails und Geld sind unabhängig: Mail-Retry ruft nie Stripe.
  */
 import {
-  priceItems, computeTotals, photoChecklist, buildAdminReviewMail, buildDigestMail, buildCustomerClosingMail,
-  digestSourceId, berlinDateAndHour, DIGEST_HOUR_BERLIN, documentationFeeAllowed, eur, ADMIN_RECIPIENT, MAX_MESSAGE,
-  bookingDepositState, allocateApplied, closingMailStillValid, adminMailStillValid, safePhotoRows,
-  type PricedItem, type ReviewFacts, type Totals, type PayoutState, type DigestEntry
+  priceItems, computeTotals, photoChecklist, buildCustomerClosingMail,
+  documentationFeeAllowed, eur, MAX_MESSAGE,
+  bookingDepositState, allocateApplied, closingMailStillValid, safePhotoRows,
+  resolveRefund, shouldSendClosingMail, depositReminderDueAt,
+  type PricedItem, type ReviewFacts, type Totals, type PayoutState
 } from "@/lib/deposit-review";
 import { resolveTripWindow } from "@/lib/trip-time";
 import { requiredReturnTagsV2 } from "@/lib/trip-return";
@@ -32,6 +33,7 @@ export type ReviewRow = {
   final_deposit_cents: number | null; final_deduct_total_cents: number | null; final_deduct_applied_cents: number | null;
   final_outstanding_cents: number | null; final_refund_cents: number | null; settlement_id: string | null;
   finalized_at: string | null; manual_payout_status: string | null; manual_payout_method: string | null; manual_payout_confirmed_at: string | null;
+  refund_override_cents: number | null; adjustment_reason: string | null; send_closing_mail: boolean;
 };
 
 export type DepositContext = {
@@ -157,22 +159,35 @@ function depositOf(ctx: DepositContext): number {
   return ctx.depositCents;
 }
 
+export type DraftAdjust = { refundCents: number | null; reason: string | null; sendMail: boolean };
+
 /** Entwurf speichern: bewegt kein Geld, sendet keine Mail. Optimistische Revision. */
-export async function saveDraft(adminId: string, source: Source, id: string, expectedRevision: number | null, items: unknown, message: string | null) {
+export async function saveDraft(adminId: string, source: Source, id: string, expectedRevision: number | null, items: unknown, message: string | null, adjust?: DraftAdjust) {
   const ctx = await loadDepositContext(source, id);
   if (ctx.review?.status === "finalized") throw new Error("Bereits abgeschlossen");
   const priced = priceItems(items, ctx.facts);
   const msg = (message ?? "").trim().slice(0, MAX_MESSAGE) || null;
+  // Frei bestätigter Rückzahlungsbetrag: serverseitig validiert und gespeichert.
+  let override: number | null = null;
+  let adjReason: string | null = null;
+  if (adjust && adjust.refundCents != null) {
+    const totals = computeTotals(depositOf(ctx), priced);
+    const r = resolveRefund(totals, adjust.refundCents, adjust.reason);
+    override = r.refundCents === totals.refundCents && !r.reason ? null : r.refundCents;
+    adjReason = r.reason;
+  }
+  const sendMail = adjust?.sendMail === true;
   const d = await db();
   const stored = priced.map(({ type, quantity, amount_cents, reason }) => ({ type, quantity, amount_cents, reason }));
+  const extra = { refund_override_cents: override, adjustment_reason: adjReason, send_closing_mail: sendMail };
   if (!ctx.review) {
     if (expectedRevision != null) throw new Error("Entwurf wurde inzwischen geändert, bitte neu laden");
-    const res = await d.from("deposit_reviews").insert({ source_type: source, source_id: id, items: stored, customer_message: msg, updated_by: adminId }).select("revision").single();
+    const res = await d.from("deposit_reviews").insert({ source_type: source, source_id: id, items: stored, customer_message: msg, ...extra, updated_by: adminId }).select("revision").single();
     if (res.error?.code === "23505") throw new Error("Entwurf wurde parallel angelegt, bitte neu laden");
     return { revision: must(res, "Entwurf").revision as number };
   }
   if (expectedRevision !== ctx.review.revision) throw new Error("Entwurf wurde inzwischen geändert, bitte neu laden");
-  const rows = must(await d.from("deposit_reviews").update({ items: stored, customer_message: msg, revision: ctx.review.revision + 1, updated_by: adminId }).eq("id", ctx.review.id).eq("revision", ctx.review.revision).eq("status", "draft").select("revision"), "Entwurf") as any[];
+  const rows = must(await d.from("deposit_reviews").update({ items: stored, customer_message: msg, ...extra, revision: ctx.review.revision + 1, updated_by: adminId }).eq("id", ctx.review.id).eq("revision", ctx.review.revision).eq("status", "draft").select("revision"), "Entwurf") as any[];
   if (!rows.length) throw new Error("Entwurf wurde inzwischen geändert, bitte neu laden");
   return { revision: rows[0].revision as number };
 }
@@ -199,13 +214,15 @@ export function totalsFor(ctx: DepositContext): Totals {
   return computeTotals(depositOf(ctx), storedPriced(ctx));
 }
 
-export async function previewClosingMail(source: Source, id: string, items: unknown, message: string | null) {
+export async function previewClosingMail(source: Source, id: string, items: unknown, message: string | null, adjust?: DraftAdjust) {
   const ctx = await loadDepositContext(source, id);
   const priced = priceItems(items, ctx.facts);
-  const totals = computeTotals(depositOf(ctx), priced);
+  const base = computeTotals(depositOf(ctx), priced);
+  const r = resolveRefund(base, adjust?.refundCents ?? null, adjust?.reason ?? null);
+  const totals: Totals = { ...base, appliedCents: r.appliedCents, refundCents: r.refundCents };
   const mail = buildCustomerClosingMail({
     to: ctx.email ?? "keine-adresse@invalid", firstName: ctx.firstName, vehicle: ctx.vehicle, startMs: ctx.startMs, endMs: ctx.endMs,
-    totals, items: priced, message, payout: { kind: "preview" }, channel: source === "booking" ? "stripe" : "manual",
+    totals, items: priced, message, adjustment: r.reason, payout: { kind: "preview" }, channel: source === "booking" ? "stripe" : "manual",
   });
   return { subject: mail.subject, html: mail.html, text: mail.text, totals, to: ctx.email };
 }
@@ -216,7 +233,10 @@ export async function finalizeReview(adminId: string, source: Source, id: string
   if (!ctx.review) throw new Error("Bitte zuerst einen Entwurf speichern");
   if (ctx.review.status !== "finalized") {
     if (ctx.review.revision !== expectedRevision) throw new Error("Entwurf wurde inzwischen geändert, bitte neu laden");
-    const t = totalsFor(ctx);
+    const base = totalsFor(ctx);
+    // Der im Entwurf gespeicherte, frei bestätigte Rückzahlungsbetrag gilt.
+    const choice = resolveRefund(base, ctx.review.refund_override_cents, ctx.review.adjustment_reason);
+    const t: Totals = { ...base, appliedCents: choice.appliedCents, refundCents: choice.refundCents };
     if (confirmName.trim() !== ctx.customerName.trim()) throw new Error("Name zur Bestätigung stimmt nicht");
     if (confirmRefundCents !== t.refundCents) throw new Error("Bestätigter Rückzahlungsbetrag stimmt nicht mit dem Entwurf überein");
     if (source === "booking" && t.refundCents > 0 && !ctx.stripe?.paymentIntentId) throw new Error("Keine eindeutig zugeordnete Stripe-Zahlung: bitte manuell prüfen");
@@ -292,10 +312,12 @@ export function payoutStateFor(ctx: DepositContext): PayoutState | null {
   return null;
 }
 
-/** Friert genau eine Kundenmail je Vorgang ein; nie bei bekanntem Bounce, nie ohne realen Zahlungsstand. */
-export async function ensureClosingMail(source: Source, id: string): Promise<"queued" | "exists" | "not_ready" | "no_email" | "bounced"> {
+/** Friert genau eine Kundenmail je Vorgang ein; nie bei bekanntem Bounce, nie ohne realen Zahlungsstand,
+ *  nie ohne ausdrücklich eingeschaltete Mailwahl im Entwurf. */
+export async function ensureClosingMail(source: Source, id: string): Promise<"queued" | "exists" | "not_ready" | "no_email" | "bounced" | "disabled"> {
   const ctx = await loadDepositContext(source, id);
   if (ctx.closingMail) return "exists";
+  if (!shouldSendClosingMail(ctx.review)) return "disabled";
   const payout = payoutStateFor(ctx);
   if (!payout) return "not_ready";
   if (!ctx.email) return "no_email";
@@ -307,7 +329,7 @@ export async function ensureClosingMail(source: Source, id: string): Promise<"qu
       depositCents: r.final_deposit_cents!, totalCents: r.final_deduct_total_cents!, appliedCents: r.final_deduct_applied_cents!,
       outstandingCents: r.final_outstanding_cents!, refundCents: r.final_refund_cents!,
     },
-    items: priceItemsFrozen(r.items), message: r.customer_message, payout, channel: source === "booking" ? "stripe" : "manual",
+    items: priceItemsFrozen(r.items), message: r.customer_message, adjustment: r.adjustment_reason ?? null, payout, channel: source === "booking" ? "stripe" : "manual",
   });
   const { insertRow, processOutboxRowById } = await import("@/lib/customer-mail-outbox.server");
   const row = await insertRow({ source_type: source, source_id: id, kind: "deposit_closing", due_at: new Date().toISOString(), recipient_email: ctx.email, payload: mail });
@@ -321,7 +343,8 @@ function priceItemsFrozen(items: unknown): PricedItem[] {
 }
 
 export async function depositMailPrecheck(row: OutboxRow): Promise<string | null> {
-  if (row.kind === "deposit_digest") return null;
+  // Admin-Kautionsmail und Tagesdigest wurden durch die In-App-/Push-Erinnerung ersetzt.
+  if (row.kind === "deposit_digest" || row.kind === "deposit_review_admin") return "Durch In-App-Erinnerung ersetzt";
   const source = row.source_type as Source;
   let ctx: DepositContext;
   try {
@@ -331,12 +354,6 @@ export async function depositMailPrecheck(row: OutboxRow): Promise<string | null
     throw e;
   }
   const text = (row.payload as { text?: string } | null)?.text ?? "";
-  if (row.kind === "deposit_review_admin") {
-    return adminMailStillValid({
-      bookingStatus: ctx.status, depositStatus: ctx.depositStatus, reviewFinalized: ctx.review?.status === "finalized",
-      endMs: ctx.endMs, returnReportedMs: ctx.returnReportedMs, nowMs: Date.now(), frozenText: text,
-    });
-  }
   const stop = closingMailStillValid({
     reviewFinalized: ctx.review?.status === "finalized", payout: payoutStateFor(ctx),
     refundCents: ctx.review?.final_refund_cents ?? null, frozenText: text,
@@ -349,7 +366,7 @@ export async function depositMailPrecheck(row: OutboxRow): Promise<string | null
 /** Teil des 5-Minuten-Outbox-Jobs. Stripe nur lesend; Mails ab Aktivierung. */
 export async function runDepositSweep(nowMs = Date.now()): Promise<Record<string, number>> {
   const d = await db();
-  const stats = { deposit_synced: 0, deposit_admin_enqueued: 0, deposit_digest: 0, deposit_closing: 0 };
+  const stats = { deposit_synced: 0, deposit_closing: 0, deposit_reminders: 0 };
   try {
     const { syncOpenSettlements } = await import("@/lib/deposit-settlement.server");
     const { productionDeps } = await import("@/lib/deposit-settlement-deps.server");
@@ -357,40 +374,19 @@ export async function runDepositSweep(nowMs = Date.now()): Promise<Record<string
   } catch (e) {
     console.warn("[kaution] Statusabgleich", String((e as Error)?.message ?? e).slice(0, 160));
   }
-  const settings = must(await d.from("customer_mail_settings").select("deposit_review_from").eq("id", true).maybeSingle(), "Einstellungen") as { deposit_review_from: string | null } | null;
-  const from = settings?.deposit_review_from;
-  if (!from) return stats;
-  const { insertRow } = await import("@/lib/customer-mail-outbox.server");
-
-  const due = (must(await d.rpc("deposit_review_due_sources", { _from: from, _limit: 20 }), "Fällig") ?? []) as { source_type: Source; source_id: string }[];
-  for (const s of due) {
-    try {
-      const ctx = await loadDepositContext(s.source_type, s.source_id);
-      const mail = buildAdminReviewMail({ ...ctx, sourceType: s.source_type, sourceId: s.source_id, checklist: ctx.checklist });
-      await insertRow({ source_type: s.source_type, source_id: s.source_id, kind: "deposit_review_admin", due_at: new Date(nowMs).toISOString(), recipient_email: ADMIN_RECIPIENT, payload: mail });
-      stats.deposit_admin_enqueued++;
-    } catch (e) {
-      console.warn("[kaution] Adminhinweis", String((e as Error)?.message ?? e).slice(0, 160));
-    }
+  // Noch nicht versendete Admin-Kautionsmails/Tagesdigests sicher absagen (durch In-App-Ablauf ersetzt).
+  try {
+    await d.from("customer_mail_outbox")
+      .update({ status: "cancelled", blocked_reason: "Durch In-App-Erinnerung ersetzt" })
+      .in("kind", ["deposit_review_admin", "deposit_digest"])
+      .eq("status", "scheduled");
+  } catch (e) {
+    console.warn("[kaution] Alte Adminmails absagen", String((e as Error)?.message ?? e).slice(0, 160));
   }
-
-  const { date, hour } = berlinDateAndHour(nowMs);
-  if (hour >= DIGEST_HOUR_BERLIN) {
-    const sid = digestSourceId(date);
-    const exists = must(await d.from("customer_mail_outbox").select("id").eq("source_type", "digest").eq("source_id", sid).eq("kind", "deposit_digest").maybeSingle(), "Digest");
-    if (!exists) {
-      const fromMs = Date.parse(from);
-      const all = (await listOpenDeposits()).filter((x) => x.endMs >= fromMs);
-      const toEntry = (x: (typeof all)[number]): DigestEntry => ({ name: x.name, vehicle: x.vehicle, endMs: x.endMs, state: x.state, sourceType: x.source, sourceId: x.id });
-      const pending = all.filter((x) => x.state === "Stripe ausstehend").map(toEntry);
-      const open = all.filter((x) => x.state !== "Stripe ausstehend").map(toEntry);
-      if (open.length + pending.length > 0) {
-        const endOfDay = new Date(nowMs + 14 * 3600_000).toISOString();
-        await insertRow({ source_type: "digest", source_id: sid, kind: "deposit_digest", due_at: new Date(nowMs).toISOString(), recipient_email: ADMIN_RECIPIENT, payload: buildDigestMail(date.split("-").reverse().join("."), open, pending), expires_at: endOfDay });
-        stats.deposit_digest++;
-      }
-    }
-  }
+  stats.deposit_reminders = await runDepositReminderSweep(nowMs).catch((e) => {
+    console.warn("[kaution] Erinnerungen", String((e as Error)?.message ?? e).slice(0, 160));
+    return 0;
+  });
 
   const fin = must(await d.from("deposit_reviews").select("source_type, source_id").eq("status", "finalized").gte("finalized_at", new Date(nowMs - 30 * 86400_000).toISOString()).limit(50), "Abschlüsse") as { source_type: Source; source_id: string }[];
   for (const f of fin) {
@@ -401,5 +397,79 @@ export async function runDepositSweep(nowMs = Date.now()): Promise<Record<string
     }
   }
   return stats;
+}
+
+/**
+ * 48h-Kautionserinnerung: genau eine In-App-Aufgabe + Web-Push je Quelle und
+ * Mietende-Version (atomare Dedupe über deposit_reminders). Keine rückwirkende
+ * Flut: nur Fälle mit Ende ab Aktivierung. Verlängerung/Storno/erledigte
+ * Kaution werden unmittelbar vor Erzeugung neu geprüft.
+ */
+export async function runDepositReminderSweep(nowMs = Date.now()): Promise<number> {
+  const d = await db();
+  const settings = must(await d.from("customer_mail_settings").select("deposit_reminder_from").eq("id", true).maybeSingle(), "Einstellungen") as { deposit_reminder_from: string | null } | null;
+  const from = settings?.deposit_reminder_from;
+  if (!from) return 0;
+  const fromMs = Date.parse(from);
+  const sinceDate = new Date(fromMs - 86400_000).toISOString().slice(0, 10);
+
+  const bookings = must(await d.from("bookings")
+    .select("id, user_id, status, vehicle_name, vehicle_plate, plan_id, start_date, start_hour, deposit_status, return_reported_at")
+    .in("status", ["paid", "active", "in_progress", "picked_up", "returning", "return_pending", "completed"])
+    .gte("start_date", sinceDate).limit(500), "Buchungen") as any[];
+  const manual = must(await d.from("manual_reservations")
+    .select("id, customer_name, end_at")
+    .gte("end_at", new Date(fromMs).toISOString()).limit(300), "Termine") as any[];
+  const finalized = must(await d.from("deposit_reviews").select("source_type, source_id").eq("status", "finalized"), "Prüfungen") as { source_type: string; source_id: string }[];
+  const done = new Set(finalized.map((r) => `${r.source_type}:${r.source_id}`));
+  const ids = [...new Set(bookings.map((b) => b.user_id))];
+  const profiles = ids.length ? (must(await d.from("profiles").select("id, first_name, last_name").in("id", ids), "Profile") as any[]) : [];
+  const pName = new Map(profiles.map((p) => [p.id, [p.first_name, p.last_name].filter(Boolean).join(" ") || "Unbekannt"]));
+
+  type Cand = { source: Source; id: string; name: string; baseMs: number };
+  const cands: Cand[] = [];
+  for (const b of bookings) {
+    if (done.has(`booking:${b.id}`)) continue;
+    if (b.deposit_status === "released") continue;
+    const { endMs } = resolveTripWindow(b);
+    const retMs = b.return_reported_at ? Date.parse(b.return_reported_at) : null;
+    const base = Math.max(endMs, retMs ?? 0);
+    if (base < fromMs) continue; // keine rückwirkende Erinnerung
+    if (depositReminderDueAt(endMs, retMs) > nowMs) continue;
+    cands.push({ source: "booking", id: b.id, name: pName.get(b.user_id) ?? "Unbekannt", baseMs: base });
+  }
+  for (const m of manual) {
+    if (done.has(`manual:${m.id}`)) continue;
+    const endMs = Date.parse(m.end_at);
+    if (endMs < fromMs) continue;
+    if (depositReminderDueAt(endMs, null) > nowMs) continue;
+    cands.push({ source: "manual", id: m.id, name: m.customer_name, baseMs: endMs });
+  }
+
+  let created = 0;
+  for (const c of cands.slice(0, 25)) {
+    const version = new Date(c.baseMs).toISOString();
+    // Atomare Dedupe: parallele Cronläufe erzeugen höchstens eine Erinnerung.
+    const ins = await d.from("deposit_reminders").insert({ source_type: c.source, source_id: c.id, end_version: version }).select("id").maybeSingle();
+    if (ins.error) {
+      if (ins.error.code === "23505") continue; // bereits erinnert
+      throw new Error(`Erinnerung: ${ins.error.message}`);
+    }
+    if (!ins.data) continue;
+    const link = `/admin?kaution=${c.source}:${c.id}`;
+    const body = `Kaution offen. Seit zwei Tagen offen: bitte Rückgabe und Nachweise prüfen und die Kaution abschließen. [kaution:${c.source}:${c.id}]`;
+    await d.from("admin_notifications").insert({
+      type: "deposit_reminder",
+      title: c.name,
+      body,
+      booking_id: c.source === "booking" ? c.id : null,
+    });
+    const { pushToAdmins } = await import("@/lib/push.functions");
+    await pushToAdmins({ title: c.name, body: "Kaution: Seit zwei Tagen offen, bitte prüfen", url: link, tag: `deposit-${c.source}-${c.id.slice(0, 8)}` }).catch((e) =>
+      console.warn("[kaution] Push", String((e as Error)?.message ?? e).slice(0, 160)),
+    );
+    created++;
+  }
+  return created;
 }
 

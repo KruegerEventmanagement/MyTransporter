@@ -137,11 +137,27 @@ function AdminDashboard() {
   const [depositDeepLink, setDepositDeepLink] = useState<{ source: "booking" | "manual"; id: string } | null>(null);
   useEffect(() => {
     // Nur Navigation: Deep Link öffnet die Ansicht, löst nie eine Geldaktion aus.
-    const k = new URLSearchParams(window.location.search).get("kaution");
-    if (!k) return;
-    const [src, id] = k.split(":");
-    if ((src === "booking" || src === "manual") && /^[0-9a-f-]{36}$/i.test(id ?? "")) setDepositDeepLink({ source: src, id });
-    setTab("deposits");
+    // Reagiert auch auf Query-Wechsel bei bereits geöffnetem Admin (z. B. Push-Klick).
+    const readDeepLink = () => {
+      const q = new URLSearchParams(window.location.search);
+      const k = q.get("kaution");
+      if (k) {
+        const [src, id] = k.split(":");
+        if ((src === "booking" || src === "manual") && /^[0-9a-f-]{36}$/i.test(id ?? "")) {
+          setDepositDeepLink({ source: src, id });
+          setTab("deposits");
+          return;
+        }
+      }
+      const kunde = q.get("kunde");
+      if (kunde && /^[0-9a-f-]{36}$/i.test(kunde)) {
+        setSelectedCustomer(kunde);
+        setTab("customers");
+      }
+    };
+    readDeepLink();
+    window.addEventListener("popstate", readDeepLink);
+    return () => window.removeEventListener("popstate", readDeepLink);
   }, []);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -748,13 +764,33 @@ function AdminDashboard() {
             <h2 className="text-3xl font-bold mb-3">{alertNotification.title}</h2>
             {alertNotification.body && (
               <p className="text-base text-muted-foreground mb-6 whitespace-pre-line">
-                {alertNotification.body}
+                {alertNotification.body.replace(/\s*\[kaution:(booking|manual):[0-9a-f-]{36}\]/i, "")}
               </p>
             )}
             <p className="text-xs text-muted-foreground mb-6">
               {format(new Date(alertNotification.created_at), "dd.MM.yyyy · HH:mm:ss", { locale: de })}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {alertNotification.type === "deposit_reminder" && (() => {
+                const m = /\[kaution:(booking|manual):([0-9a-f-]{36})\]/i.exec(alertNotification.body ?? "");
+                return m ? (
+                  <button
+                    onClick={async () => {
+                      const id = alertNotification.id;
+                      setAlertNotification(null);
+                      await supabase.from("admin_notifications").update({ read: true }).eq("id", id);
+                      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+                      const target = `/admin?kaution=${m[1]}:${m[2]}`;
+                      window.history.pushState(null, "", target);
+                      setDepositDeepLink({ source: m[1].toLowerCase() as "booking" | "manual", id: m[2] });
+                      setTab("deposits");
+                    }}
+                    className="rounded-full bg-foreground text-background px-8 py-4 text-base font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-5 h-5" /> Kaution prüfen
+                  </button>
+                ) : null;
+              })()}
               <button
                 onClick={async () => {
                   const id = alertNotification.id;
@@ -766,6 +802,14 @@ function AdminDashboard() {
               >
                 <Check className="w-5 h-5" /> Bestätigen
               </button>
+              {alertNotification.type === "deposit_reminder" && (
+                <button
+                  onClick={() => setAlertNotification(null)}
+                  className="rounded-full bg-secondary px-8 py-4 text-base font-semibold"
+                >
+                  Später
+                </button>
+              )}
               {alertNotification.booking_id && (
                 <button
                   onClick={() => {

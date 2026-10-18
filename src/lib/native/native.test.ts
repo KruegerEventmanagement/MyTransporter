@@ -70,6 +70,15 @@ describe("resolvePushTarget / Maps", () => {
     expect(resolvePushTarget("https://evil.example")).toBe("/");
     expect(resolvePushTarget(undefined)).toBe("/");
   });
+  it("lässt sichere Kautions-Deep-Links mit Query zu, lehnt fremde ab", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    expect(resolvePushTarget(`/admin?kaution=booking:${id}`)).toBe(`/admin?kaution=booking%3A${id}`);
+    expect(resolvePushTarget(`/admin?kaution=manual:${id}`)).toBe(`/admin?kaution=manual%3A${id}`);
+    expect(resolvePushTarget(`/admin?kunde=${id}`)).toBe(`/admin?kunde=${id}`);
+    expect(resolvePushTarget("/admin?kaution=booking:keine-uuid")).toBe("/admin");
+    expect(resolvePushTarget("/admin?tab=x&evil=1")).toBe("/admin");
+    expect(resolvePushTarget("/admin")).toBe("/admin");
+  });
   it("Maps-Link ist https und kodiert", () => {
     expect(mapsDirectionsUrl("Poststraße 60, 71229 Leonberg")).toBe(
       "https://www.google.com/maps/dir/?api=1&destination=Poststra%C3%9Fe%2060%2C%2071229%20Leonberg",
