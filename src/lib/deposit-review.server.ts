@@ -324,13 +324,17 @@ export async function ensureClosingMail(source: Source, id: string): Promise<"qu
   if (!ctx.email) return "no_email";
   if (ctx.knownBounce) return "bounced";
   const r = ctx.review!;
+  const frozenTotals: Totals = {
+    depositCents: r.final_deposit_cents!, totalCents: r.final_deduct_total_cents!, appliedCents: r.final_deduct_applied_cents!,
+    outstandingCents: r.final_outstanding_cents!, refundCents: r.final_refund_cents!,
+  };
+  const adj = adjustmentCents(frozenTotals);
   const mail = buildCustomerClosingMail({
     to: ctx.email, firstName: ctx.firstName, vehicle: ctx.vehicle, startMs: ctx.startMs, endMs: ctx.endMs,
-    totals: {
-      depositCents: r.final_deposit_cents!, totalCents: r.final_deduct_total_cents!, appliedCents: r.final_deduct_applied_cents!,
-      outstandingCents: r.final_outstanding_cents!, refundCents: r.final_refund_cents!,
-    },
-    items: priceItemsFrozen(r.items), message: r.customer_message, adjustment: r.adjustment_reason ?? null, payout, channel: source === "booking" ? "stripe" : "manual",
+    totals: frozenTotals,
+    items: priceItemsFrozen(r.items), message: r.customer_message,
+    adjustment: adj !== 0 && r.adjustment_reason ? { cents: adj, reason: r.adjustment_reason } : null,
+    payout, channel: source === "booking" ? "stripe" : "manual",
   });
   const { insertRow, processOutboxRowById } = await import("@/lib/customer-mail-outbox.server");
   const row = await insertRow({ source_type: source, source_id: id, kind: "deposit_closing", due_at: new Date().toISOString(), recipient_email: ctx.email, payload: mail });
@@ -354,6 +358,8 @@ export async function depositMailPrecheck(row: OutboxRow): Promise<string | null
     if (/nicht gefunden/.test(String((e as Error)?.message))) return "Quelle gelöscht";
     throw e;
   }
+  // Kundenmail nur, wenn der Admin sie im (inzwischen abgeschlossenen) Entwurf eingeschaltet hat.
+  if (!shouldSendClosingMail(ctx.review)) return "Kundenmail vom Admin ausgeschaltet";
   const text = (row.payload as { text?: string } | null)?.text ?? "";
   const stop = closingMailStillValid({
     reviewFinalized: ctx.review?.status === "finalized", payout: payoutStateFor(ctx),
