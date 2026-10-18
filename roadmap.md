@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Externe Gmail-Nachweise 18.10.2026 ab 15:40 UTC
-- [ ] 26 vom Betreiber belegte externe Sends exakt mit recipients.csv verknüpfen und historischen 0-Send-Status einordnen.
-- [ ] Sichere abgeschlossene Nachregistrierung im bestehenden Journal prüfen; keine Versandaufträge/Versuche/Jobs erzeugen.
-- [ ] Gespeicherte Nachweise und unveränderte Schutzgrenzen nachlesen; Michael zwei Quellen, eine Nachricht.
+- [x] 26 vom Betreiber belegte externe Sends exakt mit recipients.csv verknüpft; external-sends.json/external-send-audit.md, historische 0-Send-Angaben eingeordnet.
+- [x] 27 normale Quellenschlüssel direkt als sent nachregistriert für 26 echte Gmail-IDs; keine offenen Aufträge, Payloads, Hashes, internen Versuche/Leases oder Jobs.
+- [x] Alle Quelle/Empfänger/ID/Zeit-Kombinationen nachgelesen; Michael zwei Quellen/eine Nachricht; NULL-Reviewstart, Rechnungsgate, Rainer-Sperre und 13 Provider-Attempts unverändert. Bestehende Lücke: kein globaler Personenschlüssel für spätere neue Buchungen.
 
 ## Betreiberauftrag Bewertungsbestand 18.10.2026
 - [x] Versandfreie Klärung: App-Mail-Kampagnengrenze dokumentiert; Gmail-Block/Human-Approval nicht beobachtet, früheren Befund korrigiert.
