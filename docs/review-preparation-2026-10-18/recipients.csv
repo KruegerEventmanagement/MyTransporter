@@ -1,0 +1,37 @@
+name,email,source,source_ids,category,decision,note
+Giuseppe Anello,giuseppe.anello@hotmail.de,booking,a49632fb-3952-4938-a2ee-28d0205ba253,past,prepared,active account completed booking
+Alexander Ays,alexanderays@googlemail.com,booking,b071e0a5-e963-419b-ac52-71137e409b17,past,prepared,active account paid booking
+Gabriele Brackmann,g.m.brackmann@googlemail.com,booking,033d9abd-1b60-4736-9a34-4d6576d3ea1c,past,prepared,active account paid booking
+Dennis Brezing,info@fahrzeug-veredelung.com,booking,8d9db79e-7c08-4243-8607-aee9ef2d2209,past,prepared,active account paid booking
+Jochen Gast,gast.jochen@web.de,booking,d7d37bfa-393f-462c-bc26-f64ddfc7e142,future,prepared,existing online consent preserved
+Sascha Geier,saschageier19@web.de,booking,ed553e8c-fbcc-47f0-90a2-f6cef7735af1,past,prepared,active account paid booking
+Teodor Georgiev,t.georgiev88@googlemail.com,booking,f527ec9f-f8f8-4396-81ee-c9acb8f03fa8,past,prepared,active account paid booking
+Sabrina Hofmann,sabrina-nadine@gmx.de,booking,cb5644d6-9bb0-40cb-ba61-707974e66f61,past,prepared,active account paid booking
+Celine Kerzinger,ckerzinger@web.de,booking,96209254-e9f1-4bea-a21d-e747b7f9770d,past,prepared,active account paid booking
+Oleksandr Krupka,r.type.zx@gmail.com,booking,6dc6434d-6188-4608-9888-4addd55b3a32,past,prepared,active account paid booking
+Franziska Kunert,franzi.zp@web.de,booking,a70572c3-f2a6-46cc-9fab-ece3e9f03d9c,future,prepared,active account paid booking
+Serissa Matejla,serissa.matejka@web.de,booking,5ce9b09f-418c-4ead-a3da-8b4b00edfac0,future,prepared,name retained from booking profile
+Michael Nagy,mi-nagy@t-online.de,booking,8ef51cb0-6853-4c51-b5a7-eb54a5408375|e28cebad-8bd3-4745-84f0-4b5fa17c73c0,past,prepared,two bookings one recipient one person
+Christian Popiolek,christian.popi@freenet.de,booking,08080872-e2cc-4f64-838b-d3f2711fe5ad,future,prepared,not operator Christian Krueger
+Raik Schnabel,raik.schnabel@gmail.com,booking,b82259a2-f2ac-4769-9a3b-90c18873d280,past,prepared,active account paid booking
+Claudia Seuffert,seuffertc@icloud.com,booking,71296565-0ecb-4b8f-a352-d6940ff73f50,past,prepared,active account paid booking
+Sabri Trad,sabritrad0@gmail.com,booking,4f8ac252-e098-4f6f-b36d-1019d4373c12,past,prepared,active account paid booking
+Roland Zell,rzell@gmx.de,booking,e8d7e5b5-0251-4f5d-9f64-3d2b0bedac83,past,prepared,active account paid booking
+Marcel Zipperle,marcel.zipperle@live.de,booking,9145b6dc-251d-4e28-99d3-173167f9c3ed,past,prepared,active account paid booking
+Daniel Konrad,daniel.o.konrad@gmail.com,manual,bb8776b4-38ff-4a0e-9c47-6f140e1762bb,past,prepared,Gmail 1a0664b8c24641d5 and 1a0667ae04299294 verified no wife recipient
+Hassan Houdrouj,hassan.houdrouj@web.de,manual,7aaa97ea-f504-40eb-b8d7-7fb1ba749ce1,past,prepared,real customer reservation old confirmation flag not disqualifying
+Andreas Herdt,a.herdt@yandex.ru,manual,11479d46-cd0d-4057-b14c-4853dcb9e41f,past,prepared,real customer reservation
+Martin Weigand,michaelw50@t-online.de,manual,10b4fa9e-bb58-43f2-b900-1f403d394ee8,past,prepared,booking contact differs from first name retained without guessing
+Sadaf Seddiqi,seddiqisadaf4@gmail.com,manual,0355b0d1-5c5a-4ffd-b21e-618711935859,past,prepared,real customer reservation
+Ali Elkassem,ali.elkassem@ce-montage.com,manual,65774a2c-8e19-40f1-9eec-d4e61945bb19,future,prepared,18 October 18h Berlin existing manual consent preserved
+Tanja Zurawski,t.zara@gmx.de,booking,33e5058a-a148-4de4-ba95-7717e1dbdfdd,cancelled,separate_contact,operator explicitly includes customer service experience only normal cancelled gate remains
+Tatjana Krüger,tatikrug100963@gmail.com,booking,1d7d8dcd-3945-4a56-a1dc-f42dfd1d2991,past,identity_review,paid verified active account distinct phone but same-name person duplication unresolved
+Tatjana Krüger,sonnenburg.thomas@gmx.de,booking,994eb2cb-fdfe-4db1-ab9d-d88842d4ab5c,past,identity_review,paid verified active account phone matches operator possible test or shared contact not established
+Fatih Cirak,fatih.cirak61@googlemail.com,booking,14c3fc50-a466-478c-921c-a4abef1b748a,past,already_sent,Gmail 1a14f90f70148f6b no repeat
+Christian Krüger,krueger.christian96@gmx.de,booking,3f91521d-387d-4291-ab3d-44f05ff5e09e,internal,excluded,operator confirmed internal account eight bookings source is profile ID
+Rainer Schmutnig,rainerrene11@web.de,manual,6ea99f1a-0f5c-4fd4-8aa7-0a043a1902ec,excluded,owner_exclusion,administrative review scope block 18 October 2026 not customer unsubscribe
+Sandra Wünsche,,manual,f065b245-86a9-473f-8377-6cf6a720ad87,missing,missing_email,operator Gmail and Google Contacts searches could not resolve do not guess
+Suzan Ay,,manual,3e371f1d-e8aa-458b-ae4a-e102c050c834,missing,missing_email,operator searches could not resolve do not guess
+Ali Kocaaslan,,manual,28000e2b-efa2-42a7-b479-03dc919bcdc5,missing,missing_email,operator searches could not resolve do not guess
+Tobias Unkler,,manual,0e8c1791-1741-4cd1-8457-8476936bd9f7,missing,missing_email,operator searches could not resolve do not guess
+Simon Leifels,,manual,74a4caa4-3d43-4116-ab41-4d9051c85d42,missing,missing_email,operator searches could not resolve do not guess
