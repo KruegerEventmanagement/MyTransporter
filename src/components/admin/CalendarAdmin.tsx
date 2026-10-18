@@ -700,7 +700,9 @@ export function CalendarAdmin() {
       const raw = e instanceof Error ? e.message : String(e);
       const msg = /unauthorized|forbidden/i.test(raw)
         ? "Speichern nicht erlaubt – bitte neu als Admin anmelden."
-        : `Speichern fehlgeschlagen: ${raw}`;
+        : /failed to fetch|networkerror|load failed|network request failed/i.test(raw)
+          ? "Keine Verbindung zum Server – bitte erneut versuchen. Der Termin wird dabei nicht doppelt angelegt."
+          : `Speichern fehlgeschlagen: ${raw}`;
       setFormError(msg);
       toast.error(msg);
     } finally {
@@ -1340,7 +1342,7 @@ export function CalendarAdmin() {
             <div className="flex gap-2 pt-1">
               <button
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || !!conflictWarning}
                 className="flex-1 rounded-full bg-foreground text-background py-3 text-sm font-semibold disabled:opacity-50"
               >
                 {saving ? "Speichern…" : form.sendConfirmation ? "Speichern & Bestätigung senden" : "Termin speichern"}
