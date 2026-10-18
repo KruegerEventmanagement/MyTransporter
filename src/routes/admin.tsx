@@ -61,7 +61,6 @@ interface Booking {
   vehicle_name: string;
   vehicle_plate: string;
   plan_label: string;
-  free_km?: number | null;
   plan_price: number;
   deposit: number;
   deposit_status: string;
