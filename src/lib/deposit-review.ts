@@ -257,6 +257,49 @@ export function depositReminderDueAt(endMs: number, returnReportedMs: number | n
   return base + 48 * 3_600_000;
 }
 
+/**
+ * Vollständige, konsistente Abschlussrechnung: Positionen (_total) bleiben unverändert,
+ * die Anpassung (Kulanz/Zusatzabzug) steckt in applied = deposit - refund,
+ * die Restforderung über der Kaution bleibt davon unberührt.
+ */
+export function effectiveTotals(base: Totals, choice: RefundChoice): Totals {
+  return {
+    depositCents: base.depositCents,
+    totalCents: base.totalCents,
+    appliedCents: base.depositCents - choice.refundCents,
+    outstandingCents: Math.max(0, base.totalCents - base.depositCents),
+    refundCents: choice.refundCents,
+  };
+}
+
+/** Bezifferte Anpassung: negativ = Kulanz/Erlass, positiv = zusätzlicher Abzug, 0 = keiner. */
+export function adjustmentCents(t: Totals): number {
+  return t.appliedCents - Math.min(t.totalCents, t.depositCents);
+}
+
+/** Kandidatenauswahl für die 48h-Erinnerung (rein, testbar). Filtert nach effektivem
+ *  Mietende (nicht Startdatum), überspringt bereits beanspruchte Versionen VOR dem Limit. */
+export type ReminderCandidate = { source: "booking" | "manual"; id: string; name: string; baseMs: number };
+export function reminderCandidates(
+  rows: { source: "booking" | "manual"; id: string; name: string; endMs: number; returnReportedMs: number | null; skip: boolean }[],
+  fromMs: number,
+  nowMs: number,
+  claimed: Set<string>,
+  limit = 25,
+): ReminderCandidate[] {
+  const out: ReminderCandidate[] = [];
+  for (const r of rows) {
+    if (r.skip) continue;
+    const base = Math.max(r.endMs, r.returnReportedMs ?? 0);
+    if (base < fromMs) continue; // keine rückwirkende Erinnerung
+    if (depositReminderDueAt(r.endMs, r.returnReportedMs) > nowMs) continue;
+    if (claimed.has(`${r.source}:${r.id}:${new Date(base).toISOString()}`)) continue;
+    out.push({ source: r.source, id: r.id, name: r.name, baseMs: base });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 /** Kundenmail nur, wenn der Admin sie im Entwurf ausdrücklich eingeschaltet hat. */
 export function shouldSendClosingMail(review: { send_closing_mail?: boolean | null } | null | undefined): boolean {
   return review?.send_closing_mail === true;
@@ -393,8 +436,9 @@ export type CustomerMailInput = {
   totals: Totals;
   items: PricedItem[];
   message: string | null;
-  /** Begründete Anpassung, wenn der Rückzahlungsbetrag vom Vorschlag abweicht. */
-  adjustment: string | null;
+  /** Bezifferte, begründete Anpassung, wenn der Rückzahlungsbetrag vom Vorschlag abweicht
+   *  (cents < 0 = Kulanz/Erlass, cents > 0 = zusätzlicher Abzug). */
+  adjustment: { cents: number; reason: string } | null;
   payout: PayoutState;
   /** Karte/Original-Zahlung (Stripe) vs. manuell. */
   channel: "stripe" | "manual";
@@ -438,7 +482,12 @@ export function buildCustomerClosingMail(i: CustomerMailInput): FrozenOutboxMail
       value: `${eur(it.line_cents)}: ${it.customer_text}${it.reason ? `. ${it.reason}` : ""}`,
     })),
     { label: "Abzug gesamt", value: eur(t.totalCents) },
-    ...(i.adjustment ? [{ label: "Anpassung", value: i.adjustment }] : []),
+    ...(i.adjustment
+      ? [{
+          label: i.adjustment.cents < 0 ? "Kulanz" : "Zusätzlicher Abzug",
+          value: `${i.adjustment.cents < 0 ? `${eur(-i.adjustment.cents)} erlassen` : eur(i.adjustment.cents)}: ${i.adjustment.reason}`,
+        }]
+      : []),
     { label: "Verrechnet mit Kaution", value: eur(t.appliedCents) },
     { label: "Rückzahlung", value: eur(t.refundCents) },
     ...(t.outstandingCents > 0 ? [{ label: "Offener Restbetrag", value: eur(t.outstandingCents) }] : []),

@@ -8,7 +8,7 @@ import {
   priceItems, computeTotals, photoChecklist, buildCustomerClosingMail,
   documentationFeeAllowed, eur, MAX_MESSAGE,
   bookingDepositState, allocateApplied, closingMailStillValid, safePhotoRows,
-  resolveRefund, shouldSendClosingMail, depositReminderDueAt,
+  resolveRefund, shouldSendClosingMail, effectiveTotals, adjustmentCents, reminderCandidates,
   type PricedItem, type ReviewFacts, type Totals, type PayoutState
 } from "@/lib/deposit-review";
 import { resolveTripWindow } from "@/lib/trip-time";
@@ -219,10 +219,11 @@ export async function previewClosingMail(source: Source, id: string, items: unkn
   const priced = priceItems(items, ctx.facts);
   const base = computeTotals(depositOf(ctx), priced);
   const r = resolveRefund(base, adjust?.refundCents ?? null, adjust?.reason ?? null);
-  const totals: Totals = { ...base, appliedCents: r.appliedCents, refundCents: r.refundCents };
+  const totals: Totals = effectiveTotals(base, r);
+  const adj = adjustmentCents(totals);
   const mail = buildCustomerClosingMail({
     to: ctx.email ?? "keine-adresse@invalid", firstName: ctx.firstName, vehicle: ctx.vehicle, startMs: ctx.startMs, endMs: ctx.endMs,
-    totals, items: priced, message, adjustment: r.reason, payout: { kind: "preview" }, channel: source === "booking" ? "stripe" : "manual",
+    totals, items: priced, message, adjustment: adj !== 0 && r.reason ? { cents: adj, reason: r.reason } : null, payout: { kind: "preview" }, channel: source === "booking" ? "stripe" : "manual",
   });
   return { subject: mail.subject, html: mail.html, text: mail.text, totals, to: ctx.email };
 }
@@ -236,7 +237,7 @@ export async function finalizeReview(adminId: string, source: Source, id: string
     const base = totalsFor(ctx);
     // Der im Entwurf gespeicherte, frei bestätigte Rückzahlungsbetrag gilt.
     const choice = resolveRefund(base, ctx.review.refund_override_cents, ctx.review.adjustment_reason);
-    const t: Totals = { ...base, appliedCents: choice.appliedCents, refundCents: choice.refundCents };
+    const t: Totals = effectiveTotals(base, choice);
     if (confirmName.trim() !== ctx.customerName.trim()) throw new Error("Name zur Bestätigung stimmt nicht");
     if (confirmRefundCents !== t.refundCents) throw new Error("Bestätigter Rückzahlungsbetrag stimmt nicht mit dem Entwurf überein");
     if (source === "booking" && t.refundCents > 0 && !ctx.stripe?.paymentIntentId) throw new Error("Keine eindeutig zugeordnete Stripe-Zahlung: bitte manuell prüfen");
@@ -323,13 +324,17 @@ export async function ensureClosingMail(source: Source, id: string): Promise<"qu
   if (!ctx.email) return "no_email";
   if (ctx.knownBounce) return "bounced";
   const r = ctx.review!;
+  const frozenTotals: Totals = {
+    depositCents: r.final_deposit_cents!, totalCents: r.final_deduct_total_cents!, appliedCents: r.final_deduct_applied_cents!,
+    outstandingCents: r.final_outstanding_cents!, refundCents: r.final_refund_cents!,
+  };
+  const adj = adjustmentCents(frozenTotals);
   const mail = buildCustomerClosingMail({
     to: ctx.email, firstName: ctx.firstName, vehicle: ctx.vehicle, startMs: ctx.startMs, endMs: ctx.endMs,
-    totals: {
-      depositCents: r.final_deposit_cents!, totalCents: r.final_deduct_total_cents!, appliedCents: r.final_deduct_applied_cents!,
-      outstandingCents: r.final_outstanding_cents!, refundCents: r.final_refund_cents!,
-    },
-    items: priceItemsFrozen(r.items), message: r.customer_message, adjustment: r.adjustment_reason ?? null, payout, channel: source === "booking" ? "stripe" : "manual",
+    totals: frozenTotals,
+    items: priceItemsFrozen(r.items), message: r.customer_message,
+    adjustment: adj !== 0 && r.adjustment_reason ? { cents: adj, reason: r.adjustment_reason } : null,
+    payout, channel: source === "booking" ? "stripe" : "manual",
   });
   const { insertRow, processOutboxRowById } = await import("@/lib/customer-mail-outbox.server");
   const row = await insertRow({ source_type: source, source_id: id, kind: "deposit_closing", due_at: new Date().toISOString(), recipient_email: ctx.email, payload: mail });
@@ -353,6 +358,8 @@ export async function depositMailPrecheck(row: OutboxRow): Promise<string | null
     if (/nicht gefunden/.test(String((e as Error)?.message))) return "Quelle gelöscht";
     throw e;
   }
+  // Kundenmail nur, wenn der Admin sie im (inzwischen abgeschlossenen) Entwurf eingeschaltet hat.
+  if (!shouldSendClosingMail(ctx.review)) return "Kundenmail vom Admin ausgeschaltet";
   const text = (row.payload as { text?: string } | null)?.text ?? "";
   const stop = closingMailStillValid({
     reviewFinalized: ctx.review?.status === "finalized", payout: payoutStateFor(ctx),
@@ -411,61 +418,54 @@ export async function runDepositReminderSweep(nowMs = Date.now()): Promise<numbe
   const from = settings?.deposit_reminder_from;
   if (!from) return 0;
   const fromMs = Date.parse(from);
-  const sinceDate = new Date(fromMs - 86400_000).toISOString().slice(0, 10);
+  // Großzügiger Start-Lookback: auch mehrwöchige Langzeitmieten, die vor der Aktivierung
+  // begannen, aber danach enden, werden über das effektive Mietende erfasst.
+  const sinceDate = new Date(fromMs - 400 * 86400_000).toISOString().slice(0, 10);
 
   const bookings = must(await d.from("bookings")
-    .select("id, user_id, status, vehicle_name, vehicle_plate, plan_id, start_date, start_hour, deposit_status, return_reported_at")
+    .select("id, user_id, status, plan_id, start_date, start_hour, deposit, deposit_status, return_reported_at")
     .in("status", ["paid", "active", "in_progress", "picked_up", "returning", "return_pending", "completed"])
-    .gte("start_date", sinceDate).limit(500), "Buchungen") as any[];
+    .gte("start_date", sinceDate).limit(1000), "Buchungen") as any[];
   const manual = must(await d.from("manual_reservations")
     .select("id, customer_name, end_at")
-    .gte("end_at", new Date(fromMs).toISOString()).limit(300), "Termine") as any[];
+    .gte("end_at", new Date(fromMs).toISOString()).limit(500), "Termine") as any[];
   const finalized = must(await d.from("deposit_reviews").select("source_type, source_id").eq("status", "finalized"), "Prüfungen") as { source_type: string; source_id: string }[];
   const done = new Set(finalized.map((r) => `${r.source_type}:${r.source_id}`));
+  // Bereits beanspruchte Versionen VOR dem Limit entfernen, damit spätere Fälle nicht verhungern.
+  const reminders = must(await d.from("deposit_reminders").select("source_type, source_id, end_version").limit(5000), "Erinnerungen") as { source_type: string; source_id: string; end_version: string }[];
+  const claimed = new Set(reminders.map((r) => `${r.source_type}:${r.source_id}:${new Date(r.end_version).toISOString()}`));
   const ids = [...new Set(bookings.map((b) => b.user_id))];
   const profiles = ids.length ? (must(await d.from("profiles").select("id, first_name, last_name").in("id", ids), "Profile") as any[]) : [];
   const pName = new Map(profiles.map((p) => [p.id, [p.first_name, p.last_name].filter(Boolean).join(" ") || "Unbekannt"]));
 
-  type Cand = { source: Source; id: string; name: string; baseMs: number };
-  const cands: Cand[] = [];
-  for (const b of bookings) {
-    if (done.has(`booking:${b.id}`)) continue;
-    if (b.deposit_status === "released") continue;
-    const { endMs } = resolveTripWindow(b);
-    const retMs = b.return_reported_at ? Date.parse(b.return_reported_at) : null;
-    const base = Math.max(endMs, retMs ?? 0);
-    if (base < fromMs) continue; // keine rückwirkende Erinnerung
-    if (depositReminderDueAt(endMs, retMs) > nowMs) continue;
-    cands.push({ source: "booking", id: b.id, name: pName.get(b.user_id) ?? "Unbekannt", baseMs: base });
-  }
-  for (const m of manual) {
-    if (done.has(`manual:${m.id}`)) continue;
-    const endMs = Date.parse(m.end_at);
-    if (endMs < fromMs) continue;
-    if (depositReminderDueAt(endMs, null) > nowMs) continue;
-    cands.push({ source: "manual", id: m.id, name: m.customer_name, baseMs: endMs });
-  }
+  const rows = [
+    ...bookings.map((b) => {
+      const { endMs } = resolveTripWindow(b);
+      return {
+        source: "booking" as const, id: b.id, name: pName.get(b.user_id) ?? "Unbekannt", endMs,
+        returnReportedMs: b.return_reported_at ? Date.parse(b.return_reported_at) : null,
+        skip: done.has(`booking:${b.id}`) || b.deposit_status === "released" || !(Number(b.deposit ?? 0) > 0),
+      };
+    }),
+    ...manual.map((m) => ({
+      source: "manual" as const, id: m.id, name: m.customer_name as string, endMs: Date.parse(m.end_at),
+      returnReportedMs: null, skip: done.has(`manual:${m.id}`),
+    })),
+  ];
+  const cands = reminderCandidates(rows, fromMs, nowMs, claimed, 25);
 
   let created = 0;
-  for (const c of cands.slice(0, 25)) {
+  for (const c of cands) {
     const version = new Date(c.baseMs).toISOString();
-    // Atomare Dedupe: parallele Cronläufe erzeugen höchstens eine Erinnerung.
-    const ins = await d.from("deposit_reminders").insert({ source_type: c.source, source_id: c.id, end_version: version }).select("id").maybeSingle();
-    if (ins.error) {
-      if (ins.error.code === "23505") continue; // bereits erinnert
-      throw new Error(`Erinnerung: ${ins.error.message}`);
-    }
-    if (!ins.data) continue;
-    const link = `/admin?kaution=${c.source}:${c.id}`;
     const body = `Kaution offen. Seit zwei Tagen offen: bitte Rückgabe und Nachweise prüfen und die Kaution abschließen. [kaution:${c.source}:${c.id}]`;
-    await d.from("admin_notifications").insert({
-      type: "deposit_reminder",
-      title: c.name,
-      body,
-      booking_id: c.source === "booking" ? c.id : null,
-    });
+    // Atomar: Dedupe + In-App-Aufgabe in einer Transaktion, mit erneuter Prüfung
+    // (Storno, erledigte Kaution, geändertes Mietende) unmittelbar vor Erzeugung.
+    const res = must(await d.rpc("claim_deposit_reminder", {
+      _source_type: c.source, _source_id: c.id, _end_version: version, _title: c.name, _body: body,
+    }), "Erinnerung") as { result: string };
+    if (res.result !== "created") continue;
     const { pushToAdmins } = await import("@/lib/push.functions");
-    await pushToAdmins({ title: c.name, body: "Kaution: Seit zwei Tagen offen, bitte prüfen", url: link, tag: `deposit-${c.source}-${c.id.slice(0, 8)}` }).catch((e) =>
+    await pushToAdmins({ title: c.name, body: "Kaution: Seit zwei Tagen offen, bitte prüfen", url: `/admin?kaution=${c.source}:${c.id}`, tag: `deposit-${c.source}-${c.id.slice(0, 8)}` }).catch((e) =>
       console.warn("[kaution] Push", String((e as Error)?.message ?? e).slice(0, 160)),
     );
     created++;

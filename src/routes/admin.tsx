@@ -167,6 +167,10 @@ function AdminDashboard() {
   const [initialBookingId, setInitialBookingId] = useState<string | null>(null);
   const lastNotificationId = useRef<string | null>(null);
   const [alertNotification, setAlertNotification] = useState<AdminNotification | null>(null);
+  // "Später" merkt sich geschlossene Popups; bereits angebotene Aufgaben kommen nicht bei jedem Poll wieder.
+  const dismissedAlerts = useRef<Set<string>>(new Set());
+  const offeredAlerts = useRef<Set<string>>(new Set());
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const beepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -362,7 +366,16 @@ function AdminDashboard() {
     ]);
     if (b.data) setBookings(b.data as Booking[]);
     if (p.data) setProfiles(p.data as Profile[]);
-    if (n.data) setNotifications(n.data as AdminNotification[]);
+    if (n.data) {
+      setNotifications(n.data as AdminNotification[]);
+      // Beim Appstart eine fällige ungelesene Kautionsaufgabe anbieten (einmal je Aufgabe).
+      const due = (n.data as AdminNotification[]).find((x) => x.type === "deposit_reminder" && !x.read && !dismissedAlerts.current.has(x.id) && !offeredAlerts.current.has(x.id));
+      if (due) {
+        offeredAlerts.current.add(due.id);
+        setAlertNotification((cur) => cur ?? due);
+      }
+    }
+    setDataLoaded(true);
   };
 
   useEffect(() => {
@@ -396,8 +409,9 @@ function AdminDashboard() {
         (payload) => {
           const n = payload.new as AdminNotification;
           setNotifications((prev) => [n, ...prev]);
-          if (lastNotificationId.current !== n.id) {
+          if (lastNotificationId.current !== n.id && !dismissedAlerts.current.has(n.id)) {
             lastNotificationId.current = n.id;
+            offeredAlerts.current.add(n.id);
             // Großes Popup für jede neue Benachrichtigung, iPad-tauglich
             setAlertNotification(n);
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
@@ -461,6 +475,14 @@ function AdminDashboard() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  /** Sicherer interner Sprung in die Kautionsansicht (nie eine Geldaktion). */
+  const openDeposit = (source: "booking" | "manual", id: string) => {
+    window.history.pushState(null, "", `/admin?kaution=${source}:${id}`);
+    setSelectedCustomer(null);
+    setDepositDeepLink({ source, id });
+    setTab("deposits");
+  };
+
   const markAllRead = async () => {
     const unread = notifications.filter((n) => !n.read).map((n) => n.id);
     if (unread.length === 0) return;
@@ -493,7 +515,9 @@ function AdminDashboard() {
   if (selectedCustomer) {
     const customer = customers.find((c) => c.id === selectedCustomer);
     if (!customer) {
-      setSelectedCustomer(null);
+      // Erst nach geladenen Daten entscheiden; sonst würde ein Deep-Link-Kunde
+      // beim ersten Render (noch leere Listen) sofort wieder verworfen.
+      if (dataLoaded) setSelectedCustomer(null);
       return null;
     }
     return (
@@ -506,6 +530,7 @@ function AdminDashboard() {
         }}
         onConfirmReturn={confirmReturn}
         onReloadBookings={loadAll}
+        onOpenDeposit={(bookingId) => openDeposit("booking", bookingId)}
       />
     );
   }
@@ -721,10 +746,21 @@ function AdminDashboard() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-sm">{n.title}</p>
-                        {n.body && <p className="text-xs text-muted-foreground mt-0.5">{n.body}</p>}
+                        {n.body && <p className="text-xs text-muted-foreground mt-0.5">{n.body.replace(/\s*\[kaution:(booking|manual):[0-9a-f-]{36}\]/i, "")}</p>}
                         <p className="text-[10px] text-muted-foreground mt-1">
                           {format(new Date(n.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
                         </p>
+                        {n.type === "deposit_reminder" && (() => {
+                          const m = /\[kaution:(booking|manual):([0-9a-f-]{36})\]/i.exec(n.body ?? "");
+                          return m ? (
+                            <button
+                              onClick={() => openDeposit(m[1].toLowerCase() as "booking" | "manual", m[2])}
+                              className="mt-2 rounded-full bg-foreground text-background px-4 py-1.5 text-xs font-semibold"
+                            >
+                              Kaution prüfen
+                            </button>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
                   </li>
@@ -780,10 +816,7 @@ function AdminDashboard() {
                       setAlertNotification(null);
                       await supabase.from("admin_notifications").update({ read: true }).eq("id", id);
                       setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-                      const target = `/admin?kaution=${m[1]}:${m[2]}`;
-                      window.history.pushState(null, "", target);
-                      setDepositDeepLink({ source: m[1].toLowerCase() as "booking" | "manual", id: m[2] });
-                      setTab("deposits");
+                      openDeposit(m[1].toLowerCase() as "booking" | "manual", m[2]);
                     }}
                     className="rounded-full bg-foreground text-background px-8 py-4 text-base font-semibold flex items-center justify-center gap-2"
                   >
@@ -791,26 +824,28 @@ function AdminDashboard() {
                   </button>
                 ) : null;
               })()}
-              <button
-                onClick={async () => {
-                  const id = alertNotification.id;
-                  setAlertNotification(null);
-                  await supabase.from("admin_notifications").update({ read: true }).eq("id", id);
-                  setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-                }}
-                className="rounded-full bg-foreground text-background px-8 py-4 text-base font-semibold flex items-center justify-center gap-2"
-              >
-                <Check className="w-5 h-5" /> Bestätigen
-              </button>
+              {alertNotification.type !== "deposit_reminder" && (
+                <button
+                  onClick={async () => {
+                    const id = alertNotification.id;
+                    setAlertNotification(null);
+                    await supabase.from("admin_notifications").update({ read: true }).eq("id", id);
+                    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+                  }}
+                  className="rounded-full bg-foreground text-background px-8 py-4 text-base font-semibold flex items-center justify-center gap-2"
+                >
+                  <Check className="w-5 h-5" /> Bestätigen
+                </button>
+              )}
               {alertNotification.type === "deposit_reminder" && (
                 <button
-                  onClick={() => setAlertNotification(null)}
+                  onClick={() => { dismissedAlerts.current.add(alertNotification.id); setAlertNotification(null); }}
                   className="rounded-full bg-secondary px-8 py-4 text-base font-semibold"
                 >
                   Später
                 </button>
               )}
-              {alertNotification.booking_id && (
+              {alertNotification.type !== "deposit_reminder" && alertNotification.booking_id && (
                 <button
                   onClick={() => {
                     const bookingId = alertNotification.booking_id!;
@@ -879,12 +914,14 @@ function CustomerDetail({
   onBack,
   onConfirmReturn,
   onReloadBookings,
+  onOpenDeposit,
 }: {
   customer: { id: string; profile: Profile | undefined; bookings: Booking[] };
   initialBookingId?: string | null;
   onBack: () => void;
   onConfirmReturn: (id: string) => Promise<void>;
   onReloadBookings: () => Promise<void>;
+  onOpenDeposit: (bookingId: string) => void;
 }) {
   const [photos, setPhotos] = useState<TripPhoto[]>([]);
   const [gps, setGps] = useState<GpsPoint[]>([]);
@@ -1100,7 +1137,7 @@ function CustomerDetail({
                         </div>
                       )}
 
-                      <SettlementPanel booking={b} onChanged={onReloadBookings} />
+                      <SettlementPanel booking={b} onChanged={onReloadBookings} onOpenDeposit={onOpenDeposit} />
                       <BookingMailStatus sourceId={b.id} />
 
                       {b.status === "returning" && (
@@ -1286,9 +1323,11 @@ function PhotoGroup({ title, photos, urls }: { title: string; photos: TripPhoto[
 function SettlementPanel({
   booking,
   onChanged,
+  onOpenDeposit,
 }: {
   booking: Booking;
   onChanged: () => Promise<void>;
+  onOpenDeposit: (bookingId: string) => void;
 }) {
   const chargeExtra = useServerFn(chargeBookingExtra);
   const settle = useServerFn(settleDeposit);
@@ -1431,7 +1470,7 @@ function SettlementPanel({
         ) : (
           <p className="text-xs text-muted-foreground">
             Abrechnung mit Positionen, Mailvorschau und bewusstem Abschluss im Bereich{" "}
-            <a href={`/admin?kaution=booking:${booking.id}`} className="underline font-semibold">Offene Kautionen</a>.
+            <button type="button" onClick={() => onOpenDeposit(booking.id)} className="underline font-semibold">Offene Kautionen</button>.
           </p>
         )}
       </div>
