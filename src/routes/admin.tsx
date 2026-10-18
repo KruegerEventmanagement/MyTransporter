@@ -475,6 +475,14 @@ function AdminDashboard() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  /** Sicherer interner Sprung in die Kautionsansicht (nie eine Geldaktion). */
+  const openDeposit = (source: "booking" | "manual", id: string) => {
+    window.history.pushState(null, "", `/admin?kaution=${source}:${id}`);
+    setSelectedCustomer(null);
+    setDepositDeepLink({ source, id });
+    setTab("deposits");
+  };
+
   const markAllRead = async () => {
     const unread = notifications.filter((n) => !n.read).map((n) => n.id);
     if (unread.length === 0) return;
@@ -737,10 +745,21 @@ function AdminDashboard() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-sm">{n.title}</p>
-                        {n.body && <p className="text-xs text-muted-foreground mt-0.5">{n.body}</p>}
+                        {n.body && <p className="text-xs text-muted-foreground mt-0.5">{n.body.replace(/\s*\[kaution:(booking|manual):[0-9a-f-]{36}\]/i, "")}</p>}
                         <p className="text-[10px] text-muted-foreground mt-1">
                           {format(new Date(n.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
                         </p>
+                        {n.type === "deposit_reminder" && (() => {
+                          const m = /\[kaution:(booking|manual):([0-9a-f-]{36})\]/i.exec(n.body ?? "");
+                          return m ? (
+                            <button
+                              onClick={() => openDeposit(m[1].toLowerCase() as "booking" | "manual", m[2])}
+                              className="mt-2 rounded-full bg-foreground text-background px-4 py-1.5 text-xs font-semibold"
+                            >
+                              Kaution prüfen
+                            </button>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
                   </li>
