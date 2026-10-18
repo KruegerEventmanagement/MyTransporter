@@ -17,7 +17,7 @@ type Db = { from: (t: string) => any; rpc: (f: string, a?: Record<string, unknow
 async function db(): Promise<Db> {
   return (await import("@/integrations/supabase/client.server")).supabaseAdmin as unknown as Db;
 }
-function must<T>(res: { data: T; error: { message: string } | null }, what: string): T {
+function must(res: { data: any; error: { message: string } | null }, what: string): any {
   if (res.error) throw new Error(`${what}: ${res.error.message}`);
   return res.data;
 }
