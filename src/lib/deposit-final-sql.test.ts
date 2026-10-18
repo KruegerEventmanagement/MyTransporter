@@ -33,7 +33,7 @@ const END = "2026-10-20T10:00:00Z"; // local_start 07:00 + 3h
 const fin = (total: number, applied: number, outstanding: number, refund: number, km = 0) =>
   db.query<{ r: { result: string } }>(`SELECT public.finalize_deposit_review($1,1,$2,$3,$4,$5,$6,$7,$8) r`, [R, ADMIN, 20000, total, applied, outstanding, refund, km]).then((x) => x.rows[0]!.r);
 const claim = (src: string, id: string, version: string) =>
-  db.query<{ r: { result: string } }>(`SELECT public.claim_deposit_reminder($1,$2,$3,'Name','Text [kaution:' || $1 || ':' || $2 || ']') r`, [src, id, version]).then((x) => x.rows[0]!.r);
+  db.query<{ r: { result: string } }>(`SELECT public.claim_deposit_reminder($1,$2,$3::timestamptz,'Name',$4) r`, [src, id, version, `Text [kaution:${src}:${id}]`]).then((x) => x.rows[0]!.r);
 
 beforeEach(async () => {
   db = new PGlite();
