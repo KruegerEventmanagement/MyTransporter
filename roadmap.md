@@ -1,5 +1,11 @@
 # Roadmap
 
+## Betreiberauftrag Bewertungsbestand 18.10.2026
+- [x] Neue außerhalb der Website eingeholte Zustimmung als heutige Betreiberbestätigung dokumentiert, nicht als beobachteten Kunden-/Checkout-Consent.
+- [x] Rainer/Reiner Schmutnig (rainerrene11@web.de) dauerhaft als Betreiber-Ausschluss festgehalten; keine fingierte Kundenabmeldung gespeichert.
+- [x] Bestand, vorhandene Consents, Opt-outs und Fatihs bereits erfolgreiche Bewertungsmail lesend geprüft; keine Rechnungen/Buchungen verändert.
+- [ ] Extern blockiert: nachträglicher Sammelversand benötigt separaten Marketing-Maildienst. Keine zusätzlichen Mails, Outbox-Einträge oder globale Review-Aktivierung.
+
 ## Autorisierter Einzel-Nachversand 18.10.2026
 - [x] Fehlenden customer_mail_hook_enabled-Freischalter gesetzt; Jobfunktion erzeugte HTTP-ID 72215, Live-Antwort 200/ok:true, kein Versand; 14 SQL-Tests bestanden.
 - [x] PDF-MIME korrigieren und gezielt testen, archivierte Dateien unverändert.
