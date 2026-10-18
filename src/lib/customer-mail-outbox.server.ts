@@ -105,7 +105,7 @@ async function getRow(source: OutboxSource, id: string, kind: OutboxKind): Promi
   return (data as unknown as OutboxRow) ?? null;
 }
 
-async function insertRow(r: {
+export async function insertRow(r: {
   source_type: OutboxSource;
   source_id: string;
   kind: OutboxKind;
@@ -350,6 +350,10 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
   return {
     precheck: async (row) => {
       if (row.kind === "invoice") return null;
+      if (row.kind === "deposit_review_admin" || row.kind === "deposit_digest" || row.kind === "deposit_closing") {
+        const { depositMailPrecheck } = await import("@/lib/deposit-review.server");
+        return depositMailPrecheck(row);
+      }
       if (row.source_type === "booking") {
         const { data: b, error } = await db.from("bookings").select("status, user_id, start_date, start_hour, plan_id, vehicle_name").eq("id", row.source_id).maybeSingle();
         if (error) throw new Error(error.message);
@@ -451,6 +455,11 @@ export async function runCustomerMailSweep(): Promise<Record<string, number>> {
       try { if ((await enqueueReviewRequest("manual", m.id, settings)).state === "queued") stats.manual_enqueued++; } catch (e) { note("manuelle Bewertung", e); }
     }
   }
+
+  try {
+    const { runDepositSweep } = await import("@/lib/deposit-review.server");
+    Object.assign(stats, await runDepositSweep());
+  } catch (e) { note("Kaution", e); }
 
   const { data: ids, error: dErr } = await db.rpc("customer_mail_due_ids", { _limit: 25 });
   if (dErr) throw new Error(dErr.message);

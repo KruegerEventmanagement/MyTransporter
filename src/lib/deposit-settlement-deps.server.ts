@@ -82,7 +82,7 @@ const stripe: RefundApi = {
   async retrievePaymentIntent(env, id) {
     try {
       const pi = await createStripeClient(env).paymentIntents.retrieve(id);
-      return { id: pi.id, amount_received: pi.amount_received, status: pi.status };
+      return { id: pi.id, amount_received: pi.amount_received, status: pi.status, currency: pi.currency };
     } catch (e) {
       if (notFound(e)) return null;
       throw e;
