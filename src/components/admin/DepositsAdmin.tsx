@@ -221,7 +221,7 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
         {!finalized && (
           <div className="grid grid-cols-2 gap-2">
             <button disabled={busy} onClick={doSave} className="rounded-full border border-border py-2 text-sm font-semibold">Entwurf speichern</button>
-            <button disabled={busy || dep == null} onClick={doPreview} className="rounded-full border border-border py-2 text-sm font-semibold">Mailvorschau</button>
+            <button disabled={busy || dep == null || dirty} title={dirty ? "Erst speichern" : undefined} onClick={doPreview} className="rounded-full border border-border py-2 text-sm font-semibold">Mailvorschau</button>
           </div>
         )}
       </div>
