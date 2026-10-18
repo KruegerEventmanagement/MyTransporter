@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Externe Gmail-Nachweise 18.10.2026 ab 15:40 UTC
+- [x] Claudias DSN 1a14faccb704cd89 ergänzt: 26 Annahmen/SENT, 1 dauerhafter Zustellfehler, 25 ohne bekannte Fehlermeldung; Original-ID/sent erhalten, permanent_bounce annotiert, kein Opt-out/Retry. Kein adressweiter Bounce-Mechanismus vorhanden; bestehende sent-Quellensperre bleibt.
 - [x] 26 vom Betreiber belegte externe Sends exakt mit recipients.csv verknüpft; external-sends.json/external-send-audit.md, historische 0-Send-Angaben eingeordnet.
 - [x] 27 normale Quellenschlüssel direkt als sent nachregistriert für 26 echte Gmail-IDs; keine offenen Aufträge, Payloads, Hashes, internen Versuche/Leases oder Jobs.
 - [x] Alle Quelle/Empfänger/ID/Zeit-Kombinationen nachgelesen; Michael zwei Quellen/eine Nachricht; NULL-Reviewstart, Rechnungsgate, Rainer-Sperre und 13 Provider-Attempts unverändert. Bestehende Lücke: kein globaler Personenschlüssel für spätere neue Buchungen.

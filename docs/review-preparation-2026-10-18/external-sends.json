@@ -2,6 +2,10 @@
   "external_message_count": 26,
   "logical_source_record_count": 27,
   "lovable_sends_this_task": 0,
+  "gmail_acceptances_sent": 26,
+  "known_permanent_delivery_failures": 1,
+  "without_known_delivery_error": 25,
+  "sent_is_delivery_confirmation": false,
   "records": [
     {
       "name": "Giuseppe Anello",
@@ -407,6 +411,22 @@
       ],
       "gmail_message_id": "1a14facbde08bb05",
       "sent_at": "2026-10-18T15:41:22.000Z",
+      "delivery_outcome": {
+        "status": "known_permanent_failure",
+        "dsn_gmail_message_id": "1a14faccb704cd89",
+        "dsn_date": "2026-10-18T15:41:26.000Z",
+        "dsn_from": "Mail Delivery Subsystem <mailer-daemon@googlemail.com>",
+        "final_recipient": "seuffertc@icloud.com",
+        "action": "failed",
+        "enhanced_status": "5.1.1",
+        "remote_mta": "mx01.mail.icloud.com",
+        "smtp_response": "550 5.1.1 user does not exist",
+        "evidence_source": "operator-provided Root Gmail DSN readback report, 18 October 2026",
+        "independently_reread_by_lovable": false,
+        "automatic_retry_allowed": false,
+        "customer_opt_out": false,
+        "confirmed_replacement_address": null
+      },
       "actual_messages": 1,
       "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
       "independently_reread_by_lovable": false,

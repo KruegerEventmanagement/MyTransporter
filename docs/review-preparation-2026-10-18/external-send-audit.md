@@ -1,5 +1,15 @@
 # Abschlussnachweis: externer Bewertungsversand am 18.10.2026
 
+## Ergebnisergänzung: dauerhafter Zustellfehler Claudia Seuffert
+
+**26 Gmail-Annahmen/SENT, davon 1 bekannter dauerhafter Zustellfehler und 25 ohne bisher bekannte Fehlermeldung. SENT ist kein Zustellnachweis; auch die 25 sind nicht als zugestellt bestätigt.**
+
+Quelle: neue Betreiberinformation über Roots anschließendes Gmail-DSN-Nachlesen, keine erneute Gmail-Abfrage durch Lovable. DSN `1a14faccb704cd89`, Date **18.10.2026 15:41:26 UTC**, From **Mail Delivery Subsystem <mailer-daemon@googlemail.com>**, Final-Recipient **seuffertc@icloud.com**, Action **failed**, Status **5.1.1**, Remote-MTA **mx01.mail.icloud.com**, Antwort **550 5.1.1 user does not exist**. Bezug: Claudias angenommene Originalnachricht `1a14facbde08bb05`, 15:41:22 UTC, Quelle `71296565-0ecb-4b8f-a352-d6940ff73f50`.
+
+Im bestehenden Nachweis wurde ausschließlich die Ergebnisannotation ergänzt: `error_kind=permanent_bounce`, DSN-Quelle in `last_error`, kein automatischer Wiederholungsversand an die ungültige Adresse in `blocked_reason`. Originale Provider-ID, Annahmezeit und `status=sent` bleiben wahr und unverändert; **sent beschreibt hier Gmail-Annahme, nicht erfolgreiche Zustellung**. Keine fingierten Provider-Attempts, kein Retry und keine Kundenwiderrufs-/Opt-out-Umschreibung. Root sucht laut Betreiber nur eine bestätigte Ersatzadresse; bislang keine vorhanden, keine Adresse geraten oder geändert.
+
+**Bestehende technische Grenze:** Weder Schema noch geprüfte Mailpfade besitzen einen separaten adressweiten permanenten Bounce-/Suppression-Mechanismus. Der bereits endgültige sent-Eintrag verhindert reguläre Wiederholung dieser Buchungsquelle; die Ergebnisannotation allein ist keine adressweite Sperre für spätere andere Buchungen/Mailarten. Keine neue Versandarchitektur eingeführt. Bis zur bestätigten Korrektur darf seuffertc@icloud.com nicht automatisch erneut verwendet werden; dies ist dauerhaft als Anforderung dokumentiert, kein Kunden-Opt-out.
+
 ## Quelle und tatsächlicher Versand
 
 Quelle: Betreiberbericht im Nutzerauftrag um 15:42 UTC; unabhängiger nativer ChatGPT-Gmail-Connector. Laut Betreiber wurden 26 zusätzliche Nachrichten am 18.10.2026 15:40:17–15:41:49 UTC gesendet und alle mit `batch_read_email` aus SENT wieder gelesen. Abschließende Betreffsuche: 26; Review-Suche an Rainer: 0. Lovable hat Gmail hier nicht erneut aufgerufen und behauptet keine Empfängerpostfach-Zustellung.
