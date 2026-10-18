@@ -1,0 +1,422 @@
+[
+  {
+    "to": "giuseppe.anello@hotmail.de",
+    "name": "Giuseppe Anello",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/giuseppe_anello_hotmail_de.html",
+    "textFile": "drafts/giuseppe_anello_hotmail_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "alexanderays@googlemail.com",
+    "name": "Alexander Ays",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/alexanderays_googlemail_com.html",
+    "textFile": "drafts/alexanderays_googlemail_com.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "g.m.brackmann@googlemail.com",
+    "name": "Gabriele Brackmann",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/g_m_brackmann_googlemail_com.html",
+    "textFile": "drafts/g_m_brackmann_googlemail_com.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "info@fahrzeug-veredelung.com",
+    "name": "Dennis Brezing",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/info_fahrzeug_veredelung_com.html",
+    "textFile": "drafts/info_fahrzeug_veredelung_com.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "gast.jochen@web.de",
+    "name": "Jochen Gast",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "future",
+    "htmlFile": "drafts/gast_jochen_web_de.html",
+    "textFile": "drafts/gast_jochen_web_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "saschageier19@web.de",
+    "name": "Sascha Geier",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/saschageier19_web_de.html",
+    "textFile": "drafts/saschageier19_web_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "t.georgiev88@googlemail.com",
+    "name": "Teodor Georgiev",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/t_georgiev88_googlemail_com.html",
+    "textFile": "drafts/t_georgiev88_googlemail_com.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "sabrina-nadine@gmx.de",
+    "name": "Sabrina Hofmann",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/sabrina_nadine_gmx_de.html",
+    "textFile": "drafts/sabrina_nadine_gmx_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "ckerzinger@web.de",
+    "name": "Celine Kerzinger",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/ckerzinger_web_de.html",
+    "textFile": "drafts/ckerzinger_web_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "r.type.zx@gmail.com",
+    "name": "Oleksandr Krupka",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/r_type_zx_gmail_com.html",
+    "textFile": "drafts/r_type_zx_gmail_com.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "franzi.zp@web.de",
+    "name": "Franziska Kunert",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "future",
+    "htmlFile": "drafts/franzi_zp_web_de.html",
+    "textFile": "drafts/franzi_zp_web_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "serissa.matejka@web.de",
+    "name": "Serissa Matejla",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "future",
+    "htmlFile": "drafts/serissa_matejka_web_de.html",
+    "textFile": "drafts/serissa_matejka_web_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "mi-nagy@t-online.de",
+    "name": "Michael Nagy",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/mi_nagy_t_online_de.html",
+    "textFile": "drafts/mi_nagy_t_online_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "christian.popi@freenet.de",
+    "name": "Christian Popiolek",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "future",
+    "htmlFile": "drafts/christian_popi_freenet_de.html",
+    "textFile": "drafts/christian_popi_freenet_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "raik.schnabel@gmail.com",
+    "name": "Raik Schnabel",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/raik_schnabel_gmail_com.html",
+    "textFile": "drafts/raik_schnabel_gmail_com.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "seuffertc@icloud.com",
+    "name": "Claudia Seuffert",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/seuffertc_icloud_com.html",
+    "textFile": "drafts/seuffertc_icloud_com.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "sabritrad0@gmail.com",
+    "name": "Sabri Trad",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/sabritrad0_gmail_com.html",
+    "textFile": "drafts/sabritrad0_gmail_com.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "rzell@gmx.de",
+    "name": "Roland Zell",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/rzell_gmx_de.html",
+    "textFile": "drafts/rzell_gmx_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "marcel.zipperle@live.de",
+    "name": "Marcel Zipperle",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/marcel_zipperle_live_de.html",
+    "textFile": "drafts/marcel_zipperle_live_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "daniel.o.konrad@gmail.com",
+    "name": "Daniel Konrad",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/daniel_o_konrad_gmail_com.html",
+    "textFile": "drafts/daniel_o_konrad_gmail_com.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "hassan.houdrouj@web.de",
+    "name": "Hassan Houdrouj",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/hassan_houdrouj_web_de.html",
+    "textFile": "drafts/hassan_houdrouj_web_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "a.herdt@yandex.ru",
+    "name": "Andreas Herdt",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/a_herdt_yandex_ru.html",
+    "textFile": "drafts/a_herdt_yandex_ru.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "michaelw50@t-online.de",
+    "name": "Martin Weigand",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/michaelw50_t_online_de.html",
+    "textFile": "drafts/michaelw50_t_online_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "seddiqisadaf4@gmail.com",
+    "name": "Sadaf Seddiqi",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "past",
+    "htmlFile": "drafts/seddiqisadaf4_gmail_com.html",
+    "textFile": "drafts/seddiqisadaf4_gmail_com.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "ali.elkassem@ce-montage.com",
+    "name": "Ali Elkassem",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "prepared",
+    "category": "future",
+    "htmlFile": "drafts/ali_elkassem_ce_montage_com.html",
+    "textFile": "drafts/ali_elkassem_ce_montage_com.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "t.zara@gmx.de",
+    "name": "Tanja Zurawski",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "separate_contact",
+    "category": "cancelled",
+    "htmlFile": "drafts/t_zara_gmx_de.html",
+    "textFile": "drafts/t_zara_gmx_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "tatikrug100963@gmail.com",
+    "name": "Tatjana Krüger",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "identity_review",
+    "category": "past",
+    "htmlFile": "drafts/tatikrug100963_gmail_com.html",
+    "textFile": "drafts/tatikrug100963_gmail_com.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  },
+  {
+    "to": "sonnenburg.thomas@gmx.de",
+    "name": "Tatjana Krüger",
+    "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+    "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+    "reply_to": "info@mytransporter.org",
+    "decision": "identity_review",
+    "category": "past",
+    "htmlFile": "drafts/sonnenburg_thomas_gmx_de.html",
+    "textFile": "drafts/sonnenburg_thomas_gmx_de.txt",
+    "headers": {
+      "List-Unsubscribe": "<mailto:info@mytransporter.org?subject=Keine%20Bewertungsanfragen%20mehr&body=Bitte%20sende%20mir%20keine%20weiteren%20Bewertungsanfragen.>"
+    },
+    "sendEnabled": false
+  }
+]
