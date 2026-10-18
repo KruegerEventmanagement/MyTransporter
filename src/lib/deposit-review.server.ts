@@ -8,7 +8,7 @@ import {
   priceItems, computeTotals, photoChecklist, buildCustomerClosingMail,
   documentationFeeAllowed, eur, MAX_MESSAGE,
   bookingDepositState, allocateApplied, closingMailStillValid, safePhotoRows,
-  resolveRefund, shouldSendClosingMail, depositReminderDueAt,
+  resolveRefund, shouldSendClosingMail, effectiveTotals, adjustmentCents, reminderCandidates,
   type PricedItem, type ReviewFacts, type Totals, type PayoutState
 } from "@/lib/deposit-review";
 import { resolveTripWindow } from "@/lib/trip-time";
@@ -219,10 +219,11 @@ export async function previewClosingMail(source: Source, id: string, items: unkn
   const priced = priceItems(items, ctx.facts);
   const base = computeTotals(depositOf(ctx), priced);
   const r = resolveRefund(base, adjust?.refundCents ?? null, adjust?.reason ?? null);
-  const totals: Totals = { ...base, appliedCents: r.appliedCents, refundCents: r.refundCents };
+  const totals: Totals = effectiveTotals(base, r);
+  const adj = adjustmentCents(totals);
   const mail = buildCustomerClosingMail({
     to: ctx.email ?? "keine-adresse@invalid", firstName: ctx.firstName, vehicle: ctx.vehicle, startMs: ctx.startMs, endMs: ctx.endMs,
-    totals, items: priced, message, adjustment: r.reason, payout: { kind: "preview" }, channel: source === "booking" ? "stripe" : "manual",
+    totals, items: priced, message, adjustment: adj !== 0 && r.reason ? { cents: adj, reason: r.reason } : null, payout: { kind: "preview" }, channel: source === "booking" ? "stripe" : "manual",
   });
   return { subject: mail.subject, html: mail.html, text: mail.text, totals, to: ctx.email };
 }
@@ -236,7 +237,7 @@ export async function finalizeReview(adminId: string, source: Source, id: string
     const base = totalsFor(ctx);
     // Der im Entwurf gespeicherte, frei bestätigte Rückzahlungsbetrag gilt.
     const choice = resolveRefund(base, ctx.review.refund_override_cents, ctx.review.adjustment_reason);
-    const t: Totals = { ...base, appliedCents: choice.appliedCents, refundCents: choice.refundCents };
+    const t: Totals = effectiveTotals(base, choice);
     if (confirmName.trim() !== ctx.customerName.trim()) throw new Error("Name zur Bestätigung stimmt nicht");
     if (confirmRefundCents !== t.refundCents) throw new Error("Bestätigter Rückzahlungsbetrag stimmt nicht mit dem Entwurf überein");
     if (source === "booking" && t.refundCents > 0 && !ctx.stripe?.paymentIntentId) throw new Error("Keine eindeutig zugeordnete Stripe-Zahlung: bitte manuell prüfen");
