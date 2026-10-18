@@ -232,6 +232,36 @@ export function computeTotals(depositCents: number, items: PricedItem[]): Totals
 
 export const eur = (c: number) => `${(c / 100).toFixed(2).replace(".", ",")} €`;
 
+/** Vom Admin frei bestätigter Rückzahlungsbetrag (null = Vorschlag aus den Positionen). */
+export type RefundChoice = { refundCents: number; appliedCents: number; reason: string | null };
+
+/**
+ * Validiert den frei gewählten Rückzahlungsbetrag gegen die erhaltene Kaution.
+ * Weicht er vom Vorschlag ab, ist eine verständliche Begründung Pflicht
+ * (zusätzlicher begründeter Abzug oder Kulanz). Nie negativ, nie über der Kaution.
+ */
+export function resolveRefund(totals: Totals, override: number | null | undefined, reason: string | null | undefined): RefundChoice {
+  if (override == null || override === totals.refundCents)
+    return { refundCents: totals.refundCents, appliedCents: totals.appliedCents, reason: null };
+  if (!Number.isSafeInteger(override) || override < 0 || override > totals.depositCents)
+    throw new Error("Rückzahlungsbetrag ungültig (0 bis erhaltene Kaution)");
+  const r = (reason ?? "").trim();
+  if (r.length < 3) throw new Error("Abweichender Betrag: bitte die Anpassung begründen (z. B. Kulanz oder zusätzlicher Abzug)");
+  if (r.length > MAX_REASON) throw new Error("Begründung zu lang");
+  return { refundCents: override, appliedCents: totals.depositCents - override, reason: r };
+}
+
+/** Fälligkeitszeitpunkt der 48h-Erinnerung: 48 h nach Mietende, bei später gemeldeter Rückgabe frühestens 48 h danach. */
+export function depositReminderDueAt(endMs: number, returnReportedMs: number | null): number {
+  const base = Math.max(endMs, returnReportedMs ?? 0);
+  return base + 48 * 3_600_000;
+}
+
+/** Kundenmail nur, wenn der Admin sie im Entwurf ausdrücklich eingeschaltet hat. */
+export function shouldSendClosingMail(review: { send_closing_mail?: boolean | null } | null | undefined): boolean {
+  return review?.send_closing_mail === true;
+}
+
 export function berlinStamp(ms: number): string {
   return new Date(ms).toLocaleString("de-DE", {
     timeZone: "Europe/Berlin", weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
@@ -516,11 +546,19 @@ export function safePhotoRows<T extends { photo_type: string; photo_url: string 
 }
 
 /** Stabiler Inhaltsschlüssel eines Entwurfs: Abschluss nur, wenn sichtbarer Inhalt == gespeicherter Inhalt. */
-export function draftKey(items: DraftItem[], message: string | null | undefined): string {
+export function draftKey(
+  items: DraftItem[],
+  message: string | null | undefined,
+  adjust?: { refundCents: number | null; reason: string | null; sendMail: boolean } | null,
+): string {
   const norm = items
     .map((i) => ({ t: i.type, q: i.type === "late_return" ? i.quantity ?? null : null, a: i.type === "extra_km" ? null : i.amount_cents ?? null, r: (i.reason ?? "").trim() }))
     .sort((a, b) => (a.t + a.r).localeCompare(b.t + b.r));
-  return JSON.stringify({ i: norm, m: (message ?? "").trim() });
+  return JSON.stringify({
+    i: norm,
+    m: (message ?? "").trim(),
+    ...(adjust ? { r: adjust.refundCents, ar: (adjust.reason ?? "").trim(), sm: adjust.sendMail } : {}),
+  });
 }
 
 /** Ordnet den mit der Kaution verrechneten Betrag den Positionen in Reihenfolge zu (nur tatsächlich Zugeordnetes gilt als verrechnet). */
