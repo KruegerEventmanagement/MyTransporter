@@ -39,6 +39,7 @@ import { CustomerMailsAdmin, BookingMailStatus } from "@/components/admin/Custom
 import { BirthdayAdmin } from "@/components/admin/BirthdayAdmin";
 import { useServerFn } from "@tanstack/react-start";
 import { chargeBookingExtra, settleDeposit } from "@/lib/payments.functions";
+import { parseAdminDeepLink } from "@/lib/admin-deeplink";
 import { sendTestAdminPush } from "@/lib/push.functions";
 import {
   enablePushOnThisDevice,
@@ -425,7 +426,9 @@ function AdminDashboard() {
             offeredAlerts.current.add(n.id);
             // Großes Popup für jede neue Benachrichtigung, iPad-tauglich
             setAlertNotification(n);
-            if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+            // Kautionserinnerungen kommen bereits als OS-Push (Service Worker) mit eigenem Tag:
+            // hier keine doppelte Browser-Notification, nur das In-App-Popup.
+            if (n.type !== "deposit_reminder" && typeof Notification !== "undefined" && Notification.permission === "granted") {
               try {
                 new Notification("MyTransporter · " + n.title, {
                   body: n.body ?? undefined,
@@ -490,6 +493,7 @@ function AdminDashboard() {
   const openDeposit = (source: "booking" | "manual", id: string) => {
     window.history.pushState(null, "", `/admin?kaution=${source}:${id}`);
     setSelectedCustomer(null);
+    setInitialBookingId(null);
     setDepositDeepLink({ source, id });
     setTab("deposits");
   };
@@ -765,7 +769,11 @@ function AdminDashboard() {
                           const m = /\[kaution:(booking|manual):([0-9a-f-]{36})\]/i.exec(n.body ?? "");
                           return m ? (
                             <button
-                              onClick={() => openDeposit(m[1].toLowerCase() as "booking" | "manual", m[2])}
+                              onClick={async () => {
+                                await supabase.from("admin_notifications").update({ read: true }).eq("id", n.id);
+                                setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+                                openDeposit(m[1].toLowerCase() as "booking" | "manual", m[2]);
+                              }}
                               className="mt-2 rounded-full bg-foreground text-background px-4 py-1.5 text-xs font-semibold"
                             >
                               Kaution prüfen
