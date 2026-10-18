@@ -330,13 +330,36 @@ describe("Mietverlängerung und freier Rückzahlungsbetrag", () => {
     expect(draftKey(items, null, { refundCents: null, reason: null, sendMail: true })).not.toBe(a);
     expect(draftKey(items, null, { refundCents: null, reason: null, sendMail: false })).toBe(a);
   });
-  it("Kundenmail zeigt die begründete Anpassung", () => {
+  it("Kundenmail zeigt die bezifferte, begründete Anpassung (Kulanz)", () => {
+    // 200 € Kaution, 49 € Verlängerung, Admin erstattet 156 € statt 151 €: 5 € Kulanz.
     const items = priceItems([{ type: "extension", reason: "1 Tag verlängert", amount_cents: 4900 }], facts());
-    const t = computeTotals(20000, items);
-    const m = buildCustomerClosingMail({ to: "k@x.de", firstName: "Ali", vehicle: "V", startMs: 0, endMs: 1, totals: { ...t, appliedCents: 9900, refundCents: 10100 }, items, message: null, adjustment: "Kulanz: 50,00 € erlassen", payout: { kind: "preview" }, channel: "manual" });
-    expect(m.text).toContain("Anpassung: Kulanz: 50,00 € erlassen");
-    expect(m.text).toContain("Rückzahlung: 101,00 €");
+    const base = computeTotals(20000, items);
+    const choice = resolveRefund(base, 15600, "Kulanz für Stammkunden");
+    const t = effectiveTotals(base, choice);
+    expect(t).toMatchObject({ totalCents: 4900, appliedCents: 4400, refundCents: 15600, outstandingCents: 0 });
+    expect(adjustmentCents(t)).toBe(-500);
+    const m = buildCustomerClosingMail({ to: "k@x.de", firstName: "Ali", vehicle: "V", startMs: 0, endMs: 1, totals: t, items, message: null, adjustment: { cents: -500, reason: "Kulanz für Stammkunden" }, payout: { kind: "preview" }, channel: "manual" });
+    expect(m.text).toContain("Kulanz: 5,00 € erlassen: Kulanz für Stammkunden");
+    expect(m.text).toContain("Rückzahlung: 156,00 €");
     expect(m.text).toContain("1 Tag verlängert");
+  });
+  it("Kundenmail zeigt einen zusätzlichen Abzug", () => {
+    // 200 € Kaution, 100 € Rauchen, Admin erstattet nur 70 €: 30 € Zusatzabzug.
+    const items = priceItems([{ type: "smoking" }], facts());
+    const base = computeTotals(20000, items);
+    const t = effectiveTotals(base, resolveRefund(base, 7000, "Zusätzliche Innenreinigung nötig"));
+    expect(t).toMatchObject({ totalCents: 10000, appliedCents: 13000, refundCents: 7000, outstandingCents: 0 });
+    expect(adjustmentCents(t)).toBe(3000);
+    const m = buildCustomerClosingMail({ to: "k@x.de", firstName: null, vehicle: "V", startMs: 0, endMs: 1, totals: t, items, message: null, adjustment: { cents: 3000, reason: "Zusätzliche Innenreinigung nötig" }, payout: { kind: "preview" }, channel: "stripe" });
+    expect(m.text).toContain("Zusätzlicher Abzug: 30,00 €: Zusätzliche Innenreinigung nötig");
+    expect(m.text).toContain("Verrechnet mit Kaution: 130,00 €");
+  });
+  it("Restforderung über der Kaution bleibt von Kulanz unberührt", () => {
+    const items = priceItems([{ type: "damage", reason: "Unfall", amount_cents: 25000 }], facts());
+    const base = computeTotals(20000, items);
+    expect(base.outstandingCents).toBe(5000);
+    const t = effectiveTotals(base, resolveRefund(base, 5000, "Teilkulanz"));
+    expect(t).toMatchObject({ appliedCents: 15000, refundCents: 5000, outstandingCents: 5000 });
   });
 });
 
