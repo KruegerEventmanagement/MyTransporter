@@ -670,6 +670,7 @@ export type Database = {
       }
       customer_mail_settings: {
         Row: {
+          deposit_reminder_from: string | null
           deposit_review_from: string | null
           google_review_url: string | null
           id: boolean
@@ -679,6 +680,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          deposit_reminder_from?: string | null
           deposit_review_from?: string | null
           google_review_url?: string | null
           id?: boolean
@@ -688,6 +690,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          deposit_reminder_from?: string | null
           deposit_review_from?: string | null
           google_review_url?: string | null
           id?: boolean
@@ -698,8 +701,33 @@ export type Database = {
         }
         Relationships: []
       }
+      deposit_reminders: {
+        Row: {
+          created_at: string
+          end_version: string
+          id: string
+          source_id: string
+          source_type: string
+        }
+        Insert: {
+          created_at?: string
+          end_version: string
+          id?: string
+          source_id: string
+          source_type: string
+        }
+        Update: {
+          created_at?: string
+          end_version?: string
+          id?: string
+          source_id?: string
+          source_type?: string
+        }
+        Relationships: []
+      }
       deposit_reviews: {
         Row: {
+          adjustment_reason: string | null
           created_at: string
           customer_message: string | null
           final_deduct_applied_cents: number | null
@@ -720,7 +748,9 @@ export type Database = {
           manual_payout_confirmed_by: string | null
           manual_payout_method: string | null
           manual_payout_status: string | null
+          refund_override_cents: number | null
           revision: number
+          send_closing_mail: boolean
           settlement_id: string | null
           source_id: string
           source_type: string
@@ -729,6 +759,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          adjustment_reason?: string | null
           created_at?: string
           customer_message?: string | null
           final_deduct_applied_cents?: number | null
@@ -749,7 +780,9 @@ export type Database = {
           manual_payout_confirmed_by?: string | null
           manual_payout_method?: string | null
           manual_payout_status?: string | null
+          refund_override_cents?: number | null
           revision?: number
+          send_closing_mail?: boolean
           settlement_id?: string | null
           source_id: string
           source_type: string
@@ -758,6 +791,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          adjustment_reason?: string | null
           created_at?: string
           customer_message?: string | null
           final_deduct_applied_cents?: number | null
@@ -778,7 +812,9 @@ export type Database = {
           manual_payout_confirmed_by?: string | null
           manual_payout_method?: string | null
           manual_payout_status?: string | null
+          refund_override_cents?: number | null
           revision?: number
+          send_closing_mail?: boolean
           settlement_id?: string | null
           source_id?: string
           source_type?: string
