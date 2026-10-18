@@ -771,6 +771,26 @@ function AdminDashboard() {
               {format(new Date(alertNotification.created_at), "dd.MM.yyyy · HH:mm:ss", { locale: de })}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {alertNotification.type === "deposit_reminder" && (() => {
+                const m = /\[kaution:(booking|manual):([0-9a-f-]{36})\]/i.exec(alertNotification.body ?? "");
+                return m ? (
+                  <button
+                    onClick={async () => {
+                      const id = alertNotification.id;
+                      setAlertNotification(null);
+                      await supabase.from("admin_notifications").update({ read: true }).eq("id", id);
+                      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+                      const target = `/admin?kaution=${m[1]}:${m[2]}`;
+                      window.history.pushState(null, "", target);
+                      setDepositDeepLink({ source: m[1].toLowerCase() as "booking" | "manual", id: m[2] });
+                      setTab("deposits");
+                    }}
+                    className="rounded-full bg-foreground text-background px-8 py-4 text-base font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-5 h-5" /> Kaution prüfen
+                  </button>
+                ) : null;
+              })()}
               <button
                 onClick={async () => {
                   const id = alertNotification.id;
@@ -782,6 +802,14 @@ function AdminDashboard() {
               >
                 <Check className="w-5 h-5" /> Bestätigen
               </button>
+              {alertNotification.type === "deposit_reminder" && (
+                <button
+                  onClick={() => setAlertNotification(null)}
+                  className="rounded-full bg-secondary px-8 py-4 text-base font-semibold"
+                >
+                  Später
+                </button>
+              )}
               {alertNotification.booking_id && (
                 <button
                   onClick={() => {
