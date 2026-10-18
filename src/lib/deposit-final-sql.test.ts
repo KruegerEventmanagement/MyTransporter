@@ -14,6 +14,8 @@ const ADMIN = "44444444-2222-3333-4444-555555555555";
 const STUB = `
 CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
 CREATE SCHEMA auth; CREATE TABLE auth.users (id uuid PRIMARY KEY);
+CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT NULL::uuid $$;
+CREATE FUNCTION public.has_role(uuid, text) RETURNS boolean LANGUAGE sql AS $$ SELECT false $$;
 CREATE TABLE public.bookings (id uuid PRIMARY KEY, status text, deposit numeric, deposit_status text,
   return_reported_at timestamptz, start_date date, start_hour int, plan_id text, extra_charge_status text,
   extra_charge_cents int, extra_charge_intent_id text, extra_km_charge_cents int, extra_charge_claimed_at timestamptz);
