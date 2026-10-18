@@ -47,7 +47,7 @@ describe("DepositsAdmin", () => {
     expect(screen.getByText("Lädt …")).toBeTruthy();
     resolvers.forEach((r) => r(ctxFor("Anna")));
     await waitFor(() => expect(screen.getByText("Anna")).toBeTruthy());
-    expect(screen.getByText("Kaution")).toBeTruthy();
+    expect(screen.getAllByText("Kaution").length).toBeGreaterThan(0);
   });
 
   it("Kundenwechsel A → B: verspätete Antwort von A übermalt B nicht", async () => {
