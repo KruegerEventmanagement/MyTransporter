@@ -320,7 +320,7 @@ describe("Mietverlängerung und freier Rückzahlungsbetrag", () => {
     expect(r).toEqual({ refundCents: 15000, appliedCents: 5000, reason: "Kulanz aus Kulanzgründen" });
   });
   it("lehnt negative, dezimale und über der Kaution liegende Beträge ab", () => {
-    const t = computeTotals(20000, [], facts());
+    const t = computeTotals(20000, []);
     for (const v of [-1, 1.5, 20001]) expect(() => resolveRefund(t, v, "Grund genug")).toThrow(/ungültig/);
   });
   it("draftKey erkennt geänderten Betrag, Begründung und Mailwahl", () => {
