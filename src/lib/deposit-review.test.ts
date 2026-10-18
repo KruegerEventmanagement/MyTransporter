@@ -55,7 +55,7 @@ describe("Zeitzone und Checkliste", () => {
 });
 
 describe("Mails", () => {
-  const base = { to: "k@example.com", firstName: "Anna", vehicle: "Fiat · LEO 1", startMs: Date.parse("2026-10-26T08:00:00Z"), endMs: Date.parse("2026-10-27T08:00:00Z"), message: null, channel: "stripe" as const };
+  const base = { to: "k@example.com", firstName: "Anna", vehicle: "Fiat · LEO 1", startMs: Date.parse("2026-10-26T08:00:00Z"), endMs: Date.parse("2026-10-27T08:00:00Z"), message: null, adjustment: null, channel: "stripe" as const };
   it("pending heißt beauftragt, nicht zurückgezahlt", () => {
     const s = payoutSentence({ kind: "stripe_pending" }, 17000, "stripe");
     expect(s).toMatch(/beauftragt/);
@@ -225,7 +225,7 @@ describe("Review-Korrekturen", () => {
 
   it("5: eingefrorene pending-Kundenmail nach Fehlschlag nicht senden", () => {
     const items = priceItems([], facts());
-    const m = buildCustomerClosingMail({ to: "k@x.de", firstName: null, vehicle: "V", startMs: 0, endMs: 1, totals: computeTotals(20000, items), items, message: null, payout: { kind: "stripe_pending" }, channel: "stripe" });
+    const m = buildCustomerClosingMail({ to: "k@x.de", firstName: null, vehicle: "V", startMs: 0, endMs: 1, totals: computeTotals(20000, items), items, message: null, adjustment: null, payout: { kind: "stripe_pending" }, channel: "stripe" });
     expect(closingMailStillValid({ reviewFinalized: true, payout: null, refundCents: 20000, frozenText: m.text })).toMatch(/fehlgeschlagen/);
     expect(closingMailStillValid({ reviewFinalized: true, payout: { kind: "stripe_pending" }, refundCents: 20000, frozenText: m.text })).toBeNull();
     expect(closingMailStillValid({ reviewFinalized: true, payout: { kind: "stripe_pending" }, refundCents: 15000, frozenText: m.text })).toMatch(/Betrag/);
