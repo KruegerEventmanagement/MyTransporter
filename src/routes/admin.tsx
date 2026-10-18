@@ -167,6 +167,10 @@ function AdminDashboard() {
   const [initialBookingId, setInitialBookingId] = useState<string | null>(null);
   const lastNotificationId = useRef<string | null>(null);
   const [alertNotification, setAlertNotification] = useState<AdminNotification | null>(null);
+  // "Später" merkt sich geschlossene Popups; bereits angebotene Aufgaben kommen nicht bei jedem Poll wieder.
+  const dismissedAlerts = useRef<Set<string>>(new Set());
+  const offeredAlerts = useRef<Set<string>>(new Set());
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const beepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -362,7 +366,16 @@ function AdminDashboard() {
     ]);
     if (b.data) setBookings(b.data as Booking[]);
     if (p.data) setProfiles(p.data as Profile[]);
-    if (n.data) setNotifications(n.data as AdminNotification[]);
+    if (n.data) {
+      setNotifications(n.data as AdminNotification[]);
+      // Beim Appstart eine fällige ungelesene Kautionsaufgabe anbieten (einmal je Aufgabe).
+      const due = (n.data as AdminNotification[]).find((x) => x.type === "deposit_reminder" && !x.read && !dismissedAlerts.current.has(x.id) && !offeredAlerts.current.has(x.id));
+      if (due) {
+        offeredAlerts.current.add(due.id);
+        setAlertNotification((cur) => cur ?? due);
+      }
+    }
+    setDataLoaded(true);
   };
 
   useEffect(() => {
@@ -396,8 +409,9 @@ function AdminDashboard() {
         (payload) => {
           const n = payload.new as AdminNotification;
           setNotifications((prev) => [n, ...prev]);
-          if (lastNotificationId.current !== n.id) {
+          if (lastNotificationId.current !== n.id && !dismissedAlerts.current.has(n.id)) {
             lastNotificationId.current = n.id;
+            offeredAlerts.current.add(n.id);
             // Großes Popup für jede neue Benachrichtigung, iPad-tauglich
             setAlertNotification(n);
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
@@ -493,7 +507,9 @@ function AdminDashboard() {
   if (selectedCustomer) {
     const customer = customers.find((c) => c.id === selectedCustomer);
     if (!customer) {
-      setSelectedCustomer(null);
+      // Erst nach geladenen Daten entscheiden; sonst würde ein Deep-Link-Kunde
+      // beim ersten Render (noch leere Listen) sofort wieder verworfen.
+      if (dataLoaded) setSelectedCustomer(null);
       return null;
     }
     return (
