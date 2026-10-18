@@ -667,6 +667,7 @@ export type Database = {
       }
       customer_mail_settings: {
         Row: {
+          deposit_review_from: string | null
           google_review_url: string | null
           id: boolean
           invoice_outbox_from: string
@@ -675,6 +676,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          deposit_review_from?: string | null
           google_review_url?: string | null
           id?: boolean
           invoice_outbox_from?: string
@@ -683,6 +685,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          deposit_review_from?: string | null
           google_review_url?: string | null
           id?: boolean
           invoice_outbox_from?: string
@@ -691,6 +694,101 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      deposit_reviews: {
+        Row: {
+          created_at: string
+          customer_message: string | null
+          final_deduct_applied_cents: number | null
+          final_deduct_total_cents: number | null
+          final_deposit_cents: number | null
+          final_outstanding_cents: number | null
+          final_refund_cents: number | null
+          finalized_at: string | null
+          finalized_by: string | null
+          id: string
+          items: Json
+          manual_deposit_cents: number | null
+          manual_deposit_method: string | null
+          manual_deposit_recorded_at: string | null
+          manual_deposit_recorded_by: string | null
+          manual_payout_confirmed_at: string | null
+          manual_payout_confirmed_by: string | null
+          manual_payout_method: string | null
+          manual_payout_status: string | null
+          revision: number
+          settlement_id: string | null
+          source_id: string
+          source_type: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_message?: string | null
+          final_deduct_applied_cents?: number | null
+          final_deduct_total_cents?: number | null
+          final_deposit_cents?: number | null
+          final_outstanding_cents?: number | null
+          final_refund_cents?: number | null
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          items?: Json
+          manual_deposit_cents?: number | null
+          manual_deposit_method?: string | null
+          manual_deposit_recorded_at?: string | null
+          manual_deposit_recorded_by?: string | null
+          manual_payout_confirmed_at?: string | null
+          manual_payout_confirmed_by?: string | null
+          manual_payout_method?: string | null
+          manual_payout_status?: string | null
+          revision?: number
+          settlement_id?: string | null
+          source_id: string
+          source_type: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_message?: string | null
+          final_deduct_applied_cents?: number | null
+          final_deduct_total_cents?: number | null
+          final_deposit_cents?: number | null
+          final_outstanding_cents?: number | null
+          final_refund_cents?: number | null
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          items?: Json
+          manual_deposit_cents?: number | null
+          manual_deposit_method?: string | null
+          manual_deposit_recorded_at?: string | null
+          manual_deposit_recorded_by?: string | null
+          manual_payout_confirmed_at?: string | null
+          manual_payout_confirmed_by?: string | null
+          manual_payout_method?: string | null
+          manual_payout_status?: string | null
+          revision?: number
+          settlement_id?: string | null
+          source_id?: string
+          source_type?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deposit_reviews_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "deposit_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       deposit_settlements: {
         Row: {
@@ -2050,6 +2148,15 @@ export type Database = {
         }[]
       }
       delete_expired_booking_holds: { Args: never; Returns: undefined }
+      deposit_review_due_sources: {
+        Args: { _from: string; _limit: number }
+        Returns: {
+          event_at: string
+          return_reported: boolean
+          source_id: string
+          source_type: string
+        }[]
+      }
       enqueue_calendar_sync: {
         Args: {
           _event_kind: string
@@ -2136,6 +2243,19 @@ export type Database = {
             }
             Returns: boolean
           }
+      finalize_deposit_review: {
+        Args: {
+          _admin: string
+          _applied: number
+          _deposit: number
+          _expected_revision: number
+          _id: string
+          _outstanding: number
+          _refund: number
+          _total: number
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

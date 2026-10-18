@@ -233,144 +233,51 @@ export const chargeBookingExtra = createServerFn({ method: "POST" })
     return { status: intent.status, intentId: intent.id };
   });
 
-/** Behält einen Teil der Kaution ein und erstattet den Rest. deductCents = einbehaltener Betrag. */
+/**
+ * Kautionsabrechnung über den robusten Auftrag (deposit-settlement.server.ts):
+ * Umgebung aus der Originalzahlung, stabiler Idempotenz-Key, Buchungslock.
+ * Die Client-Umgebung wird ignoriert. Bevorzugt: Admin-Bereich „Offene Kautionen“.
+ */
 export const settleDeposit = createServerFn({ method: "POST" })
   .middleware([requireActiveAccount])
-  .inputValidator((data: { bookingId: string; deductCents: number; environment: StripeEnv }) => {
+  .inputValidator((data: { bookingId: string; deductCents: number; environment?: StripeEnv }) => {
     if (!data.bookingId) throw new Error("bookingId fehlt");
-    if (!Number.isInteger(data.deductCents) || data.deductCents < 0) {
-      throw new Error("Abzug ungültig");
-    }
-    if (data.deductCents > DEPOSIT_CENTS) {
-      throw new Error("Abzug darf die Kaution (200 €) nicht übersteigen");
-    }
-    assertStripeEnvironment(data.environment);
-    return data;
+    if (!Number.isSafeInteger(data.deductCents) || data.deductCents < 0 || data.deductCents > 5_000_00) throw new Error("Abzug ungültig");
+    return { bookingId: data.bookingId, deductCents: data.deductCents };
   })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase as never, context.userId);
-    const { data: booking, error } = await supabaseAdmin
-      .from("bookings")
-      .select("stripe_payment_intent_id, deposit_status")
-      .eq("id", data.bookingId)
-      .maybeSingle();
-    if (error || !booking) throw new Error("Buchung nicht gefunden");
-    if (booking.deposit_status === "released") {
-      throw new Error("Kaution wurde bereits abgerechnet");
-    }
-    if (!booking.stripe_payment_intent_id) {
-      throw new Error("Keine Stripe-Zahlung für diese Buchung gefunden");
-    }
-    const refundCents = DEPOSIT_CENTS - data.deductCents;
-    const stripe = createStripeClient(data.environment);
-    let refundId: string | null = null;
-    if (refundCents > 0) {
-      const refund = await stripe.refunds.create({
-        payment_intent: booking.stripe_payment_intent_id,
-        amount: refundCents,
-        metadata: { bookingId: data.bookingId, kind: "deposit_partial" },
-      });
-      refundId = refund.id;
-    }
-    await supabaseAdmin
-      .from("bookings")
-      .update({
-        deposit_status: "released",
-        deposit_released_at: new Date().toISOString(),
-        deposit_released_by: context.userId,
-        deposit_deducted_cents: data.deductCents,
-        deposit_refund_id: refundId,
-      })
-      .eq("id", data.bookingId);
-    return { refundCents, refundId };
+    const { requestDepositSettlement } = await import("@/lib/deposit-settlement.server");
+    const { productionDeps } = await import("@/lib/deposit-settlement-deps.server");
+    const { settlement } = await requestDepositSettlement(productionDeps(), {
+      bookingId: data.bookingId, deductCents: data.deductCents, adminId: context.userId, requestKey: `admin-${data.bookingId}-${data.deductCents}`,
+    });
+    return { refundCents: settlement.refund_cents, refundId: settlement.refund_id, status: settlement.status };
   });
-
-/**
- * Storniert eine Buchung des angemeldeten Nutzers, behält die fällige
- * Stornogebühr ein und erstattet den Rest (Miete - Gebühr) + Kaution
- * automatisch via Stripe-Refund auf den ursprünglichen PaymentIntent.
- *
- * Gebührenstaffel (h vor Abfahrt):
- *   ≥13 h: 0 €  ·  12 h: 1 €  ·  11 h: 2 €  ·  …  ·  1 h oder weniger: 12 €
- */
-function computeCancellationFeeCents(startsAtMs: number, nowMs: number): { hours: number; feeCents: number } {
-  const diffMs = startsAtMs - nowMs;
-  const hours = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60)));
-  let feeEuro: number;
-  if (hours >= 13) feeEuro = 0;
-  else if (hours <= 1) feeEuro = 12;
-  else feeEuro = 13 - hours;
-  return { hours, feeCents: feeEuro * 100 };
-}
 
 export const cancelBookingWithRefund = createServerFn({ method: "POST" })
   .middleware([requireActiveAccount])
-  .inputValidator((data: { bookingId: string; environment: StripeEnv }) => {
+  .inputValidator((data: { bookingId: string; environment?: StripeEnv }) => {
     if (!data.bookingId) throw new Error("bookingId fehlt");
-    assertStripeEnvironment(data.environment);
-    return data;
+    return { bookingId: data.bookingId };
   })
   .handler(async ({ data, context }) => {
-    const { data: booking, error } = await supabaseAdmin
-      .from("bookings")
-      .select(
-        "id, user_id, status, start_date, start_hour, start_km, plan_price, deposit, deposit_status, stripe_payment_intent_id, remarks, addons"
-      )
-      .eq("id", data.bookingId)
-      .maybeSingle();
-    if (error || !booking) throw new Error("Buchung nicht gefunden");
-    if (booking.user_id !== context.userId) throw new Error("Nicht autorisiert");
-    if (booking.status === "cancelled") throw new Error("Buchung ist bereits storniert");
-    if (booking.start_km !== null) throw new Error("Fahrt wurde bereits gestartet und kann nicht mehr storniert werden");
-    if (!booking.stripe_payment_intent_id) throw new Error("Keine Stripe-Zahlung für diese Buchung gefunden");
-
-    const startsAtMs = new Date(
-      `${booking.start_date}T${String(booking.start_hour).padStart(2, "0")}:00:00`
-    ).getTime();
-    const { hours, feeCents } = computeCancellationFeeCents(startsAtMs, Date.now());
-
-    const planPriceCents = Math.round(Number(booking.plan_price) * 100);
-    const depositCents = Math.round(Number(booking.deposit) * 100);
-    // Erstattet wird die Miete abzüglich Gebühr + die volle Kaution
-    const rentRefundCents = Math.max(0, planPriceCents - feeCents);
-    // Vorab bezahltes Kilometerpaket wird bei nicht begonnener Fahrt voll erstattet.
-    const kmPackageCents = paidCustomKmCents(booking.addons);
-    const refundCents = rentRefundCents + depositCents + kmPackageCents;
-
-    const stripe = createStripeClient(data.environment);
-    let refundId: string | null = null;
-    if (refundCents > 0) {
-      const refund = await stripe.refunds.create({
-        payment_intent: booking.stripe_payment_intent_id,
-        amount: refundCents,
-        metadata: { bookingId: booking.id, kind: "cancellation", fee_cents: String(feeCents) },
-      });
-      refundId = refund.id;
+    const { requestCancellation } = await import("@/lib/deposit-settlement.server");
+    const { productionDeps } = await import("@/lib/deposit-settlement-deps.server");
+    let res;
+    try {
+      res = await requestCancellation(productionDeps(), { bookingId: data.bookingId, userId: context.userId, requestKey: `cancel-${data.bookingId}` });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("DEPOSIT_ALREADY_REVIEWED")) throw new Error("Die Kaution dieser Buchung wurde bereits abgerechnet; Stornierung bitte mit uns klären.");
+      throw e;
     }
-
-    const nowIso = new Date().toISOString();
-    const note = `Storniert am ${new Date().toLocaleString("de-DE")} · Gebühr ${(feeCents / 100).toFixed(2)} € (${hours} h vor Abfahrt) · Erstattet ${(refundCents / 100).toFixed(2)} €`;
-    await supabaseAdmin
-      .from("bookings")
-      .update({
-        status: "cancelled",
-        deposit_status: "released",
-        deposit_released_at: nowIso,
-        deposit_released_by: context.userId,
-        deposit_deducted_cents: feeCents,
-        deposit_refund_id: refundId,
-        remarks: booking.remarks ? `${booking.remarks}\n${note}` : note,
-      })
-      .eq("id", booking.id);
-
-    // Storno im Kalender: Zustand wurde per Trigger markiert; Sofortversuch nur
-    // für diese Buchung, Fehler bleiben retrybar und beeinflussen den Storno nie.
+    // Storno im Kalender: Sofortversuch nur für diese Buchung, Fehler bleiben retrybar.
     try {
       const { kickCalendarSync } = await import("@/lib/calendar-sync.server");
-      await kickCalendarSync("booking", booking.id as string);
+      await kickCalendarSync("booking", data.bookingId);
     } catch (e) {
       console.warn("[storno] Kalenderübertragung nicht gestartet", e);
     }
-
-    return { refundCents, feeCents, hours, refundId };
+    return { refundCents: res.settlement.refund_cents, feeCents: res.feeCents, hours: res.hours, refundId: res.settlement.refund_id, status: res.settlement.status };
   });

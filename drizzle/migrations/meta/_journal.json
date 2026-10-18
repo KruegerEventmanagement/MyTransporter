@@ -85,6 +85,13 @@
       "when": 1792259524915,
       "tag": "0011_mail_active_account_service_grant",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792339407926,
+      "tag": "0012_deposit_reviews",
+      "breakpoints": true
     }
   ]
 }

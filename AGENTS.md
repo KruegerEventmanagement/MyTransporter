@@ -20,3 +20,4 @@
 - Eigenwerbung/AdSense ab Wizard-Schritt 1 aus.
 - Kundenbestätigung manueller Termine nur via manual-confirmation.server.ts (Absicht im Save, Payload je Revision eingefroren, Fencing-RPCs, Erfolg nur mit Provider-ID); Abholort = PICKUP_ADDRESS, nicht Geschäftsadresse.
 - Mail: immutable provider/Gmail fence; backfill same key; legacy untouched; unknown never replay. Local drafts never import senders, preventing sends.
+- Kautionsabschluss nur über src/lib/deposit-review(.server).ts: Entwurf (Revision, kein Geld/keine Mail), bewusster Abschluss via RPC finalize_deposit_review (Buchungslock, Trigger sperrt parallelen Storno), Stripe nur über requestDepositSettlement mit Key review-<id>, Mails (deposit_review_admin/deposit_digest/deposit_closing) nur über die Outbox im 5-Minuten-Job; damit nie Doppelerstattung und Mailretry nie Stripe ruft.

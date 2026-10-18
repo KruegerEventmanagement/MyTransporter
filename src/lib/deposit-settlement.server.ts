@@ -15,6 +15,7 @@ import {
   type SettlementStatus,
 } from "@/lib/deposit-settlement";
 import { paidCustomKmCents } from "@/lib/custom-km";
+import { berlinDateHourToMs } from "@/lib/berlin-time";
 
 export type Env = "sandbox" | "live";
 
@@ -89,7 +90,7 @@ export interface RefundApi {
   retrieveRefund(env: Env, id: string): Promise<RefundLike | null>;
   listRefunds(env: Env, paymentIntentId: string): Promise<RefundLike[]>;
   /** null ⇒ in dieser Umgebung nicht vorhanden. */
-  retrievePaymentIntent(env: Env, id: string): Promise<{ id: string; amount_received: number; status: string } | null>;
+  retrievePaymentIntent(env: Env, id: string): Promise<{ id: string; amount_received: number; status: string; currency?: string } | null>;
 }
 
 export type Deps = { store: SettlementStore; stripe: RefundApi; now?: () => number; newId?: () => string };
@@ -210,6 +211,10 @@ export async function executeSettlement(d: Deps, input: SettlementRow, opts: { m
   // Fremde/frühere Erstattungen auf der Originalzahlung berücksichtigen.
   const pi = await d.stripe.retrievePaymentIntent(row.environment, row.payment_intent_id);
   if (!pi) return d.store.updateSettlement(row.id, { status: "needs_review", failure_reason: "Originalzahlung in der gespeicherten Umgebung nicht gefunden", last_synced_at: at });
+  if (pi.status !== "succeeded" || (pi.currency && pi.currency.toLowerCase() !== "eur")) {
+    // z. B. requires_capture einer gemeinsamen Miet-/Kautionszahlung: nie stornieren/teilerfassen.
+    return d.store.updateSettlement(row.id, { status: "needs_review", failure_reason: `Originalzahlung nicht eindeutig erstattbar (Status ${pi.status}, Währung ${pi.currency ?? "?"}): manuell prüfen`, last_synced_at: at });
+  }
   const alreadyRefunded = refunds
     .filter((r) => r.status !== "failed" && r.status !== "canceled")
     .reduce((s, r) => s + r.amount, 0);
@@ -317,7 +322,7 @@ export async function requestCancellation(
     throw new Error("Für diese Buchung läuft bereits eine Erstattung – bitte kurz warten");
   }
 
-  const startsAtMs = new Date(`${booking.start_date}T${String(booking.start_hour).padStart(2, "0")}:00:00`).getTime();
+  const startsAtMs = berlinDateHourToMs(booking.start_date, booking.start_hour);
   const { hours, feeCents } = computeCancellationFeeCents(startsAtMs, (d.now ?? Date.now)());
   const depositAlreadySettled = !!(activeOf(rows, "deposit") ?? activeOf(rows, "legacy")) || booking.deposit_status === "released";
   const r = computeCancellationRefund({
