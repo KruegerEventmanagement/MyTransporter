@@ -7,7 +7,7 @@
 import {
   priceItems, computeTotals, photoChecklist, buildAdminReviewMail, buildDigestMail, buildCustomerClosingMail,
   digestSourceId, berlinDateAndHour, DIGEST_HOUR_BERLIN, documentationFeeAllowed, eur, ADMIN_RECIPIENT, MAX_MESSAGE,
-  bookingDepositState, closingMailStillValid, adminMailStillValid, safePhotoRows,
+  bookingDepositState, allocateApplied, closingMailStillValid, adminMailStillValid, safePhotoRows,
   type PricedItem, type ReviewFacts, type Totals, type PayoutState, type DigestEntry
 } from "@/lib/deposit-review";
 import { resolveTripWindow } from "@/lib/trip-time";
@@ -73,7 +73,7 @@ export async function loadDepositContext(source: Source, id: string): Promise<De
     const missing = required.filter((t) => !checklist.find((c) => c.tag === t)?.present);
     const exceptions = (b.return_exceptions && typeof b.return_exceptions === "object" ? b.return_exceptions : {}) as Record<string, string>;
     const facts: ReviewFacts = {
-      extraKmChargeCents: b.extra_km_charge_cents ?? null, extraKmAlreadyPaid: b.extra_charge_status === "succeeded", extraKm: b.extra_km ?? null,
+      extraKmChargeCents: b.extra_km_charge_cents ?? null, extraKmAlreadyPaid: b.extra_charge_status != null && b.extra_charge_status !== "failed", extraKm: b.extra_km ?? null,
       missingTags: missing, exceptions,
     };
     const issues: string[] = [];
@@ -93,7 +93,7 @@ export async function loadDepositContext(source: Source, id: string): Promise<De
       status: b.status, depositCents, depositLine: `${eur(depositCents)} · Status ${b.deposit_status}`,
       stripe: { paymentIntentId: b.stripe_payment_intent_id, environment: b.stripe_environment }, depositStatus: b.deposit_status,
       facts, checklist, photos: safePhotos, issues, docFee: documentationFeeAllowed(facts),
-      extraKm: { km: b.extra_km ?? null, cents: b.extra_km_charge_cents ?? null, alreadyPaid: b.extra_charge_status === "succeeded" },
+      extraKm: { km: b.extra_km ?? null, cents: b.extra_km_charge_cents ?? null, alreadyPaid: b.extra_charge_status != null && b.extra_charge_status !== "failed" },
       review, settlements, closingMail: closing, knownBounce: email ? await hasPermanentBounce(email) : false,
     };
   }
@@ -224,7 +224,9 @@ export async function finalizeReview(adminId: string, source: Source, id: string
     const res = must(await d.rpc("finalize_deposit_review", {
       _id: ctx.review.id, _expected_revision: expectedRevision, _admin: adminId,
       _deposit: t.depositCents, _total: t.totalCents, _applied: t.appliedCents, _outstanding: t.outstandingCents, _refund: t.refundCents,
+      _extra_km_applied: allocateApplied(storedPriced(ctx), t.appliedCents).extra_km ?? 0,
     }), "Abschluss") as { result: string };
+    if (res.result === "extra_charged") throw new Error("Mehrkilometer werden bereits separat eingezogen oder sind unklar: Position entfernen");
     if (res.result === "stale_revision") throw new Error("Entwurf wurde inzwischen geändert, bitte neu laden");
     if (res.result === "cancelled") throw new Error("Buchung wurde storniert: Kaution ist dort abgerechnet");
     if (res.result !== "finalized" && res.result !== "already_finalized") throw new Error("Abschluss nicht möglich");

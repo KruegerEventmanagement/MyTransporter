@@ -319,6 +319,7 @@ export type Database = {
           end_km: number | null
           end_km_manual: boolean | null
           extra_charge_cents: number | null
+          extra_charge_claimed_at: string | null
           extra_charge_intent_id: string | null
           extra_charge_status: string | null
           extra_km: number | null
@@ -372,6 +373,7 @@ export type Database = {
           end_km?: number | null
           end_km_manual?: boolean | null
           extra_charge_cents?: number | null
+          extra_charge_claimed_at?: string | null
           extra_charge_intent_id?: string | null
           extra_charge_status?: string | null
           extra_km?: number | null
@@ -425,6 +427,7 @@ export type Database = {
           end_km?: number | null
           end_km_manual?: boolean | null
           extra_charge_cents?: number | null
+          extra_charge_claimed_at?: string | null
           extra_charge_intent_id?: string | null
           extra_charge_status?: string | null
           extra_km?: number | null
@@ -702,6 +705,7 @@ export type Database = {
           final_deduct_applied_cents: number | null
           final_deduct_total_cents: number | null
           final_deposit_cents: number | null
+          final_extra_km_applied_cents: number | null
           final_outstanding_cents: number | null
           final_refund_cents: number | null
           finalized_at: string | null
@@ -730,6 +734,7 @@ export type Database = {
           final_deduct_applied_cents?: number | null
           final_deduct_total_cents?: number | null
           final_deposit_cents?: number | null
+          final_extra_km_applied_cents?: number | null
           final_outstanding_cents?: number | null
           final_refund_cents?: number | null
           finalized_at?: string | null
@@ -758,6 +763,7 @@ export type Database = {
           final_deduct_applied_cents?: number | null
           final_deduct_total_cents?: number | null
           final_deposit_cents?: number | null
+          final_extra_km_applied_cents?: number | null
           final_outstanding_cents?: number | null
           final_refund_cents?: number | null
           finalized_at?: string | null
@@ -2031,6 +2037,10 @@ export type Database = {
         Args: { _id: string; _lease_seconds: number; _safe_seconds: number }
         Returns: Json
       }
+      claim_extra_charge: {
+        Args: { _amount_cents: number; _booking_id: string }
+        Returns: Json
+      }
       claim_gmail_attempt: {
         Args: { _hash: string; _key: string }
         Returns: Json
@@ -2249,6 +2259,7 @@ export type Database = {
           _applied: number
           _deposit: number
           _expected_revision: number
+          _extra_km_applied: number
           _id: string
           _outstanding: number
           _refund: number

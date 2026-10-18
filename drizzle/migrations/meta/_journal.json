@@ -92,6 +92,13 @@
       "when": 1792339407926,
       "tag": "0012_deposit_reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792340434112,
+      "tag": "0013_extra_km_mutual_lock",
+      "breakpoints": true
     }
   ]
 }
