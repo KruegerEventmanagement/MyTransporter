@@ -14,12 +14,14 @@ describe('provider preparation', () => {
     expect(await sendEmailDetailed({ ...args, fetchImpl: f })).toMatchObject({ ok: false, kind: 'provider_not_ready' });
     expect(f).not.toHaveBeenCalled();
   });
-  it('blocks Gmail without any network call', async () => {
+  it('released Gmail still refuses to send without connection credentials', async () => {
+    vi.stubEnv('GOOGLE_MAIL_API_KEY', '');
     const f = vi.fn();
     expect(await preparedGmailMailProvider.send({ ...args, fetchImpl: f })).toMatchObject({ ok: false, kind: 'provider_not_ready', ambiguous: false });
     expect(f).not.toHaveBeenCalled();
     expect(preparedGmailMailProvider.supportsProviderIdempotency).toBe(false);
     expect(resendMailProvider.supportsProviderIdempotency).toBe(true);
+    vi.unstubAllEnvs();
   });
   it('never falls back to Gmail on Resend failure', async () => {
     vi.stubEnv('RESEND_API_KEY', 'mock-key');

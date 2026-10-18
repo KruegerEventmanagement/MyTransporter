@@ -2,8 +2,9 @@ import type { DetailedSendResult, MailSendArgs } from '@/lib/mail-provider';
 import { buildGmailRaw, GMAIL_BOOKING_ACCOUNT } from '@/lib/gmail-mail-format';
 
 const GATEWAY = 'https://connector-gateway.lovable.dev/google_mail/gmail/v1';
-// Human release required after review. Linking alone never enables send.
-export const GMAIL_SEND_RELEASED = false;
+// Released 18.10.2026 by owner after two internal TEST mails (Gmail IDs 1a14f7c7485ea49b,
+// 1a14f7d3e69b8a14). Old intents stay excluded via invoice_outbox_from and blocked rows.
+export const GMAIL_SEND_RELEASED = true;
 export type GmailDeps = {
   enabled: boolean; fetch: typeof fetch; gatewayKey: string; connectionKey: string;
   claim: (key: string, hash: string) => Promise<{ result: string; lease_token?: string; provider_id?: string }>;
