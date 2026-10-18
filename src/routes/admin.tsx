@@ -1137,7 +1137,7 @@ function CustomerDetail({
                         </div>
                       )}
 
-                      <SettlementPanel booking={b} onChanged={onReloadBookings} />
+                      <SettlementPanel booking={b} onChanged={onReloadBookings} onOpenDeposit={onOpenDeposit} />
                       <BookingMailStatus sourceId={b.id} />
 
                       {b.status === "returning" && (
@@ -1323,9 +1323,11 @@ function PhotoGroup({ title, photos, urls }: { title: string; photos: TripPhoto[
 function SettlementPanel({
   booking,
   onChanged,
+  onOpenDeposit,
 }: {
   booking: Booking;
   onChanged: () => Promise<void>;
+  onOpenDeposit: (bookingId: string) => void;
 }) {
   const chargeExtra = useServerFn(chargeBookingExtra);
   const settle = useServerFn(settleDeposit);
