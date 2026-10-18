@@ -100,3 +100,4 @@
 
 - [x] Kautionsabschluss (Offene Kautionen, Abzüge, Adminhinweis/Tagesdigest, Kundenmail) 18.10.2026, nicht veröffentlicht
 - [x] Review 263e9e9: failed-Auszahlung offen, fremde Refunds, Nullerstattung, Dirty-Draft, Mail-Precheck, manuelle Blocker/Fotos
+- [x] Review-Ergänzung: Mehrkilometer Karte vs. Kaution gegenseitig gesperrt, Legacy-settleDeposit verweigert bei Review
