@@ -254,3 +254,46 @@ describe("Review-Korrekturen", () => {
     expect(ok.map((r) => r.photo_type)).toEqual(["post_front"]);
   });
 });
+
+import { runExtraCharge, type ExtraChargeDeps } from "./extra-charge.server";
+import { allocateApplied } from "./deposit-review";
+
+describe("Mehrkilometer separat (Karte)", () => {
+  const mk = (claimResult: any, opts: { throwAmbiguous?: boolean } = {}) => {
+    const calls: { key: string; amount: number }[] = [];
+    const d: ExtraChargeDeps = {
+      claim: async () => claimResult,
+      getCard: async () => ({ customer: "cus", paymentMethod: "pm", environment: "sandbox" }),
+      createIntent: async (_e, p, key) => {
+        calls.push({ key, amount: p.amount });
+        if (opts.throwAmbiguous) throw Object.assign(new Error("t"), { type: "StripeConnectionError" });
+        return { id: "pi_x", status: "succeeded" };
+      },
+      record: async () => {},
+    };
+    return { d, calls };
+  };
+  it("mit Kaution verrechnet ⇒ 0 Stripe-Aufrufe", async () => {
+    const h = mk({ result: "in_deposit_review" });
+    await expect(runExtraCharge(h.d, "b1", 2250, "x")).rejects.toThrow(/Kautionsprüfung/);
+    expect(h.calls).toHaveLength(0);
+  });
+  it("bereits erfolgreich / unklar alt ⇒ 0 Stripe-Aufrufe", async () => {
+    for (const r of ["succeeded", "needs_review", "failed_final"]) {
+      const h = mk({ result: r });
+      await expect(runExtraCharge(h.d, "b1", 2250, "x")).rejects.toThrow();
+      expect(h.calls).toHaveLength(0);
+    }
+  });
+  it("Fortsetzung nach Timeout nutzt eingefrorenen Betrag und denselben Key", async () => {
+    const h = mk({ result: "resume", amount_cents: 2250 });
+    await runExtraCharge(h.d, "b1", 9999, "x");
+    expect(h.calls).toEqual([{ key: "mt-extra-km-b1", amount: 2250 }]);
+  });
+  it("Verrechnung > Kaution: nur zugeordneter Teil gilt als verrechnet", () => {
+    const items = priceItems([{ type: "damage", reason: "Delle", amount_cents: 19000 }, { type: "extra_km" }], facts({ extraKmChargeCents: 2250 }));
+    const t = computeTotals(20000, items);
+    expect(allocateApplied(items, t.appliedCents)).toEqual({ damage: 19000, extra_km: 1000 });
+    expect(t.outstandingCents).toBe(1250);
+  });
+});
