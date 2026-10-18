@@ -2073,6 +2073,16 @@ export type Database = {
         Args: { _id: string; _lease_seconds: number; _safe_seconds: number }
         Returns: Json
       }
+      claim_deposit_reminder: {
+        Args: {
+          _body: string
+          _end_version: string
+          _source_id: string
+          _source_type: string
+          _title: string
+        }
+        Returns: Json
+      }
       claim_extra_charge: {
         Args: { _amount_cents: number; _booking_id: string }
         Returns: Json
