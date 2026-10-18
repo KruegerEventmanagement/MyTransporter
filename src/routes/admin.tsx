@@ -137,11 +137,27 @@ function AdminDashboard() {
   const [depositDeepLink, setDepositDeepLink] = useState<{ source: "booking" | "manual"; id: string } | null>(null);
   useEffect(() => {
     // Nur Navigation: Deep Link öffnet die Ansicht, löst nie eine Geldaktion aus.
-    const k = new URLSearchParams(window.location.search).get("kaution");
-    if (!k) return;
-    const [src, id] = k.split(":");
-    if ((src === "booking" || src === "manual") && /^[0-9a-f-]{36}$/i.test(id ?? "")) setDepositDeepLink({ source: src, id });
-    setTab("deposits");
+    // Reagiert auch auf Query-Wechsel bei bereits geöffnetem Admin (z. B. Push-Klick).
+    const readDeepLink = () => {
+      const q = new URLSearchParams(window.location.search);
+      const k = q.get("kaution");
+      if (k) {
+        const [src, id] = k.split(":");
+        if ((src === "booking" || src === "manual") && /^[0-9a-f-]{36}$/i.test(id ?? "")) {
+          setDepositDeepLink({ source: src, id });
+          setTab("deposits");
+          return;
+        }
+      }
+      const kunde = q.get("kunde");
+      if (kunde && /^[0-9a-f-]{36}$/i.test(kunde)) {
+        setSelectedCustomer(kunde);
+        setTab("customers");
+      }
+    };
+    readDeepLink();
+    window.addEventListener("popstate", readDeepLink);
+    return () => window.removeEventListener("popstate", readDeepLink);
   }, []);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
