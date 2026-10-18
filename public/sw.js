@@ -70,12 +70,18 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     (async () => {
       const allClients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      // 1) Fenster, das genau dieses Ziel zeigt
+      // 1) Fenster, das genau dieses Ziel (Pfad + Query) zeigt
       for (const client of allClients) {
         try {
           const url = new URL(client.url);
-          if (url.origin === origin && url.pathname === target.split("?")[0]) {
+          if (url.origin === origin && url.pathname + url.search === target) {
             await client.focus();
+            return;
+          }
+          // Gleicher Pfad, andere Query (z. B. andere Kaution): fokussieren und navigieren.
+          if (url.origin === origin && url.pathname === target.split("?")[0] && "navigate" in client) {
+            await client.focus();
+            try { await client.navigate(target); } catch (e) {}
             return;
           }
         } catch (e) {}

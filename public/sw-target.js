@@ -13,8 +13,15 @@
     }
     if (u.origin !== origin) return fallback;
     if (TRIP.test(u.pathname)) return u.pathname;
-    if (u.pathname === "/admin" || u.pathname.indexOf("/admin/") === 0 || u.pathname.indexOf("/admin?") === 0)
-      return u.pathname + u.search;
+    if (u.pathname === "/admin" || u.pathname.indexOf("/admin/") === 0) {
+      // Nur bekannte, harmlose Query-Deep-Links durchlassen (z. B. kaution=booking:<uuid>).
+      var k = u.searchParams.get("kaution");
+      if (k && /^(booking|manual):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(k))
+        return "/admin?kaution=" + encodeURIComponent(k);
+      if (u.searchParams.get("kunde") && /^[0-9a-f-]{36}$/i.test(u.searchParams.get("kunde")))
+        return "/admin?kunde=" + u.searchParams.get("kunde");
+      return u.pathname;
+    }
     return fallback;
   }
   root.mtResolveTarget = mtResolveTarget;
