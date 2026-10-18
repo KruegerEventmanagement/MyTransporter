@@ -46,12 +46,38 @@ export async function loadMailSettings(): Promise<MailSettings> {
   return data as MailSettings;
 }
 
-async function isActive(userId: string): Promise<boolean> {
-  const db = await admin();
-  const { data, error } = await db.rpc("is_account_active", { _uid: userId });
-  if (error) throw new Error(error.message);
-  return data === true;
+/** Serverseitige Kontoprüfung. is_account_active vergleicht mit auth.uid() und
+ * ist im Dienstkontext immer false – daher hier direkt: Nutzer existiert,
+ * nicht gelöscht, keine abgeschlossene Kontolöschung. Fehler ⇒ Fehler (nie „aktiv“). */
+export async function isAccountActiveForMail(
+  userId: string,
+  deps?: { getUser: (id: string) => Promise<{ exists: boolean; deleted: boolean }>; hasCompletedDeletion: (id: string) => Promise<boolean> },
+): Promise<boolean> {
+  const d = deps ?? (await defaultActiveDeps());
+  const u = await d.getUser(userId);
+  if (!u.exists || u.deleted) return false;
+  return !(await d.hasCompletedDeletion(userId));
 }
+
+async function defaultActiveDeps() {
+  const db = await admin();
+  return {
+    getUser: async (id: string) => {
+      const { data, error } = await db.auth.admin.getUserById(id);
+      if (error && /not.?found/i.test(error.message)) return { exists: false, deleted: false };
+      if (error) throw new Error(`Konto nicht prüfbar: ${error.message}`);
+      const user = data.user as unknown as { deleted_at?: string | null } | null;
+      return { exists: !!user, deleted: !!user?.deleted_at };
+    },
+    hasCompletedDeletion: async (id: string) => {
+      const { data, error } = await db.from("account_deletions").select("id").eq("former_user_id", id).eq("status", "completed").limit(1);
+      if (error) throw new Error(`Kontolöschung nicht prüfbar: ${error.message}`);
+      return (data ?? []).length > 0;
+    },
+  };
+}
+
+const isActive = (userId: string) => isAccountActiveForMail(userId);
 
 async function isOptedOut(email: string): Promise<boolean> {
   const db = await admin();
