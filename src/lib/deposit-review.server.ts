@@ -159,22 +159,35 @@ function depositOf(ctx: DepositContext): number {
   return ctx.depositCents;
 }
 
+export type DraftAdjust = { refundCents: number | null; reason: string | null; sendMail: boolean };
+
 /** Entwurf speichern: bewegt kein Geld, sendet keine Mail. Optimistische Revision. */
-export async function saveDraft(adminId: string, source: Source, id: string, expectedRevision: number | null, items: unknown, message: string | null) {
+export async function saveDraft(adminId: string, source: Source, id: string, expectedRevision: number | null, items: unknown, message: string | null, adjust?: DraftAdjust) {
   const ctx = await loadDepositContext(source, id);
   if (ctx.review?.status === "finalized") throw new Error("Bereits abgeschlossen");
   const priced = priceItems(items, ctx.facts);
   const msg = (message ?? "").trim().slice(0, MAX_MESSAGE) || null;
+  // Frei bestätigter Rückzahlungsbetrag: serverseitig validiert und gespeichert.
+  let override: number | null = null;
+  let adjReason: string | null = null;
+  if (adjust && adjust.refundCents != null) {
+    const totals = computeTotals(depositOf(ctx), priced);
+    const r = resolveRefund(totals, adjust.refundCents, adjust.reason);
+    override = r.refundCents === totals.refundCents && !r.reason ? null : r.refundCents;
+    adjReason = r.reason;
+  }
+  const sendMail = adjust?.sendMail === true;
   const d = await db();
   const stored = priced.map(({ type, quantity, amount_cents, reason }) => ({ type, quantity, amount_cents, reason }));
+  const extra = { refund_override_cents: override, adjustment_reason: adjReason, send_closing_mail: sendMail };
   if (!ctx.review) {
     if (expectedRevision != null) throw new Error("Entwurf wurde inzwischen geändert, bitte neu laden");
-    const res = await d.from("deposit_reviews").insert({ source_type: source, source_id: id, items: stored, customer_message: msg, updated_by: adminId }).select("revision").single();
+    const res = await d.from("deposit_reviews").insert({ source_type: source, source_id: id, items: stored, customer_message: msg, ...extra, updated_by: adminId }).select("revision").single();
     if (res.error?.code === "23505") throw new Error("Entwurf wurde parallel angelegt, bitte neu laden");
     return { revision: must(res, "Entwurf").revision as number };
   }
   if (expectedRevision !== ctx.review.revision) throw new Error("Entwurf wurde inzwischen geändert, bitte neu laden");
-  const rows = must(await d.from("deposit_reviews").update({ items: stored, customer_message: msg, revision: ctx.review.revision + 1, updated_by: adminId }).eq("id", ctx.review.id).eq("revision", ctx.review.revision).eq("status", "draft").select("revision"), "Entwurf") as any[];
+  const rows = must(await d.from("deposit_reviews").update({ items: stored, customer_message: msg, ...extra, revision: ctx.review.revision + 1, updated_by: adminId }).eq("id", ctx.review.id).eq("revision", ctx.review.revision).eq("status", "draft").select("revision"), "Entwurf") as any[];
   if (!rows.length) throw new Error("Entwurf wurde inzwischen geändert, bitte neu laden");
   return { revision: rows[0].revision as number };
 }
