@@ -643,7 +643,8 @@ function AdminDashboard() {
                     <div className="min-w-0">
                       <p className="font-semibold truncate">{name}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {b.vehicle_plate} · {b.plan_label} · {b.start_date} {b.start_hour}:00
+                        {b.vehicle_plate} · {b.plan_label}
+                        {b.free_km != null ? ` · ${b.free_km.toLocaleString("de-DE")} km inkl.` : ""} · {b.start_date} {b.start_hour}:00
                       </p>
                       {Array.isArray(b.addons) && b.addons.length > 0 && (
                         <p className="text-[11px] text-foreground mt-0.5 truncate">
@@ -1008,6 +1009,7 @@ function CustomerDetail({
                     <div className="min-w-0">
                       <p className="font-semibold truncate">
                         {b.vehicle_plate} · {b.plan_label}
+                        {b.free_km != null ? ` · ${b.free_km.toLocaleString("de-DE")} km inkl.` : ""}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(b.start_date), "dd.MM.yyyy", { locale: de })} · {b.start_hour}:00 ·{" "}
