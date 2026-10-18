@@ -11,6 +11,7 @@ export function resolvePushTarget(url: unknown): string {
     try {
       const u = new URL(url, "https://app.local");
       const k = u.searchParams.get("kaution");
+      if (k === "list") return "/admin?kaution=list";
       if (k && /^(booking|manual):[0-9a-f-]{36}$/i.test(k)) return `/admin?kaution=${encodeURIComponent(k)}`;
       const kunde = u.searchParams.get("kunde");
       if (kunde && UUID.test(kunde)) return `/admin?kunde=${kunde}`;

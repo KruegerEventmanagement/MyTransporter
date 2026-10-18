@@ -147,10 +147,12 @@ const isCents = (v: unknown, max = MAX_ITEM_CENTS): v is number =>
 export function documentationFeeAllowed(f: ReviewFacts): { allowed: boolean; why: string } {
   const g = classifyDocumentationGaps(f.exceptions);
   if (g.technical.length > 0) return { allowed: false, why: "Kunde meldete technische Probleme: keine Pauschale" };
+  // Alle Pflichtnachweise bestätigt vorhanden: keine Pauschale, auch wenn früher
+  // "nicht bereitgestellt" gemeldet wurde (Fotos können nachgereicht worden sein).
+  if (f.missingTags.length === 0) return { allowed: false, why: "Alle Pflichtnachweise vorhanden" };
   if (g.notProvided.length > 0) return { allowed: true, why: "Nachweis laut Kunde bewusst nicht bereitgestellt" };
   if (f.missingTags.length > 0 && g.unclassified.length === 0)
     return { allowed: true, why: "Pflichtnachweise fehlen ohne gemeldetes Technikproblem (manuell prüfen)" };
-  if (f.missingTags.length === 0) return { allowed: false, why: "Alle Pflichtnachweise vorhanden" };
   return { allowed: false, why: "Ursache unklar: manuell klären, keine Pauschale" };
 }
 

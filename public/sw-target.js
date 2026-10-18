@@ -16,6 +16,7 @@
     if (u.pathname === "/admin" || u.pathname.indexOf("/admin/") === 0) {
       // Nur bekannte, harmlose Query-Deep-Links durchlassen (z. B. kaution=booking:<uuid>).
       var k = u.searchParams.get("kaution");
+      if (k === "list") return "/admin?kaution=list";
       if (k && /^(booking|manual):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(k))
         return "/admin?kaution=" + encodeURIComponent(k);
       if (u.searchParams.get("kunde") && /^[0-9a-f-]{36}$/i.test(u.searchParams.get("kunde")))
