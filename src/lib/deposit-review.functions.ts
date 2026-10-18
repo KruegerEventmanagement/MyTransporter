@@ -18,6 +18,12 @@ const cents = (v: unknown) => {
 };
 const lib = () => import("@/lib/deposit-review.server");
 
+const adjust = (d: any) => ({
+  refundCents: d?.adjust?.refundCents == null ? null : cents(d.adjust.refundCents),
+  reason: typeof d?.adjust?.reason === "string" ? d.adjust.reason : null,
+  sendMail: d?.adjust?.sendMail === true,
+});
+
 export const listOpenDepositsFn = createServerFn({ method: "POST" })
   .middleware([requireActiveAccount])
   .handler(async ({ context }) => {
@@ -36,18 +42,18 @@ export const getDepositReviewFn = createServerFn({ method: "POST" })
 
 export const saveDepositDraftFn = createServerFn({ method: "POST" })
   .middleware([requireActiveAccount])
-  .inputValidator((d: any) => ({ ...src(d), revision: d?.revision == null ? null : Number(d.revision), items: d?.items, message: typeof d?.message === "string" ? d.message : null }))
+  .inputValidator((d: any) => ({ ...src(d), revision: d?.revision == null ? null : Number(d.revision), items: d?.items, message: typeof d?.message === "string" ? d.message : null, adjust: adjust(d) }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
-    return (await lib()).saveDraft(context.userId, data.source, data.id, data.revision, data.items, data.message);
+    return (await lib()).saveDraft(context.userId, data.source, data.id, data.revision, data.items, data.message, data.adjust);
   });
 
 export const previewDepositMailFn = createServerFn({ method: "POST" })
   .middleware([requireActiveAccount])
-  .inputValidator((d: any) => ({ ...src(d), items: d?.items, message: typeof d?.message === "string" ? d.message : null }))
+  .inputValidator((d: any) => ({ ...src(d), items: d?.items, message: typeof d?.message === "string" ? d.message : null, adjust: adjust(d) }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
-    return (await lib()).previewClosingMail(data.source, data.id, data.items, data.message);
+    return (await lib()).previewClosingMail(data.source, data.id, data.items, data.message, data.adjust);
   });
 
 export const recordManualDepositFn = createServerFn({ method: "POST" })
