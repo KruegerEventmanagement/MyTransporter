@@ -434,6 +434,42 @@ export async function runDepositReminderSweep(nowMs = Date.now()): Promise<numbe
   // Bereits beanspruchte Versionen VOR dem Limit entfernen, damit spätere Fälle nicht verhungern.
   const reminders = must(await d.from("deposit_reminders").select("source_type, source_id, end_version").limit(5000), "Erinnerungen") as { source_type: string; source_id: string; end_version: string }[];
   const claimed = new Set(reminders.map((r) => `${r.source_type}:${r.source_id}:${new Date(r.end_version).toISOString()}`));
+
+  // Veraltete offene Hinweise aufräumen: abgeschlossene, stornierte oder ohne Kaution
+  // geführte Fälle dürfen nicht als ungelesene Aufgabe/Popup wiederauftauchen.
+  // "Später" bei weiterhin offener, unveränderter Miete bleibt unangetastet.
+  {
+    const MARK = /\[kaution:(booking|manual):([0-9a-f-]{36})\]/i;
+    const openNotes = must(await d.from("admin_notifications").select("id, body").eq("type", "deposit_reminder").eq("read", false).limit(200), "Offene Hinweise") as { id: string; body: string | null }[];
+    const marks = openNotes.map((n) => ({ note: n, m: MARK.exec(n.body ?? "") })).filter((x): x is { note: { id: string; body: string | null }; m: RegExpExecArray } => !!x.m);
+    const bIds = [...new Set(marks.filter((x) => x.m[1].toLowerCase() === "booking").map((x) => x.m[2]))];
+    const mIds = [...new Set(marks.filter((x) => x.m[1].toLowerCase() === "manual").map((x) => x.m[2]))];
+    const bStates = bIds.length
+      ? (must(await d.from("bookings").select("id, status, deposit, deposit_status").in("id", bIds), "Buchungsstände") as any[])
+      : [];
+    const mStates = mIds.length
+      ? (must(await d.from("deposit_reviews").select("source_id, status, manual_deposit_cents, manual_deposit_method").eq("source_type", "manual").in("source_id", mIds), "Manuelle Kautionen") as any[])
+      : [];
+    const bMap = new Map(bStates.map((b) => [b.id as string, b]));
+    const mMap = new Map(mStates.map((r) => [r.source_id as string, r]));
+    const retire: string[] = [];
+    for (const { note, m } of marks) {
+      const src = m[1].toLowerCase();
+      const id = m[2];
+      if (done.has(`${src}:${id}`)) { retire.push(note.id); continue; }
+      if (src === "booking") {
+        const b = bMap.get(id);
+        if (!b || b.status === "cancelled" || b.deposit_status === "released" || !(Number(b.deposit ?? 0) > 0)) retire.push(note.id);
+      } else {
+        const r = mMap.get(id);
+        if (r && (r.status === "finalized" || r.manual_deposit_method === "none" || r.manual_deposit_cents === 0)) retire.push(note.id);
+      }
+    }
+    if (retire.length) {
+      const { error } = await d.from("admin_notifications").update({ read: true }).in("id", retire);
+      if (error) console.warn("[kaution] Hinweise aufräumen", error.message);
+    }
+  }
   const ids = [...new Set(bookings.map((b) => b.user_id))];
   const profiles = ids.length ? (must(await d.from("profiles").select("id, first_name, last_name").in("id", ids), "Profile") as any[]) : [];
   const pName = new Map(profiles.map((p) => [p.id, [p.first_name, p.last_name].filter(Boolean).join(" ") || "Unbekannt"]));

@@ -8,6 +8,7 @@ const M13 = readFileSync(new URL("../../drizzle/migrations/0013_extra_km_mutual_
 const M14 = readFileSync(new URL("../../drizzle/migrations/0014_deposit_reminders_and_refund_override.sql", import.meta.url), "utf8");
 const M15 = readFileSync(new URL("../../drizzle/migrations/0015_deposit_adjustment_and_reminder_claim.sql", import.meta.url), "utf8");
 const M16 = readFileSync(new URL("../../drizzle/migrations/0016_deposit_reminder_claim_mark_read_only_on_create.sql", import.meta.url), "utf8");
+const M17 = readFileSync(new URL("../../drizzle/migrations/0017_deposit_reminder_claim_manual_deposit_and_lock_order.sql", import.meta.url), "utf8");
 const B = "11111111-2222-3333-4444-555555555555";
 const R = "22222222-2222-3333-4444-555555555555";
 const M = "33333333-2222-3333-4444-555555555555";
@@ -44,6 +45,7 @@ beforeEach(async () => {
   await db.exec(M14);
   await db.exec(M15);
   await db.exec(M16);
+  await db.exec(M17);
   await db.query(`INSERT INTO public.bookings (id, status, deposit, deposit_status, start_date, start_hour, plan_id) VALUES ($1,'completed',200,'held','2026-10-20',7,'3h')`, [B]);
   await db.query(`INSERT INTO public.manual_reservations (id, end_at) VALUES ($1,$2)`, [M, END]);
   await db.query(`INSERT INTO public.deposit_reviews (id, source_type, source_id, items, refund_override_cents, adjustment_reason, send_closing_mail) VALUES ($1,'booking',$2,'[]',15000,'Kulanz',false)`, [R, B]);
@@ -108,5 +110,17 @@ describe("Atomarer Erinnerungs-Claim", () => {
     expect((await claim("manual", M, END)).result).toBe("created");
     const n = (await db.query(`SELECT booking_id b FROM public.admin_notifications`)).rows[0] as any;
     expect(n.b).toBeNull();
+  });
+  it("manueller Termin mit explizit 0 Euro / 'keine Kaution' erinnert nicht", async () => {
+    await db.query(`INSERT INTO public.deposit_reviews (source_type, source_id, items, manual_deposit_cents, manual_deposit_method) VALUES ('manual',$1,'[]',0,'none')`, [M]);
+    expect((await claim("manual", M, END)).result).toBe("no_deposit");
+    expect(((await db.query(`SELECT count(*)::int c FROM public.admin_notifications`)).rows[0] as any).c).toBe(0);
+  });
+  it("manueller Termin mit unbekannter Kaution (kein Review) erinnert zur Prüfung", async () => {
+    expect((await claim("manual", M, END)).result).toBe("created");
+  });
+  it("finalisierter Review nach dem Lock stoppt den Claim (paralleler Abschluss)", async () => {
+    await db.query(`UPDATE public.deposit_reviews SET status = 'finalized'`);
+    expect((await claim("booking", B, END)).result).toBe("done");
   });
 });

@@ -40,10 +40,17 @@ export function DepositsAdmin({ initial }: { initial?: { source: "booking" | "ma
   const [open, setOpen] = useState<{ source: "booking" | "manual"; id: string } | null>(initial ?? null);
   const reload = () => list().then(setItems).catch((e) => toast.error(e instanceof Error ? e.message : "Laden fehlgeschlagen"));
   useEffect(() => { reload(); }, []);
-  // Deep-Link-Wechsel (z. B. Push-Klick bei bereits geöffnetem Admin) öffnet die neue Kautionsansicht.
-  useEffect(() => { if (initial) setOpen(initial); }, [initial?.source, initial?.id]);
+  // Deep-Link-Wechsel (z. B. Push-Klick bei bereits geöffnetem Admin) öffnet die neue
+  // Kautionsansicht; Wechsel auf die Liste/Browser-Zurück schließt die Detailauswahl.
+  useEffect(() => { setOpen(initial ?? null); }, [initial?.source, initial?.id]);
 
-  if (open) return <DepositDetail key={`${open.source}:${open.id}`} source={open.source} id={open.id} onBack={() => { setOpen(null); reload(); }} />;
+  const backToList = () => {
+    window.history.pushState(null, "", "/admin?kaution=list");
+    setOpen(null);
+    reload();
+  };
+
+  if (open) return <DepositDetail key={`${open.source}:${open.id}`} source={open.source} id={open.id} onBack={backToList} />;
   return (
     <div className="space-y-3">
       <h2 className="text-lg font-semibold">Offene Kautionen</h2>
