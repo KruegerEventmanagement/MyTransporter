@@ -1,5 +1,10 @@
 # Roadmap
 
+## Externe Gmail-Nachweise 18.10.2026 ab 15:40 UTC
+- [ ] 26 vom Betreiber belegte externe Sends exakt mit recipients.csv verknüpfen und historischen 0-Send-Status einordnen.
+- [ ] Sichere abgeschlossene Nachregistrierung im bestehenden Journal prüfen; keine Versandaufträge/Versuche/Jobs erzeugen.
+- [ ] Gespeicherte Nachweise und unveränderte Schutzgrenzen nachlesen; Michael zwei Quellen, eine Nachricht.
+
 ## Betreiberauftrag Bewertungsbestand 18.10.2026
 - [x] Versandfreie Klärung: App-Mail-Kampagnengrenze dokumentiert; Gmail-Block/Human-Approval nicht beobachtet, früheren Befund korrigiert.
 - [x] Empfängervorbereitung: 25 reguläre Kontakte inkl. Daniel, Tanja separat, 2 Tatjana-Prüffälle, 5 fehlende Adressen dokumentiert.
