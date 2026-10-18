@@ -8,7 +8,8 @@ import {
   priceItems, computeTotals, photoChecklist, buildAdminReviewMail, buildDigestMail, buildCustomerClosingMail,
   digestSourceId, berlinDateAndHour, DIGEST_HOUR_BERLIN, documentationFeeAllowed, eur, ADMIN_RECIPIENT, MAX_MESSAGE,
   bookingDepositState, allocateApplied, closingMailStillValid, adminMailStillValid, safePhotoRows,
-  type PricedItem, type ReviewFacts, type Totals, type PayoutState, type DigestEntry
+  resolveRefund, shouldSendClosingMail, depositReminderDueAt,
+  type PricedItem, type ReviewFacts, type Totals, type PayoutState
 } from "@/lib/deposit-review";
 import { resolveTripWindow } from "@/lib/trip-time";
 import { requiredReturnTagsV2 } from "@/lib/trip-return";
@@ -32,6 +33,7 @@ export type ReviewRow = {
   final_deposit_cents: number | null; final_deduct_total_cents: number | null; final_deduct_applied_cents: number | null;
   final_outstanding_cents: number | null; final_refund_cents: number | null; settlement_id: string | null;
   finalized_at: string | null; manual_payout_status: string | null; manual_payout_method: string | null; manual_payout_confirmed_at: string | null;
+  refund_override_cents: number | null; adjustment_reason: string | null; send_closing_mail: boolean;
 };
 
 export type DepositContext = {
