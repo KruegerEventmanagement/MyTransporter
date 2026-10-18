@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
@@ -43,7 +43,7 @@ export function DepositsAdmin({ initial }: { initial?: { source: "booking" | "ma
   // Deep-Link-Wechsel (z. B. Push-Klick bei bereits geöffnetem Admin) öffnet die neue Kautionsansicht.
   useEffect(() => { if (initial) setOpen(initial); }, [initial?.source, initial?.id]);
 
-  if (open) return <DepositDetail source={open.source} id={open.id} onBack={() => { setOpen(null); reload(); }} />;
+  if (open) return <DepositDetail key={`${open.source}:${open.id}`} source={open.source} id={open.id} onBack={() => { setOpen(null); reload(); }} />;
   return (
     <div className="space-y-3">
       <h2 className="text-lg font-semibold">Offene Kautionen</h2>
@@ -64,8 +64,59 @@ export function DepositsAdmin({ initial }: { initial?: { source: "booking" | "ma
   );
 }
 
+/**
+ * Lader: holt Kontext, Fotos und Dokumente. Stale-Request-Fencing über seq:
+ * eine verspätete Antwort von Kunde A übermalt niemals Kunde B.
+ * Der Editor wird je Quelle/Revision/Status neu gemountet (key), dadurch
+ * bleiben keine Hook- oder Zustandsreste des vorigen Kunden hängen.
+ */
 function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; id: string; onBack: () => void }) {
   const get = useServerFn(getDepositReviewFn);
+  const getDetails = useServerFn(getCalendarEntryDetails);
+  const [ctx, setCtx] = useState<any>(null);
+  const [details, setDetails] = useState<CalendarEntryDetails | null>(null);
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const seq = useRef(0);
+
+  const load = async () => {
+    const my = ++seq.current;
+    const c = await get({ data: { source, id } });
+    const urls: Record<string, string> = {};
+    await Promise.all((c.photos ?? []).map(async (p: any) => { urls[p.photo_url] = await resolveTripPhotoUrl(p.photo_url); }));
+    const det = await getDetails({ data: { kind: source, id } }).catch(() => null);
+    if (my !== seq.current) return; // veraltete Antwort verwerfen
+    setPhotoUrls(urls);
+    setDetails(det);
+    setCtx(c);
+  };
+  useEffect(() => {
+    setCtx(null);
+    setDetails(null);
+    setPhotoUrls({});
+    load().catch((e) => toast.error(e instanceof Error ? e.message : "Laden fehlgeschlagen"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, id]);
+
+  if (!ctx) return <p className="text-sm text-muted-foreground">Lädt …</p>;
+  return (
+    <DepositEditor
+      key={`${source}:${id}:${ctx.review?.revision ?? 0}:${ctx.review?.status ?? "none"}`}
+      source={source}
+      id={id}
+      ctx={ctx}
+      details={details}
+      photoUrls={photoUrls}
+      onBack={onBack}
+      onReload={load}
+      onCtx={setCtx}
+    />
+  );
+}
+
+function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, onCtx }: {
+  source: "booking" | "manual"; id: string; ctx: any; details: CalendarEntryDetails | null;
+  photoUrls: Record<string, string>; onBack: () => void; onReload: () => Promise<void>; onCtx: (c: any) => void;
+}) {
   const save = useServerFn(saveDepositDraftFn);
   const preview = useServerFn(previewDepositMailFn);
   const recordDeposit = useServerFn(recordManualDepositFn);
@@ -73,48 +124,30 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
   const cont = useServerFn(continueDepositFn);
   const refresh = useServerFn(refreshDepositFn);
   const confirmPayout = useServerFn(confirmManualPayoutFn);
-  const getDetails = useServerFn(getCalendarEntryDetails);
-  const [ctx, setCtx] = useState<any>(null);
-  const [details, setDetails] = useState<CalendarEntryDetails | null>(null);
-  const [sel, setSel] = useState(emptySel());
-  const [msg, setMsg] = useState("");
+  const [sel, setSel] = useState(() => {
+    const s = emptySel();
+    for (const it of (ctx.review?.items ?? []) as DraftItem[]) {
+      s[it.type] = { checked: true, quantity: String(it.quantity ?? 1), amount: it.amount_cents != null ? toEuro(it.amount_cents) : "", reason: it.reason ?? "" };
+    }
+    return s;
+  });
+  const [msg, setMsg] = useState(ctx.review?.customer_message ?? "");
   const [busy, setBusy] = useState(false);
   const [mail, setMail] = useState<{ html: string; subject: string; to: string | null } | null>(null);
-  const [savedKey, setSavedKey] = useState<string | null>(null);
-  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [depAmount, setDepAmount] = useState("");
   const [depMethod, setDepMethod] = useState("cash");
   const [payMethod, setPayMethod] = useState("cash");
-  const [refundInput, setRefundInput] = useState("");
+  // Gespeicherter Override bleibt nach Speichern/Neuladen sichtbar und wirksam.
+  const [savedOverride] = useState<number | null>(ctx.review?.refund_override_cents ?? null);
+  const [refundInput, setRefundInput] = useState(ctx.review?.refund_override_cents != null ? toEuro(ctx.review.refund_override_cents) : "");
   const [refundTouched, setRefundTouched] = useState(false);
-  const [adjustReason, setAdjustReason] = useState("");
-  const [sendMail, setSendMail] = useState(false);
-
-  const load = async () => {
-    const c = await get({ data: { source, id } });
-    setCtx(c);
-    const s = emptySel();
-    for (const it of (c.review?.items ?? []) as DraftItem[]) {
-      s[it.type] = { checked: true, quantity: String(it.quantity ?? 1), amount: it.amount_cents != null ? toEuro(it.amount_cents) : "", reason: it.reason ?? "" };
-    }
-    setSel(s);
-    setMsg(c.review?.customer_message ?? "");
-    setSendMail(c.review?.send_closing_mail === true);
-    setAdjustReason(c.review?.adjustment_reason ?? "");
-    setRefundTouched(false);
-    setRefundInput(c.review?.refund_override_cents != null ? toEuro(c.review.refund_override_cents) : "");
-    setSavedKey(c.review ? draftKey((c.review.items ?? []) as DraftItem[], c.review.customer_message, {
-      refundCents: c.review.refund_override_cents ?? null,
-      reason: c.review.adjustment_reason ?? null,
-      sendMail: c.review.send_closing_mail === true,
-    }) : null);
-    const urls: Record<string, string> = {};
-    await Promise.all((c.photos ?? []).map(async (p: any) => { urls[p.photo_url] = await resolveTripPhotoUrl(p.photo_url); }));
-    setPhotoUrls(urls);
-    // Ausweis, Führerschein und weitere Dokumente über den sicheren, ID-basierten Adminweg.
-    getDetails({ data: { kind: source, id } }).then(setDetails).catch(() => setDetails(null));
-  };
-  useEffect(() => { load().catch((e) => toast.error(e instanceof Error ? e.message : "Laden fehlgeschlagen")); }, [source, id]);
+  const [adjustReason, setAdjustReason] = useState(ctx.review?.adjustment_reason ?? "");
+  const [sendMail, setSendMail] = useState(ctx.review?.send_closing_mail === true);
+  const [savedKey, setSavedKey] = useState<string | null>(ctx.review ? draftKey((ctx.review.items ?? []) as DraftItem[], ctx.review.customer_message, {
+    refundCents: ctx.review.refund_override_cents ?? null,
+    reason: ctx.review.adjustment_reason ?? null,
+    sendMail: ctx.review.send_closing_mail === true,
+  }) : null);
 
   const draftItems = useMemo((): { items: DraftItem[]; error: string | null } => {
     const out: DraftItem[] = [];
@@ -134,7 +167,6 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
     return { items: out, error: null };
   }, [sel]);
 
-  if (!ctx) return <p className="text-sm text-muted-foreground">Lädt …</p>;
   const finalized = ctx.review?.status === "finalized";
   const dep: number | null = ctx.depositCents;
   const lineOf = (t: DeductionType): number => {
@@ -147,11 +179,11 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
   };
   const total = TYPES.filter((t) => sel[t].checked).reduce((s, t) => s + lineOf(t), 0);
   const suggestedRefund = dep == null ? 0 : Math.max(0, dep - Math.min(total, dep));
-  const applied = dep == null ? 0 : Math.min(total, dep);
-  const outstanding = total - applied;
+  const outstanding = Math.max(0, total - (dep ?? 0));
 
   // Frei bestätigter Rückzahlungsbetrag: Vorschlag = Kaution minus Abzüge, editierbar.
-  const refundCents = refundTouched ? toCents(refundInput) : suggestedRefund;
+  // Ein gespeicherter Override gilt auch ohne erneutes Bearbeiten weiter.
+  const refundCents = refundTouched ? toCents(refundInput) : (savedOverride ?? suggestedRefund);
   const deviates = refundCents != null && refundCents !== suggestedRefund;
   const refundError =
     refundCents == null ? "Rückzahlungsbetrag ungültig"
@@ -159,9 +191,14 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
     : deviates && adjustReason.trim().length < 3 ? "Abweichender Betrag: bitte die Anpassung begründen (z. B. Kulanz oder zusätzlicher Abzug)"
     : null;
   const refund = finalized ? ctx.review.final_refund_cents : (refundCents ?? 0);
+  const appliedEff = dep == null ? 0 : dep - (finalized ? ctx.review.final_refund_cents : (refundCents ?? 0));
+  const adjCents = finalized
+    ? ctx.review.final_deduct_applied_cents - Math.min(ctx.review.final_deduct_total_cents, ctx.review.final_deposit_cents)
+    : appliedEff - Math.min(total, dep ?? 0);
+  const adjReasonShown = finalized ? ctx.review.adjustment_reason : adjustReason.trim();
 
   const adjust = {
-    refundCents: refundTouched ? refundCents : null,
+    refundCents: refundCents != null && refundCents !== suggestedRefund ? refundCents : null,
     reason: adjustReason.trim() || null,
     sendMail,
   };
@@ -178,7 +215,7 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
     if (draftItems.error) throw new Error(draftItems.error);
     if (refundError) throw new Error(refundError);
     await save({ data: { source, id, revision: ctx.review?.revision ?? null, items: draftItems.items, message: msg, adjust } });
-    await load();
+    await onReload();
   }, "Entwurf gespeichert (kein Geld bewegt, keine Mail)");
   const doPreview = () => run(async () => {
     if (draftItems.error) throw new Error(draftItems.error);
@@ -269,7 +306,7 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
               <option value="cash">Bar</option><option value="transfer">Überweisung</option><option value="sumup">SumUp</option><option value="other">Sonstiges</option><option value="none">Keine Kaution</option>
             </select>
           </div>
-          <button disabled={busy} onClick={() => run(async () => { const c = toCents(depAmount || "0"); if (c == null) throw new Error("Betrag ungültig"); await recordDeposit({ data: { source, id, cents: c, method: depMethod } }); await load(); }, "Kaution erfasst")} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">Kaution speichern</button>
+          <button disabled={busy} onClick={() => run(async () => { const c = toCents(depAmount || "0"); if (c == null) throw new Error("Betrag ungültig"); await recordDeposit({ data: { source, id, cents: c, method: depMethod } }); await onReload(); }, "Kaution erfasst")} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">Kaution speichern</button>
         </div>
       )}
 
@@ -300,7 +337,15 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
         <textarea value={msg} onChange={(e) => setMsg(e.target.value)} disabled={finalized} placeholder="Zusätzliche Nachricht an den Kunden (optional)" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" rows={3} />
         <div className="text-sm space-y-1">
           <div className="flex justify-between"><span>Kaution</span><strong>{dep == null ? "nicht erfasst" : eur(dep)}</strong></div>
-          <div className="flex justify-between"><span>Abzug gesamt</span><strong>{eur(finalized ? ctx.review.final_deduct_total_cents : total)}</strong></div>
+          <div className="flex justify-between"><span>Abzüge (Positionen)</span><strong>{eur(finalized ? ctx.review.final_deduct_total_cents : total)}</strong></div>
+          {adjCents !== 0 && (
+            <div className="flex justify-between">
+              <span>{adjCents < 0 ? "Kulanz (Erlass)" : "Zusätzlicher Abzug"}</span>
+              <strong>{adjCents < 0 ? `−${eur(-adjCents)}` : `+${eur(adjCents)}`}{adjReasonShown ? ` · ${adjReasonShown}` : ""}</strong>
+            </div>
+          )}
+          <div className="flex justify-between"><span>Verrechnet mit Kaution</span><strong>{eur(finalized ? ctx.review.final_deduct_applied_cents : appliedEff)}</strong></div>
+          <div className="flex justify-between"><span>Rückzahlung</span><strong>{eur(refund)}</strong></div>
           {(finalized ? ctx.review.final_outstanding_cents : outstanding) > 0 && <div className="flex justify-between"><span>Offene Restforderung (keine automatische Abbuchung)</span><strong>{eur(finalized ? ctx.review.final_outstanding_cents : outstanding)}</strong></div>}
         </div>
         {!finalized && dep != null && (
@@ -308,7 +353,7 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
             <label className="text-sm font-semibold">Wie viel Kaution möchtest du zurückzahlen?</label>
             <div className="flex items-center gap-2">
               <input
-                value={refundTouched ? refundInput : toEuro(suggestedRefund)}
+                value={refundTouched ? refundInput : toEuro(savedOverride ?? suggestedRefund)}
                 onChange={(e) => { setRefundTouched(true); setRefundInput(e.target.value); }}
                 inputMode="decimal"
                 className="w-32 rounded-lg border border-border bg-background px-3 py-2 text-sm"
@@ -318,7 +363,7 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
             {deviates && (
               <input value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder="Begründung der Anpassung (Pflicht), z. B. Kulanz oder zusätzlicher Abzug" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
             )}
-            {refundError && refundTouched && <p className="text-xs font-semibold">{refundError}</p>}
+            {refundError && (refundTouched || deviates) && <p className="text-xs font-semibold">{refundError}</p>}
           </div>
         )}
         {!finalized && (
@@ -347,7 +392,7 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
           <h3 className="text-sm font-semibold">Kaution abschließen</h3>
           <p className="text-sm">Abschluss für <strong>{ctx.customerName}</strong> mit Rückzahlung <strong>{eur(refund)}</strong>{source === "booking" ? " auf die Originalzahlung (nur Kautionsanteil)" : " (manuell, separate Bestätigung)"}. Gilt für den zuletzt gespeicherten Entwurf.{sendMail ? " Die Kundenmail ist eingeschaltet." : " Es wird keine Kundenmail gesendet."}</p>
           {dirty && <p className="text-xs font-semibold">Ungespeicherte Änderungen: bitte zuerst „Entwurf speichern“. Abgeschlossen wird nur der gespeicherte Entwurf.</p>}
-          <button disabled={busy || dirty} onClick={() => run(async () => { setCtx(await finalize({ data: { source, id, revision: ctx.review.revision, confirmName: ctx.customerName, confirmRefundCents: refund } })); }, "Abschluss gespeichert")} className="w-full rounded-full bg-foreground text-background py-2.5 text-sm font-semibold disabled:opacity-50">
+          <button disabled={busy || dirty} onClick={() => run(async () => { onCtx(await finalize({ data: { source, id, revision: ctx.review.revision, confirmName: ctx.customerName, confirmRefundCents: refund } })); }, "Abschluss gespeichert")} className="w-full rounded-full bg-foreground text-background py-2.5 text-sm font-semibold disabled:opacity-50">
             {refund === 0 ? `Kaution von ${ctx.customerName} vollständig einbehalten und abschließen` : source === "manual" ? `Abschließen: ${eur(refund)} an ${ctx.customerName} manuell auszahlen` : `${eur(refund)} an ${ctx.customerName} zurückzahlen und abschließen`}
           </button>
         </div>
@@ -363,16 +408,16 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
           )}
           <p>Kundenmail: {ctx.review.send_closing_mail === false ? "vom Admin ausgeschaltet" : ctx.closingMail ? `${MAIL_STATE_DE[ctx.closingMail.status] ?? ctx.closingMail.status}${ctx.closingMail.blocked_reason ? ` · ${ctx.closingMail.blocked_reason}` : ""}` : "noch nicht erstellt (erst bei bestätigtem oder beauftragtem Zahlungsstand)"}</p>
           <div className="flex flex-wrap gap-2">
-            {source === "booking" && !settlement && <button disabled={busy} onClick={() => run(async () => setCtx(await cont({ data: { source, id } })), "Fortgesetzt")} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">Rückzahlung fortsetzen (gleicher Auftrag)</button>}
-            {source === "booking" && settlement?.status === "processing" && <button disabled={busy} onClick={() => run(async () => setCtx(await cont({ data: { source, id } })), "Erneut versucht")} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">Erneut versuchen (gleicher Key)</button>}
-            <button disabled={busy} onClick={() => run(async () => setCtx(await refresh({ data: { source, id } })), "Status abgeglichen")} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">Status abgleichen</button>
+            {source === "booking" && !settlement && <button disabled={busy} onClick={() => run(async () => onCtx(await cont({ data: { source, id } })), "Fortgesetzt")} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">Rückzahlung fortsetzen (gleicher Auftrag)</button>}
+            {source === "booking" && settlement?.status === "processing" && <button disabled={busy} onClick={() => run(async () => onCtx(await cont({ data: { source, id } })), "Erneut versucht")} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">Erneut versuchen (gleicher Key)</button>}
+            <button disabled={busy} onClick={() => run(async () => onCtx(await refresh({ data: { source, id } })), "Status abgeglichen")} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">Status abgleichen</button>
           </div>
           {source === "manual" && ctx.review.manual_payout_status === "open" && (
             <div className="flex gap-2 pt-2">
               <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)} className="rounded-lg border border-border bg-background px-2 text-sm">
                 <option value="cash">Bar</option><option value="transfer">Überweisung</option><option value="sumup">SumUp</option><option value="other">Sonstiges</option>
               </select>
-              <button disabled={busy} onClick={() => run(async () => setCtx(await confirmPayout({ data: { source, id, method: payMethod, confirmRefundCents: ctx.review.final_refund_cents } })), "Rückzahlung bestätigt")} className="flex-1 rounded-full bg-foreground text-background py-2 text-xs font-semibold">{eur(ctx.review.final_refund_cents)} an {ctx.customerName} ausgezahlt bestätigen</button>
+              <button disabled={busy} onClick={() => run(async () => onCtx(await confirmPayout({ data: { source, id, method: payMethod, confirmRefundCents: ctx.review.final_refund_cents } })), "Rückzahlung bestätigt")} className="flex-1 rounded-full bg-foreground text-background py-2 text-xs font-semibold">{eur(ctx.review.final_refund_cents)} an {ctx.customerName} ausgezahlt bestätigen</button>
             </div>
           )}
         </div>
