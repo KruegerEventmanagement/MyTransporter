@@ -417,11 +417,11 @@ describe("Erinnerungskandidaten (Auswahl vor dem Limit)", () => {
 
 describe("Dokumentationspauschale: nachgereichte Fotos", () => {
   it("alle Pflichtnachweise vorhanden + alter 'nicht bereitgestellt'-Hinweis => keine Pauschale", () => {
-    const f = { ...facts(), missingTags: [] as string[], exceptions: [{ type: "not_provided", tag: "post_fuel_receipt" }] };
-    expect(documentationFeeAllowed(f as never).allowed).toBe(false);
+    const f = facts({ missingTags: [], exceptions: { post_fuel_receipt: "Kunde gab an, den Beleg nicht bereitgestellt zu haben" } });
+    expect(documentationFeeAllowed(f).allowed).toBe(false);
   });
   it("fehlende Nachweise + 'nicht bereitgestellt' => Pauschale zulässig", () => {
-    const f = { ...facts(), missingTags: ["post_fuel_receipt"], exceptions: [{ type: "not_provided", tag: "post_fuel_receipt" }] };
-    expect(documentationFeeAllowed(f as never).allowed).toBe(true);
+    const f = facts({ missingTags: ["post_fuel_receipt"], exceptions: { post_fuel_receipt: "Kunde gab an, den Beleg nicht bereitgestellt zu haben" } });
+    expect(documentationFeeAllowed(f).allowed).toBe(true);
   });
 });
