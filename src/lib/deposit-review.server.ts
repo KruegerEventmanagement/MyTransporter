@@ -354,12 +354,6 @@ export async function depositMailPrecheck(row: OutboxRow): Promise<string | null
     throw e;
   }
   const text = (row.payload as { text?: string } | null)?.text ?? "";
-  if (row.kind === "deposit_review_admin") {
-    return adminMailStillValid({
-      bookingStatus: ctx.status, depositStatus: ctx.depositStatus, reviewFinalized: ctx.review?.status === "finalized",
-      endMs: ctx.endMs, returnReportedMs: ctx.returnReportedMs, nowMs: Date.now(), frozenText: text,
-    });
-  }
   const stop = closingMailStillValid({
     reviewFinalized: ctx.review?.status === "finalized", payout: payoutStateFor(ctx),
     refundCents: ctx.review?.final_refund_cents ?? null, frozenText: text,
