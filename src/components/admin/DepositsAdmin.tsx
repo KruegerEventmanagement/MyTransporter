@@ -5,7 +5,7 @@ import {
   listOpenDepositsFn, getDepositReviewFn, saveDepositDraftFn, previewDepositMailFn, recordManualDepositFn,
   finalizeDepositFn, continueDepositFn, refreshDepositFn, confirmManualPayoutFn,
 } from "@/lib/deposit-review.functions";
-import { DEDUCTION_DEFS, PHOTO_CHECKLIST, berlinStamp, eur, type DeductionType, type DraftItem } from "@/lib/deposit-review";
+import { DEDUCTION_DEFS, PHOTO_CHECKLIST, SETTLEMENT_STATE_DE, MAIL_STATE_DE, berlinStamp, draftKey, eur, type DeductionType, type DraftItem } from "@/lib/deposit-review";
 import { parseEuroToCents } from "@/lib/money-input";
 import { resolveTripPhotoUrl } from "@/lib/trip-photos";
 
@@ -62,7 +62,7 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [mail, setMail] = useState<{ html: string; subject: string; to: string | null } | null>(null);
-  const [confirmName, setConfirmName] = useState("");
+  const [savedKey, setSavedKey] = useState<string | null>(null);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [depAmount, setDepAmount] = useState("");
   const [depMethod, setDepMethod] = useState("cash");
@@ -77,6 +77,7 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
     }
     setSel(s);
     setMsg(c.review?.customer_message ?? "");
+    setSavedKey(c.review ? draftKey((c.review.items ?? []) as DraftItem[], c.review.customer_message) : null);
     const urls: Record<string, string> = {};
     await Promise.all((c.photos ?? []).filter((p: any) => p.photo_type.startsWith("post_") || p.photo_type === "tank_receipt").map(async (p: any) => { urls[p.photo_url] = await resolveTripPhotoUrl(p.photo_url); }));
     setPhotoUrls(urls);
@@ -100,6 +101,11 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
     }
     return { items: out, error: null };
   }, [sel]);
+
+  const currentKey = draftItems.error ? null : draftKey(draftItems.items, msg);
+  const dirty = savedKey == null || currentKey !== savedKey;
+  // Jede Änderung macht die Vorschau ungültig.
+  useEffect(() => { setMail(null); }, [currentKey]);
 
   if (!ctx) return <p className="text-sm text-muted-foreground">Lädt …</p>;
   const finalized = ctx.review?.status === "finalized";
@@ -215,12 +221,12 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
         {!finalized && (
           <div className="grid grid-cols-2 gap-2">
             <button disabled={busy} onClick={doSave} className="rounded-full border border-border py-2 text-sm font-semibold">Entwurf speichern</button>
-            <button disabled={busy || dep == null} onClick={doPreview} className="rounded-full border border-border py-2 text-sm font-semibold">Mailvorschau</button>
+            <button disabled={busy || dep == null || dirty} title={dirty ? "Erst speichern" : undefined} onClick={doPreview} className="rounded-full border border-border py-2 text-sm font-semibold">Mailvorschau</button>
           </div>
         )}
       </div>
 
-      {mail && (
+      {mail && !dirty && (
         <div className="rounded-2xl border border-border bg-card p-3 space-y-2">
           <p className="text-xs">Vorschau an {mail.to ?? "keine Adresse"} · {mail.subject}</p>
           <iframe title="Mailvorschau" srcDoc={mail.html} sandbox="" className="w-full h-[480px] rounded-lg border border-border bg-background" />
@@ -231,9 +237,9 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
         <div className="rounded-2xl border-2 border-foreground p-4 space-y-2">
           <h3 className="text-sm font-semibold">Kaution abschließen</h3>
           <p className="text-sm">Abschluss für <strong>{ctx.customerName}</strong> mit Rückzahlung <strong>{eur(refund)}</strong>{source === "booking" ? " auf die Originalzahlung (nur Kautionsanteil)" : " (manuell, separate Bestätigung)"}. Gilt für den zuletzt gespeicherten Entwurf.</p>
-          <input value={confirmName} onChange={(e) => setConfirmName(e.target.value)} placeholder={`Zur Bestätigung Namen eintippen: ${ctx.customerName}`} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-          <button disabled={busy || confirmName.trim() !== ctx.customerName.trim()} onClick={() => run(async () => { setCtx(await finalize({ data: { source, id, revision: ctx.review.revision, confirmName, confirmRefundCents: refund } })); }, "Abschluss gespeichert")} className="w-full rounded-full bg-foreground text-background py-2.5 text-sm font-semibold disabled:opacity-50">
-            {eur(refund)} an {ctx.customerName} zurückzahlen und abschließen
+          {dirty && <p className="text-xs font-semibold">Ungespeicherte Änderungen: bitte zuerst „Entwurf speichern“. Abgeschlossen wird nur der gespeicherte Entwurf.</p>}
+          <button disabled={busy || dirty} onClick={() => run(async () => { setCtx(await finalize({ data: { source, id, revision: ctx.review.revision, confirmName: ctx.customerName, confirmRefundCents: refund } })); }, "Abschluss gespeichert")} className="w-full rounded-full bg-foreground text-background py-2.5 text-sm font-semibold disabled:opacity-50">
+            {refund === 0 ? `Kaution von ${ctx.customerName} vollständig einbehalten und abschließen` : source === "manual" ? `Abschließen: ${eur(refund)} an ${ctx.customerName} manuell auszuzahlen` : `${eur(refund)} an ${ctx.customerName} zurückzahlen und abschließen`}
           </button>
         </div>
       )}
@@ -242,11 +248,11 @@ function DepositDetail({ source, id, onBack }: { source: "booking" | "manual"; i
         <div className="rounded-2xl border border-border bg-card p-4 space-y-2 text-sm">
           <h3 className="font-semibold">Status</h3>
           {source === "booking" ? (
-            <p>Stripe: {settlement ? `${settlement.status}${settlement.failure_reason ? ` · ${settlement.failure_reason}` : ""}` : "Auftrag noch nicht angelegt"}</p>
+            <p>Stripe: {settlement ? `${SETTLEMENT_STATE_DE[settlement.status] ?? settlement.status}${settlement.failure_reason ? ` · ${settlement.failure_reason}` : ""}` : "Auftrag noch nicht angelegt"}</p>
           ) : (
             <p>Manuelle Rückzahlung: {ctx.review.manual_payout_status === "confirmed" ? `bestätigt (${ctx.review.manual_payout_method})` : ctx.review.manual_payout_status === "open" ? "offen" : "nicht erforderlich"}</p>
           )}
-          <p>Kundenmail: {ctx.closingMail ? `${ctx.closingMail.status}${ctx.closingMail.blocked_reason ? ` · ${ctx.closingMail.blocked_reason}` : ""}` : "noch nicht erstellt (erst bei bestätigtem oder beauftragtem Zahlungsstand)"}</p>
+          <p>Kundenmail: {ctx.closingMail ? `${MAIL_STATE_DE[ctx.closingMail.status] ?? ctx.closingMail.status}${ctx.closingMail.blocked_reason ? ` · ${ctx.closingMail.blocked_reason}` : ""}` : "noch nicht erstellt (erst bei bestätigtem oder beauftragtem Zahlungsstand)"}</p>
           <div className="flex flex-wrap gap-2">
             {source === "booking" && !settlement && <button disabled={busy} onClick={() => run(async () => setCtx(await cont({ data: { source, id } })), "Fortgesetzt")} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">Rückzahlung fortsetzen (gleicher Auftrag)</button>}
             {source === "booking" && settlement?.status === "processing" && <button disabled={busy} onClick={() => run(async () => setCtx(await cont({ data: { source, id } })), "Erneut versucht")} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">Erneut versuchen (gleicher Key)</button>}

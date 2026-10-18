@@ -89,7 +89,7 @@ export const DEDUCTION_DEFS: Record<DeductionType, Def> = {
   },
   documentation_fee: {
     label: "Bearbeitungspauschale fehlende Nachweise",
-    source: "documentation-fee.ts: 30 € nur nach manueller Prüfung, nie bei technischen Problemen",
+    source: "Rückgabehinweis / Bearbeitungspauschale: 30 € nur nach manueller Prüfung, nie bei technischen Problemen",
     customerText: "Bearbeitungspauschale für fehlende Fahrzeugdokumentation bei der Rückgabe",
     mode: "fixed",
     unitCents: DOCUMENTATION_FEE_EUR * 100,
@@ -97,7 +97,7 @@ export const DEDUCTION_DEFS: Record<DeductionType, Def> = {
   },
   extra_km: {
     label: "Mehrkilometer",
-    source: "Gebuchter Kilometer-Snapshot (extra_km_charge_cents)",
+    source: "Bei Buchung vereinbarter Kilometerpreis",
     customerText: "Mehrkilometer zum bei der Buchung vereinbarten Kilometerpreis",
     mode: "snapshot",
     reasonRequired: false,
@@ -185,7 +185,7 @@ export function priceItems(raw: unknown, facts: ReviewFacts, opts: { frozen?: bo
         break;
       case "snapshot":
         if (opts.frozen) {
-          if (!isCents(it.amount_cents) || !it.amount_cents) throw new Error("Mehrkilometer-Snapshot fehlt");
+          if (!isCents(it.amount_cents) || !it.amount_cents) throw new Error("Mehrkilometer-Betrag fehlt");
           amount = it.amount_cents;
           line = amount;
           break;
@@ -274,7 +274,7 @@ const RULES_SUMMARY = [
   "Fehlender Kraftstoff: tatsächliche Tankkosten + 20 € Servicegebühr (AGB §5)",
   "Reinigung, Zubehör, Schäden: nach tatsächlichem Aufwand mit Begründung (AGB §3/§9)",
   "Fehlende Nachweise: 30 € nur nach manueller Prüfung, nie bei technischen Problemen",
-  "Mehrkilometer: nur aus dem gebuchten Snapshot, nicht wenn bereits separat bezahlt",
+  "Mehrkilometer: nur zum bei Buchung vereinbarten Kilometerpreis, nicht wenn bereits separat bezahlt",
 ];
 
 export function buildAdminReviewMail(i: AdminMailInput): FrozenOutboxMail {
@@ -430,3 +430,87 @@ export function berlinDateAndHour(ms: number): { date: string; hour: number } {
 }
 
 export const DIGEST_HOUR_BERLIN = 10;
+
+export const SETTLEMENT_STATE_DE: Record<string, string> = {
+  processing: "Ergebnis unklar, gleicher Auftrag wird abgeglichen",
+  pending: "Stripe ausstehend",
+  requires_action: "Stripe benötigt eine Aktion",
+  needs_review: "Manuell prüfen",
+  failed: "Rückzahlung fehlgeschlagen",
+  canceled: "Rückzahlung abgebrochen",
+  succeeded: "Von Stripe bestätigt",
+  no_refund: "Vollständig einbehalten",
+};
+
+export const MAIL_STATE_DE: Record<string, string> = {
+  scheduled: "geplant", processing: "wird versendet", sent: "von Gmail angenommen", failed: "fehlgeschlagen, wird erneut versucht",
+  needs_review: "unklar, manuell prüfen", blocked: "gesperrt", cancelled: "abgebrochen",
+};
+
+type SettlementLite = { id: string; status: string };
+
+/**
+ * Offener Status einer Online-Kaution; null nur bei bestätigtem Erfolg/no_refund
+ * bzw. Altabschluss ohne Auftrag. Fehlerstatus bleiben offen (kein automatischer Neuversuch).
+ */
+export function bookingDepositState(
+  review: { status: string; settlement_id: string | null } | null,
+  settlements: SettlementLite[],
+  depositStatus: string | null,
+): string | null {
+  if (review?.status === "finalized") {
+    if (!review.settlement_id) return "Abschluss: Rückzahlung fortsetzen";
+    const s = settlements.find((x) => x.id === review.settlement_id);
+    if (!s) return "Verknüpfung ungültig: manuell prüfen";
+    if (s.status === "succeeded" || s.status === "no_refund") return null;
+    return SETTLEMENT_STATE_DE[s.status] ?? "Manuell prüfen";
+  }
+  const active = settlements.find((x) => !["failed", "canceled"].includes(x.status));
+  if (active) return active.status === "succeeded" || active.status === "no_refund" ? null : SETTLEMENT_STATE_DE[active.status] ?? "Manuell prüfen";
+  const bad = settlements.find((x) => x.status === "failed" || x.status === "canceled");
+  if (bad) return SETTLEMENT_STATE_DE[bad.status];
+  if (depositStatus === "released") return null;
+  return review ? "Entwurf" : "Ungeprüft";
+}
+
+/** Vor (erneutem) Versand der Kundenmail: aktuelle Fakten müssen den eingefrorenen Inhalt noch tragen. */
+export function closingMailStillValid(i: { reviewFinalized: boolean; payout: PayoutState | null; refundCents: number | null; frozenText: string }): string | null {
+  if (!i.reviewFinalized) return "Kaution nicht abgeschlossen";
+  if (!i.payout) return "Zahlungsstand geändert oder fehlgeschlagen: Mail nicht gesendet";
+  if (i.refundCents == null || !i.frozenText.includes(`Rückzahlung: ${eur(i.refundCents)}`)) return "Betrag passt nicht zum Abschluss: Mail nicht gesendet";
+  if (i.frozenText.includes("bestätigt") && i.payout.kind === "stripe_pending") return "Zahlungsstand passt nicht: Mail nicht gesendet";
+  return null;
+}
+
+/** Vor (erneutem) Versand des Adminhinweises: Quelle noch fällig, offen und unverändert. */
+export function adminMailStillValid(i: {
+  bookingStatus: string; depositStatus: string | null; reviewFinalized: boolean; endMs: number; returnReportedMs: number | null; nowMs: number; frozenText: string;
+}): string | null {
+  if (i.bookingStatus === "cancelled") return "Buchung storniert";
+  if (i.depositStatus === "released") return "Kaution bereits abgerechnet";
+  if (i.reviewFinalized) return "Kaution bereits abgeschlossen";
+  if (i.returnReportedMs == null && i.endMs > i.nowMs) return "Mietende verschoben, noch nicht fällig";
+  if (!i.frozenText.includes(berlinStamp(i.endMs))) return "Mietzeitraum geändert: veraltete Nachricht";
+  return null;
+}
+
+/** Nur Fotos dieser Buchung mit bestätigtem Storage-Objekt (Typ), keine fremden/ungültigen Pfade, keine öffentlichen URLs. */
+export function safePhotoRows<T extends { photo_type: string; photo_url: string }>(bookingId: string, rows: T[], confirmedTypes: string[]): T[] {
+  const ok = new Set(confirmedTypes);
+  return rows.filter(
+    (r) =>
+      typeof r.photo_url === "string" &&
+      r.photo_url.startsWith(`${bookingId}/`) &&
+      !r.photo_url.includes("..") &&
+      !/^https?:/i.test(r.photo_url) &&
+      ok.has(r.photo_type),
+  );
+}
+
+/** Stabiler Inhaltsschlüssel eines Entwurfs: Abschluss nur, wenn sichtbarer Inhalt == gespeicherter Inhalt. */
+export function draftKey(items: DraftItem[], message: string | null | undefined): string {
+  const norm = items
+    .map((i) => ({ t: i.type, q: i.type === "late_return" ? i.quantity ?? null : null, a: i.type === "extra_km" ? null : i.amount_cents ?? null, r: (i.reason ?? "").trim() }))
+    .sort((a, b) => (a.t + a.r).localeCompare(b.t + b.r));
+  return JSON.stringify({ i: norm, m: (message ?? "").trim() });
+}

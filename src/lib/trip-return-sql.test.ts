@@ -265,3 +265,17 @@ describe("bookings_guard_customer_update (SQL)", () => {
     });
   });
 });
+
+describe("Kautions-Fotovorschau: bestätigte Objekte (SQL-Fixture)", () => {
+  it("nur echtes Bild-Objekt im Buchungsordner zählt; fehlend/fremd/leer nicht", async () => {
+    await as(null);
+    await seed();
+    await photo("post_front");
+    await photo("post_back", { object: false });
+    await photo("post_left", { path: `99999999-2222-3333-4444-555555555555/post_left.jpg` });
+    await photo("post_right", { size: 0 });
+    await photo("post_interior", { mime: "application/pdf" });
+    const r = await db.query<{ t: string[] }>(`SELECT public.trip_confirmed_photo_types($1) AS t`, [B]);
+    expect(r.rows[0]!.t).toEqual(["post_front"]);
+  });
+});

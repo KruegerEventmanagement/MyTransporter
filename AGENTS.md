@@ -1,5 +1,7 @@
 # AGENTS
 
+Subdirectories (android/) have their own AGENTS.md to read before changing files there.
+
 - Kamera/Foto-Helfer liegen in src/lib/image-capture.ts; alle Aufnahmen nutzen sie, damit kein stiller null/0-px-Fehler entsteht.
 - Fahrtfotos speichern über src/lib/trip-photo-store.ts (Upload + bestätigter DB-Eintrag, signierte Vorschau); trip-photos.ts bleibt für bestehende Leser.
 - Page headers use BrandHomeLink for the official home-linked logo, keeping navigation consistent without duplicate logos.
@@ -9,7 +11,7 @@
 - Individuelles Kilometerpaket: einzige Preislogik in src/lib/custom-km.ts (Aufschlag auf unveränderte plan_id, Stripe-Metadata ck*, Webhook übernimmt Snapshot unverändert, addon id km_paket).
 - Admin-Kalenderdetails laufen nur über getCalendarEntryDetails (src/lib/calendar-details.server.ts): Client sendet Art+ID, Server prüft Admin-Rolle, verknüpft Profil/Dokumente nur per user_id bzw. reservation_id und signiert kurzfristig; damit nie fremde Pfade oder Kunden vertauscht werden.
 - Aktive Miete: Auswahl/Phase in src/lib/active-trip.ts, Zeitfenster über src/lib/trip-time.ts (Spiegel von plan_end_at); Rückgabe nur über die DB-Funktion report_trip_return (Fotos nur mit echtem Storage-Objekt, Mehrkilometer aus Buchungs-Snapshots, idempotenter return_code) und Trigger bookings_guard_customer_update sperrt sensible Fahrtfelder für Kunden; 10-min-Push nur über eigenen Hook return-reminders (Minutenjob).
-- Native App: Capacitor bündelt die SPA-Shell aus `bun run build:native` (MT_NATIVE=1, dist-native), kein server.url; Server-Funktionen gehen über src/lib/native/remote-fetch.ts an die öffentliche Origin mit CORS nur für App-Origins (src/lib/native/cors.ts), native Push-Tokens getrennt in native_push_tokens; Server-Funktions-IDs bleiben Compiler-Default, native API-Origin ist kanonisch https://mytransporter.org (www leitet um), CORS auch auf Fehlerantworten; Android-Release nur über .github/workflows/android.yml mit Env-Signierung und Play-Upload, iOS-CI deaktiviert.
+- Native App (Capacitor, remote-fetch, CORS, Android-CI): siehe android/AGENTS.md.
 - Awin nur aus src/lib/affiliate.ts auf /werbeflaeche (noindex,follow, ohne AdSense, nicht in Sitemap); nie anderswo oder als Anzeigen-Fallback.
 - AdSense-Plätze/Allowlist nur in src/lib/ad-placements.ts (gemeinsam für CMP+Slots, unbekannte Pfade fail-closed, max. 2 Rails je Seite + 2 In-Flow, mobil max. 2); Flags/IDs in adsense.ts nur mit externem Nachweis, fehlende ID sperrt nur ihren Slot; Laden nur bei Konfiguration+Einwilligung+Viewport, nie nativ, Auto Ads aus; Direktplätze nur als Anfrage über web-ad-inquiry (Erfolg nur bei bestätigtem Speichern/Mail); damit Buchung nie von Werbung abhängt.
 - Belegarchiv: jede erzeugte Rechnung/jedes Angebot läuft über archiveIssuedDocument (src/lib/document-archive.server.ts) in issued_documents (Update/Delete per Trigger gesperrt) + privaten Bucket issued-documents; Buchungsrechnungen behalten die Erstfassung, manuelle Dokumente bekommen bei Inhaltsänderung neue Revisionen; Health-Checks rendern mit archive:false; damit Belege unveränderlich bleiben.
@@ -20,4 +22,4 @@
 - Eigenwerbung/AdSense ab Wizard-Schritt 1 aus.
 - Kundenbestätigung manueller Termine nur via manual-confirmation.server.ts (Absicht im Save, Payload je Revision eingefroren, Fencing-RPCs, Erfolg nur mit Provider-ID); Abholort = PICKUP_ADDRESS, nicht Geschäftsadresse.
 - Mail: immutable provider/Gmail fence; backfill same key; legacy untouched; unknown never replay. Local drafts never import senders, preventing sends.
-- Kautionsabschluss nur über src/lib/deposit-review(.server).ts: Entwurf (Revision, kein Geld/keine Mail), bewusster Abschluss via RPC finalize_deposit_review (Buchungslock, Trigger sperrt parallelen Storno), Stripe nur über requestDepositSettlement mit Key review-<id>, Mails (deposit_review_admin/deposit_digest/deposit_closing) nur über die Outbox im 5-Minuten-Job; damit nie Doppelerstattung und Mailretry nie Stripe ruft.
+- Kautionsabschluss nur über src/lib/deposit-review(.server).ts: Entwurf (Revision, kein Geld/keine Mail), bewusster Abschluss via RPC finalize_deposit_review (Buchungslock, Trigger sperrt parallelen Storno), Stripe nur über requestDepositSettlement mit Key review-<id>, Mails (deposit_review_admin/deposit_digest/deposit_closing) nur über die Outbox im 5-Minuten-Job; nie Doppelerstattung, Mailretry ruft nie Stripe.

@@ -178,6 +178,9 @@ export async function executeSettlement(d: Deps, input: SettlementRow, opts: { m
 
   if (row.refund_cents === 0 && row.kind !== "legacy") {
     if (row.status === "no_refund") return row;
+    // Auch vollständig einbehaltene Kaution nur mit belegter, eingegangener Originalzahlung.
+    const v = await verifyOriginalPayment(d, row);
+    if (!v.ok) return d.store.updateSettlement(row.id, { status: "needs_review", failure_reason: v.reason, last_synced_at: at });
     const updated = await d.store.updateSettlement(row.id, { status: "no_refund", confirmed_at: at, last_synced_at: at, failure_reason: null });
     await applyBookingState(d, updated);
     return updated;
@@ -208,24 +211,8 @@ export async function executeSettlement(d: Deps, input: SettlementRow, opts: { m
     return d.store.updateSettlement(row.id, { last_synced_at: at });
   }
 
-  // Fremde/frühere Erstattungen auf der Originalzahlung berücksichtigen.
-  const pi = await d.stripe.retrievePaymentIntent(row.environment, row.payment_intent_id);
-  if (!pi) return d.store.updateSettlement(row.id, { status: "needs_review", failure_reason: "Originalzahlung in der gespeicherten Umgebung nicht gefunden", last_synced_at: at });
-  if (pi.status !== "succeeded" || (pi.currency && pi.currency.toLowerCase() !== "eur")) {
-    // z. B. requires_capture einer gemeinsamen Miet-/Kautionszahlung: nie stornieren/teilerfassen.
-    return d.store.updateSettlement(row.id, { status: "needs_review", failure_reason: `Originalzahlung nicht eindeutig erstattbar (Status ${pi.status}, Währung ${pi.currency ?? "?"}): manuell prüfen`, last_synced_at: at });
-  }
-  const alreadyRefunded = refunds
-    .filter((r) => r.status !== "failed" && r.status !== "canceled")
-    .reduce((s, r) => s + r.amount, 0);
-  const remaining = pi.amount_received - alreadyRefunded;
-  if (row.refund_cents > remaining) {
-    return d.store.updateSettlement(row.id, {
-      status: "needs_review",
-      failure_reason: `Erstattbarer Rest der Zahlung (${(remaining / 100).toFixed(2)} €) kleiner als Auftrag – andere Erstattungen vorhanden, manuell prüfen`,
-      last_synced_at: at,
-    });
-  }
+  const v = await verifyOriginalPayment(d, row, refunds);
+  if (!v.ok) return d.store.updateSettlement(row.id, { status: "needs_review", failure_reason: v.reason, last_synced_at: at });
 
   row = await d.store.markStripeCalled(row.id, at);
   let refund: RefundLike;
@@ -249,6 +236,30 @@ export async function executeSettlement(d: Deps, input: SettlementRow, opts: { m
     return d.store.updateSettlement(row.id, { status: "processing", failure_reason: `Ergebnis unklar (${msg}) – „Erneut versuchen“ nutzt denselben Auftrag`, last_synced_at: at });
   }
   return applyRefund(d, row, refund);
+}
+
+
+/**
+ * Originalzahlung belegen: vorhanden, eingegangen (succeeded), EUR, Kaution vollständig enthalten
+ * und keine fremden aktiven Erstattungen (Aufteilung Miete/Kaution wäre nicht belegbar).
+ * Eigene Refunds (metadata.settlement_id) zählen nicht als fremd; failed/canceled werden ignoriert.
+ */
+export async function verifyOriginalPayment(d: Deps, row: SettlementRow, known?: RefundLike[]): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (!row.payment_intent_id || row.payment_intent_id === "none") return { ok: false, reason: "Keine Originalzahlung verknüpft: manuell prüfen" };
+  const pi = await d.stripe.retrievePaymentIntent(row.environment, row.payment_intent_id);
+  if (!pi) return { ok: false, reason: "Originalzahlung in der gespeicherten Umgebung nicht gefunden" };
+  if (pi.status !== "succeeded" || (pi.currency && pi.currency.toLowerCase() !== "eur")) {
+    // z. B. requires_capture einer gemeinsamen Miet-/Kautionszahlung: nie stornieren/teilerfassen.
+    return { ok: false, reason: `Originalzahlung nicht eindeutig eingegangen (Status ${pi.status}, Währung ${pi.currency ?? "?"}): manuell prüfen` };
+  }
+  if (pi.amount_received < row.deposit_cents) return { ok: false, reason: "Eingegangener Betrag kleiner als die Kaution: manuell prüfen" };
+  const refunds = known ?? (await d.stripe.listRefunds(row.environment, row.payment_intent_id));
+  const foreign = refunds.filter((r) => r.metadata?.settlement_id !== row.id && r.status !== "failed" && r.status !== "canceled");
+  if (foreign.length > 0) {
+    return { ok: false, reason: `Andere Erstattung(en) auf der Zahlung vorhanden (${(foreign.reduce((s, r) => s + r.amount, 0) / 100).toFixed(2)} €), Aufteilung Miete/Kaution nicht belegbar: manuell prüfen` };
+  }
+  if (row.refund_cents > pi.amount_received) return { ok: false, reason: "Auftrag größer als eingegangene Zahlung: manuell prüfen" };
+  return { ok: true };
 }
 
 function activeOf(rows: SettlementRow[], kind?: SettlementKind) {

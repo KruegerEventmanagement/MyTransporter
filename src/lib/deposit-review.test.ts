@@ -160,3 +160,97 @@ describe("Kautionserstattung", () => {
     await expect(requestDepositSettlement(h.d, { bookingId: "b1", deductCents: 20001, adminId: "a", requestKey: "k" })).rejects.toThrow();
   });
 });
+
+// ---- Review 263e9e9 ----
+import { bookingDepositState, closingMailStillValid, adminMailStillValid, safePhotoRows, draftKey } from "./deposit-review";
+import { executeSettlement } from "./deposit-settlement.server";
+
+describe("Review-Korrekturen", () => {
+  it("1: finalisiert + fehlgeschlagene Rückzahlung bleibt offen, Erfolg schließt", () => {
+    const r = { status: "finalized", settlement_id: "s1" };
+    expect(bookingDepositState(r, [{ id: "s1", status: "failed" }], "held")).toBe("Rückzahlung fehlgeschlagen");
+    expect(bookingDepositState(r, [{ id: "s1", status: "canceled" }], "held")).toBe("Rückzahlung abgebrochen");
+    expect(bookingDepositState(r, [{ id: "s1", status: "requires_action" }], "held")).toMatch(/Aktion/);
+    expect(bookingDepositState(r, [], "held")).toMatch(/Verknüpfung ungültig/);
+    expect(bookingDepositState({ status: "finalized", settlement_id: null }, [], "held")).toMatch(/fortsetzen/);
+    expect(bookingDepositState(r, [{ id: "s1", status: "succeeded" }], "released")).toBeNull();
+    expect(bookingDepositState(r, [{ id: "s1", status: "no_refund" }], "released")).toBeNull();
+    expect(bookingDepositState(null, [{ id: "s0", status: "failed" }], "held")).toBe("Rückzahlung fehlgeschlagen");
+  });
+
+  it("2: 29900 erhalten, fremder 7000-Refund, Auftrag 20000 ⇒ KEIN neuer Refund", async () => {
+    const h = harness();
+    h.refunds.push({ id: "re_x", status: "succeeded", amount: 7000, payment_intent: "pi_1", metadata: {} });
+    const a = await requestDepositSettlement(h.d, { bookingId: "b1", deductCents: 0, adminId: "a", requestKey: "k" });
+    expect(a.settlement.status).toBe("needs_review");
+    expect(h.creates()).toBe(0);
+  });
+  it("2: fremder pending-Refund blockiert, fremder failed nicht", async () => {
+    const h1 = harness();
+    h1.refunds.push({ id: "re_p", status: "pending", amount: 100, payment_intent: "pi_1", metadata: {} });
+    expect((await requestDepositSettlement(h1.d, { bookingId: "b1", deductCents: 0, adminId: "a", requestKey: "k" })).settlement.status).toBe("needs_review");
+    const h2 = harness();
+    h2.refunds.push({ id: "re_f", status: "failed", amount: 100, payment_intent: "pi_1", metadata: {} });
+    expect((await requestDepositSettlement(h2.d, { bookingId: "b1", deductCents: 0, adminId: "a", requestKey: "k" })).settlement.status).toBe("pending");
+  });
+
+  it("3: Nullerstattung + requires_capture ⇒ kein no_refund", async () => {
+    const h = harness({ piStatus: "requires_capture" });
+    const a = await requestDepositSettlement(h.d, { bookingId: "b1", deductCents: 20000, adminId: "a", requestKey: "k" });
+    expect(a.settlement.status).toBe("needs_review");
+    expect(h.booking.deposit_status).toBe("held");
+  });
+  it("3: Nullerstattung ohne Originalzahlung ⇒ kein no_refund", async () => {
+    const h = harness();
+    h.booking.stripe_payment_intent_id = null;
+    const a = await requestDepositSettlement(h.d, { bookingId: "b1", deductCents: 20000, adminId: "a", requestKey: "k" });
+    expect(a.settlement.status).toBe("needs_review");
+    expect(h.booking.deposit_status).toBe("held");
+  });
+  it("3: Nullerstattung mit belegter Zahlung ⇒ no_refund", async () => {
+    const h = harness();
+    const a = await requestDepositSettlement(h.d, { bookingId: "b1", deductCents: 20000, adminId: "a", requestKey: "k" });
+    expect(a.settlement.status).toBe("no_refund");
+    expect(h.creates()).toBe(0);
+    expect(await executeSettlement(h.d, a.settlement, { mayCreate: false })).toBe(a.settlement);
+  });
+
+  it("4: gleich teure, nur in der Begründung geänderte Position ⇒ anderer Entwurf", () => {
+    const saved = draftKey([{ type: "cleaning", amount_cents: 3000, reason: "Laderaum" }], null);
+    expect(draftKey([{ type: "cleaning", amount_cents: 3000, reason: "Laderaum" }], null)).toBe(saved);
+    expect(draftKey([{ type: "cleaning", amount_cents: 3000, reason: "Sitz" }], null)).not.toBe(saved);
+    expect(draftKey([{ type: "missing_accessory", amount_cents: 3000, reason: "Laderaum" }], null)).not.toBe(saved);
+    expect(draftKey([{ type: "cleaning", amount_cents: 3000, reason: "Laderaum" }], "Hallo")).not.toBe(saved);
+  });
+
+  it("5: eingefrorene pending-Kundenmail nach Fehlschlag nicht senden", () => {
+    const items = priceItems([], facts());
+    const m = buildCustomerClosingMail({ to: "k@x.de", firstName: null, vehicle: "V", startMs: 0, endMs: 1, totals: computeTotals(20000, items), items, message: null, payout: { kind: "stripe_pending" }, channel: "stripe" });
+    expect(closingMailStillValid({ reviewFinalized: true, payout: null, refundCents: 20000, frozenText: m.text })).toMatch(/fehlgeschlagen/);
+    expect(closingMailStillValid({ reviewFinalized: true, payout: { kind: "stripe_pending" }, refundCents: 20000, frozenText: m.text })).toBeNull();
+    expect(closingMailStillValid({ reviewFinalized: true, payout: { kind: "stripe_pending" }, refundCents: 15000, frozenText: m.text })).toMatch(/Betrag/);
+  });
+  it("5: Adminhinweis bei Storno, Verlängerung oder Abschluss abbrechen", () => {
+    const endMs = Date.parse("2026-10-27T08:00:00Z");
+    const m = buildAdminReviewMail({ sourceType: "booking", sourceId: "x", customerName: "A", bookingRef: "R", vehicle: "V", startMs: endMs - 864e5, endMs, returnReportedMs: null, priceLine: "", depositLine: "", checklist: null, issues: [] });
+    const base = { bookingStatus: "completed", depositStatus: "held", reviewFinalized: false, endMs, returnReportedMs: null, nowMs: endMs + 1, frozenText: m.text };
+    expect(adminMailStillValid(base)).toBeNull();
+    expect(adminMailStillValid({ ...base, bookingStatus: "cancelled" })).toMatch(/storniert/);
+    expect(adminMailStillValid({ ...base, endMs: endMs + 7200e3, nowMs: endMs + 3600e3 })).toMatch(/verschoben/);
+    expect(adminMailStillValid({ ...base, endMs: endMs + 3600e3, nowMs: endMs + 7200e3 })).toMatch(/geändert/);
+    expect(adminMailStillValid({ ...base, reviewFinalized: true })).toMatch(/abgeschlossen/);
+  });
+
+  it("6: Fotovorschau nur für bestätigte Objekte dieser Buchung (Testfixture)", () => {
+    const bid = "aaaaaaaa-0000-4000-8000-000000000001";
+    const rows = [
+      { photo_type: "post_front", photo_url: `${bid}/front.jpg` },
+      { photo_type: "post_back", photo_url: `bbbbbbbb-0000-4000-8000-000000000002/back.jpg` },
+      { photo_type: "post_left", photo_url: `${bid}/../x/left.jpg` },
+      { photo_type: "post_right", photo_url: `https://example.com/right.jpg` },
+      { photo_type: "tank_receipt", photo_url: `${bid}/receipt.jpg` },
+    ];
+    const ok = safePhotoRows(bid, rows, ["post_front", "post_back", "post_left", "post_right"]);
+    expect(ok.map((r) => r.photo_type)).toEqual(["post_front"]);
+  });
+});
