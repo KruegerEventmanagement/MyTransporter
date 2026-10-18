@@ -1,5 +1,11 @@
 # Betreiberauftrag zum einmaligen Bewertungsversand
 
+## Aktueller Nachweisstand nach externem Versand
+
+Der Betreiber meldet für 18.10.2026 15:40:17–15:41:49 UTC **26 tatsächlich extern gesendete und aus Gmail SENT nachgelesene Nachrichten** über den unabhängigen nativen ChatGPT-Gmail-Connector. Lovable hat in diesem Nachweisauftrag **0** Nachrichten gesendet. Exakte Empfänger, Provider-IDs, Zeiten, Quellen und tatsächliche Header-Abweichung (kein List-Unsubscribe, sichtbare Mailto-Abmeldung) stehen in `docs/review-preparation-2026-10-18/external-sends.json` und `external-send-audit.md`.
+
+Abgeschlossene Nachregistrierung im vorhandenen Journal: 27 logische Buchungsquellen für 26 eindeutige Nachrichten, Michaels zwei Quellen mit derselben Gmail-ID. Keine offenen Versandaufträge, keine erfundenen internen Versuche/Hashes/Leases. Die nachfolgenden 0-Send-Angaben sind ausdrücklich **historische Lovable-Vorbereitungsbefunde vor dem externen Versand**, keine weiterhin geltende Aussage über die externen Sends.
+
 ## Quelle und Zeitpunkt
 
 Dokumentiert am 18.10.2026, nach Betreiberauftrag um 15:24 UTC.

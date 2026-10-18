@@ -1,5 +1,10 @@
 # Roadmap
 
+## Externe Gmail-Nachweise 18.10.2026 ab 15:40 UTC
+- [x] 26 vom Betreiber belegte externe Sends exakt mit recipients.csv verknüpft; external-sends.json/external-send-audit.md, historische 0-Send-Angaben eingeordnet.
+- [x] 27 normale Quellenschlüssel direkt als sent nachregistriert für 26 echte Gmail-IDs; keine offenen Aufträge, Payloads, Hashes, internen Versuche/Leases oder Jobs.
+- [x] Alle Quelle/Empfänger/ID/Zeit-Kombinationen nachgelesen; Michael zwei Quellen/eine Nachricht; NULL-Reviewstart, Rechnungsgate, Rainer-Sperre und 13 Provider-Attempts unverändert. Bestehende Lücke: kein globaler Personenschlüssel für spätere neue Buchungen.
+
 ## Betreiberauftrag Bewertungsbestand 18.10.2026
 - [x] Versandfreie Klärung: App-Mail-Kampagnengrenze dokumentiert; Gmail-Block/Human-Approval nicht beobachtet, früheren Befund korrigiert.
 - [x] Empfängervorbereitung: 25 reguläre Kontakte inkl. Daniel, Tanja separat, 2 Tatjana-Prüffälle, 5 fehlende Adressen dokumentiert.
@@ -9,7 +14,7 @@
 - [x] Neue außerhalb der Website eingeholte Zustimmung als heutige Betreiberbestätigung dokumentiert, nicht als beobachteten Kunden-/Checkout-Consent.
 - [x] Rainer/Reiner Schmutnig (rainerrene11@web.de) dauerhaft als Betreiber-Ausschluss festgehalten; keine fingierte Kundenabmeldung gespeichert.
 - [x] Bestand, vorhandene Consents, Opt-outs und Fatihs bereits erfolgreiche Bewertungsmail lesend geprüft; keine Rechnungen/Buchungen verändert.
-- [x] Kein Sammelversand: aktueller Auftrag nur Vorbereitung, 0 Sends; früheren pauschalen Gmail-Plattformblock korrigiert.
+- [x] Historische Lovable-Vorbereitung: 0 Sends; später extern 26 Sends laut Betreiber, siehe Nachweisabschnitt oben; früheren pauschalen Gmail-Plattformblock korrigiert.
 - [ ] Identität/Personendublette beider Tatjana-Profile extern ungeklärt; paid/aktive Konten, eine Telefonnummer entspricht Betreiber. Keine pauschale Testannahme.
 
 ## Autorisierter Einzel-Nachversand 18.10.2026

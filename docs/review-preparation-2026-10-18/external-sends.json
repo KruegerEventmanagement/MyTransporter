@@ -1,0 +1,685 @@
+{
+  "external_message_count": 26,
+  "logical_source_record_count": 27,
+  "lovable_sends_this_task": 0,
+  "records": [
+    {
+      "name": "Giuseppe Anello",
+      "email": "giuseppe.anello@hotmail.de",
+      "source_type": "booking",
+      "source_ids": [
+        "a49632fb-3952-4938-a2ee-28d0205ba253"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-a49632fb-3952-4938-a2ee-28d0205ba253"
+      ],
+      "gmail_message_id": "1a14fabbd4f3aa81",
+      "sent_at": "2026-10-18T15:40:17.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/giuseppe_anello_hotmail_de.html",
+      "text_draft": "drafts/giuseppe_anello_hotmail_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Alexander Ays",
+      "email": "alexanderays@googlemail.com",
+      "source_type": "booking",
+      "source_ids": [
+        "b071e0a5-e963-419b-ac52-71137e409b17"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-b071e0a5-e963-419b-ac52-71137e409b17"
+      ],
+      "gmail_message_id": "1a14fac27c80a6f3",
+      "sent_at": "2026-10-18T15:40:44.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/alexanderays_googlemail_com.html",
+      "text_draft": "drafts/alexanderays_googlemail_com.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Gabriele Brackmann",
+      "email": "g.m.brackmann@googlemail.com",
+      "source_type": "booking",
+      "source_ids": [
+        "033d9abd-1b60-4736-9a34-4d6576d3ea1c"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-033d9abd-1b60-4736-9a34-4d6576d3ea1c"
+      ],
+      "gmail_message_id": "1a14fac2fec3f984",
+      "sent_at": "2026-10-18T15:40:46.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/g_m_brackmann_googlemail_com.html",
+      "text_draft": "drafts/g_m_brackmann_googlemail_com.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Dennis Brezing",
+      "email": "info@fahrzeug-veredelung.com",
+      "source_type": "booking",
+      "source_ids": [
+        "8d9db79e-7c08-4243-8607-aee9ef2d2209"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-8d9db79e-7c08-4243-8607-aee9ef2d2209"
+      ],
+      "gmail_message_id": "1a14fac348debc8f",
+      "sent_at": "2026-10-18T15:40:48.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/info_fahrzeug_veredelung_com.html",
+      "text_draft": "drafts/info_fahrzeug_veredelung_com.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Jochen Gast",
+      "email": "gast.jochen@web.de",
+      "source_type": "booking",
+      "source_ids": [
+        "d7d37bfa-393f-462c-bc26-f64ddfc7e142"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-d7d37bfa-393f-462c-bc26-f64ddfc7e142"
+      ],
+      "gmail_message_id": "1a14fac3d0ca9ccb",
+      "sent_at": "2026-10-18T15:40:50.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/gast_jochen_web_de.html",
+      "text_draft": "drafts/gast_jochen_web_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Sascha Geier",
+      "email": "saschageier19@web.de",
+      "source_type": "booking",
+      "source_ids": [
+        "ed553e8c-fbcc-47f0-90a2-f6cef7735af1"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-ed553e8c-fbcc-47f0-90a2-f6cef7735af1"
+      ],
+      "gmail_message_id": "1a14fac423f93de9",
+      "sent_at": "2026-10-18T15:40:52.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/saschageier19_web_de.html",
+      "text_draft": "drafts/saschageier19_web_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Teodor Georgiev",
+      "email": "t.georgiev88@googlemail.com",
+      "source_type": "booking",
+      "source_ids": [
+        "f527ec9f-f8f8-4396-81ee-c9acb8f03fa8"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-f527ec9f-f8f8-4396-81ee-c9acb8f03fa8"
+      ],
+      "gmail_message_id": "1a14fac4dd56cb93",
+      "sent_at": "2026-10-18T15:40:54.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/t_georgiev88_googlemail_com.html",
+      "text_draft": "drafts/t_georgiev88_googlemail_com.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Sabrina Hofmann",
+      "email": "sabrina-nadine@gmx.de",
+      "source_type": "booking",
+      "source_ids": [
+        "cb5644d6-9bb0-40cb-ba61-707974e66f61"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-cb5644d6-9bb0-40cb-ba61-707974e66f61"
+      ],
+      "gmail_message_id": "1a14fac53fc86f27",
+      "sent_at": "2026-10-18T15:40:55.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/sabrina_nadine_gmx_de.html",
+      "text_draft": "drafts/sabrina_nadine_gmx_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Celine Kerzinger",
+      "email": "ckerzinger@web.de",
+      "source_type": "booking",
+      "source_ids": [
+        "96209254-e9f1-4bea-a21d-e747b7f9770d"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-96209254-e9f1-4bea-a21d-e747b7f9770d"
+      ],
+      "gmail_message_id": "1a14fac5a190d76a",
+      "sent_at": "2026-10-18T15:40:57.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/ckerzinger_web_de.html",
+      "text_draft": "drafts/ckerzinger_web_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Oleksandr Krupka",
+      "email": "r.type.zx@gmail.com",
+      "source_type": "booking",
+      "source_ids": [
+        "6dc6434d-6188-4608-9888-4addd55b3a32"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-6dc6434d-6188-4608-9888-4addd55b3a32"
+      ],
+      "gmail_message_id": "1a14fac60c3a7668",
+      "sent_at": "2026-10-18T15:40:59.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/r_type_zx_gmail_com.html",
+      "text_draft": "drafts/r_type_zx_gmail_com.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Franziska Kunert",
+      "email": "franzi.zp@web.de",
+      "source_type": "booking",
+      "source_ids": [
+        "a70572c3-f2a6-46cc-9fab-ece3e9f03d9c"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-a70572c3-f2a6-46cc-9fab-ece3e9f03d9c"
+      ],
+      "gmail_message_id": "1a14fac9aed7828d",
+      "sent_at": "2026-10-18T15:41:14.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/franzi_zp_web_de.html",
+      "text_draft": "drafts/franzi_zp_web_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Serissa Matejla",
+      "email": "serissa.matejka@web.de",
+      "source_type": "booking",
+      "source_ids": [
+        "5ce9b09f-418c-4ead-a3da-8b4b00edfac0"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-5ce9b09f-418c-4ead-a3da-8b4b00edfac0"
+      ],
+      "gmail_message_id": "1a14faca17dab7fb",
+      "sent_at": "2026-10-18T15:41:16.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/serissa_matejka_web_de.html",
+      "text_draft": "drafts/serissa_matejka_web_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Michael Nagy",
+      "email": "mi-nagy@t-online.de",
+      "source_type": "booking",
+      "source_ids": [
+        "8ef51cb0-6853-4c51-b5a7-eb54a5408375",
+        "e28cebad-8bd3-4745-84f0-4b5fa17c73c0"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-8ef51cb0-6853-4c51-b5a7-eb54a5408375",
+        "mt-review_request-booking-e28cebad-8bd3-4745-84f0-4b5fa17c73c0"
+      ],
+      "gmail_message_id": "1a14faca7b33aa3a",
+      "sent_at": "2026-10-18T15:41:17.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/mi_nagy_t_online_de.html",
+      "text_draft": "drafts/mi_nagy_t_online_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Christian Popiolek",
+      "email": "christian.popi@freenet.de",
+      "source_type": "booking",
+      "source_ids": [
+        "08080872-e2cc-4f64-838b-d3f2711fe5ad"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-08080872-e2cc-4f64-838b-d3f2711fe5ad"
+      ],
+      "gmail_message_id": "1a14facaf4d6e0ce",
+      "sent_at": "2026-10-18T15:41:19.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/christian_popi_freenet_de.html",
+      "text_draft": "drafts/christian_popi_freenet_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Raik Schnabel",
+      "email": "raik.schnabel@gmail.com",
+      "source_type": "booking",
+      "source_ids": [
+        "b82259a2-f2ac-4769-9a3b-90c18873d280"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-b82259a2-f2ac-4769-9a3b-90c18873d280"
+      ],
+      "gmail_message_id": "1a14facb4b1efdbb",
+      "sent_at": "2026-10-18T15:41:20.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/raik_schnabel_gmail_com.html",
+      "text_draft": "drafts/raik_schnabel_gmail_com.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Claudia Seuffert",
+      "email": "seuffertc@icloud.com",
+      "source_type": "booking",
+      "source_ids": [
+        "71296565-0ecb-4b8f-a352-d6940ff73f50"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-71296565-0ecb-4b8f-a352-d6940ff73f50"
+      ],
+      "gmail_message_id": "1a14facbde08bb05",
+      "sent_at": "2026-10-18T15:41:22.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/seuffertc_icloud_com.html",
+      "text_draft": "drafts/seuffertc_icloud_com.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Sabri Trad",
+      "email": "sabritrad0@gmail.com",
+      "source_type": "booking",
+      "source_ids": [
+        "4f8ac252-e098-4f6f-b36d-1019d4373c12"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-4f8ac252-e098-4f6f-b36d-1019d4373c12"
+      ],
+      "gmail_message_id": "1a14facc2e2861f7",
+      "sent_at": "2026-10-18T15:41:24.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/sabritrad0_gmail_com.html",
+      "text_draft": "drafts/sabritrad0_gmail_com.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Roland Zell",
+      "email": "rzell@gmx.de",
+      "source_type": "booking",
+      "source_ids": [
+        "e8d7e5b5-0251-4f5d-9f64-3d2b0bedac83"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-e8d7e5b5-0251-4f5d-9f64-3d2b0bedac83"
+      ],
+      "gmail_message_id": "1a14facc9aa82f37",
+      "sent_at": "2026-10-18T15:41:25.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/rzell_gmx_de.html",
+      "text_draft": "drafts/rzell_gmx_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Marcel Zipperle",
+      "email": "marcel.zipperle@live.de",
+      "source_type": "booking",
+      "source_ids": [
+        "9145b6dc-251d-4e28-99d3-173167f9c3ed"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-9145b6dc-251d-4e28-99d3-173167f9c3ed"
+      ],
+      "gmail_message_id": "1a14facce05216a9",
+      "sent_at": "2026-10-18T15:41:27.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/marcel_zipperle_live_de.html",
+      "text_draft": "drafts/marcel_zipperle_live_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Daniel Konrad",
+      "email": "daniel.o.konrad@gmail.com",
+      "source_type": "manual",
+      "source_ids": [
+        "bb8776b4-38ff-4a0e-9c47-6f140e1762bb"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-manual-bb8776b4-38ff-4a0e-9c47-6f140e1762bb"
+      ],
+      "gmail_message_id": "1a14facd5268c0a8",
+      "sent_at": "2026-10-18T15:41:29.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/daniel_o_konrad_gmail_com.html",
+      "text_draft": "drafts/daniel_o_konrad_gmail_com.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Hassan Houdrouj",
+      "email": "hassan.houdrouj@web.de",
+      "source_type": "manual",
+      "source_ids": [
+        "7aaa97ea-f504-40eb-b8d7-7fb1ba749ce1"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-manual-7aaa97ea-f504-40eb-b8d7-7fb1ba749ce1"
+      ],
+      "gmail_message_id": "1a14fad0241ff38d",
+      "sent_at": "2026-10-18T15:41:41.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/hassan_houdrouj_web_de.html",
+      "text_draft": "drafts/hassan_houdrouj_web_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Andreas Herdt",
+      "email": "a.herdt@yandex.ru",
+      "source_type": "manual",
+      "source_ids": [
+        "11479d46-cd0d-4057-b14c-4853dcb9e41f"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-manual-11479d46-cd0d-4057-b14c-4853dcb9e41f"
+      ],
+      "gmail_message_id": "1a14fad0b2a68261",
+      "sent_at": "2026-10-18T15:41:43.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/a_herdt_yandex_ru.html",
+      "text_draft": "drafts/a_herdt_yandex_ru.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Martin Weigand",
+      "email": "michaelw50@t-online.de",
+      "source_type": "manual",
+      "source_ids": [
+        "10b4fa9e-bb58-43f2-b900-1f403d394ee8"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-manual-10b4fa9e-bb58-43f2-b900-1f403d394ee8"
+      ],
+      "gmail_message_id": "1a14fad12451cafb",
+      "sent_at": "2026-10-18T15:41:44.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/michaelw50_t_online_de.html",
+      "text_draft": "drafts/michaelw50_t_online_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Sadaf Seddiqi",
+      "email": "seddiqisadaf4@gmail.com",
+      "source_type": "manual",
+      "source_ids": [
+        "0355b0d1-5c5a-4ffd-b21e-618711935859"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-manual-0355b0d1-5c5a-4ffd-b21e-618711935859"
+      ],
+      "gmail_message_id": "1a14fad19c119a17",
+      "sent_at": "2026-10-18T15:41:46.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/seddiqisadaf4_gmail_com.html",
+      "text_draft": "drafts/seddiqisadaf4_gmail_com.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Ali Elkassem",
+      "email": "ali.elkassem@ce-montage.com",
+      "source_type": "manual",
+      "source_ids": [
+        "65774a2c-8e19-40f1-9eec-d4e61945bb19"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-manual-65774a2c-8e19-40f1-9eec-d4e61945bb19"
+      ],
+      "gmail_message_id": "1a14fad1f9a3bbe2",
+      "sent_at": "2026-10-18T15:41:48.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/ali_elkassem_ce_montage_com.html",
+      "text_draft": "drafts/ali_elkassem_ce_montage_com.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    },
+    {
+      "name": "Tanja Zurawski",
+      "email": "t.zara@gmx.de",
+      "source_type": "booking",
+      "source_ids": [
+        "33e5058a-a148-4de4-ba95-7717e1dbdfdd"
+      ],
+      "logical_review_keys": [
+        "mt-review_request-booking-33e5058a-a148-4de4-ba95-7717e1dbdfdd"
+      ],
+      "gmail_message_id": "1a14fad2581cdeea",
+      "sent_at": "2026-10-18T15:41:49.000Z",
+      "actual_messages": 1,
+      "evidence_source": "independent native ChatGPT Gmail connector; operator-provided SENT readback report",
+      "independently_reread_by_lovable": false,
+      "from": "Christian Krüger – MyTransporter <info@mytransporter.org>",
+      "reply_to": "info@mytransporter.org",
+      "subject": "Danke für deine Buchung! Wie war deine Erfahrung?",
+      "cc": [],
+      "bcc": [],
+      "actual_list_unsubscribe_header": false,
+      "unsubscribe": "visible mailto and reply",
+      "html_draft": "drafts/t_zara_gmx_de.html",
+      "text_draft": "drafts/t_zara_gmx_de.txt",
+      "text_change": "normal blank-line condensation only, per operator"
+    }
+  ]
+}
