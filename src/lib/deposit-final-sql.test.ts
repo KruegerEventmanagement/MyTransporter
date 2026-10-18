@@ -7,6 +7,7 @@ const M12 = readFileSync(new URL("../../drizzle/migrations/0012_deposit_reviews.
 const M13 = readFileSync(new URL("../../drizzle/migrations/0013_extra_km_mutual_lock.sql", import.meta.url), "utf8");
 const M14 = readFileSync(new URL("../../drizzle/migrations/0014_deposit_reminders_and_refund_override.sql", import.meta.url), "utf8");
 const M15 = readFileSync(new URL("../../drizzle/migrations/0015_deposit_adjustment_and_reminder_claim.sql", import.meta.url), "utf8");
+const M16 = readFileSync(new URL("../../drizzle/migrations/0016_deposit_reminder_claim_mark_read_only_on_create.sql", import.meta.url), "utf8");
 const B = "11111111-2222-3333-4444-555555555555";
 const R = "22222222-2222-3333-4444-555555555555";
 const M = "33333333-2222-3333-4444-555555555555";
@@ -42,6 +43,7 @@ beforeEach(async () => {
   await db.exec(M13);
   await db.exec(M14);
   await db.exec(M15);
+  await db.exec(M16);
   await db.query(`INSERT INTO public.bookings (id, status, deposit, deposit_status, start_date, start_hour, plan_id) VALUES ($1,'completed',200,'held','2026-10-20',7,'3h')`, [B]);
   await db.query(`INSERT INTO public.manual_reservations (id, end_at) VALUES ($1,$2)`, [M, END]);
   await db.query(`INSERT INTO public.deposit_reviews (id, source_type, source_id, items, refund_override_cents, adjustment_reason, send_closing_mail) VALUES ($1,'booking',$2,'[]',15000,'Kulanz',false)`, [R, B]);
