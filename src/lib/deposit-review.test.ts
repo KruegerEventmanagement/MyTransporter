@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   priceItems, computeTotals, documentationFeeAllowed, buildCustomerClosingMail, buildAdminReviewMail,
-  resolveRefund, depositReminderDueAt, shouldSendClosingMail, draftKey,
+  resolveRefund, depositReminderDueAt, shouldSendClosingMail,
   payoutSentence, digestSourceId, berlinDateAndHour, photoChecklist, type ReviewFacts,
 } from "./deposit-review";
 import { requestDepositSettlement, syncOpenSettlements, type Deps, type SettlementRow, type BookingRow, type RefundLike } from "./deposit-settlement.server";
