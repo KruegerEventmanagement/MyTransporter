@@ -25,6 +25,7 @@ export type DeductionType =
   | "missing_accessory"
   | "documentation_fee"
   | "extra_km"
+  | "extension"
   | "other";
 
 type Def = {
@@ -101,6 +102,13 @@ export const DEDUCTION_DEFS: Record<DeductionType, Def> = {
     customerText: "Mehrkilometer zum bei der Buchung vereinbarten Kilometerpreis",
     mode: "snapshot",
     reasonRequired: false,
+  },
+  extension: {
+    label: "Mietverlängerung",
+    source: "Individuell vereinbarter Betrag (Tage/Stunden und Betrag in der Begründung), kein automatischer Tagestarif",
+    customerText: "Mietverlängerung zum individuell vereinbarten Betrag",
+    mode: "free",
+    reasonRequired: true,
   },
   other: {
     label: "Sonstiges",
