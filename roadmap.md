@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Autorisierter Einzel-Nachversand 18.10.2026
+- [ ] Fehlenden customer_mail_hook_enabled-Freischalter setzen und konkreten Cron-HTTP-Erfolg belegen (separat vom direkten Live-POST).
 - [x] PDF-MIME korrigieren und gezielt testen, archivierte Dateien unverändert.
 - [x] Zwölf Rechnungen einzeln mit aktuellen Statusprüfungen und Gmail-Fence nachsenden; alte Providerbindungen erhalten.
 - [x] Erste Gmail-Nachricht samt PDF nachlesen, danach übrige einzeln abarbeiten.
