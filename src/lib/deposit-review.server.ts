@@ -214,13 +214,15 @@ export function totalsFor(ctx: DepositContext): Totals {
   return computeTotals(depositOf(ctx), storedPriced(ctx));
 }
 
-export async function previewClosingMail(source: Source, id: string, items: unknown, message: string | null) {
+export async function previewClosingMail(source: Source, id: string, items: unknown, message: string | null, adjust?: DraftAdjust) {
   const ctx = await loadDepositContext(source, id);
   const priced = priceItems(items, ctx.facts);
-  const totals = computeTotals(depositOf(ctx), priced);
+  const base = computeTotals(depositOf(ctx), priced);
+  const r = resolveRefund(base, adjust?.refundCents ?? null, adjust?.reason ?? null);
+  const totals: Totals = { ...base, appliedCents: r.appliedCents, refundCents: r.refundCents };
   const mail = buildCustomerClosingMail({
     to: ctx.email ?? "keine-adresse@invalid", firstName: ctx.firstName, vehicle: ctx.vehicle, startMs: ctx.startMs, endMs: ctx.endMs,
-    totals, items: priced, message, payout: { kind: "preview" }, channel: source === "booking" ? "stripe" : "manual",
+    totals, items: priced, message, adjustment: r.reason, payout: { kind: "preview" }, channel: source === "booking" ? "stripe" : "manual",
   });
   return { subject: mail.subject, html: mail.html, text: mail.text, totals, to: ctx.email };
 }
@@ -231,7 +233,10 @@ export async function finalizeReview(adminId: string, source: Source, id: string
   if (!ctx.review) throw new Error("Bitte zuerst einen Entwurf speichern");
   if (ctx.review.status !== "finalized") {
     if (ctx.review.revision !== expectedRevision) throw new Error("Entwurf wurde inzwischen geändert, bitte neu laden");
-    const t = totalsFor(ctx);
+    const base = totalsFor(ctx);
+    // Der im Entwurf gespeicherte, frei bestätigte Rückzahlungsbetrag gilt.
+    const choice = resolveRefund(base, ctx.review.refund_override_cents, ctx.review.adjustment_reason);
+    const t: Totals = { ...base, appliedCents: choice.appliedCents, refundCents: choice.refundCents };
     if (confirmName.trim() !== ctx.customerName.trim()) throw new Error("Name zur Bestätigung stimmt nicht");
     if (confirmRefundCents !== t.refundCents) throw new Error("Bestätigter Rückzahlungsbetrag stimmt nicht mit dem Entwurf überein");
     if (source === "booking" && t.refundCents > 0 && !ctx.stripe?.paymentIntentId) throw new Error("Keine eindeutig zugeordnete Stripe-Zahlung: bitte manuell prüfen");
