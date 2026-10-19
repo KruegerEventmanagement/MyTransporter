@@ -127,6 +127,13 @@
       "when": 1792343731937,
       "tag": "0017_deposit_reminder_claim_manual_deposit_and_lock_order",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792435459759,
+      "tag": "0018_vehicle_key_codes",
+      "breakpoints": true
     }
   ]
 }

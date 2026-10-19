@@ -1769,6 +1769,32 @@ export type Database = {
           },
         ]
       }
+      vehicle_key_codes: {
+        Row: {
+          key_code: string
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          key_code: string
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          key_code?: string
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_key_codes_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: true
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           axles: number | null

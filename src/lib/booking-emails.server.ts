@@ -245,8 +245,9 @@ export async function sendBookingConfirmationImpl(data: {
     extraHtml:
       addonsHtmlBlock +
       listBlock("So geht es weiter", [
-        "Dein Schlüssel-Code wird automatisch 30 Minuten vor der Abholung in der App freigeschaltet.",
-        "Du bekommst eine Erinnerung 24 Stunden vorher und nochmal 30 Minuten vor Start.",
+        "Deinen Schlüsselcode bekommst du automatisch 15 Minuten vor der Abholung per E-Mail.",
+        "Schlüssel: OBI Leonberg, vor dem Eingang an den Fahrradständern. Transporter: Poststraße 60, 71229 Leonberg (ca. 500 m entfernt).",
+        "Du bekommst außerdem eine Erinnerung 24 Stunden vorher.",
         "Über den Button oben kommst du jederzeit zu deiner Buchung.",
       ]) +
       noteBlock(`<strong>${RETURN_NOTICE_TITLE}:</strong> ${RETURN_NOTICE_FAST} ${RETURN_NOTICE_SLOW} ${DEPOSIT_BANK_NOTE} Wir erinnern dich vor Mietende per E-Mail.`) +
