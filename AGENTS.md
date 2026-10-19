@@ -4,7 +4,7 @@ Subdirectories (android/) have their own AGENTS.md to read before changing files
 
 - Kamera/Foto-Helfer liegen in src/lib/image-capture.ts; alle Aufnahmen nutzen sie, damit kein stiller null/0-px-Fehler entsteht.
 - Fahrtfotos speichern über src/lib/trip-photo-store.ts (Upload + bestätigter DB-Eintrag, signierte Vorschau); trip-photos.ts bleibt für bestehende Leser.
-- Page headers use BrandHomeLink for the official home-linked logo, keeping navigation consistent without duplicate logos.
+- Page headers use BrandHomeLink for the home-linked logo (no duplicate logos).
 - Component tests use jsdom file comments and mocked services from src/test/.
 - Inklusivkilometer sind versioniert (KM_CATALOG_VERSION, LEGACY_FREE_KM, resolveCheckoutKmSnapshot, bookingFreeKm in booking-rules.ts); Altbuchungen und alte Stripe-Sessions dürfen nie mit gekürztem Neukatalog abgerechnet werden.
 - Pflicht-Abschluss von Fahrten gilt erst ab TRIP_COMPLETION_REQUIRED_FROM (src/lib/active-trip.ts, isLegacyOpenTrip); ältere offene Buchungen gelten nur in der Anzeige als verfallen (kein Banner, keine Erinnerung, kein Rückgabeablauf), Daten bleiben unverändert, damit Altfälle Kunden nicht dauerhaft blockieren.
@@ -18,7 +18,7 @@ Subdirectories (android/) have their own AGENTS.md to read before changing files
 
 - Datenschutz-Abläufe (Kontolöschung, Dokument aus Konto entfernen, Archivbereinigung) laufen nur über src/lib/privacy-ops.server.ts gegen PrivacyStore (privacy-store.server.ts); bookings.user_id hat bewusst keinen FK, account_deletions/document_archive sind per Trigger unveränderlich bzw. nicht verlängerbar, RESTRICTIVE-Policies "Only active accounts" sperren alte JWTs; damit Buchungen/Belege erhalten bleiben und Löschungen idempotent sind. Kontolöschung nur mit Fencing-Lease (claim/complete/fail_account_deletion_lease); Wiederaufnahme nur via Hook purge-document-archive bzw. Admin-Retry.
 - Kunden-Serverfunktionen nutzen requireActiveAccount (src/lib/active-account.ts) statt requireSupabaseAuth direkt, kundenseitige SECURITY-DEFINER-RPCs prüfen is_account_active; damit alte JWTs gelöschter Konten nichts mehr ausführen.
-- Passwort-Reset nur über src/lib/password-reset.ts (immer https://mytransporter.org/reset-password, neutrale Antwort nur bei angenommenem Versand) und /reset-password, das nur Sitzungen mit AMR recovery freischaltet; damit nie localhost/App-Shell als Mailziel.
+- Passwort-Reset nur über src/lib/password-reset.ts → https://mytransporter.org/reset-password (nur AMR recovery); nie localhost/App-Shell als Mailziel.
 - Kundenbestätigung manueller Termine nur via manual-confirmation.server.ts (Absicht im Save, Payload je Revision eingefroren, Fencing-RPCs, Erfolg nur mit Provider-ID); Abholort = PICKUP_ADDRESS, nicht Geschäftsadresse.
 - Mail: immutable provider/Gmail fence; backfill same key; legacy untouched; unknown never replay. Local drafts never import senders, preventing sends.
 - Kautionsabschluss nur über src/lib/deposit-review(.server).ts: Entwurf (Revision, freier Rückzahlungsbetrag mit Pflichtbegründung, Mailwahl Standard aus), Abschluss via RPC finalize_deposit_review, Stripe nur über requestDepositSettlement Key review-<id>, Kundenmail nur über Outbox; nie Doppelerstattung. Admin-Hinweis 48h nach Mietende als In-App-Aufgabe + Push (atomar via RPC claim_deposit_reminder), keine Adminmails.
