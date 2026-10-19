@@ -2,7 +2,7 @@
 
 Subdirectories (android/) have their own AGENTS.md to read before changing files there.
 
-- Kamera/Foto-Helfer liegen in src/lib/image-capture.ts; alle Aufnahmen nutzen sie, damit kein stiller null/0-px-Fehler entsteht.
+- Kamera/Foto nur über src/lib/image-capture.ts (kein stiller 0-px-Fehler).
 - Fahrtfotos speichern über src/lib/trip-photo-store.ts (Upload + bestätigter DB-Eintrag, signierte Vorschau); trip-photos.ts bleibt für bestehende Leser.
 - Page headers use BrandHomeLink for the home-linked logo (no duplicate logos).
 - Component tests: jsdom file comments + mocks from src/test/.
