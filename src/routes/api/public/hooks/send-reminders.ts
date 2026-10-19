@@ -1,6 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { renderEmail } from "@/lib/email-template";
+import { isKeyCodeDue, keyHandoverRows, KEY_HANDOVER_HINTS } from "@/lib/key-handover";
+
+/** Fester Schlüsselkasten-Code des Fahrzeugs (nur serverseitig, nie geloggt). */
+async function keyCodeFor(plate: string): Promise<string | null> {
+  const { data: v } = await supabaseAdmin.from("vehicles").select("id").eq("plate", plate).maybeSingle();
+  if (!v?.id) return null;
+  const { data } = await supabaseAdmin.from("vehicle_key_codes").select("key_code").eq("vehicle_id", v.id).maybeSingle();
+  return data?.key_code ?? null;
+}
 
 type ReminderKind = "24h" | "30min";
 
@@ -81,6 +90,7 @@ function buildEmail(
   kind: ReminderKind,
   b: BookingRow,
   firstName?: string | null,
+  keyCode: string | null = null,
 ): { subject: string; html: string; title: string } {
   const dateStr = new Date(`${b.start_date}T${String(b.start_hour).padStart(2, "0")}:00:00`)
     .toLocaleString("de-DE", { dateStyle: "full", timeStyle: "short" });
@@ -101,21 +111,21 @@ function buildEmail(
         rowsTitle: "Deine Mietdaten",
         rows,
         button: { label: "Buchung öffnen", url: tripUrl },
-        outro: ["Deinen Schlüssel-Code schalten wir automatisch 30 Minuten vor der Abholung in der App frei."],
+        outro: ["Deinen Schlüsselcode bekommst du automatisch 15 Minuten vor der Abholung per E-Mail."],
       }),
     };
   }
   return {
-    title: `Dein Schlüssel-Code ist jetzt freigeschaltet`,
-    subject: `MyTransporter · Schlüssel-Code freigeschaltet`,
+    title: `Schlüsselcode versendet`,
+    subject: `MyTransporter · Dein Schlüsselcode für ${b.vehicle_plate}`,
     html: renderEmail({
       firstName,
-      heading: "Es geht gleich los",
-      intro: [`deine Fahrt startet um ${b.start_hour}:00 Uhr. Dein Schlüssel-Code ist jetzt in der App freigeschaltet.`],
-      rowsTitle: "Deine Mietdaten",
-      rows,
+      heading: "Dein Schlüsselcode",
+      intro: [`deine Fahrt startet um ${b.start_hour}:00 Uhr. Hier ist dein Schlüsselcode und wo du alles findest:`],
+      rowsTitle: "Schlüssel & Abholung",
+      rows: [...keyHandoverRows(keyCode), ...rows],
       button: { label: "Zur Buchung", url: tripUrl },
-      outro: ["Bitte prüfe das Fahrzeug vor der Fahrt und lade die Fotos direkt in der App hoch."],
+      outro: [...KEY_HANDOVER_HINTS, "Bitte prüfe das Fahrzeug vor der Fahrt und lade die Fotos direkt in der App hoch."],
     }),
   };
 }
@@ -140,7 +150,7 @@ async function processBatch(kind: ReminderKind) {
 
   const candidates = (data ?? []).filter((b) => {
     const t = startTsOf(b as BookingRow);
-    return t >= windowStart && t <= windowEnd;
+    return kind === "24h" ? t >= windowStart && t <= windowEnd : isKeyCodeDue(t, now);
   }) as BookingRow[];
 
   let processed = 0;
@@ -151,7 +161,8 @@ async function processBatch(kind: ReminderKind) {
       .eq("id", b.user_id)
       .maybeSingle();
     const email = profile?.email ?? null;
-    const { subject, html, title } = buildEmail(kind, b, profile?.first_name);
+    const code = kind === "30min" ? await keyCodeFor(b.vehicle_plate) : null;
+    const { subject, html, title } = buildEmail(kind, b, profile?.first_name, code);
 
     const r = await deliverReminder("bookings", b.id, kind, email, subject, html, new Date(startTsOf(b)).toISOString());
     if (r === "pending") continue;
@@ -214,7 +225,7 @@ async function processManualBatch(kind: ReminderKind) {
 
   const candidates = ((data ?? []) as ManualRow[]).filter((m) => {
     const t = new Date(m.start_at).getTime();
-    return t >= windowStart && t <= windowEnd;
+    return kind === "24h" ? t >= windowStart && t <= windowEnd : isKeyCodeDue(t, now);
   });
 
   let processed = 0;
@@ -224,7 +235,7 @@ async function processManualBatch(kind: ReminderKind) {
     const title =
       kind === "24h"
         ? `Erinnerung: Termin morgen – ${m.customer_name}`
-        : `Termin startet in 30 Minuten – ${m.customer_name}`;
+        : `Schlüsselcode versendet – ${m.customer_name}`;
     const bodyParts = [
       vehicle,
       `Start ${when}`,
@@ -234,6 +245,7 @@ async function processManualBatch(kind: ReminderKind) {
     ].filter(Boolean);
 
     const wantsMail = m.notify_customer && !!m.customer_email;
+    const code = kind === "30min" && wantsMail ? await keyCodeFor(m.vehicle_plate) : null;
     const r = await deliverReminder(
         "manual_reservations",
         m.id,
@@ -241,13 +253,15 @@ async function processManualBatch(kind: ReminderKind) {
         wantsMail ? m.customer_email : null,
         kind === "24h"
           ? "MyTransporter · Erinnerung an deinen Termin morgen"
-          : "MyTransporter · Dein Termin startet in Kürze",
+          : `MyTransporter · Dein Schlüsselcode für ${m.vehicle_plate}`,
         renderEmail({
           firstName: m.customer_name,
-          heading: kind === "24h" ? "Erinnerung an deinen Termin morgen" : "Dein Termin startet in Kürze",
-          intro: ["hier noch einmal die Daten zu deinem Termin bei MyTransporter:"],
-          rowsTitle: "Deine Mietdaten",
+          heading: kind === "24h" ? "Erinnerung an deinen Termin morgen" : "Dein Schlüsselcode",
+          intro: [kind === "24h" ? "hier noch einmal die Daten zu deinem Termin bei MyTransporter:" : "dein Termin startet gleich. Hier ist dein Schlüsselcode und wo du alles findest:"],
+          rowsTitle: kind === "24h" ? "Deine Mietdaten" : "Schlüssel & Abholung",
+          ...(kind === "24h" ? { outro: ["Deinen Schlüsselcode bekommst du automatisch 15 Minuten vor Beginn per E-Mail."] } : { outro: KEY_HANDOVER_HINTS }),
           rows: [
+            ...(kind === "30min" ? keyHandoverRows(code) : []),
             { label: "Fahrzeug", value: vehicle || "Transporter" },
             { label: "Beginn", value: `${when} Uhr` },
             { label: "Ende", value: `${fmtBerlin(m.end_at)} Uhr` },
@@ -272,6 +286,11 @@ async function processManualBatch(kind: ReminderKind) {
     processed++;
   }
   return { processed };
+}
+
+/** Schlüsselcode-Mails (Online + manuell); läuft zusätzlich im Minutenjob, damit genau 15 Min. vorher versendet wird. */
+export async function runKeyCodeReminders() {
+  return { bookings: await processBatch("30min"), manual: await processManualBatch("30min") };
 }
 
 export const Route = createFileRoute("/api/public/hooks/send-reminders")({
