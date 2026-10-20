@@ -7,6 +7,7 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: fake.client }));
 vi.mock("@/lib/admin-notify", () => ({ notifyAdmin: vi.fn() }));
 vi.mock("@/lib/odometer-ai.functions", () => ({ recognizeOdometer: vi.fn() }));
 vi.mock("@/lib/trip-return.functions", () => ({ reportReturn: vi.fn() }));
+vi.mock("@/lib/pickup-key.functions", () => ({ getPickupKeyCode: vi.fn() }));
 vi.mock("@tanstack/react-start", () => ({
   useServerFn: () => async () => ({ km: null, fuelPercent: null, confidence: "low" }),
 }));
