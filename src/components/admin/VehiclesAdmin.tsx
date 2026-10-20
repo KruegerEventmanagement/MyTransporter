@@ -310,6 +310,8 @@ function VehicleEditor({
         </div>
       </div>
 
+      {!isNew && form.id && <KeyCodeEditor vehicleId={form.id} />}
+
       <Section title="Fotos">
         <div className="grid grid-cols-3 gap-2">
           {form.photo_urls.map((url) => (
