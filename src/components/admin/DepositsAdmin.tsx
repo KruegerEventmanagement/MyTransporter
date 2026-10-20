@@ -227,6 +227,23 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
     await save({ data: { source, id, revision: ctx.review?.revision ?? null, items: draftItems.items, message: msg, adjust } });
     await onReload();
   }, "Entwurf gespeichert (kein Geld bewegt, keine Mail)");
+  // 1-Klick: speichert den angezeigten Betrag als Entwurf (falls geändert) und schließt
+  // sofort ab. Server prüft Revision + Betrag; Stripe läuft über den stabilen Key review-<id>.
+  const doPayNow = () => {
+    if (draftItems.error) { toast.error(draftItems.error); return; }
+    if (refundError) { toast.error(refundError); return; }
+    const amount = refundCents ?? 0;
+    const label = source === "booking" ? `${eur(amount)} jetzt per Stripe an ${ctx.customerName} zurückzahlen?` : `${eur(amount)} an ${ctx.customerName} als manuelle Auszahlung abschließen?`;
+    if (!window.confirm(`${label}\n\nDas kann nicht rückgängig gemacht werden.`)) return;
+    return run(async () => {
+      let revision: number | null = ctx.review?.revision ?? null;
+      if (dirty || revision == null) {
+        const r = await save({ data: { source, id, revision, items: draftItems.items, message: msg, adjust } });
+        revision = r.revision;
+      }
+      onCtx(await finalize({ data: { source, id, revision: revision!, confirmName: ctx.customerName, confirmRefundCents: amount } }));
+    }, source === "booking" ? "Rückzahlung bei Stripe beauftragt" : "Abschluss gespeichert");
+  };
   const doPreview = () => run(async () => {
     if (draftItems.error) throw new Error(draftItems.error);
     if (refundError) throw new Error(refundError);
@@ -374,6 +391,9 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
               <input value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder="Begründung der Anpassung (Pflicht), z. B. Kulanz oder zusätzlicher Abzug" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
             )}
             {refundError && (refundTouched || deviates) && <p className="text-xs font-semibold">{refundError}</p>}
+            <button disabled={busy || !!refundError || !!draftItems.error} onClick={doPayNow} className="w-full rounded-full bg-foreground text-background py-2.5 text-sm font-semibold disabled:opacity-50">
+              {(refundCents ?? 0) === 0 ? "Kaution einbehalten und abschließen" : source === "booking" ? `${eur(refundCents ?? 0)} jetzt per Stripe zurückzahlen` : `${eur(refundCents ?? 0)} manuell auszahlen & abschließen`}
+            </button>
           </div>
         )}
         {!finalized && (
