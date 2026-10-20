@@ -421,6 +421,8 @@ function AdminDashboard() {
         (payload) => {
           const n = payload.new as AdminNotification;
           setNotifications((prev) => [n, ...prev]);
+          // Push-Fehler nur still in der Liste – kein Pop-up, kein Browser-Fenster.
+          if (isSilentAdminNotification(n.type)) return;
           if (lastNotificationId.current !== n.id && !dismissedAlerts.current.has(n.id)) {
             lastNotificationId.current = n.id;
             offeredAlerts.current.add(n.id);
