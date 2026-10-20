@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveAccount } from "@/lib/active-account";
+import { logPushIssueThrottled } from "@/lib/push-issue-log";
 
 /** Öffentlicher Push-Schlüssel (darf jeder kennen), passend zum Server-Schlüssel. */
 export const getVapidPublicKey = createServerFn({ method: "GET" }).handler(async () => {
@@ -25,17 +26,26 @@ export async function pushToAdmins(input: {
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  const logIssue = async (reason: string, body: string) => {
-    try {
-      await supabaseAdmin.from("admin_notifications").insert({
-        type: "push_failed",
-        title: `Push nicht zugestellt (${reason})`,
-        body,
-      });
-    } catch {
-      // ignore
-    }
-  };
+  const logIssue = (reason: string, body: string) =>
+    logPushIssueThrottled(
+      {
+        recentExists: async (title, sinceIso) => {
+          const { data } = await supabaseAdmin
+            .from("admin_notifications")
+            .select("id")
+            .eq("type", "push_failed")
+            .eq("title", title)
+            .gte("created_at", sinceIso)
+            .limit(1);
+          return (data?.length ?? 0) > 0;
+        },
+        insert: async (row) => {
+          await supabaseAdmin.from("admin_notifications").insert(row);
+        },
+      },
+      reason,
+      body,
+    );
 
   const { getVapidKeys } = await import("@/lib/vapid.server");
   const keys = await getVapidKeys();
