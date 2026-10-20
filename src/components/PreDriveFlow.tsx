@@ -272,31 +272,7 @@ export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlow
 
       {/* Step 1: Pickup Code */}
       {!codeShown ? (
-        <div className="text-center">
-          <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6">
-            <Key className="w-10 h-10 text-foreground" />
-          </div>
-          <h3 className="text-2xl font-bold text-foreground mb-2">Schlüssel abholen</h3>
-          <p className="text-muted-foreground mb-2">
-            Komme zur <span className="font-medium text-foreground">Poststraße 60</span> und nenne einem Mitarbeiter diesen Code:
-          </p>
-
-          <div className="my-8 p-6 rounded-2xl bg-primary text-primary-foreground">
-            <p className="text-xs opacity-70 mb-2">Dein Abholcode</p>
-            <p className="text-4xl font-mono font-bold tracking-[0.3em]">{pickupCode}</p>
-          </div>
-
-          <p className="text-xs text-muted-foreground mb-8">
-            Gebe diesen Code einem Mitarbeiter von MyTransporter an, um die Schlüssel zu erhalten.
-          </p>
-
-          <button
-            onClick={() => setCodeShown(true)}
-            className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg"
-          >
-            Schlüssel erhalten, weiter <ChevronRight className="w-5 h-5 inline" />
-          </button>
-        </div>
+        <PickupKeyStep bookingId={bookingId} onDone={() => setCodeShown(true)} />
       ) : (
         <>
           {/* Step 2: Vehicle Photos */}
