@@ -1,4 +1,5 @@
 import { DocumentationFeeNotice } from "./DocumentationFeeNotice";
+import { PickupKeyStep } from "./PickupKeyStep";
 import { useState, useCallback, useEffect } from "react";
 import { Camera, ChevronRight, MessageSquare, Key, Plus, X, AlertTriangle, ChevronLeft } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -44,7 +45,7 @@ interface PreDriveFlowProps {
   onComplete: (startKm: number) => void;
 }
 
-export function PreDriveFlow({ bookingId, pickupCode, onComplete }: PreDriveFlowProps) {
+export function PreDriveFlow({ bookingId, onComplete }: PreDriveFlowProps) {
   const [photos, setPhotos] = useState<Record<string, StoredTripPhoto>>({});
   const [interiorPhoto, setInteriorPhoto] = useState<StoredTripPhoto | null>(null);
   const [damagePhotos, setDamagePhotos] = useState<StoredTripPhoto[]>([]);

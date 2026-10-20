@@ -72,7 +72,7 @@ export function PickupKeyStep({ bookingId, onDone }: { bookingId: string; onDone
 
       <button
         onClick={onDone}
-        disabled={info?.state !== "ready"}
+        disabled={info?.state === "locked"}
         className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 disabled:hover:scale-100"
       >
         Schlüssel erhalten, weiter <ChevronRight className="w-5 h-5 inline" />
