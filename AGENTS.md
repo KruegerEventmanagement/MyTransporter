@@ -2,9 +2,9 @@
 
 Subdirectories (android/, src/test/) have their own AGENTS.md to read before changing files there.
 
-- Kamera/Foto nur über src/lib/image-capture.ts (kein stiller 0-px-Fehler).
+- Kamera/Foto nur über src/lib/image-capture.ts.
 - Fahrtfotos speichern via src/lib/trip-photo-store.ts (Upload + bestätigter DB-Eintrag); trip-photos.ts nur für Leser.
-- Page headers: BrandHomeLink logo, no duplicates.
+- Page headers: one BrandHomeLink logo.
 - Inklusivkilometer sind versioniert (KM_CATALOG_VERSION, LEGACY_FREE_KM, resolveCheckoutKmSnapshot, bookingFreeKm in booking-rules.ts); Altbuchungen/alte Stripe-Sessions nie mit neuem Katalog abrechnen.
 - Pflicht-Abschluss von Fahrten gilt erst ab TRIP_COMPLETION_REQUIRED_FROM (src/lib/active-trip.ts, isLegacyOpenTrip); ältere offene Buchungen gelten nur in der Anzeige als verfallen (kein Banner, keine Erinnerung, kein Rückgabeablauf), Daten bleiben unverändert, damit Altfälle Kunden nicht dauerhaft blockieren.
 - Individuelles Kilometerpaket: einzige Preislogik in src/lib/custom-km.ts (Aufschlag auf unveränderte plan_id, Stripe-Metadata ck*, Webhook übernimmt Snapshot unverändert, addon id km_paket).
