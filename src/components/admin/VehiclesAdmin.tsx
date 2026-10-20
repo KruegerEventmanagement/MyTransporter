@@ -137,6 +137,75 @@ export function VehiclesAdmin() {
   );
 }
 
+function KeyCodeEditor({ vehicleId }: { vehicleId: string }) {
+  const [code, setCode] = useState("");
+  const [saved, setSaved] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>("Lädt…");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    supabase
+      .from("vehicle_key_codes")
+      .select("key_code")
+      .eq("vehicle_id", vehicleId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!alive) return;
+        if (error) return setStatus("Konnte nicht geladen werden");
+        setCode(data?.key_code ?? "");
+        setSaved(data?.key_code ?? null);
+        setStatus(data ? "" : "Noch kein Code hinterlegt");
+      });
+    return () => {
+      alive = false;
+    };
+  }, [vehicleId]);
+
+  const valid = /^[0-9A-Za-z]{3,16}$/.test(code);
+  const save = async () => {
+    if (!valid) return;
+    setBusy(true);
+    const { error } = await supabase
+      .from("vehicle_key_codes")
+      .upsert({ vehicle_id: vehicleId, key_code: code, updated_at: new Date().toISOString() });
+    setBusy(false);
+    if (error) return setStatus("Speichern fehlgeschlagen: " + error.message);
+    setSaved(code);
+    setStatus("Gespeichert");
+  };
+
+  return (
+    <Section title="Schlüsselkasten-Code">
+      <div className="sm:col-span-2">
+      <div className="flex gap-2">
+        <input
+          className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm tracking-widest"
+          value={code}
+          inputMode="numeric"
+          maxLength={16}
+          onChange={(e) => {
+            setCode(e.target.value.trim());
+            setStatus("");
+          }}
+          aria-label="Schlüsselkasten-Code"
+        />
+        <button
+          onClick={save}
+          disabled={busy || !valid || code === saved}
+          className="rounded-full bg-foreground text-background px-4 py-2 text-xs font-semibold disabled:opacity-60"
+        >
+          {busy ? "Speichert…" : "Code speichern"}
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground mt-2">
+        {!valid && code ? "3–16 Ziffern oder Buchstaben" : status || "Nur für Admins sichtbar. Wird 15 Min. vor Abholung per E-Mail verschickt."}
+      </p>
+      </div>
+    </Section>
+  );
+}
+
 function VehicleEditor({
   vehicle,
   isNew,
@@ -309,6 +378,8 @@ function VehicleEditor({
           </button>
         </div>
       </div>
+
+      {!isNew && form.id && <KeyCodeEditor vehicleId={form.id} />}
 
       <Section title="Fotos">
         <div className="grid grid-cols-3 gap-2">
