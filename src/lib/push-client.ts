@@ -1,6 +1,47 @@
 import { supabase } from "@/integrations/supabase/client";
-import { VAPID_PUBLIC_KEY, urlBase64ToUint8Array } from "./push-config";
+import { urlBase64ToUint8Array } from "./push-config";
 import { IS_NATIVE_BUILD } from "./native/platform";
+import { getVapidPublicKey } from "./push.functions";
+
+let keyPromise: Promise<string | null> | null = null;
+function serverPublicKey(): Promise<string | null> {
+  if (!keyPromise) {
+    keyPromise = getVapidPublicKey()
+      .then((r) => r.publicKey)
+      .catch(() => {
+        keyPromise = null;
+        return null;
+      });
+  }
+  return keyPromise;
+}
+
+function sameKey(sub: PushSubscription, key: Uint8Array): boolean {
+  const cur = sub.options?.applicationServerKey;
+  if (!cur) return false;
+  const a = new Uint8Array(cur);
+  return a.length === key.length && a.every((v, i) => v === key[i]);
+}
+
+/** Abo zum aktuellen Server-Schlüssel; ein altes Abo mit anderem Schlüssel wird still ersetzt. */
+async function subscribeCurrent(reg: ServiceWorkerRegistration): Promise<PushSubscription | null> {
+  const pub = await serverPublicKey();
+  if (!pub) return null;
+  const key = urlBase64ToUint8Array(pub);
+  let sub = await reg.pushManager.getSubscription();
+  if (sub && !sameKey(sub, key)) {
+    const old = sub.endpoint;
+    try {
+      await sub.unsubscribe();
+    } catch {
+      /* ignore */
+    }
+    await supabase.from("push_subscriptions").delete().eq("endpoint", old);
+    sub = null;
+  }
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key as BufferSource });
+  return sub;
+}
 
 export function pushSupported(): boolean {
   // Im nativen WebView kein Web-Push/Service Worker (native Push ist getrennt).
@@ -47,13 +88,8 @@ export async function enablePushOnThisDevice(): Promise<{ ok: true } | { ok: fal
   const reg = await getRegistration();
   await navigator.serviceWorker.ready;
 
-  let sub = await reg.pushManager.getSubscription();
-  if (!sub) {
-    sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
-    });
-  }
+  const sub = await subscribeCurrent(reg);
+  if (!sub) return { ok: false, reason: "Push ist gerade nicht verfügbar. Bitte später erneut versuchen." };
 
   const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
   if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
@@ -112,13 +148,8 @@ export async function ensurePushSubscribed(): Promise<boolean> {
     const reg = await getRegistration();
     await navigator.serviceWorker.ready;
 
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
-      });
-    }
+    const sub = await subscribeCurrent(reg);
+    if (!sub) return false;
 
     const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
     if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return false;

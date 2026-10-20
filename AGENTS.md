@@ -1,25 +1,25 @@
 # AGENTS
 
-Subdirectories (android/) have their own AGENTS.md to read before changing files there.
+Subdirectories (android/, src/test/) have their own AGENTS.md to read before changing files there.
 
 - Kamera/Foto nur über src/lib/image-capture.ts (kein stiller 0-px-Fehler).
-- Fahrtfotos speichern über src/lib/trip-photo-store.ts (Upload + bestätigter DB-Eintrag, signierte Vorschau); trip-photos.ts bleibt für bestehende Leser.
-- Page headers use BrandHomeLink for the home-linked logo (no duplicate logos).
-- Component tests: jsdom file comments + mocks from src/test/.
-- Inklusivkilometer sind versioniert (KM_CATALOG_VERSION, LEGACY_FREE_KM, resolveCheckoutKmSnapshot, bookingFreeKm in booking-rules.ts); Altbuchungen und alte Stripe-Sessions dürfen nie mit gekürztem Neukatalog abgerechnet werden.
+- Fahrtfotos speichern via src/lib/trip-photo-store.ts (Upload + bestätigter DB-Eintrag); trip-photos.ts nur für Leser.
+- Page headers: BrandHomeLink logo, no duplicates.
+- Inklusivkilometer sind versioniert (KM_CATALOG_VERSION, LEGACY_FREE_KM, resolveCheckoutKmSnapshot, bookingFreeKm in booking-rules.ts); Altbuchungen/alte Stripe-Sessions nie mit neuem Katalog abrechnen.
 - Pflicht-Abschluss von Fahrten gilt erst ab TRIP_COMPLETION_REQUIRED_FROM (src/lib/active-trip.ts, isLegacyOpenTrip); ältere offene Buchungen gelten nur in der Anzeige als verfallen (kein Banner, keine Erinnerung, kein Rückgabeablauf), Daten bleiben unverändert, damit Altfälle Kunden nicht dauerhaft blockieren.
 - Individuelles Kilometerpaket: einzige Preislogik in src/lib/custom-km.ts (Aufschlag auf unveränderte plan_id, Stripe-Metadata ck*, Webhook übernimmt Snapshot unverändert, addon id km_paket).
 - Admin-Kalenderdetails laufen nur über getCalendarEntryDetails (src/lib/calendar-details.server.ts): Client sendet Art+ID, Server prüft Admin-Rolle, verknüpft Profil/Dokumente nur per user_id bzw. reservation_id und signiert kurzfristig; damit nie fremde Pfade oder Kunden vertauscht werden.
 - Aktive Miete: Auswahl/Phase in src/lib/active-trip.ts, Zeitfenster über src/lib/trip-time.ts (Spiegel von plan_end_at); Rückgabe nur über die DB-Funktion report_trip_return (Fotos nur mit echtem Storage-Objekt, Mehrkilometer aus Buchungs-Snapshots, idempotenter return_code) und Trigger bookings_guard_customer_update sperrt sensible Fahrtfelder für Kunden; 10-min-Push nur über eigenen Hook return-reminders (Minutenjob).
 - Native App (Capacitor, remote-fetch, CORS, Android-CI): siehe android/AGENTS.md.
-- Awin nur aus src/lib/affiliate.ts auf /werbeflaeche (noindex,follow, ohne AdSense, nicht in Sitemap); nie anderswo oder als Anzeigen-Fallback.
+- Awin nur via src/lib/affiliate.ts auf /werbeflaeche (noindex, ohne AdSense, nicht in Sitemap), nie als Fallback.
 - AdSense-Plätze/Allowlist nur in src/lib/ad-placements.ts (gemeinsam für CMP+Slots, unbekannte Pfade fail-closed, max. 2 Rails je Seite + 2 In-Flow, mobil max. 2); Flags/IDs in adsense.ts nur mit externem Nachweis, fehlende ID sperrt nur ihren Slot; Laden nur bei Konfiguration+Einwilligung+Viewport, nie nativ, Auto Ads aus; Direktplätze nur als Anfrage über web-ad-inquiry (Erfolg nur bei bestätigtem Speichern/Mail); ab Wizard-Schritt 1 keine Werbung; damit Buchung nie von Werbung abhängt.
 - Belegarchiv: jede erzeugte Rechnung/jedes Angebot läuft über archiveIssuedDocument (src/lib/document-archive.server.ts) in issued_documents (Update/Delete per Trigger gesperrt) + privaten Bucket issued-documents; Buchungsrechnungen behalten die Erstfassung, manuelle Dokumente bekommen bei Inhaltsänderung neue Revisionen; Health-Checks rendern mit archive:false; damit Belege unveränderlich bleiben.
 
 - Datenschutz-Abläufe (Kontolöschung, Dokument aus Konto entfernen, Archivbereinigung) laufen nur über src/lib/privacy-ops.server.ts gegen PrivacyStore (privacy-store.server.ts); bookings.user_id hat bewusst keinen FK, account_deletions/document_archive sind per Trigger unveränderlich bzw. nicht verlängerbar, RESTRICTIVE-Policies "Only active accounts" sperren alte JWTs; damit Buchungen/Belege erhalten bleiben und Löschungen idempotent sind. Kontolöschung nur mit Fencing-Lease (claim/complete/fail_account_deletion_lease); Wiederaufnahme nur via Hook purge-document-archive bzw. Admin-Retry.
 - Kunden-Serverfunktionen nutzen requireActiveAccount (src/lib/active-account.ts) statt requireSupabaseAuth direkt, kundenseitige SECURITY-DEFINER-RPCs prüfen is_account_active; damit alte JWTs gelöschter Konten nichts mehr ausführen.
-- Passwort-Reset nur über src/lib/password-reset.ts → https://mytransporter.org/reset-password (nur AMR recovery); nie localhost/App-Shell als Mailziel.
+- Passwort-Reset nur via src/lib/password-reset.ts → https://mytransporter.org/reset-password (AMR recovery), nie localhost/App-Shell.
 - Kundenbestätigung manueller Termine nur via manual-confirmation.server.ts (Absicht im Save, Payload je Revision eingefroren, Fencing-RPCs, Erfolg nur mit Provider-ID); Abholort = PICKUP_ADDRESS, nicht Geschäftsadresse.
 - Mail: immutable provider/Gmail fence; backfill same key; legacy untouched; unknown never replay. Local drafts never import senders, preventing sends.
 - Kautionsabschluss nur über src/lib/deposit-review(.server).ts: Entwurf (Revision, freier Rückzahlungsbetrag mit Pflichtbegründung, Mailwahl Standard aus), Abschluss via RPC finalize_deposit_review, Stripe nur über requestDepositSettlement Key review-<id>, Kundenmail nur über Outbox; nie Doppelerstattung. Admin-Hinweis 48h nach Mietende als In-App-Aufgabe + Push (atomar via RPC claim_deposit_reminder), keine Adminmails.
-- Schlüsselcodes nur in vehicle_key_codes (Admin-RLS), nur in der Code-Mail (src/lib/key-handover.ts); pickup_code bleibt Buchungsreferenz, damit der Code nie in Bestätigung/Rechnung landet.
+- Schlüsselcodes nur in vehicle_key_codes (Admin-RLS), nur in der Code-Mail (src/lib/key-handover.ts) und in der Kunden-App über getPickupKeyCode (serverseitig geprüft); pickup_code bleibt Buchungsreferenz, damit der Code nie in Bestätigung/Rechnung landet.
+- Web-Push-Schlüssel nur über src/lib/vapid.server.ts (Seed-Secret VAPID_SEED_V2, Public Key via getVapidPublicKey), damit Paar immer passt.
