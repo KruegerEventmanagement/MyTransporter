@@ -7,10 +7,9 @@ export async function pushToUser(
   input: { title: string; body: string; url: string; tag: string },
 ): Promise<{ sent: number; reason?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { VAPID_PUBLIC_KEY } = await import("@/lib/push-config");
-  const safe = (v: string) => v.trim().replace(/\s+/g, "").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-  const raw = process.env.VAPID_PRIVATE_KEY;
-  if (!raw) return { sent: 0, reason: "vapid_missing" };
+  const { getVapidKeys } = await import("@/lib/vapid.server");
+  const keys = await getVapidKeys();
+  if (!keys) return { sent: 0, reason: "vapid_missing" };
   const { data: subs } = await supabaseAdmin
     .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth")
@@ -19,7 +18,7 @@ export async function pushToUser(
 
   const mod = await import("web-push");
   const webpush = (mod.default ?? mod) as typeof import("web-push");
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:info@mytransporter.org", safe(VAPID_PUBLIC_KEY), safe(raw));
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:info@mytransporter.org", keys.publicKey, keys.privateKey);
   const payload = JSON.stringify(input);
   let sent = 0;
   const stale: string[] = [];

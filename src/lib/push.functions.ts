@@ -1,6 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveAccount } from "@/lib/active-account";
-import { VAPID_PUBLIC_KEY } from "@/lib/push-config";
+
+/** Öffentlicher Push-Schlüssel (darf jeder kennen), passend zum Server-Schlüssel. */
+export const getVapidPublicKey = createServerFn({ method: "GET" }).handler(async () => {
+  const { getVapidKeys } = await import("@/lib/vapid.server");
+  return { publicKey: (await getVapidKeys())?.publicKey ?? null };
+});
 
 // Interne Push-Logik: kann direkt aus anderen Server-Funktionen aufgerufen werden,
 // ohne den createServerFn-RPC-Boundary zu überqueren. Loggt Fehler in admin_notifications,
@@ -32,23 +37,17 @@ export async function pushToAdmins(input: {
     }
   };
 
-  // web-push verlangt URL-safe Base64 ohne Padding – Secrets kommen aber oft
-  // im Standard-Base64-Format ("+", "/", "="). Daher hier normalisieren.
-  const toUrlSafeBase64 = (v: string) =>
-    v.trim().replace(/\s+/g, "").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-
-  const publicKey = toUrlSafeBase64(VAPID_PUBLIC_KEY);
-  const rawPrivateKey = process.env.VAPID_PRIVATE_KEY;
-  const privateKey = rawPrivateKey ? toUrlSafeBase64(rawPrivateKey) : undefined;
+  const { getVapidKeys } = await import("@/lib/vapid.server");
+  const keys = await getVapidKeys();
   const subject = process.env.VAPID_SUBJECT || "mailto:info@mytransporter.org";
-  if (!privateKey) {
-    await logIssue("vapid_missing", "VAPID_PRIVATE_KEY ist nicht gesetzt.");
+  if (!keys) {
+    await logIssue("vapid_missing", "Kein gültiger Push-Schlüssel konfiguriert.");
     return { sent: 0, skipped: true, reason: "vapid_missing" };
   }
 
   const webpushMod = await import("web-push");
   const webpush = (webpushMod.default ?? webpushMod) as typeof import("web-push");
-  webpush.setVapidDetails(subject, publicKey, privateKey);
+  webpush.setVapidDetails(subject, keys.publicKey, keys.privateKey);
 
   const { data: adminRoles } = await supabaseAdmin
     .from("user_roles")
