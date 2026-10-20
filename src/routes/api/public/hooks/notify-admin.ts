@@ -26,6 +26,14 @@ export const Route = createFileRoute("/api/public/hooks/notify-admin")({
         }
 
         const type = payload.type ?? "info";
+        const { isSilentAdminNotification } = await import("@/lib/push-issue-log");
+        if (isSilentAdminNotification(type)) {
+          // Push-Fehler nie erneut pushen – sonst Endlosschleife.
+          return new Response(JSON.stringify({ sent: 0, skipped: true, reason: "silent_type" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
         const { pushToAdmins } = await import("@/lib/push.functions");
 
         let title = payload.title || "MyTransporter";
