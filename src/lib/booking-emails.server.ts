@@ -97,6 +97,9 @@ export async function sendEmail(
 ): Promise<boolean> {
   const safeTo = isValidEmailish(to, 320) ? to : DEFAULT_ADMIN_EMAIL;
   const res = await sendEmailDetailed({
+    // Direkte Mails (Kalender-Owner-Mails, Admin-Hinweise) laufen fest über Gmail;
+    // Resend ist abgeschaltet. Idempotenz über den Gmail-Fence (Schlüssel je Ereignis).
+    provider: "gmail",
     from: opts.from ?? getFrom(),
     to: safeTo,
     replyTo: opts.replyTo,
