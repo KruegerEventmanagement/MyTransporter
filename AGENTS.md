@@ -1,11 +1,10 @@
 # AGENTS
 
-Subdirectories (android/) have their own AGENTS.md to read before changing files there.
+Subdirectories (android/, src/test/) have their own AGENTS.md to read before changing files there.
 
 - Kamera/Foto nur über src/lib/image-capture.ts (kein stiller 0-px-Fehler).
 - Fahrtfotos speichern über src/lib/trip-photo-store.ts (Upload + bestätigter DB-Eintrag, signierte Vorschau); trip-photos.ts bleibt für bestehende Leser.
 - Page headers use BrandHomeLink for the home-linked logo (no duplicate logos).
-- Component tests: jsdom file comments + mocks from src/test/.
 - Inklusivkilometer sind versioniert (KM_CATALOG_VERSION, LEGACY_FREE_KM, resolveCheckoutKmSnapshot, bookingFreeKm in booking-rules.ts); Altbuchungen und alte Stripe-Sessions dürfen nie mit gekürztem Neukatalog abgerechnet werden.
 - Pflicht-Abschluss von Fahrten gilt erst ab TRIP_COMPLETION_REQUIRED_FROM (src/lib/active-trip.ts, isLegacyOpenTrip); ältere offene Buchungen gelten nur in der Anzeige als verfallen (kein Banner, keine Erinnerung, kein Rückgabeablauf), Daten bleiben unverändert, damit Altfälle Kunden nicht dauerhaft blockieren.
 - Individuelles Kilometerpaket: einzige Preislogik in src/lib/custom-km.ts (Aufschlag auf unveränderte plan_id, Stripe-Metadata ck*, Webhook übernimmt Snapshot unverändert, addon id km_paket).
@@ -22,5 +21,5 @@ Subdirectories (android/) have their own AGENTS.md to read before changing files
 - Kundenbestätigung manueller Termine nur via manual-confirmation.server.ts (Absicht im Save, Payload je Revision eingefroren, Fencing-RPCs, Erfolg nur mit Provider-ID); Abholort = PICKUP_ADDRESS, nicht Geschäftsadresse.
 - Mail: immutable provider/Gmail fence; backfill same key; legacy untouched; unknown never replay. Local drafts never import senders, preventing sends.
 - Kautionsabschluss nur über src/lib/deposit-review(.server).ts: Entwurf (Revision, freier Rückzahlungsbetrag mit Pflichtbegründung, Mailwahl Standard aus), Abschluss via RPC finalize_deposit_review, Stripe nur über requestDepositSettlement Key review-<id>, Kundenmail nur über Outbox; nie Doppelerstattung. Admin-Hinweis 48h nach Mietende als In-App-Aufgabe + Push (atomar via RPC claim_deposit_reminder), keine Adminmails.
-- Schlüsselcodes nur in vehicle_key_codes (Admin-RLS), nur in der Code-Mail (src/lib/key-handover.ts) und in der Kunden-App über getPickupKeyCode (Besitz/Status/15-Min-Prüfung serverseitig); pickup_code bleibt Buchungsreferenz, damit der Code nie in Bestätigung/Rechnung landet.
-- Web-Push-Schlüssel nur über src/lib/vapid.server.ts (aus Secret VAPID_SEED_V2 abgeleitet, Public Key per getVapidPublicKey; Client ersetzt Abos mit altem Schlüssel still), damit Public/Private nie auseinanderlaufen.
+- Schlüsselcodes nur in vehicle_key_codes (Admin-RLS), nur in der Code-Mail (src/lib/key-handover.ts) und in der Kunden-App über getPickupKeyCode (serverseitig geprüft); pickup_code bleibt Buchungsreferenz, damit der Code nie in Bestätigung/Rechnung landet.
+- Web-Push-Schlüssel nur über src/lib/vapid.server.ts (Seed-Secret VAPID_SEED_V2, Public Key via getVapidPublicKey), damit Paar immer passt.
