@@ -8,20 +8,21 @@ import { REMINDER_STATUSES } from "@/lib/return-reminder";
 import { resolveTripWindow, formatBerlin } from "@/lib/trip-time";
 import { renderEmail, noteBlock, APP_ORIGIN } from "@/lib/email-template";
 import { DOCUMENTATION_FEE_EUR } from "@/lib/documentation-fee";
-import { RETURN_MAIL_LEAD_MS, returnMailDue, RETURN_NOTICE_FAST, DEPOSIT_BANK_NOTE, DEPOSIT_DEDUCTION_LINE, OVERDUE_STAGES, overdueStageDue } from "@/lib/return-notice";
+import { RETURN_MAIL_LEAD_MS, returnMailDue, RETURN_NOTICE_FAST, DEPOSIT_BANK_NOTE, DEPOSIT_DEDUCTION_LINE, OVERDUE_STAGES, overdueStageDue, RETURN_FEE_SUBJECT, RETURN_FEE_INTRO } from "@/lib/return-notice";
 
 const MAIL_STATUSES = ["paid", ...REMINDER_STATUSES];
 
 export function buildReturnReminderMail(a: { firstName: string | null; endText: string; vehicle: string; url: string }) {
-  const subject = "Deine Rückgabe steht an – bitte Fahrt mit Fotos abschließen (sonst 30 € Abzug)";
+  const subject = RETURN_FEE_SUBJECT;
   const html = renderEmail({
     firstName: a.firstName,
     heading: "Deine Rückgabe steht an",
-    intro: [`deine Miete (${a.vehicle}) endet am ${a.endText} Uhr. Bitte bring das Fahrzeug rechtzeitig zurück und schließe anschließend die Rückgabe in der App ab.`, "Bitte dokumentiere außen vorn, hinten, links und rechts sowie den Innenraum. Dazu gehören ein Tachofoto mit Kilometerstand und Tankanzeige bei eingeschalteter Zündung sowie der Tankbeleg.", RETURN_NOTICE_FAST, DEPOSIT_DEDUCTION_LINE],
+    intro: [...RETURN_FEE_INTRO, `Deine Miete (${a.vehicle}) endet am ${a.endText} Uhr. Bitte bring das Fahrzeug rechtzeitig zurück und schließe anschließend die Rückgabe in der App ab.`, RETURN_NOTICE_FAST],
     button: { label: "Zur Rückgabe mit Fotos", url: a.url },
     extraHtml: noteBlock(`Vollständige Rückgabedokumentation ist nötig. Fehlende oder nicht verwertbare Pflichtfotos können nach manueller Prüfung eine Bearbeitungspauschale für fehlende Fahrzeugdokumentation von ${DOCUMENTATION_FEE_EUR} € auslösen. Technische Kamera-, Upload- oder Netzfehler lösen diese Pauschale nicht aus. ${DEPOSIT_BANK_NOTE}`),
   });
   const text = `Hallo${a.firstName ? ` ${a.firstName}` : ""},
+${RETURN_FEE_INTRO.join("\n")}
 Deine Miete (${a.vehicle}) endet am ${a.endText} Uhr. Bitte bring das Fahrzeug rechtzeitig zurück und schließe die Rückgabe in der App ab.
 Pflichtfotos: außen vorn, hinten, links, rechts; Innenraum; Tachofoto mit Kilometerstand und Tankanzeige bei eingeschalteter Zündung; Tankbeleg.
 ${RETURN_NOTICE_FAST}
@@ -95,20 +96,18 @@ export async function processReturnReminderMails(nowMs = Date.now()): Promise<{ 
 }
 
 export function buildOverdueMail(a: { firstName: string | null; endText: string; vehicle: string; url: string; final: boolean }) {
-  const subject = a.final
-    ? "Letzte Erinnerung: Rückgabefotos fehlen – 30 € Kautionsabzug"
-    : "Rückgabe noch offen – bitte jetzt die Fotos machen (sonst 30 € Abzug)";
+  const subject = a.final ? `Letzte Erinnerung: ${RETURN_FEE_SUBJECT}` : RETURN_FEE_SUBJECT;
   const intro = [
-    `deine Miete (${a.vehicle}) ist am ${a.endText} Uhr zu Ende gegangen, aber die Rückgabe mit Fotos wurde noch nicht abgeschlossen.`,
-    "Bitte öffne jetzt die App und mache die 7 Pflichtfotos: außen vorn, hinten, links, rechts, Innenraum, Tacho mit Kilometerstand und Tankanzeige sowie den Tankbeleg. Das dauert nur 2 Minuten.",
-    DEPOSIT_DEDUCTION_LINE,
+    ...RETURN_FEE_INTRO,
+    `Deine Miete (${a.vehicle}) ist am ${a.endText} Uhr zu Ende gegangen, aber die Rückgabe mit Fotos wurde noch nicht abgeschlossen.`,
+    "Bitte öffne jetzt die App und lade die Fotos hoch. Das dauert nur 2 Minuten.",
   ];
   const html = renderEmail({
     firstName: a.firstName,
     heading: a.final ? "Letzte Erinnerung: Rückgabefotos fehlen" : "Deine Rückgabe ist noch offen",
     intro,
     button: { label: "Jetzt Rückgabefotos machen", url: a.url },
-    extraHtml: noteBlock(`<strong>${DEPOSIT_DEDUCTION_LINE}</strong> Mit vollständigen Fotos bekommst du deine Kaution schneller und ohne Abzug zurück. Technische Kamera-, Upload- oder Netzfehler führen nicht zum Abzug. ${DEPOSIT_BANK_NOTE}`),
+    extraHtml: noteBlock(`Mit vollständigen Fotos bekommst du deine Kaution schneller und ohne Abzug zurück. Technische Kamera-, Upload- oder Netzfehler führen nicht zum Abzug. ${DEPOSIT_BANK_NOTE}`),
   });
   const text = `Hallo${a.firstName ? ` ${a.firstName}` : ""},\n${intro.join("\n")}\n${a.url}\nChristian Krüger – MyTransporter`;
   return { subject, html, text };

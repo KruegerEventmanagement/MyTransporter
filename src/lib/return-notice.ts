@@ -42,3 +42,15 @@ export function overdueStageDue(nowMs: number, endMs: number): OverdueKind | nul
   return OVERDUE_STAGES.find((s) => d >= s.afterMs && d < s.untilMs)?.kind ?? null;
 }
 export const DEPOSIT_DEDUCTION_LINE = "Ohne vollständige Rückgabefotos ziehen wir 30 € von deiner Kaution ab.";
+
+export const RETURN_FEE_SUBJECT = "Es drohen 30 € Bearbeitungsgebühr bei fehlenden Rückgabefotos …";
+export const RETURN_PHOTO_LIST = [
+  "Tankbeleg",
+  "Tacho mit Kilometerstand und Tankanzeige",
+  "Innenraum / Fahrerkabine (wie sauber das Fahrzeug ist)",
+  "Laderaum innen",
+  "Außen: vorn, hinten, links und rechts",
+];
+export const RETURN_FEE_OPENING = "Es müssen alle Fotos gemacht und hochgeladen werden:";
+export const RETURN_FEE_CONSEQUENCE = "Werden diese Fotos nicht hochgeladen und muss ein Mitarbeiter das Fahrzeug nachträglich prüfen, stellen wir dir zusätzlich 30 € Bearbeitungsgebühr in Rechnung.";
+export const RETURN_FEE_INTRO = [RETURN_FEE_OPENING, ...RETURN_PHOTO_LIST.map((p) => `• ${p}`), RETURN_FEE_CONSEQUENCE];
