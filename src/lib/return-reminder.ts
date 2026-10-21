@@ -74,7 +74,7 @@ export async function processReturnReminders(deps: ReminderDeps): Promise<{ due:
     try {
       const r = await deps.push(b.user_id, {
         title: "Rückgabe in Kürze",
-        body: `Deine Miete endet ${deps.formatEnd(b.endMs)} Uhr. Nach dem Abstellen bitte die Rückgabe mit allen Fotos inkl. Tankbeleg abschließen – dann kommt die Kaution schneller zurück und es fällt keine 30-€-Pauschale an.`,
+        body: `Deine Miete endet ${deps.formatEnd(b.endMs)} Uhr. Nach dem Abstellen bitte die Rückgabe mit allen Fotos inkl. Tankbeleg abschließen – sonst ziehen wir 30 € von der Kaution ab.`,
         url: `/trip/${b.id}`,
         // Gleicher Tag/Topic je Buchung: Gerät ersetzt eine evtl. doppelte Anzeige statt zu stapeln.
         tag: `mt-return-${b.id}`,

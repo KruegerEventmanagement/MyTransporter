@@ -7,7 +7,7 @@ import { DOCUMENTATION_FEE_EUR } from "./documentation-fee";
 export const RETURN_NOTICE_TITLE = "Wichtig: Fahrt mit Fotos beenden";
 export const RETURN_NOTICE_FAST =
   "Bitte beende nach dem Abstellen des Fahrzeugs die Fahrt in der App und mache alle vorgegebenen Fotos inklusive Tankbeleg. Dann erhältst du deine Kaution schneller zurück und es fällt keine Bearbeitungspauschale an.";
-export const RETURN_NOTICE_SLOW = `Ohne vollständige Rückgabe-Fotos kann die Rückzahlung der Kaution bis zu 10 Werktage dauern und es wird eine Bearbeitungspauschale von ${DOCUMENTATION_FEE_EUR} € berechnet.`;
+export const RETURN_NOTICE_SLOW = `Ohne vollständige Rückgabe-Fotos kann die Rückzahlung der Kaution bis zu 10 Werktage dauern und es werden ${DOCUMENTATION_FEE_EUR} € von der Kaution abgezogen.`;
 export const DEPOSIT_BANK_NOTE = "Je nach Bank kann die Gutschrift der Kaution 1–10 Werktage dauern.";
 export const DEPOSIT_RETURN_NOTICE = `${RETURN_NOTICE_FAST} ${RETURN_NOTICE_SLOW} ${DEPOSIT_BANK_NOTE}`;
 
