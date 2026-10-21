@@ -29,3 +29,16 @@ export function returnPopupPhase(nowMs: number, endMs: number, returning: boolea
 export function returnMailDue(nowMs: number, endMs: number): boolean {
   return Number.isFinite(nowMs) && Number.isFinite(endMs) && nowMs >= endMs - RETURN_MAIL_LEAD_MS && nowMs < endMs;
 }
+
+/** Penetrante Nachfass-Stufen nach Mietende, solange die Rückgabe mit Fotos fehlt. */
+export type OverdueKind = "return_overdue_1" | "return_overdue_2";
+export const OVERDUE_STAGES: ReadonlyArray<{ kind: OverdueKind; afterMs: number; untilMs: number }> = [
+  { kind: "return_overdue_1", afterMs: 30 * 60_000, untilMs: 3 * 3600_000 },
+  { kind: "return_overdue_2", afterMs: 3 * 3600_000, untilMs: 24 * 3600_000 },
+];
+export function overdueStageDue(nowMs: number, endMs: number): OverdueKind | null {
+  if (!Number.isFinite(nowMs) || !Number.isFinite(endMs)) return null;
+  const d = nowMs - endMs;
+  return OVERDUE_STAGES.find((s) => d >= s.afterMs && d < s.untilMs)?.kind ?? null;
+}
+export const DEPOSIT_DEDUCTION_LINE = "Ohne vollständige Rückgabefotos ziehen wir 30 € von deiner Kaution ab.";
