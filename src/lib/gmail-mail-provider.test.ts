@@ -63,3 +63,17 @@ describe('Gmail durable adapter', () => {
     expect(await sendGmailWithDeps(args, deps)).toMatchObject({ ok: false, ambiguous: true });
   });
 });
+
+describe("boundFetch (workerd Illegal invocation)", () => {
+  it("ruft globales fetch ohne fremdes this auf", async () => {
+    const { boundFetch } = await import("./gmail-mail-provider.server");
+    const orig = globalThis.fetch;
+    let seenThis: unknown = "unset";
+    globalThis.fetch = function (this: unknown) { seenThis = this; return Promise.resolve(new Response("ok")); } as typeof fetch;
+    try {
+      const deps = { fetch: boundFetch };
+      await deps.fetch("https://example.invalid");
+      expect(seenThis).not.toBe(deps);
+    } finally { globalThis.fetch = orig; }
+  });
+});
