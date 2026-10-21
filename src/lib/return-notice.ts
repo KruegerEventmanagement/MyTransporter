@@ -54,3 +54,12 @@ export const RETURN_PHOTO_LIST = [
 export const RETURN_FEE_OPENING = "Es müssen alle Fotos gemacht und hochgeladen werden:";
 export const RETURN_FEE_CONSEQUENCE = "Werden diese Fotos nicht hochgeladen und muss ein Mitarbeiter das Fahrzeug nachträglich prüfen, stellen wir dir zusätzlich 30 € Bearbeitungsgebühr in Rechnung.";
 export const RETURN_FEE_INTRO = [RETURN_FEE_OPENING, ...RETURN_PHOTO_LIST.map((p) => `• ${p}`), RETURN_FEE_CONSEQUENCE];
+
+/** Hinweis direkt nach der Zahlung (Zahlungsseite + einmaliges Pop-up je Buchung). */
+export const POST_PAYMENT_PHOTO_HEADLINE = "Rückgabefotos sind Pflicht – sonst droht eine Bearbeitungsgebühr von 30 €";
+export const POST_PAYMENT_PHOTO_TITLE = "Wichtig: Rückgabefotos sind Pflicht";
+export const POST_PAYMENT_PHOTO_NOTICE = "Fehlen nach der Fahrt die Rückgabefotos, droht eine Bearbeitungsgebühr von 30 €.";
+export const postPaymentNoticeKey = (bookingId: string) => `mt_postpay_notice_${bookingId}`;
+export function shouldShowPostPaymentNotice(fromCheckout: boolean, alreadySeen: boolean): boolean {
+  return fromCheckout && !alreadySeen;
+}

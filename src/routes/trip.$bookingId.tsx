@@ -14,9 +14,13 @@ import { isLegacyOpenTrip, isReturningStatus, phaseFor } from "@/lib/active-trip
 import { loadReturnDraft, saveReturnDraft, clearReturnDraft } from "@/lib/return-draft";
 import { BrandHomeLink } from "@/components/BrandHomeLink";
 import { forgetTrip, isNetworkFailure, loadTrip, rememberTrip } from "@/lib/trip-snapshot";
+import { PostPaymentPhotoNotice } from "@/components/PostPaymentPhotoNotice";
 
 export const Route = createFileRoute("/trip/$bookingId")({
   head: () => privateHead("MyTransporter · Fahrt"),
+  validateSearch: (s: Record<string, unknown>): { neu?: string } => ({
+    neu: s.neu === "1" || s.neu === 1 ? "1" : undefined,
+  }),
   component: TripPage,
 });
 
@@ -68,8 +72,14 @@ function TripLogoBar() {
 
 function TripPage() {
   const { bookingId } = Route.useParams();
+  const { neu } = Route.useSearch();
   // Neuer Schlüssel je Buchung: kein Zustand (Phase, Start-KM, Adresse) wandert zur nächsten Fahrt.
-  return <TripView key={bookingId} bookingId={bookingId} />;
+  return (
+    <>
+      <TripView key={bookingId} bookingId={bookingId} />
+      <PostPaymentPhotoNotice bookingId={bookingId} fromCheckout={neu === "1"} />
+    </>
+  );
 }
 
 type PickupState = { status: "loading" | "ok" | "missing" | "error"; address: string | null };

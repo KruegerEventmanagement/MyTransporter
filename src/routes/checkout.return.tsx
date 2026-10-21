@@ -53,7 +53,7 @@ function CheckoutReturn() {
           if (result.bookingId) {
             try { localStorage.removeItem("mt_pending_booking"); } catch {}
             if (!cancelled) {
-              navigate({ to: "/trip/$bookingId", params: { bookingId: result.bookingId }, replace: true });
+              navigate({ to: "/trip/$bookingId", params: { bookingId: result.bookingId }, search: { neu: "1" }, replace: true });
             }
             return;
           }
