@@ -123,7 +123,7 @@ function buildEmail(
       heading: "Dein Schlüsselcode",
       intro: [`deine Fahrt startet um ${b.start_hour}:00 Uhr. Hier ist dein Schlüsselcode und wo du alles findest:`],
       rowsTitle: "Schlüssel & Abholung",
-      rows: [...keyHandoverRows(keyCode), ...rows],
+      rows: [...keyHandoverRows(keyCode, b.vehicle_plate), ...rows],
       button: { label: "Zur Buchung", url: tripUrl },
       outro: [...KEY_HANDOVER_HINTS, "Bitte prüfe das Fahrzeug vor der Fahrt und lade die Fotos direkt in der App hoch."],
     }),
@@ -261,7 +261,7 @@ async function processManualBatch(kind: ReminderKind) {
           rowsTitle: kind === "24h" ? "Deine Mietdaten" : "Schlüssel & Abholung",
           ...(kind === "24h" ? { outro: ["Deinen Schlüsselcode bekommst du automatisch 15 Minuten vor Beginn per E-Mail."] } : { outro: KEY_HANDOVER_HINTS }),
           rows: [
-            ...(kind === "30min" ? keyHandoverRows(code) : []),
+            ...(kind === "30min" ? keyHandoverRows(code, m.vehicle_plate) : []),
             { label: "Fahrzeug", value: vehicle || "Transporter" },
             { label: "Beginn", value: `${when} Uhr` },
             { label: "Ende", value: `${fmtBerlin(m.end_at)} Uhr` },
