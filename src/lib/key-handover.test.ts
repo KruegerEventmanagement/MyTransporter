@@ -15,3 +15,17 @@ describe("Schlüsselcode 15 Minuten vor Abholung", () => {
     expect(v).toContain("Poststraße 60");
   });
 });
+
+import { keySafeFor, keyHandoverRows as rowsWithSafe } from "./key-handover";
+describe("Schlüsseltresor-Zuordnung", () => {
+  it("ordnet jedes Fahrzeug seinem Tresor zu", () => {
+    expect(keySafeFor("LEO-MY 101")).toBe(1);
+    expect(keySafeFor("LEO-MY 102")).toBe(2);
+    expect(keySafeFor("PF-MY 1003")).toBe(3);
+    expect(keySafeFor("OF-DK 1234")).toBe(4);
+    expect(keySafeFor("LEO-MY 104")).toBeNull();
+  });
+  it("nennt den Tresor in der Code-Mail", () => {
+    expect(rowsWithSafe("123", "OF-DK 1234")[0]).toEqual({ label: "Schlüsseltresor", value: "Tresor 4 (für OF-DK 1234)" });
+  });
+});

@@ -13,8 +13,18 @@ export function isKeyCodeDue(startMs: number, nowMs: number): boolean {
   return nowMs >= startMs - KEY_CODE_LEAD_MS && nowMs <= startMs + KEY_CODE_GRACE_MS;
 }
 
-export function keyHandoverRows(code: string | null): { label: string; value: string }[] {
+/** Feste Zuordnung Fahrzeug → Schlüsseltresor (Kennzeichen ohne Leer-/Bindestriche). */
+const KEY_SAFE_BY_PLATE: Record<string, number> = { LEOMY101: 1, LEOMY102: 2, PFMY1003: 3, OFDK1234: 4 };
+
+export function keySafeFor(plate: string | null | undefined): number | null {
+  const k = (plate ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return KEY_SAFE_BY_PLATE[k] ?? null;
+}
+
+export function keyHandoverRows(code: string | null, plate?: string | null): { label: string; value: string }[] {
+  const safe = keySafeFor(plate);
   return [
+    ...(safe ? [{ label: "Schlüsseltresor", value: `Tresor ${safe}${plate ? ` (für ${plate})` : ""}` }] : []),
     { label: "Schlüsselcode", value: code ?? "Bitte ruf uns an – Code wird telefonisch durchgegeben" },
     { label: "Schlüssel abholen", value: KEY_PICKUP_PLACE },
     { label: "Transporter steht", value: VEHICLE_PICKUP_PLACE },
