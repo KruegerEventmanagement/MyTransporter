@@ -62,11 +62,14 @@ export async function sendGmailWithDeps(args: MailSendArgs, deps: GmailDeps): Pr
   } finally { clearTimeout(timer); }
 }
 
+export const boundFetch: typeof fetch = (input, init) => fetch(input, init);
+
 export async function sendViaGmail(args: MailSendArgs): Promise<DetailedSendResult> {
   if (!GMAIL_SEND_RELEASED) return failure('provider_not_ready', false, null, 'Gmail-Versand noch nicht freigegeben');
   const { supabaseAdmin: db } = await import('@/integrations/supabase/client.server');
   return sendGmailWithDeps(args, {
-    enabled: GMAIL_SEND_RELEASED, fetch: args.fetchImpl ?? fetch,
+    // workerd throws "Illegal invocation" when global fetch is called as deps.fetch(); keep it unbound.
+    enabled: GMAIL_SEND_RELEASED, fetch: args.fetchImpl ?? boundFetch,
     gatewayKey: process.env.LOVABLE_API_KEY ?? '', connectionKey: process.env.GOOGLE_MAIL_API_KEY ?? '',
     claim: async (key, hash) => {
       const { data, error } = await db.rpc('claim_gmail_attempt', { _key: key, _hash: hash });
