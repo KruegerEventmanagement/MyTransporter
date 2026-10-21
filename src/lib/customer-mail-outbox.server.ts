@@ -366,6 +366,11 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
           if (!Number.isFinite(endMs) || Date.now() >= endMs) return "Rückgabe-Erinnerung abgelaufen";
           if (["returning", "completed", "return_pending"].includes(b.status)) return "Rückgabe bereits gemeldet";
         }
+        if (row.kind === "return_overdue_1" || row.kind === "return_overdue_2") {
+          if (["returning", "completed", "return_pending", "returned"].includes(b.status)) return "Rückgabe bereits gemeldet";
+          const { isLegacyOpenTrip } = await import("@/lib/active-trip");
+          if (isLegacyOpenTrip(b)) return "Altbuchung";
+        }
       } else {
         const { data: r, error } = await db.from("manual_reservations").select("id, confirmation_requested, end_at").eq("id", row.source_id).maybeSingle();
         if (error) throw new Error(error.message);
@@ -485,7 +490,7 @@ export async function runCustomerMailSweep(): Promise<Record<string, number>> {
 export async function sendReminderViaOutbox(args: {
   source: OutboxSource;
   sourceId: string;
-  kind: "reminder_24h" | "reminder_30min" | "return_reminder";
+  kind: "reminder_24h" | "reminder_30min" | "return_reminder" | "return_overdue_1" | "return_overdue_2";
   to: string;
   subject: string;
   html: string;

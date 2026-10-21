@@ -28,6 +28,9 @@ export const Route = createFileRoute("/api/public/hooks/return-reminders")({
           try {
             const { processReturnReminderMails } = await import("@/lib/return-reminder-mail.server");
             mail = await processReturnReminderMails();
+            const { processOverdueReturnMails } = await import("@/lib/return-reminder-mail.server");
+            const o = await processOverdueReturnMails();
+            mail = { due: mail.due + o.due, sent: mail.sent + o.sent };
           } catch (e) {
             console.error("return-reminder mails failed", e instanceof Error ? e.message : "unknown");
           }
