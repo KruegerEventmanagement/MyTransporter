@@ -253,6 +253,8 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
   });
   const setT = (t: DeductionType, patch: Partial<Sel>) => setSel((s) => ({ ...s, [t]: { ...s[t], ...patch } }));
   const settlement = ctx.settlements?.find((s: any) => s.id === ctx.review?.settlement_id);
+  const externalRefundCents = (ctx.stripeRefunds ?? []).filter((r: any) => r.origin === "external" && r.status !== "failed" && r.status !== "canceled").reduce((a: number, r: any) => a + r.amount_cents, 0);
+  const stripeBlocked = source === "booking" && externalRefundCents > 0;
 
   const docLink = (d: { label: string; signedUrl: string | null; fileState: string; removedByUser: boolean } | null) =>
     !d ? null : (
@@ -393,7 +395,8 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
               <input value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder="Begründung der Anpassung (Pflicht), z. B. Kulanz oder zusätzlicher Abzug" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
             )}
             {refundError && (refundTouched || deviates) && <p className="text-xs font-semibold">{refundError}</p>}
-            <button disabled={busy || !!refundError || !!draftItems.error} onClick={doPayNow} className="w-full rounded-full bg-foreground text-background py-2.5 text-sm font-semibold disabled:opacity-50">
+            {stripeBlocked && <p className="text-xs font-semibold">Bei Stripe wurde direkt bereits {eur(externalRefundCents)} erstattet. Rückzahlung gesperrt – bitte in Stripe prüfen.</p>}
+            <button disabled={busy || !!refundError || !!draftItems.error || (stripeBlocked && (refundCents ?? 0) > 0)} onClick={doPayNow} className="w-full rounded-full bg-foreground text-background py-2.5 text-sm font-semibold disabled:opacity-50">
               {(refundCents ?? 0) === 0 ? "Kaution einbehalten und abschließen" : source === "booking" ? `${eur(refundCents ?? 0)} jetzt per Stripe zurückzahlen` : `${eur(refundCents ?? 0)} manuell auszahlen & abschließen`}
             </button>
           </div>
@@ -438,6 +441,7 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
           ) : (
             <p>Manuelle Rückzahlung: {ctx.review.manual_payout_status === "confirmed" ? `bestätigt (${ctx.review.manual_payout_method})` : ctx.review.manual_payout_status === "open" ? "offen" : "nicht erforderlich"}</p>
           )}
+          {(ctx.stripeRefunds ?? []).length > 0 && <ul className="text-xs text-muted-foreground">{ctx.stripeRefunds.map((r: any) => <li key={r.refund_id}>Stripe-Erstattung {eur(r.amount_cents)} · {r.status} · {r.origin === "external" ? "direkt in Stripe (nicht zugeordnet)" : r.allocation}</li>)}</ul>}
           <p>Kundenmail: {ctx.review.send_closing_mail === false ? "vom Admin ausgeschaltet" : ctx.closingMail ? `${MAIL_STATE_DE[ctx.closingMail.status] ?? ctx.closingMail.status}${ctx.closingMail.blocked_reason ? ` · ${ctx.closingMail.blocked_reason}` : ""}` : "noch nicht erstellt (erst bei bestätigtem oder beauftragtem Zahlungsstand)"}</p>
           <div className="flex flex-wrap gap-2">
             {source === "booking" && !settlement && <button disabled={busy} onClick={() => run(async () => onCtx(await cont({ data: { source, id } })), "Fortgesetzt")} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">Rückzahlung fortsetzen (gleicher Auftrag)</button>}

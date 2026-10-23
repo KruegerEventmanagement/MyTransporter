@@ -52,6 +52,7 @@ export type DepositContext = {
   extraKm: { km: number | null; cents: number | null; rateCents?: number | null; alreadyPaid: boolean };
   review: ReviewRow | null;
   settlements: { id: string; kind: string; status: string; refund_cents: number; failure_reason: string | null; refund_id: string | null }[];
+  stripeRefunds?: { refund_id: string; origin: string; allocation: string; amount_cents: number; status: string; stripe_created_at: string | null }[];
   closingMail: { status: string; provider_message_id: string | null; blocked_reason: string | null } | null;
   knownBounce: boolean;
 };
@@ -102,7 +103,7 @@ export async function loadDepositContext(source: Source, id: string): Promise<De
       stripe: { paymentIntentId: b.stripe_payment_intent_id, environment: b.stripe_environment }, depositStatus: b.deposit_status,
       facts, checklist, photos: safePhotos, issues, docFee: documentationFeeAllowed(facts),
       extraKm: { km: b.extra_km ?? null, cents: b.extra_km_charge_cents ?? null, rateCents: b.km_price_cents ?? null, alreadyPaid: b.extra_charge_status != null && b.extra_charge_status !== "failed" },
-      review, settlements, closingMail: closing, knownBounce: email ? await hasPermanentBounce(email) : false,
+      review, settlements, stripeRefunds, closingMail: closing, knownBounce: email ? await hasPermanentBounce(email) : false,
     };
   }
   const m = must(await d.from("manual_reservations").select("id, customer_name, customer_email, vehicle_name, vehicle_plate, start_at, end_at, total_price_cents").eq("id", id).maybeSingle(), "Termin");
