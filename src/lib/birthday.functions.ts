@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireActiveAccount } from "@/lib/active-account";
-import { berlinDateParts, checkCoupon, normalizeCouponCode, type CouponRow } from "@/lib/birthday";
+import { normalizeCouponCode } from "@/lib/birthday";
 
 export interface CouponPreview {
   valid: boolean;
