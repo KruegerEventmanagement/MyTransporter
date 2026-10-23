@@ -396,6 +396,35 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
   return res.hasFailures;
 }
 
+const REFUND_EVENTS = new Set(["refund.created", "refund.updated", "refund.failed", "charge.refunded", "charge.refund.updated"]);
+
+/**
+ * Refund-Ereignisse (signiert). Event-ID dedupliziert; Inhalt nie vertraut:
+ * Stripe-Zustand wird frisch gelesen und per refund_id monoton übernommen,
+ * daher reihenfolgeunabhängig. Fehler ⇒ 500, Stripe wiederholt.
+ */
+async function handleRefundEvent(event: { id: string; type: string; data: { object: unknown } }, env: StripeEnv): Promise<"ok" | "duplicate" | "busy"> {
+  const { claimStripeEvent, finishStripeEvent, mirrorDeps } = await import("@/lib/stripe-refund-sync-deps.server");
+  const { mirrorRefundById, mirrorPaymentIntent } = await import("@/lib/stripe-refund-sync.server");
+  const claim = await claimStripeEvent(event.id, env, event.type);
+  if (claim !== "new") return claim;
+  try {
+    const obj = event.data.object as { id?: string; object?: string; payment_intent?: unknown };
+    const d = mirrorDeps();
+    if (obj?.object === "charge") {
+      const pi = extractId(obj.payment_intent ?? null);
+      if (pi) await mirrorPaymentIntent(d, env, pi);
+    } else if (obj?.id) {
+      await mirrorRefundById(d, env, obj.id);
+    }
+    await finishStripeEvent(event.id, true);
+    return "ok";
+  } catch (e) {
+    await finishStripeEvent(event.id, false, e instanceof Error ? e.message : String(e)).catch(() => undefined);
+    throw e;
+  }
+}
+
 export const Route = createFileRoute("/api/public/payments/webhook")({
   server: {
     handlers: {
@@ -433,6 +462,9 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
                 session.payment_status,
               );
             }
+          } else if (REFUND_EVENTS.has(event.type)) {
+            const r = await handleRefundEvent(event, env);
+            if (r === "busy") return new Response("event in progress", { status: 409 });
           } else {
             // Weitere Events (payment_intent.succeeded, invoice.*, …) hier ergänzen
             console.log("[webhook] event", event.type);
