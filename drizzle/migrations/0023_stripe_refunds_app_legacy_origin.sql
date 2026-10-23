@@ -1,0 +1,2 @@
+ALTER TABLE public.stripe_refunds DROP CONSTRAINT IF EXISTS stripe_refunds_origin_check;
+ALTER TABLE public.stripe_refunds ADD CONSTRAINT stripe_refunds_origin_check CHECK (origin IN ('app_settlement','app_conflict','app_legacy','external'));

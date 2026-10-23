@@ -162,6 +162,13 @@
       "when": 1792765031347,
       "tag": "0022_stripe_refund_mirror",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792765279185,
+      "tag": "0023_stripe_refunds_app_legacy_origin",
+      "breakpoints": true
     }
   ]
 }

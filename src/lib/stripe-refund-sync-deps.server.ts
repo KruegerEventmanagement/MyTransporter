@@ -45,7 +45,7 @@ export function mirrorDeps(): MirrorDeps {
       return out;
     },
     async findBookingByPi(pi) {
-      const { data, error } = await db.from("bookings").select("id").eq("stripe_payment_intent_id", pi).maybeSingle();
+      const { data, error } = await db.from("bookings").select("id, deposit_refund_id").eq("stripe_payment_intent_id", pi).maybeSingle();
       if (error) throw new Error(error.message);
       return data;
     },

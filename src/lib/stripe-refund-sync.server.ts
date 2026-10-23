@@ -25,7 +25,7 @@ export type MirrorRow = {
   charge_id: string | null;
   booking_id: string | null;
   settlement_id: string | null;
-  origin: "app_settlement" | "app_conflict" | "external";
+  origin: "app_settlement" | "app_conflict" | "app_legacy" | "external";
   allocation: "deposit" | "cancellation" | "legacy" | "conflict" | "unallocated";
   amount_cents: number;
   currency: string | null;
@@ -39,7 +39,7 @@ export interface MirrorDeps {
   retrieveRefund(env: Env, id: string): Promise<StripeRefundFull | null>;
   listRefundsForPi(env: Env, pi: string): Promise<StripeRefundFull[]>;
   listRecentRefunds(env: Env, sinceUnix: number, max: number): Promise<StripeRefundFull[]>;
-  findBookingByPi(pi: string): Promise<{ id: string } | null>;
+  findBookingByPi(pi: string): Promise<{ id: string; deposit_refund_id?: string | null } | null>;
   getSettlementKind(id: string): Promise<{ id: string; kind: string; booking_id: string } | null>;
   upsert(row: MirrorRow): Promise<{ inserted: boolean; status: string; notify: boolean }>;
   markNotified(refundId: string): Promise<void>;
@@ -60,12 +60,17 @@ export async function classify(d: MirrorDeps, r: StripeRefundFull): Promise<Pick
       return { origin: "app_settlement", allocation: alloc, settlement_id: s.id, booking_id: s.booking_id };
     }
   }
+  // Ältere App-Erstattungen (vor Auftragssystem): nur bei belegter Zuordnung,
+  // d. h. die Buchung verweist selbst auf genau diesen Refund.
+  if (booking?.deposit_refund_id && booking.deposit_refund_id === r.id) {
+    return { origin: "app_legacy", allocation: "legacy", settlement_id: null, booking_id: booking.id };
+  }
   if (r.metadata?.kind === "double_booking_conflict") return { origin: "app_conflict", allocation: "conflict", settlement_id: null, booking_id: booking?.id ?? null };
   return { origin: "external", allocation: "unallocated", settlement_id: null, booking_id: booking?.id ?? null };
 }
 
 /** Übernimmt einen Refund anhand des frisch gelesenen Stripe-Stands. */
-export async function mirrorRefund(d: MirrorDeps, env: Env, fresh: StripeRefundFull): Promise<MirrorRow> {
+export async function mirrorRefund(d: MirrorDeps, env: Env, fresh: StripeRefundFull, opts: { silent?: boolean } = {}): Promise<MirrorRow> {
   const c = await classify(d, fresh);
   const row: MirrorRow = {
     refund_id: fresh.id,
@@ -84,7 +89,9 @@ export async function mirrorRefund(d: MirrorDeps, env: Env, fresh: StripeRefundF
   if (c.origin === "app_settlement" && d.settlement) {
     await syncRefundFromWebhook(d.settlement, env, fresh.id);
   }
-  if (res.notify && fresh.status !== "failed" && fresh.status !== "canceled") {
+  if (res.notify && opts.silent) {
+    await d.markNotified(fresh.id).catch(() => undefined);
+  } else if (res.notify && fresh.status !== "failed" && fresh.status !== "canceled") {
     await d.notifyAdmin(
       "Erstattung direkt in Stripe erkannt – manuell zuordnen",
       `${eur(fresh.amount)} (${fresh.status}) auf Zahlung ${fresh.payment_intent ?? "?"} · Refund ${fresh.id}. ` +
@@ -110,7 +117,7 @@ export async function mirrorPaymentIntent(d: MirrorDeps, env: Env, pi: string) {
 }
 
 /** Abgleich verpasster Events: alle Refunds seit sinceUnix je Umgebung. */
-export async function reconcileRecentRefunds(d: MirrorDeps, envs: Env[], sinceUnix: number, max = 300) {
+export async function reconcileRecentRefunds(d: MirrorDeps, envs: Env[], sinceUnix: number, max = 300, opts: { silent?: boolean } = {}) {
   let mirrored = 0;
   let errors = 0;
   for (const env of envs) {
@@ -123,7 +130,7 @@ export async function reconcileRecentRefunds(d: MirrorDeps, envs: Env[], sinceUn
     }
     for (const r of list) {
       try {
-        await mirrorRefund(d, env, r);
+        await mirrorRefund(d, env, r, opts);
         mirrored++;
       } catch {
         errors++;
