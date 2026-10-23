@@ -135,9 +135,14 @@ export async function runBookingCheckout(data: BookingCheckoutInput, context: Ct
     const { resolveCouponForRent } = await import("@/lib/birthday.server");
     const coupon = await resolveCouponForRent(data.couponCode, context.userId, plan.rent);
     if (!coupon.ok) return { error: coupon.reason ?? "Gutscheincode ungültig." };
+    if (coupon.code && coupon.source && (coupon.discountCents ?? 0) > 0) {
+      const { reserveCouponForCheckout } = await import("@/lib/birthday.server");
+      if (!(await reserveCouponForCheckout(coupon.code, context.userId, coupon.source)))
+        return { error: "Dieser Gutschein wird gerade in einer anderen Zahlung verwendet oder ist bereits eingelöst." };
+    }
     const discountCents = Math.min(coupon.discountCents ?? 0, Math.max(0, plan.rent - 100));
     const rentAfterDiscount = plan.rent - discountCents;
-    const rentLabel = discountCents > 0 ? `${plan.label} · inkl. ${coupon.discountPercent} % Geburtstagsrabatt` : plan.label;
+    const rentLabel = discountCents > 0 ? `${plan.label} · inkl. ${coupon.discountPercent} % ${coupon.source === "thanks" ? "Dankeschön-Rabatt" : "Geburtstagsrabatt"}` : plan.label;
 
     type LineItem = { price_data: { currency: string; product_data: { name: string }; unit_amount: number }; quantity: number };
     const line_items: LineItem[] = [];

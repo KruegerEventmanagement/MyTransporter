@@ -14,6 +14,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AgbRouteImport } from './routes/agb'
 import { Route as DatenschutzRouteImport } from './routes/datenschutz'
 import { Route as FaqRouteImport } from './routes/faq'
+import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as ImpressumRouteImport } from './routes/impressum'
 import { Route as KontaktRouteImport } from './routes/kontakt'
 import { Route as KontoLoeschenRouteImport } from './routes/konto-loeschen'
@@ -73,6 +74,11 @@ const DatenschutzRoute = DatenschutzRouteImport.update({
 const FaqRoute = FaqRouteImport.update({
   id: '/faq',
   path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedbackRoute = FeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImpressumRoute = ImpressumRouteImport.update({
@@ -272,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/agb': typeof AgbRoute
   '/datenschutz': typeof DatenschutzRoute
   '/faq': typeof FaqRoute
+  '/feedback': typeof FeedbackRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
   '/konto-loeschen': typeof KontoLoeschenRoute
@@ -314,6 +321,7 @@ export interface FileRoutesByTo {
   '/agb': typeof AgbRoute
   '/datenschutz': typeof DatenschutzRoute
   '/faq': typeof FaqRoute
+  '/feedback': typeof FeedbackRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
   '/konto-loeschen': typeof KontoLoeschenRoute
@@ -357,6 +365,7 @@ export interface FileRoutesById {
   '/agb': typeof AgbRoute
   '/datenschutz': typeof DatenschutzRoute
   '/faq': typeof FaqRoute
+  '/feedback': typeof FeedbackRoute
   '/impressum': typeof ImpressumRoute
   '/kontakt': typeof KontaktRoute
   '/konto-loeschen': typeof KontoLoeschenRoute
@@ -401,6 +410,7 @@ export interface FileRouteTypes {
     | '/agb'
     | '/datenschutz'
     | '/faq'
+    | '/feedback'
     | '/impressum'
     | '/kontakt'
     | '/konto-loeschen'
@@ -443,6 +453,7 @@ export interface FileRouteTypes {
     | '/agb'
     | '/datenschutz'
     | '/faq'
+    | '/feedback'
     | '/impressum'
     | '/kontakt'
     | '/konto-loeschen'
@@ -485,6 +496,7 @@ export interface FileRouteTypes {
     | '/agb'
     | '/datenschutz'
     | '/faq'
+    | '/feedback'
     | '/impressum'
     | '/kontakt'
     | '/konto-loeschen'
@@ -528,6 +540,7 @@ export interface RootRouteChildren {
   AgbRoute: typeof AgbRoute
   DatenschutzRoute: typeof DatenschutzRoute
   FaqRoute: typeof FaqRoute
+  FeedbackRoute: typeof FeedbackRoute
   ImpressumRoute: typeof ImpressumRoute
   KontaktRoute: typeof KontaktRoute
   KontoLoeschenRoute: typeof KontoLoeschenRoute
@@ -600,6 +613,13 @@ declare module '@tanstack/react-router' {
       path: '/faq'
       fullPath: '/faq'
       preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feedback': {
+      id: '/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof FeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/impressum': {
@@ -856,6 +876,7 @@ const rootRouteChildren: RootRouteChildren = {
   AgbRoute: AgbRoute,
   DatenschutzRoute: DatenschutzRoute,
   FaqRoute: FaqRoute,
+  FeedbackRoute: FeedbackRoute,
   ImpressumRoute: ImpressumRoute,
   KontaktRoute: KontaktRoute,
   KontoLoeschenRoute: KontoLoeschenRoute,

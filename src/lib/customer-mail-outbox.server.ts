@@ -5,6 +5,7 @@
 import {
   buildInvoiceMail,
   buildReviewMail,
+  buildFeedbackMail,
   berlinDateTime,
   outboxIdempotencyKey,
   processOutboxRow,
@@ -33,13 +34,14 @@ export type MailSettings = {
   google_review_url: string | null;
   review_requests_from: string | null;
   invoice_outbox_from: string;
+  feedback_requests_from?: string | null;
 };
 
 export async function loadMailSettings(): Promise<MailSettings> {
   const db = await admin();
   const { data, error } = await db
     .from("customer_mail_settings")
-    .select("google_review_url, review_requests_from, invoice_outbox_from")
+    .select("google_review_url, review_requests_from, invoice_outbox_from, feedback_requests_from")
     .eq("id", true)
     .maybeSingle();
   if (error || !data) throw new Error(`Mail-Einstellungen nicht lesbar: ${error?.message ?? "fehlt"}`);
@@ -343,6 +345,133 @@ export async function enqueueReviewRequest(source: OutboxSource, sourceId: strin
   return { state: "queued", rowId: row.id };
 }
 
+/** Feedback-Einwilligung: Buchungs-Einwilligung ODER dokumentierte Telefon-Einwilligung (Betreiber). */
+export async function hasFeedbackConsent(source: OutboxSource, sourceId: string, email: string): Promise<boolean> {
+  if (await hasReviewConsent(source, sourceId)) return true;
+  const db = await admin();
+  const { data, error } = await db.from("marketing_consent_attestations").select("id")
+    .eq("email_lower", email.trim().toLowerCase()).eq("scope", "feedback").maybeSingle();
+  if (error) throw new Error(`Einwilligung nicht prüfbar: ${error.message}`);
+  return !!data;
+}
+
+/** Ende des einmaligen Nachholzeitraums (Auftrag 23.10.2026). */
+export const FEEDBACK_BACKFILL_UNTIL = "2026-10-23T11:00:00Z";
+
+/** Bereits angeschriebene Adressen (Bewertungs-/Feedbackmail versendet oder unterwegs). */
+async function contactedEmails(): Promise<Set<string>> {
+  const db = await admin();
+  const { data, error } = await db.from("customer_mail_outbox").select("recipient_email, kind, status")
+    .in("kind", ["review_request", "feedback_request"]).in("status", ["sent", "scheduled", "processing", "failed", "needs_review"]);
+  if (error) throw new Error(error.message);
+  return new Set((data ?? []).map((r) => (r.recipient_email ?? "").trim().toLowerCase()).filter(Boolean));
+}
+
+/** Persönlicher 10-%-Dankeschön-Gutschein, einmal pro Kunde (DB-Unique email+kind). */
+async function ensureThanksCoupon(emailLower: string, userId: string | null, source: OutboxSource, sourceId: string) {
+  const { generateThanksCode, thanksValidUntil, THANKS_DISCOUNT_PERCENT } = await import("@/lib/coupons");
+  const { berlinDateParts } = await import("@/lib/birthday");
+  const db = await admin();
+  const { data: existing, error } = await db.from("customer_coupons").select("code, discount_percent, valid_until, redeemed_at, created_at")
+    .eq("email_lower", emailLower).eq("kind", "thanks").maybeSingle();
+  if (error) throw new Error(error.message);
+  if (existing) return null; // nur einmal pro Kunde – keine zweite Ausgabe
+  const today = berlinDateParts().iso;
+  const row = { code: generateThanksCode(), kind: "thanks", email_lower: emailLower, user_id: userId, discount_percent: THANKS_DISCOUNT_PERCENT,
+    valid_from: today, valid_until: thanksValidUntil(today), source_type: source, source_id: sourceId };
+  const { error: insErr } = await db.from("customer_coupons").insert(row as never);
+  if (insErr) {
+    if (insErr.code === "23505") return null;
+    throw new Error(insErr.message);
+  }
+  return { code: row.code, percent: row.discount_percent, validUntil: row.valid_until };
+}
+
+/**
+ * Feedback-Mail 24 h nach tatsächlichem Mietende (Rückgabe, sonst geplantes Ende).
+ * Nur nicht stornierte, beendete Mieten; nie für laufende/zukünftige Mieten.
+ * Pro Buchung genau eine Zeile (Unique source+kind); pro Adresse höchstens eine offene/versendete
+ * Bewertungs-/Feedbackmail im Nachholzeitraum.
+ */
+export async function enqueueFeedbackRequest(source: OutboxSource, sourceId: string, contacted?: Set<string>): Promise<EnqueueResult> {
+  const existing = await getRow(source, sourceId, "feedback_request");
+  if (existing) return { state: "queued", rowId: existing.id };
+  const s = await loadMailSettings();
+  const from = (s as unknown as { feedback_requests_from?: string | null }).feedback_requests_from;
+  if (!from) return { state: "disabled" };
+  const db = await admin();
+  const { feedbackDueAt } = await import("@/lib/coupons");
+  const { MARKETING_EXCLUDED_EMAILS } = await import("@/lib/birthday.server");
+  let endDue: number, email: string, firstName: string | null, userId: string | null = null;
+  if (source === "booking") {
+    const { data: b, error } = await db.from("bookings").select("id, user_id, status, start_date, start_hour, plan_id, vehicle_name, return_reported_at").eq("id", sourceId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!b) return { state: "not_found" };
+    if (!BOOKED.includes(b.status)) return { state: "cancelled" };
+    if (!(await isActive(b.user_id))) return { state: "cancelled" };
+    const { resolveTripWindow } = await import("@/lib/trip-time");
+    const { endMs } = resolveTripWindow(b as never);
+    if (!Number.isFinite(endMs)) return { state: "blocked" };
+    endDue = feedbackDueAt(endMs, b.return_reported_at);
+    const { data: p, error: pErr } = await db.from("profiles").select("email, first_name").eq("id", b.user_id).maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    email = p?.email?.trim() ?? ""; firstName = p?.first_name ?? null; userId = b.user_id;
+  } else {
+    const { data: r, error } = await db.from("manual_reservations").select("id, end_at, customer_email, customer_name").eq("id", sourceId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!r) return { state: "not_found" };
+    endDue = new Date(r.end_at).getTime() + 24 * 3600_000;
+    email = (r.customer_email ?? "").trim(); firstName = (r.customer_name ?? "").trim().split(/\s+/)[0] || null;
+  }
+  // Mietende muss im Aktivierungszeitraum liegen und 24 h vorbei sein – sonst nichts anlegen.
+  if (endDue - 24 * 3600_000 < new Date(from).getTime()) return { state: "before_activation" };
+  if (endDue > Date.now()) return { state: "blocked" };
+  const lower = email.toLowerCase();
+  if (!email.includes("@") || MARKETING_EXCLUDED_EMAILS.includes(lower) || (await isOptedOut(email))) return { state: "cancelled" };
+  // Nachholzeitraum: bereits (z. B. am 18.10.) angeschriebene Kunden nicht erneut anschreiben.
+  if (endDue - 24 * 3600_000 < new Date(FEEDBACK_BACKFILL_UNTIL).getTime() && (contacted ?? (await contactedEmails())).has(lower))
+    return { state: "legacy_sent" };
+  if (!(await hasFeedbackConsent(source, sourceId, email))) return { state: "no_consent" };
+  const token = crypto.randomUUID();
+  const coupon = await ensureThanksCoupon(lower, userId, source, sourceId);
+  const payload = buildFeedbackMail({ firstName, to: email, reviewUrl: effectiveReviewUrl(s.google_review_url), optOutToken: token, coupon });
+  const row = await insertRow({
+    source_type: source, source_id: sourceId, kind: "feedback_request",
+    due_at: new Date().toISOString(), recipient_email: email, payload, opt_out_token: token,
+  });
+  contacted?.add(lower);
+  return { state: "queued", rowId: row.id };
+}
+
+/** Kandidaten: beendete Mieten ab Aktivierung, ohne Feedback-Zeile. */
+export async function runFeedbackEnqueue(): Promise<number> {
+  const s = await loadMailSettings();
+  const from = (s as unknown as { feedback_requests_from?: string | null }).feedback_requests_from;
+  if (!from) return 0;
+  const db = await admin();
+  const sinceDate = new Date(new Date(from).getTime() - 35 * 86400_000).toISOString().slice(0, 10);
+  const { data: bs, error } = await db.from("bookings").select("id").gte("start_date", sinceDate)
+    .lte("start_date", new Date().toISOString().slice(0, 10)).in("status", BOOKED).order("start_date");
+  if (error) throw new Error(error.message);
+  const { data: ms, error: mErr } = await db.from("manual_reservations").select("id").gte("end_at", from).lte("end_at", new Date().toISOString());
+  if (mErr) throw new Error(mErr.message);
+  const { data: done, error: dErr } = await db.from("customer_mail_outbox").select("source_type, source_id").eq("kind", "feedback_request");
+  if (dErr) throw new Error(dErr.message);
+  const have = new Set((done ?? []).map((d) => `${d.source_type}:${d.source_id}`));
+  const contacted = await contactedEmails();
+  let n = 0;
+  const list: [OutboxSource, string][] = [
+    ...(bs ?? []).map((b) => ["booking", b.id] as [OutboxSource, string]),
+    ...(ms ?? []).map((m) => ["manual", m.id] as [OutboxSource, string]),
+  ];
+  for (const [src, id] of list) {
+    if (have.has(`${src}:${id}`)) continue;
+    try { if ((await enqueueFeedbackRequest(src, id, contacted)).state === "queued") n++; }
+    catch (e) { console.warn("[outbox] Feedback", String((e as Error)?.message ?? e).slice(0, 200)); }
+  }
+  return n;
+}
+
 export async function createOutboxDeps(): Promise<OutboxDeps> {
   const db = await admin();
   const { sendEmailDetailed } = await import("@/lib/booking-emails.server");
@@ -376,6 +505,11 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
         if (error) throw new Error(error.message);
         if (!r) return "Termin gelöscht";
         if (row.kind === "return_reminder" && (!r.confirmation_requested || Date.now() >= new Date(r.end_at).getTime())) return "Rückgabe-Erinnerung abgelaufen/zurückgezogen";
+      }
+      if (row.kind === "feedback_request") {
+        if (!row.recipient_email || !(await hasFeedbackConsent(row.source_type, row.source_id, row.recipient_email))) return "Keine Einwilligung für Feedbackmail";
+        if (await isOptedOut(row.recipient_email)) return "Empfänger hat widersprochen";
+        return null;
       }
       if (row.kind !== "review_request") return null;
       if (!(await hasReviewConsent(row.source_type, row.source_id))) return "Keine Einwilligung für Bewertungsmail";
@@ -460,6 +594,8 @@ export async function runCustomerMailSweep(): Promise<Record<string, number>> {
       try { if ((await enqueueReviewRequest("manual", m.id, settings)).state === "queued") stats.manual_enqueued++; } catch (e) { note("manuelle Bewertung", e); }
     }
   }
+
+  try { stats.feedback_enqueued = await runFeedbackEnqueue(); } catch (e) { note("Feedback", e); }
 
   try {
     const { runDepositSweep } = await import("@/lib/deposit-review.server");

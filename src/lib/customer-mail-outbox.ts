@@ -30,7 +30,7 @@ export const REVIEW_CONSENT_TEXT =
   "Ja, MyTransporter darf mir 24 Stunden nach dieser Buchung einmalig eine E-Mail mit der Bitte um eine freiwillige Google-Bewertung senden. Ich kann jederzeit widersprechen (Abmeldelink in der E-Mail oder an info@mytransporter.org).";
 export const REVIEW_DELAY_MS = 24 * 3600_000;
 
-export type OutboxKind = "invoice" | "review_request" | "reminder_24h" | "reminder_30min" | "return_reminder" | "return_overdue_1" | "return_overdue_2" | "booking_confirmation" | "admin_booking" | "deposit_review_admin" | "deposit_digest" | "deposit_closing";
+export type OutboxKind = "invoice" | "review_request" | "reminder_24h" | "reminder_30min" | "return_reminder" | "return_overdue_1" | "return_overdue_2" | "booking_confirmation" | "admin_booking" | "deposit_review_admin" | "deposit_digest" | "deposit_closing" | "feedback_request";
 export type OutboxSource = "booking" | "manual" | "digest";
 
 export type FrozenOutboxMail = {
@@ -225,6 +225,84 @@ export function buildReviewMail(i: ReviewMailInput): FrozenOutboxMail {
     to: i.to,
     reply_to: OUTBOX_REPLY_TO,
     subject: `${prefix}Deine Erfahrung mit MyTransporter`,
+    headers: { "List-Unsubscribe": `<${optOut}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+    html,
+    text,
+    attachment: null,
+  };
+}
+
+export type FeedbackMailInput = {
+  firstName: string | null;
+  to: string;
+  reviewUrl: string;
+  optOutToken: string;
+  coupon: { code: string; percent: number; validUntil: string } | null;
+};
+
+export function feedbackFormUrl(token: string): string {
+  return `${APP_ORIGIN}/feedback?t=${encodeURIComponent(token)}`;
+}
+
+/**
+ * Feedback-Mail 24 h nach Mietende. Gutschein ist ein unabhängiges Dankeschön –
+ * ausdrücklich NICHT an eine Google-Bewertung oder ein Feedback geknüpft.
+ */
+export function buildFeedbackMail(i: FeedbackMailInput): FrozenOutboxMail {
+  const url = validateGoogleReviewUrl(i.reviewUrl) ?? GOOGLE_REVIEW_URL;
+  const optOut = reviewOptOutUrl(i.optOutToken);
+  const form = feedbackFormUrl(i.optOutToken);
+  const [y, m, d] = (i.coupon?.validUntil ?? "").split("-");
+  const until = i.coupon ? `${d}.${m}.${y}` : "";
+  const intro = [
+    "vielen Dank, dass du mit MyTransporter unterwegs warst. Wir hoffen, alles hat gut geklappt.",
+    "Uns interessiert ehrlich, wie es für dich war: Was war gut, was hat gestört, was können wir besser machen? Dafür haben wir ein kurzes Formular, das nur bei uns ankommt. Ganz freiwillig.",
+  ];
+  const couponHtml = i.coupon
+    ? noteBlock(
+        `<strong>Unser Dankeschön an dich:</strong> ${i.coupon.percent} % auf deine nächste Miete mit dem Code <strong>${esc(i.coupon.code)}</strong>, gültig bis ${esc(until)}. Einfach bei der Buchung im Feld „Gutscheincode“ eingeben. Einmal einlösbar, gilt nur für den Mietpreis (nicht für Kaution oder Zusatzleistungen). Der Gutschein gehört dir unabhängig davon, ob du uns Feedback gibst oder eine Bewertung schreibst.`,
+      )
+    : "";
+  const reviewHtml = noteBlock(
+    `Wenn du magst, kannst du uns auch freiwillig auf Google bewerten, ganz gleich wie deine Erfahrung war: <a href="${esc(url)}" style="color:#000;">Google-Profil öffnen</a>.`,
+  );
+  const html = renderEmail({
+    firstName: i.firstName,
+    heading: "Danke für deine Miete",
+    intro,
+    button: { label: "Kurzes Feedback geben", url: form },
+    extraHtml:
+      couponHtml +
+      reviewHtml +
+      noteBlock(`Du möchtest solche E-Mails nicht mehr erhalten? <a href="${esc(optOut)}" style="color:#000;">Hier abmelden</a>.`),
+    outro: ["Bei Fragen oder Problemen antworte einfach direkt auf diese E-Mail."],
+    signature: OUTBOX_SIGNATURE,
+  });
+  const text = [
+    i.firstName ? `Hallo ${i.firstName},` : "Hallo,",
+    "",
+    ...intro,
+    "",
+    `Feedback-Formular: ${form}`,
+    "",
+    ...(i.coupon
+      ? [
+          `Unser Dankeschön an dich: ${i.coupon.percent} % auf deine nächste Miete mit dem Code ${i.coupon.code}, gültig bis ${until}. Einmal einlösbar, nur auf den Mietpreis. Unabhängig von Feedback oder Bewertung.`,
+          "",
+        ]
+      : []),
+    `Freiwillige Google-Bewertung: ${url}`,
+    "",
+    `Keine solchen E-Mails mehr: ${optOut}`,
+    "",
+    "Herzliche Grüße",
+    OUTBOX_SIGNATURE,
+  ].join("\n");
+  return {
+    from: OUTBOX_FROM,
+    to: i.to,
+    reply_to: OUTBOX_REPLY_TO,
+    subject: "Danke für deine Miete bei MyTransporter",
     headers: { "List-Unsubscribe": `<${optOut}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
     html,
     text,
