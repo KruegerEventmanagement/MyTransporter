@@ -34,13 +34,14 @@ export type MailSettings = {
   google_review_url: string | null;
   review_requests_from: string | null;
   invoice_outbox_from: string;
+  feedback_requests_from?: string | null;
 };
 
 export async function loadMailSettings(): Promise<MailSettings> {
   const db = await admin();
   const { data, error } = await db
     .from("customer_mail_settings")
-    .select("google_review_url, review_requests_from, invoice_outbox_from")
+    .select("google_review_url, review_requests_from, invoice_outbox_from, feedback_requests_from")
     .eq("id", true)
     .maybeSingle();
   if (error || !data) throw new Error(`Mail-Einstellungen nicht lesbar: ${error?.message ?? "fehlt"}`);
@@ -354,6 +355,9 @@ export async function hasFeedbackConsent(source: OutboxSource, sourceId: string,
   return !!data;
 }
 
+/** Ende des einmaligen Nachholzeitraums (Auftrag 23.10.2026). */
+export const FEEDBACK_BACKFILL_UNTIL = "2026-10-23T11:00:00Z";
+
 /** Bereits angeschriebene Adressen (Bewertungs-/Feedbackmail versendet oder unterwegs). */
 async function contactedEmails(): Promise<Set<string>> {
   const db = await admin();
@@ -424,7 +428,9 @@ export async function enqueueFeedbackRequest(source: OutboxSource, sourceId: str
   if (endDue > Date.now()) return { state: "blocked" };
   const lower = email.toLowerCase();
   if (!email.includes("@") || MARKETING_EXCLUDED_EMAILS.includes(lower) || (await isOptedOut(email))) return { state: "cancelled" };
-  if ((contacted ?? (await contactedEmails())).has(lower)) return { state: "legacy_sent" };
+  // Nachholzeitraum: bereits (z. B. am 18.10.) angeschriebene Kunden nicht erneut anschreiben.
+  if (endDue - 24 * 3600_000 < new Date(FEEDBACK_BACKFILL_UNTIL).getTime() && (contacted ?? (await contactedEmails())).has(lower))
+    return { state: "legacy_sent" };
   if (!(await hasFeedbackConsent(source, sourceId, email))) return { state: "no_consent" };
   const token = crypto.randomUUID();
   const coupon = await ensureThanksCoupon(lower, userId, source, sourceId);
