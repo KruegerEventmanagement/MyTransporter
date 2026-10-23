@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { berlinDateParts } from "@/lib/birthday";
 
 /**
  * Täglicher Geburtstagsversand.
@@ -16,7 +15,13 @@ export const Route = createFileRoute("/api/public/hooks/send-birthday-emails")({
       POST: async ({ request }) => {
         const token = process.env.NOTIFY_HOOK_TOKEN;
         if (!token || request.headers.get("x-hook-token") !== token) return new Response("Unauthorized", { status: 401 });
-        return Response.json({ skipped: "marketing_service_required", sent: 0 });
+        try {
+          const { processBirthdayEmails } = await import("@/lib/birthday.server");
+          return Response.json(await processBirthdayEmails());
+        } catch (e) {
+          console.error("birthday hook failed", String((e as Error)?.message ?? e).slice(0, 200));
+          return Response.json({ ok: false }, { status: 500 });
+        }
       },
     },
   },

@@ -6,7 +6,7 @@
  * unberührt.
  */
 
-export const BIRTHDAY_DISCOUNT_PERCENT = 20;
+export const BIRTHDAY_DISCOUNT_PERCENT = 10;
 /** Gültigkeit ab Geburtstag (inklusive) in Tagen. */
 export const BIRTHDAY_COUPON_VALID_DAYS = 14;
 /** Mindestalter für eine Buchung bei MyTransporter. */

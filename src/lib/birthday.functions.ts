@@ -24,24 +24,10 @@ export const previewCoupon = createServerFn({ method: "POST" })
     const code = normalizeCouponCode(data.couponCode);
     if (!code) return { valid: false, reason: "Bitte einen Gutscheincode eingeben." };
 
-    const { data: row } = await context.supabase
-      .from("birthday_campaigns")
-      .select("coupon_code, user_id, discount_percent, valid_from, valid_until, redeemed_at")
-      .eq("coupon_code", code)
-      .maybeSingle();
-
-    const check = checkCoupon(
-      (row as CouponRow | null) ?? null,
-      context.userId,
-      berlinDateParts().iso,
-    );
-    if (!check.ok) return { valid: false, reason: check.reason };
-    return {
-      valid: true,
-      code,
-      discountPercent: check.discountPercent,
-      validUntil: (row as CouponRow).valid_until,
-    };
+    const { resolveCouponForRent } = await import("@/lib/birthday.server");
+    const res = await resolveCouponForRent(code, context.userId, 10_000);
+    if (!res.ok) return { valid: false, reason: res.reason };
+    return { valid: true, code, discountPercent: res.discountPercent, validUntil: res.validUntil };
   });
 
 type RpcClient = {
