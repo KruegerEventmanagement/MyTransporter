@@ -2,6 +2,17 @@
 
 Stand: 06.10.2026; interner Release um 19:30 Europe/Berlin bestätigt. Kein Store-Upload aus Lovable. Keine Secrets im Repository.
 
+## Aktuelle Android-Paketmigration – 23.10.2026 (nur Vorbereitung)
+
+- Android: `de.mytransporterr.app`, Namespace und MainActivity entsprechend angepasst. Angezeigter Name bleibt **MyTransporter**. iOS bleibt unverändert `de.mytransporter.app`.
+- Capacitor wählt die ID über `scripts/capacitor-identity.ts` anhand des expliziten CLI-Plattformarguments (alternativ `MT_CAPACITOR_PLATFORM=android|ios`). Kein gemeinsames `cap sync`: `bun run cap:sync` synchronisiert beide Plattformen separat; plattformlose verändernde Befehle und widersprüchliche Auswahl brechen ab.
+- **Keine Uploadfreigabe:** Push/PR kann niemals Play-Upload auslösen. Nur `workflow_dispatch` mit bewusst gesetztem Boolean `upload_to_play=true` erlaubt Upload; Standard **false**. Für die Übergabe ausschließlich auf `main` mit `upload_to_play=false` starten; signiertes AAB bleibt als `mytransporter-release-<versionCode>` 30 Tage erhalten. Signierungsschlüssel unverändert.
+- **Release-Blocker:** Das Veröffentlichungsteam meldet alte ID abgelehnt/neue ID akzeptiert. Ablehnungsgrund und aktueller Status beider Play-Listings sind NICHT verifiziert. Ein neuer applicationId ist eine andere App und kein Update der alten Installation. Vor Upload muss das Team Listing, Signaturzuordnung und Freigabestatus bestätigen; historische Nachweise unten gelten ausschließlich für die alte ID.
+- **App Links noch nicht migriert:** `public/.well-known/assetlinks.json` bleibt absichtlich unverändert für die bestehende App/Website. Die Android-Vorlage enthält die neue ID, aber weiterhin einen Zertifikats-Platzhalter. Vor separater Websitefreigabe muss der tatsächliche Play-App-Signing-Fingerprint für die neue App bestätigt werden; niemals den bisherigen Fingerprint ungeprüft übernehmen. Keine erfolgreiche neue App-Link-Verifizierung behauptet.
+- **Firebase:** Kein `android/app/google-services.json` vorhanden. Für native Push muss das Team eine Registrierung für die neue Android-ID bereitstellen; keine Schlüssel geändert oder erfunden.
+- **CI-Zugang fehlt in dieser Sitzung:** Weder GitHub-Verbindung noch GH_TOKEN/GITHUB_TOKEN verfügbar. Daher kein Actions-Lauf gestartet, kein neues signiertes AAB erzeugt, kein Artefaktlink. Lokale Typ-/Buildprüfung wird von der Lovable-Vorschau automatisch ausgeführt; kein manueller Native-/Gradle-Build durchgeführt. Aktuelle Prüfergebnisse siehe `docs/android-package-handover.md`.
+- Keine Website-/Backendveröffentlichung, Play-Uploads, Datenbankänderungen, Zahlungen oder E-Mails autorisiert/durchgeführt.
+
 ## Architektur
 
 - **Keine `server.url`-Wrapper-App.** `bun run build:native` baut mit `MT_NATIVE=1` den bestehenden TanStack-Start-Code als SPA-Shell (`tanstackStart.spa`) und kopiert ihn nach `dist-native/` (`_shell.html` → `index.html`). Capacitor bündelt diese Dateien lokal (`webDir: dist-native`).
@@ -15,7 +26,7 @@ Stand: 06.10.2026; interner Release um 19:30 Europe/Berlin bestätigt. Kein Stor
 
 | Bereich | Umsetzung |
 |---|---|
-| App-ID / Name | `de.mytransporter.app` / MyTransporter (kein vorhandener Identifier gefunden) |
+| App-ID / Name | Android `de.mytransporterr.app`, iOS `de.mytransporter.app` / MyTransporter |
 | Lifecycle | `src/lib/native/bootstrap.ts`: `resume` → `focus`+`visibilitychange`, Netzwerkwechsel → `online`/`offline` (Fahrtansicht, Rückgabeentwurf, Fotoqueue hören darauf) |
 | StatusBar/Safe Area | Overlay + `viewport-fit=cover` (bestehende `env(safe-area-inset-*)`) |
 | Splash/Icon | Splash via Plugin (weiß), Icons aus `public/icons/icon-512.png`. Für Google Play reicht das 512×512-Icon (Play-Format), sofern es den Qualitätscheck besteht; 1024×1024 nur für iOS später nötig |
@@ -30,7 +41,8 @@ Stand: 06.10.2026; interner Release um 19:30 Europe/Berlin bestätigt. Kein Stor
 ```bash
 bun install
 bun run build:native      # dist-native
-npx cap sync              # Web-Assets + Plugins in android/ und ios/
+npx cap sync android      # Web-Assets + Plugins: neue Android-ID
+npx cap sync ios          # separat: unveränderte iOS-ID (macOS)
 bun run cap:android       # Android Studio
 bun run cap:ios           # Xcode (macOS, vorher: cd ios/App && pod install)
 bun run android:debug     # Debug-APK (JDK 21 + Android SDK nötig)
@@ -50,11 +62,11 @@ npx cap doctor
 
 Stand 05.10.2026: Das Google-Play-Entwicklerkonto „Krueger Eventmanagement“ besteht bereits (vier Apps); die App `de.mytransporter.app` ist in der Play Console angelegt.
 
-1. In der Play Console App `de.mytransporter.app` anlegen bzw. prüfen; Play App Signing aktivieren.
+1. Für neue Android-Builds Listing `de.mytransporterr.app` prüfen; Status/Ablehnungsgrund und Play-App-Signing-Zertifikat vor Upload verifizieren (siehe aktueller Blocker oben).
 2. Upload-Keystore lokal erzeugen (`keytool -genkey -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000`) – **nicht committen**.
 3. Die vier Signierungs-Secrets sind eingerichtet: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. `PLAY_SERVICE_ACCOUNT_JSON` wird zusätzlich für automatische Uploads benötigt und fehlt derzeit.
 4. Version nicht manuell erhöhen: CI setzt `versionCode = 1000 + run_number*100 + run_attempt`, `versionName = 1.0.<run>-<sha7>`.
-5. Manueller Upload: Artefakt `mytransporter-release-<versionCode>` (AAB) aus dem Workflow-Lauf laden und in „Interner Test“ hochladen. Automatische Uploads nach main-Push sind erst mit eingerichtetem `PLAY_SERVICE_ACCOUNT_JSON` möglich (Standard-Track `internal`).
+5. Sign-only: Artefakt `mytransporter-release-<versionCode>` (AAB) aus dem Workflow-Lauf laden. Kein Upload nach main-Push; Upload nur nach separater Freigabe per manuellem Workflow mit `upload_to_play=true` und eingerichtetem `PLAY_SERVICE_ACCOUNT_JSON` (Standard-Track `internal`).
 6. Datenschutz-Formular (Datensicherheit), Kontolöschungs-URL: `https://mytransporter.org/konto-loeschen`.
 7. Push: Firebase-Projekt, `google-services.json` nach `android/app/` (gitignored), Versandweg serverseitig mit FCM-Service-Account als Secret.
 
@@ -79,8 +91,8 @@ Stand 05.10.2026: Das Google-Play-Entwicklerkonto „Krueger Eventmanagement“ 
 Workflow `.github/workflows/android.yml` (iOS-CI deaktiviert, `ios/` bleibt im Repo; `native-ci.yml` entfernt).
 
 - **check** (push `main` + PR): `bun install --frozen-lockfile` (kein Fallback), `bun run typecheck`, `bunx vitest run`, `bun run build:native`, `npx cap sync android`, `./gradlew assembleDebug lintDebug`, Artefakt `android-debug-apk` (+ Lint-Bericht).
-- **release** (nur `push` auf `main` bzw. manuell im Repo `KruegerEventmanagement/MyTransporter`, erst nach grünem check): signiertes AAB (`bundleRelease`) + Upload per Play Developer API (`r0adkll/upload-google-play`).
-  - Secrets (GitHub → Settings → Secrets → Actions): `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`. Die vier `ANDROID_*`-Secrets steuern die Signierung. Fehlt eines davon, wird kein Release gebaut. `PLAY_SERVICE_ACCOUNT_JSON` steuert ausschließlich den automatischen Upload: Fehlt es, wird das signierte AAB trotzdem als Artefakt für den manuellen Upload erstellt. Keine Secret-Ausgabe.
+- **release** (nur `push` auf `main` bzw. manuell im Repo `KruegerEventmanagement/MyTransporter`, erst nach grünem check): signiertes AAB (`bundleRelease`); Upload per Play Developer API (`r0adkll/upload-google-play`) ausschließlich bei `workflow_dispatch` mit `upload_to_play=true`, standardmäßig aus.
+  - Secrets (GitHub → Settings → Secrets → Actions): `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`. Die vier `ANDROID_*`-Secrets steuern die Signierung. Fehlt eines davon, wird kein Release gebaut. Play-Servicekonto allein erlaubt keinen Upload: zusätzlicher manueller Boolean erforderlich. Ohne Upload bleibt das signierte AAB als Artefakt. Keine Secret-Ausgabe.
   - Track: Variable `PLAY_TRACK` (Standard `internal`) bzw. Eingabe bei manuellem Start. `production` läuft über die GitHub-Umgebung `play-production` (dort Reviewer als Freigabe eintragen); sonst `play-internal`.
   - `PLAY_RELEASE_STATUS` (Standard `completed`). Solange die App in Play noch Entwurf ist, auf `draft` setzen.
   - **Erster Upload muss manuell** in der Play Console erfolgen (App anlegen, Play App Signing); erst danach akzeptiert die API Uploads.

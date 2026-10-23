@@ -1,5 +1,11 @@
 # Roadmap
 
+## Android package handover (23.10.2026; preparation only)
+- [x] Migrate Android to de.mytransporterr.app, preserve iOS identity and brand, gate Play uploads behind explicit opt-in.
+- [x] Validate native package consistency and regression tests; 25 native tests passed, real Capacitor CLI identity selection checked, automatic preview build OK; evidence in docs/android-package-handover.md. No signed/native build claimed.
+- [ ] Signed release artifact via Android CI: blocked pending accessible GitHub Actions connection; no upload/deployment authorized.
+- [ ] Release approval: publishing team must verify rejection reason, existing/new Play listing status and new Play-signing certificate; no release authorized.
+
 ## Externe Gmail-Nachweise 18.10.2026 ab 15:40 UTC
 - [x] Claudias DSN 1a14faccb704cd89 ergänzt: 26 Annahmen/SENT, 1 dauerhafter Zustellfehler, 25 ohne bekannte Fehlermeldung; Original-ID/sent erhalten, permanent_bounce annotiert, kein Opt-out/Retry. Kein adressweiter Bounce-Mechanismus vorhanden; bestehende sent-Quellensperre bleibt.
 - [x] 26 vom Betreiber belegte externe Sends exakt mit recipients.csv verknüpft; external-sends.json/external-send-audit.md, historische 0-Send-Angaben eingeordnet.

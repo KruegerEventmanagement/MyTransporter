@@ -2,7 +2,7 @@
 # check:   push main + PR – frozen bun.lock, Typecheck, Tests, Native-Shell, cap sync android,
 #          Gradle assembleDebug + lintDebug, Debug-APK als Artefakt.
 # release: nur push auf main im Original-Repo nach grünem check (oder manuell) – signiertes AAB
-#          + optionaler Upload zu Google Play (Track konfigurierbar, Standard internal).
+#          + Play-Upload NUR bei workflow_dispatch mit upload_to_play=true.
 #          Das signierte AAB bleibt auch ohne Play-Servicekonto als Artefakt verfügbar.
 name: android
 on:
@@ -11,6 +11,11 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      upload_to_play:
+        description: "Explizit zu Google Play hochladen (separate Freigabe erforderlich)"
+        type: boolean
+        required: false
+        default: false
       track:
         description: "Play-Track (internal|alpha|beta|production)"
         required: false
@@ -76,6 +81,7 @@ jobs:
           KA: ${{ secrets.ANDROID_KEY_ALIAS }}
           KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
           PLAY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          UPLOAD_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_to_play == true }}
         run: |
           missing=""
           [ -n "$KS" ]   || missing="$missing ANDROID_KEYSTORE_BASE64"
@@ -91,7 +97,7 @@ jobs:
           else
             echo "signing=true" >> "$GITHUB_OUTPUT"
           fi
-          if [ -z "$missing" ] && [ -n "$PLAY" ]; then
+          if [ -z "$missing" ] && [ -n "$PLAY" ] && [ "$UPLOAD_REQUESTED" = "true" ]; then
             echo "upload=true" >> "$GITHUB_OUTPUT"
           else
             echo "upload=false" >> "$GITHUB_OUTPUT"
@@ -99,6 +105,9 @@ jobs:
           if [ -z "$PLAY" ]; then
             echo "::warning::Automatischer Play-Upload nicht eingerichtet: PLAY_SERVICE_ACCOUNT_JSON fehlt."
             echo "Automatischer Play-Upload ist nicht eingerichtet. Bei vollständiger Signierung wird das AAB für den manuellen Upload gebaut und gesichert." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "$UPLOAD_REQUESTED" != "true" ]; then
+            echo "Nur Signierung/Artefakt: Play-Upload wurde nicht ausdrücklich per workflow_dispatch freigegeben." >> "$GITHUB_STEP_SUMMARY"
           fi
       - if: steps.cfg.outputs.signing == 'true'
         uses: actions/checkout@v4
@@ -138,19 +147,19 @@ jobs:
           path: android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 30
-      - if: steps.cfg.outputs.upload == 'true'
+      - if: github.event_name == 'workflow_dispatch' && inputs.upload_to_play == true && steps.cfg.outputs.upload == 'true'
         name: Upload zu Google Play
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: de.mytransporter.app
+          packageName: de.mytransporterr.app
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           track: ${{ env.PLAY_TRACK }}
           status: ${{ env.PLAY_RELEASE_STATUS }}
-      - if: steps.cfg.outputs.upload == 'true'
+      - if: github.event_name == 'workflow_dispatch' && inputs.upload_to_play == true && steps.cfg.outputs.upload == 'true'
         run: echo "### Android-Release hochgeladen ($PLAY_TRACK, versionCode $MT_VERSION_CODE)" >> "$GITHUB_STEP_SUMMARY"
       - if: steps.cfg.outputs.signing == 'true' && steps.cfg.outputs.upload != 'true'
         name: Manuellen Upload dokumentieren
         run: |
           echo "### Signiertes Android-Bundle bereit (versionCode $MT_VERSION_CODE)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Artefakt: mytransporter-release-$MT_VERSION_CODE. Noch nicht zu Google Play hochgeladen; bitte das AAB in der Play Console hochladen." >> "$GITHUB_STEP_SUMMARY"
+            echo "Artefakt: mytransporter-release-$MT_VERSION_CODE. Nicht zu Google Play hochgeladen. Vor jeder Freigabe Paket-/Listing-Blocker im Handover klären." >> "$GITHUB_STEP_SUMMARY"
