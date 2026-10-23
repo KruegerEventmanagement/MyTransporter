@@ -110,6 +110,8 @@ export type Database = {
           id: string
           redeemed_at: string | null
           redeemed_booking_id: string | null
+          reserved_by: string | null
+          reserved_until: string | null
           sent_at: string | null
           updated_at: string
           user_id: string
@@ -128,6 +130,8 @@ export type Database = {
           id?: string
           redeemed_at?: string | null
           redeemed_booking_id?: string | null
+          reserved_by?: string | null
+          reserved_until?: string | null
           sent_at?: string | null
           updated_at?: string
           user_id: string
@@ -146,6 +150,8 @@ export type Database = {
           id?: string
           redeemed_at?: string | null
           redeemed_booking_id?: string | null
+          reserved_by?: string | null
+          reserved_until?: string | null
           sent_at?: string | null
           updated_at?: string
           user_id?: string
@@ -581,6 +587,96 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_coupons: {
+        Row: {
+          code: string
+          created_at: string
+          discount_cents: number | null
+          discount_percent: number
+          email_lower: string
+          id: string
+          kind: string
+          redeemed_at: string | null
+          redeemed_booking_id: string | null
+          reserved_by: string | null
+          reserved_until: string | null
+          source_id: string | null
+          source_type: string | null
+          user_id: string | null
+          valid_from: string
+          valid_until: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          discount_cents?: number | null
+          discount_percent: number
+          email_lower: string
+          id?: string
+          kind: string
+          redeemed_at?: string | null
+          redeemed_booking_id?: string | null
+          reserved_by?: string | null
+          reserved_until?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          user_id?: string | null
+          valid_from: string
+          valid_until: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          discount_cents?: number | null
+          discount_percent?: number
+          email_lower?: string
+          id?: string
+          kind?: string
+          redeemed_at?: string | null
+          redeemed_booking_id?: string | null
+          reserved_by?: string | null
+          reserved_until?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          user_id?: string | null
+          valid_from?: string
+          valid_until?: string
+        }
+        Relationships: []
+      }
+      customer_feedback: {
+        Row: {
+          created_at: string
+          disliked: string | null
+          id: string
+          ideas: string | null
+          liked: string | null
+          outbox_id: string
+          source_id: string
+          source_type: string
+        }
+        Insert: {
+          created_at?: string
+          disliked?: string | null
+          id?: string
+          ideas?: string | null
+          liked?: string | null
+          outbox_id: string
+          source_id: string
+          source_type: string
+        }
+        Update: {
+          created_at?: string
+          disliked?: string | null
+          id?: string
+          ideas?: string | null
+          liked?: string | null
+          outbox_id?: string
+          source_id?: string
+          source_type?: string
+        }
+        Relationships: []
+      }
       customer_mail_outbox: {
         Row: {
           ambiguous: boolean
@@ -672,6 +768,7 @@ export type Database = {
         Row: {
           deposit_reminder_from: string | null
           deposit_review_from: string | null
+          feedback_requests_from: string | null
           google_review_url: string | null
           id: boolean
           invoice_outbox_from: string
@@ -682,6 +779,7 @@ export type Database = {
         Insert: {
           deposit_reminder_from?: string | null
           deposit_review_from?: string | null
+          feedback_requests_from?: string | null
           google_review_url?: string | null
           id?: boolean
           invoice_outbox_from?: string
@@ -692,6 +790,7 @@ export type Database = {
         Update: {
           deposit_reminder_from?: string | null
           deposit_review_from?: string | null
+          feedback_requests_from?: string | null
           google_review_url?: string | null
           id?: boolean
           invoice_outbox_from?: string
@@ -1464,6 +1563,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      marketing_consent_attestations: {
+        Row: {
+          attested_at: string
+          attested_by: string | null
+          created_at: string
+          email_lower: string
+          id: string
+          method: string
+          scope: string
+          statement: string
+        }
+        Insert: {
+          attested_at?: string
+          attested_by?: string | null
+          created_at?: string
+          email_lower: string
+          id?: string
+          method: string
+          scope: string
+          statement: string
+        }
+        Update: {
+          attested_at?: string
+          attested_by?: string | null
+          created_at?: string
+          email_lower?: string
+          id?: string
+          method?: string
+          scope?: string
+          statement?: string
+        }
+        Relationships: []
       }
       native_push_tokens: {
         Row: {
