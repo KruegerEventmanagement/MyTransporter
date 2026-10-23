@@ -1,0 +1,1 @@
+- [Feedback & Gutscheine](mem://features/feedback-gutscheine) — Feedback 24h nach Mietende, 10%-Dank 6 Monate, Geburtstag 10%, Telefon-Einwilligung 23.10.
