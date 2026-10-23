@@ -18,10 +18,10 @@ def signingComplete = [mtKsPath, mtKsPass, mtKeyAlias, mtKeyPass].every { it != 
 def unsignedRelease = project.hasProperty("mtUnsignedRelease") && project.property("mtUnsignedRelease") == "true"
 
 android {
-    namespace "de.mytransporter.app"
+    namespace "de.mytransporterr.app"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "de.mytransporter.app"
+        applicationId "de.mytransporterr.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode mtVersionCode

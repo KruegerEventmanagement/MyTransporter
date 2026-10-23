@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p .",
     "build:native": "node scripts/build-native.mjs",
-    "cap:sync": "node scripts/build-native.mjs && cap sync",
+    "cap:sync": "node scripts/build-native.mjs && cap sync android && cap sync ios",
     "cap:android": "node scripts/build-native.mjs && cap sync android && cap open android",
     "cap:ios": "node scripts/build-native.mjs && cap sync ios && cap open ios",
     "cap:doctor": "cap doctor",
