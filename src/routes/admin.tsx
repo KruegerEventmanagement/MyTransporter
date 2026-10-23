@@ -2,6 +2,7 @@ import { AdminMailTest } from "@/components/admin/AdminMailTest";
 import { AdminPrivacy } from "@/components/admin/AdminPrivacy";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { privateHead } from "@/lib/seo";
+import { formatBookingRange } from "@/lib/booking-range";
 import { BrandHomeLink } from "@/components/BrandHomeLink";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -736,7 +737,7 @@ function AdminDashboard() {
                       <p className="font-semibold truncate">{name}</p>
                       <p className="text-xs text-muted-foreground truncate">
                         {b.vehicle_plate} · {b.plan_label}
-                        {b.free_km != null ? ` · ${b.free_km.toLocaleString("de-DE")} km inkl.` : ""} · {b.start_date} {b.start_hour}:00
+                        {b.free_km != null ? ` · ${b.free_km.toLocaleString("de-DE")} km inkl.` : ""} · {formatBookingRange(b as unknown as { start_date: string; start_hour: number; plan_id: string | null })}
                       </p>
                       {Array.isArray(b.addons) && b.addons.length > 0 && (
                         <p className="text-[11px] text-foreground mt-0.5 truncate">
@@ -1164,7 +1165,9 @@ function CustomerDetail({
                         {b.free_km != null ? ` · ${b.free_km.toLocaleString("de-DE")} km inkl.` : ""}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(b.start_date), "dd.MM.yyyy", { locale: de })} · {b.start_hour}:00 ·{" "}
+                        {formatBookingRange(b as unknown as { start_date: string; start_hour: number; plan_id: string | null })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
                         Code {b.pickup_code}
                       </p>
                     </div>
