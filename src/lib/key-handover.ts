@@ -7,7 +7,7 @@ export const KEY_CODE_LEAD_MS = 15 * 60_000;
 export const KEY_CODE_GRACE_MS = 10 * 60_000;
 
 export const KEY_PICKUP_PLACE = "OBI Leonberg – vor dem Eingang an den Fahrradständern";
-export const VEHICLE_PICKUP_PLACE = "Poststraße 60, 71229 Leonberg";
+export const VEHICLE_PICKUP_PLACE = "Poststraße 63, 71229 Leonberg";
 
 export function isKeyCodeDue(startMs: number, nowMs: number): boolean {
   return nowMs >= startMs - KEY_CODE_LEAD_MS && nowMs <= startMs + KEY_CODE_GRACE_MS;
@@ -33,5 +33,5 @@ export function keyHandoverRows(code: string | null, plate?: string | null): { l
 
 export const KEY_HANDOVER_HINTS = [
   "Den Schlüssel holst du am Schlüsselkasten beim OBI Leonberg ab – vor dem Eingang an den Fahrradständern.",
-  "Der Transporter steht in der Poststraße 60 (ca. 500 m Luftlinie). Du kannst zu Fuß hinlaufen oder mit deinem Auto hinfahren, den Transporter wegfahren und dein Auto während der Miete auf dem Parkplatz des Transporters stehen lassen.",
+  "Der Transporter steht an der Poststraße 63 (ca. 500 m Luftlinie) – neben dem Othalo-Gebäude an der Straße, nicht im Othalo-Gebäude selbst. Bitte nicht bei Othalo klingeln. Du kannst zu Fuß hinlaufen oder mit deinem Auto hinfahren, den Transporter wegfahren und dein Auto während der Miete auf dem Parkplatz des Transporters stehen lassen.",
 ];

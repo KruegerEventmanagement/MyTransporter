@@ -71,7 +71,7 @@ describe("Kunden-Bestätigung (Vorlage)", () => {
     const m = buildCustomerConfirmation(base);
     for (const body of [m.html, m.text]) {
       expect(body).toContain("129,50 €");
-      expect(body).toContain("Poststraße 60, 71229 Leonberg");
+      expect(body).toContain("Poststraße 63, 71229 Leonberg");
       expect(body).toContain("11.10.2026, 09:00");
       expect(body).toContain("25.10.2026, 10:00");
       expect(body).toContain("MT-11111111");

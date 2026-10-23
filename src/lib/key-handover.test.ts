@@ -8,11 +8,11 @@ describe("Schlüsselcode 15 Minuten vor Abholung", () => {
   it("nicht vor 16:45", () => expect(isKeyCodeDue(start, start - 16 * min)).toBe(false));
   it("ab 16:45 fällig", () => expect(isKeyCodeDue(start, start - 15 * min)).toBe(true));
   it("nicht lange nach Beginn nachsenden", () => expect(isKeyCodeDue(start, start + 11 * min)).toBe(false));
-  it("enthält Code, OBI und Poststraße 60", () => {
+  it("enthält Code, OBI und Poststraße 63", () => {
     const v = keyHandoverRows("70108680").map((r) => r.value).join(" ");
     expect(v).toContain("70108680");
     expect(v).toContain("OBI Leonberg");
-    expect(v).toContain("Poststraße 60");
+    expect(v).toContain("Poststraße 63");
   });
 });
 
