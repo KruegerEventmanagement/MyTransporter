@@ -85,6 +85,11 @@ export async function loadDepositContext(source: Source, id: string): Promise<De
     for (const [k, v] of Object.entries(exceptions)) if (v) issues.push(`Kundenhinweis (${k}): ${String(v).slice(0, 200)}`);
     if (b.extra_km_charge_cents) issues.push(`Mehrkilometer laut Snapshot: ${eur(b.extra_km_charge_cents)}${b.extra_charge_status === "succeeded" ? " (bereits separat bezahlt)" : ""}`);
     const settlements = must(await d.from("deposit_settlements").select("id, kind, status, refund_cents, failure_reason, refund_id").eq("booking_id", id).order("created_at"), "Erstattungen");
+    const stripeRefunds = b.stripe_payment_intent_id
+      ? (must(await d.from("stripe_refunds").select("refund_id, origin, allocation, amount_cents, status, stripe_created_at").eq("payment_intent_id", b.stripe_payment_intent_id).order("stripe_created_at"), "Stripe-Erstattungen") as any[])
+      : [];
+    const externalActive = stripeRefunds.filter((r) => r.origin === "external" && r.status !== "failed" && r.status !== "canceled");
+    if (externalActive.length) issues.push(`Direkt in Stripe erstattet (nicht zugeordnet): ${externalActive.map((r) => `${eur(r.amount_cents)} ${r.status}`).join(", ")} – Kautionsrückzahlung gesperrt, bitte manuell prüfen`);
     const name = [p?.first_name, p?.last_name].filter(Boolean).join(" ") || "Unbekannt";
     const depositCents = Math.round(Number(b.deposit ?? 0) * 100);
     const email = p?.email ?? null;

@@ -94,6 +94,14 @@ export const refreshDepositFn = createServerFn({ method: "POST" })
       const { refreshBookingSettlements } = await import("@/lib/deposit-settlement.server");
       const { productionDeps } = await import("@/lib/deposit-settlement-deps.server");
       await refreshBookingSettlements(productionDeps(), data.id);
+      // Auch direkt in Stripe ausgelöste Erstattungen übernehmen (nur lesend).
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: b } = await supabaseAdmin.from("bookings").select("stripe_payment_intent_id, stripe_environment").eq("id", data.id).maybeSingle();
+      if (b?.stripe_payment_intent_id && (b.stripe_environment === "live" || b.stripe_environment === "sandbox")) {
+        const { mirrorPaymentIntent } = await import("@/lib/stripe-refund-sync.server");
+        const { mirrorDeps } = await import("@/lib/stripe-refund-sync-deps.server");
+        await mirrorPaymentIntent(mirrorDeps(), b.stripe_environment, b.stripe_payment_intent_id);
+      }
     }
     await (await lib()).ensureClosingMail(data.source, data.id).catch(() => undefined);
     return JSON.parse(JSON.stringify(await (await lib()).loadDepositContext(data.source, data.id)));
