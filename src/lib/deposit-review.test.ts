@@ -179,17 +179,16 @@ describe("Review-Korrekturen", () => {
     expect(bookingDepositState(null, [{ id: "s0", status: "failed" }], "held")).toBe("Rückzahlung fehlgeschlagen");
   });
 
-  it("2: 29900 erhalten, fremder 7000-Refund, Auftrag 20000 ⇒ KEIN neuer Refund", async () => {
+  it("2: 29900 erhalten, fremder 7000-Refund, Auftrag 20000 ⇒ KEIN neuer Refund (vor Auftragsanlage gesperrt)", async () => {
     const h = harness();
     h.refunds.push({ id: "re_x", status: "succeeded", amount: 7000, payment_intent: "pi_1", metadata: {} });
-    const a = await requestDepositSettlement(h.d, { bookingId: "b1", deductCents: 0, adminId: "a", requestKey: "k" });
-    expect(a.settlement.status).toBe("needs_review");
+    await expect(requestDepositSettlement(h.d, { bookingId: "b1", deductCents: 0, adminId: "a", requestKey: "k" })).rejects.toThrow(/bereits Erstattungen/);
     expect(h.creates()).toBe(0);
   });
   it("2: fremder pending-Refund blockiert, fremder failed nicht", async () => {
     const h1 = harness();
     h1.refunds.push({ id: "re_p", status: "pending", amount: 100, payment_intent: "pi_1", metadata: {} });
-    expect((await requestDepositSettlement(h1.d, { bookingId: "b1", deductCents: 0, adminId: "a", requestKey: "k" })).settlement.status).toBe("needs_review");
+    await expect(requestDepositSettlement(h1.d, { bookingId: "b1", deductCents: 0, adminId: "a", requestKey: "k" })).rejects.toThrow(/bereits Erstattungen/);
     const h2 = harness();
     h2.refunds.push({ id: "re_f", status: "failed", amount: 100, payment_intent: "pi_1", metadata: {} });
     expect((await requestDepositSettlement(h2.d, { bookingId: "b1", deductCents: 0, adminId: "a", requestKey: "k" })).settlement.status).toBe("pending");

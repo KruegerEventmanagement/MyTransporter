@@ -1765,6 +1765,99 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_refunds: {
+        Row: {
+          admin_notified_at: string | null
+          allocation: string
+          amount_cents: number
+          booking_id: string | null
+          charge_id: string | null
+          currency: string | null
+          environment: string
+          failure_reason: string | null
+          first_seen_at: string
+          origin: string
+          payment_intent_id: string | null
+          reason: string | null
+          refund_id: string
+          settlement_id: string | null
+          status: string
+          stripe_created_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          admin_notified_at?: string | null
+          allocation: string
+          amount_cents: number
+          booking_id?: string | null
+          charge_id?: string | null
+          currency?: string | null
+          environment: string
+          failure_reason?: string | null
+          first_seen_at?: string
+          origin: string
+          payment_intent_id?: string | null
+          reason?: string | null
+          refund_id: string
+          settlement_id?: string | null
+          status: string
+          stripe_created_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admin_notified_at?: string | null
+          allocation?: string
+          amount_cents?: number
+          booking_id?: string | null
+          charge_id?: string | null
+          currency?: string | null
+          environment?: string
+          failure_reason?: string | null
+          first_seen_at?: string
+          origin?: string
+          payment_intent_id?: string | null
+          reason?: string | null
+          refund_id?: string
+          settlement_id?: string | null
+          status?: string
+          stripe_created_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stripe_webhook_events: {
+        Row: {
+          attempts: number
+          environment: string
+          event_id: string
+          last_error: string | null
+          processed_at: string | null
+          received_at: string
+          status: string
+          type: string
+        }
+        Insert: {
+          attempts?: number
+          environment: string
+          event_id: string
+          last_error?: string | null
+          processed_at?: string | null
+          received_at?: string
+          status?: string
+          type: string
+        }
+        Update: {
+          attempts?: number
+          environment?: string
+          event_id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          received_at?: string
+          status?: string
+          type?: string
+        }
+        Relationships: []
+      }
       trip_photos: {
         Row: {
           booking_id: string
@@ -2289,6 +2382,10 @@ export type Database = {
         Args: { _id: string; _kind: string; _table: string }
         Returns: boolean
       }
+      claim_stripe_event: {
+        Args: { _environment: string; _event_id: string; _type: string }
+        Returns: string
+      }
       complete_account_deletion_lease: {
         Args: { _booking_count: number; _token: string; _uid: string }
         Returns: string
@@ -2567,6 +2664,25 @@ export type Database = {
         Returns: string[]
       }
       trip_returning_statuses: { Args: never; Returns: string[] }
+      upsert_stripe_refund: {
+        Args: {
+          _allocation: string
+          _amount_cents: number
+          _booking_id: string
+          _charge_id: string
+          _currency: string
+          _environment: string
+          _failure_reason: string
+          _origin: string
+          _payment_intent_id: string
+          _reason: string
+          _refund_id: string
+          _settlement_id: string
+          _status: string
+          _stripe_created_at: string
+        }
+        Returns: Json
+      }
       vehicle_conflicts: {
         Args: {
           _end: string
