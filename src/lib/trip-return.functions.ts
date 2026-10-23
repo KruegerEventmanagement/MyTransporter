@@ -20,7 +20,7 @@ export const reportReturn = createServerFn({ method: "POST" })
       _end_km_manual: data.endKmManual,
       _end_fuel_percent: data.endFuelPercent,
       // flow/refueled reisen im bestehenden jsonb-Parameter (keine Signaturänderung, Altclients unverändert).
-      _exceptions: data.mode ? { ...data.exceptions, flow: data.mode.flow, refueled: data.mode.refueled } : data.exceptions,
+      _exceptions: { ...data.exceptions, ...(data.notes ? { notes: data.notes } : {}), ...(data.mode ? { flow: data.mode.flow, refueled: data.mode.refueled } : {}) },
     });
     if (!error && rpc && typeof rpc === "object") {
       const r = rpc as Record<string, unknown>;

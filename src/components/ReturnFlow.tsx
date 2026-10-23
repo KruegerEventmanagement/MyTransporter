@@ -173,6 +173,7 @@ export function ReturnFlow({
   const [endKm, setEndKm] = useState(draft0?.endKm ?? "");
   const [endKmManual, setEndKmManual] = useState(draft0?.endKmManual ?? false);
   const [exceptions, setExceptions] = useState<ReturnExceptions>(draft0?.exceptions ?? {});
+  const [notes, setNotes] = useState("");
   const [openException, setOpenException] = useState<ExceptionKey | null>(null);
   const [photoError, setPhotoError] = useState<{ message: string; tag: string; file: Blob; uploadedPath: string | null } | null>(null);
   const [pending, setPending] = useState<Record<string, PendingState>>({});
@@ -695,6 +696,7 @@ export function ReturnFlow({
           endFuelPercent: fuel,
           endKmManual,
           exceptions,
+          notes: notes.trim() || null,
           mode: { flow: "v2", refueled },
         },
       });
@@ -722,7 +724,7 @@ export function ReturnFlow({
       submittingRef.current = false;
       setSaving(false);
     }
-  }, [report, bookingId, endKm, endFuelPercent, endKmManual, exceptions, refueled, transferAll]);
+  }, [report, bookingId, endKm, endFuelPercent, endKmManual, exceptions, notes, refueled, transferAll]);
 
   // Beauftragte Meldung nach abgeschlossenem Warteschlangen-Durchlauf automatisch wiederholen –
   // je Durchlauf höchstens einmal, nur wenn keine Fotos mehr offen sind.
@@ -1013,6 +1015,20 @@ export function ReturnFlow({
           </div>
         )}
 
+        <div className="mb-4">
+          <label htmlFor="return-notes" className="text-sm font-medium text-foreground">Sonstiges (optional)</label>
+          <p className="text-xs text-muted-foreground mt-1">Probleme, Schäden oder Anregungen? Z. B. Blinker oder Scheibenwischer defekt, Scheinwerfer beschädigt, irgendwo angestoßen – bitte hier kurz beschreiben, damit wir es klären können.</p>
+          <textarea
+            id="return-notes"
+            data-testid="return-notes"
+            value={notes}
+            maxLength={1000}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder="z. B. Blinker hinten links geht nicht"
+            className="mt-2 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+          />
+        </div>
         <DocumentationFeeNotice />
         {pendingCount > 0 && (
           <p className="mb-3 text-xs text-muted-foreground">Es sind noch Fotos nur auf diesem Gerät. Sie zählen erst als Nachweis, wenn sie übertragen sind; der Abschluss wird danach gesendet.</p>

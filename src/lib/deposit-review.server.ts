@@ -73,7 +73,7 @@ export async function loadDepositContext(source: Source, id: string): Promise<De
     const safePhotos = safePhotoRows(id, photos, present);
     const required = requiredReturnTagsV2();
     const missing = required.filter((t) => !checklist.find((c) => c.tag === t)?.present);
-    const exceptions = (b.return_exceptions && typeof b.return_exceptions === "object" ? b.return_exceptions : {}) as Record<string, string>;
+    const { notes: customerNotes, ...exceptions } = (b.return_exceptions && typeof b.return_exceptions === "object" ? b.return_exceptions : {}) as Record<string, string>;
     const facts: ReviewFacts = {
       extraKmChargeCents: b.extra_km_charge_cents ?? null, extraKmAlreadyPaid: b.extra_charge_status != null && b.extra_charge_status !== "failed", extraKm: b.extra_km ?? null, kmPriceCents: b.km_price_cents ?? null,
       missingTags: missing, exceptions,
@@ -81,6 +81,7 @@ export async function loadDepositContext(source: Source, id: string): Promise<De
     const issues: string[] = [];
     if (!b.return_reported_at) issues.push("Rückgabe im System noch nicht bestätigt");
     if (missing.length) issues.push(`Fehlende Nachweise: ${checklist.filter((c) => !c.present).map((c) => c.label).join(", ")}`);
+    if (typeof customerNotes === "string" && customerNotes) issues.push(`Sonstiges vom Kunden: ${customerNotes.slice(0, 1000)}`);
     for (const [k, v] of Object.entries(exceptions)) if (v) issues.push(`Kundenhinweis (${k}): ${String(v).slice(0, 200)}`);
     if (b.extra_km_charge_cents) issues.push(`Mehrkilometer laut Snapshot: ${eur(b.extra_km_charge_cents)}${b.extra_charge_status === "succeeded" ? " (bereits separat bezahlt)" : ""}`);
     const settlements = must(await d.from("deposit_settlements").select("id, kind, status, refund_cents, failure_reason, refund_id").eq("booking_id", id).order("created_at"), "Erstattungen");
