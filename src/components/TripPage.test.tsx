@@ -8,7 +8,7 @@ const params = { bookingId: "A" };
 const navigate = vi.fn();
 vi.mock("@tanstack/react-router", async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
-  createFileRoute: () => (opts: Record<string, unknown>) => ({ options: opts, useParams: () => ({ ...params }) }),
+  createFileRoute: () => (opts: Record<string, unknown>) => ({ options: opts, useParams: () => ({ ...params }), useSearch: () => ({}) }),
   Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
   useNavigate: () => navigate,
 }));
