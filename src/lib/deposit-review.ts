@@ -134,6 +134,8 @@ export type ReviewFacts = {
   extraKmChargeCents: number | null;
   extraKmAlreadyPaid: boolean;
   extraKm: number | null;
+  /** Bei Buchung vereinbarter Mehrkilometerpreis (Cent/km); erlaubt manuelle km-Eingabe ohne Snapshot. */
+  kmPriceCents?: number | null;
   /** Fehlende Pflichtnachweise (Tags). */
   missingTags: string[];
   /** Kunden-Ausnahmen aus der Rückgabe (return_exceptions). */
@@ -201,7 +203,16 @@ export function priceItems(raw: unknown, facts: ReviewFacts, opts: { frozen?: bo
           break;
         }
         if (facts.extraKmAlreadyPaid) throw new Error("Mehrkilometer wurden bereits separat eingezogen oder der Einzug läuft");
-        if (!isCents(facts.extraKmChargeCents) || !facts.extraKmChargeCents) throw new Error("Keine Mehrkilometer-Forderung gespeichert");
+        if (!isCents(facts.extraKmChargeCents) || !facts.extraKmChargeCents) {
+          // Keine gespeicherte Forderung: Admin gibt gefahrene Mehrkilometer an, Preis aus dem Buchungs-Snapshot.
+          if (!isCents(facts.kmPriceCents) || !facts.kmPriceCents) throw new Error("Keine Mehrkilometer-Forderung gespeichert");
+          if (!Number.isSafeInteger(it.quantity) || (it.quantity as number) < 1 || (it.quantity as number) > 100_000)
+            throw new Error("Mehrkilometer: Anzahl km ungültig");
+          quantity = it.quantity as number;
+          line = facts.kmPriceCents * quantity;
+          amount = line;
+          break;
+        }
         line = facts.extraKmChargeCents;
         amount = line;
         break;
@@ -606,7 +617,7 @@ export function draftKey(
   adjust?: { refundCents: number | null; reason: string | null; sendMail: boolean } | null,
 ): string {
   const norm = items
-    .map((i) => ({ t: i.type, q: i.type === "late_return" ? i.quantity ?? null : null, a: i.type === "extra_km" ? null : i.amount_cents ?? null, r: (i.reason ?? "").trim() }))
+    .map((i) => ({ t: i.type, q: i.type === "late_return" || i.type === "extra_km" ? i.quantity ?? null : null, a: i.type === "extra_km" ? null : i.amount_cents ?? null, r: (i.reason ?? "").trim() }))
     .sort((a, b) => (a.t + a.r).localeCompare(b.t + b.r));
   return JSON.stringify({
     i: norm,

@@ -49,7 +49,7 @@ export type DepositContext = {
   photos: { photo_type: string; photo_url: string }[];
   issues: string[];
   docFee: { allowed: boolean; why: string };
-  extraKm: { km: number | null; cents: number | null; alreadyPaid: boolean };
+  extraKm: { km: number | null; cents: number | null; rateCents?: number | null; alreadyPaid: boolean };
   review: ReviewRow | null;
   settlements: { id: string; kind: string; status: string; refund_cents: number; failure_reason: string | null; refund_id: string | null }[];
   closingMail: { status: string; provider_message_id: string | null; blocked_reason: string | null } | null;
@@ -63,7 +63,7 @@ export async function loadDepositContext(source: Source, id: string): Promise<De
   const review = must(await d.from("deposit_reviews").select("*").eq("source_type", source).eq("source_id", id).maybeSingle(), "Prüfung") as ReviewRow | null;
   const closing = must(await d.from("customer_mail_outbox").select("status, provider_message_id, blocked_reason").eq("source_type", source).eq("source_id", id).eq("kind", "deposit_closing").maybeSingle(), "Mail");
   if (source === "booking") {
-    const b = must(await d.from("bookings").select("id, user_id, status, vehicle_name, vehicle_plate, plan_id, plan_label, plan_price, deposit, deposit_status, start_date, start_hour, return_reported_at, return_exceptions, extra_km, extra_km_charge_cents, extra_charge_status, stripe_payment_intent_id, stripe_environment").eq("id", id).maybeSingle(), "Buchung");
+    const b = must(await d.from("bookings").select("id, user_id, status, vehicle_name, vehicle_plate, plan_id, plan_label, plan_price, deposit, deposit_status, start_date, start_hour, return_reported_at, return_exceptions, extra_km, extra_km_charge_cents, km_price_cents, extra_charge_status, stripe_payment_intent_id, stripe_environment").eq("id", id).maybeSingle(), "Buchung");
     if (!b) throw new Error("Buchung nicht gefunden");
     const p = must(await d.from("profiles").select("first_name, last_name, email").eq("id", b.user_id).maybeSingle(), "Profil");
     const { startMs, endMs } = resolveTripWindow(b);
@@ -75,7 +75,7 @@ export async function loadDepositContext(source: Source, id: string): Promise<De
     const missing = required.filter((t) => !checklist.find((c) => c.tag === t)?.present);
     const exceptions = (b.return_exceptions && typeof b.return_exceptions === "object" ? b.return_exceptions : {}) as Record<string, string>;
     const facts: ReviewFacts = {
-      extraKmChargeCents: b.extra_km_charge_cents ?? null, extraKmAlreadyPaid: b.extra_charge_status != null && b.extra_charge_status !== "failed", extraKm: b.extra_km ?? null,
+      extraKmChargeCents: b.extra_km_charge_cents ?? null, extraKmAlreadyPaid: b.extra_charge_status != null && b.extra_charge_status !== "failed", extraKm: b.extra_km ?? null, kmPriceCents: b.km_price_cents ?? null,
       missingTags: missing, exceptions,
     };
     const issues: string[] = [];
@@ -95,7 +95,7 @@ export async function loadDepositContext(source: Source, id: string): Promise<De
       status: b.status, depositCents, depositLine: `${eur(depositCents)} · Status ${b.deposit_status}`,
       stripe: { paymentIntentId: b.stripe_payment_intent_id, environment: b.stripe_environment }, depositStatus: b.deposit_status,
       facts, checklist, photos: safePhotos, issues, docFee: documentationFeeAllowed(facts),
-      extraKm: { km: b.extra_km ?? null, cents: b.extra_km_charge_cents ?? null, alreadyPaid: b.extra_charge_status != null && b.extra_charge_status !== "failed" },
+      extraKm: { km: b.extra_km ?? null, cents: b.extra_km_charge_cents ?? null, rateCents: b.km_price_cents ?? null, alreadyPaid: b.extra_charge_status != null && b.extra_charge_status !== "failed" },
       review, settlements, closingMail: closing, knownBounce: email ? await hasPermanentBounce(email) : false,
     };
   }

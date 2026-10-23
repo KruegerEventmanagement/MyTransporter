@@ -166,6 +166,7 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
       if (!s.checked) continue;
       const def = DEDUCTION_DEFS[t];
       const it: DraftItem = { type: t, reason: s.reason.trim() || undefined };
+      if (t === "extra_km" && !ctx.extraKm.cents) it.quantity = Number.parseInt(s.quantity, 10);
       if (def.mode === "per_unit") it.quantity = Number.parseInt(s.quantity, 10);
       if (def.mode === "free" || def.mode === "amount_plus_fee") {
         const c = toCents(s.amount);
@@ -184,7 +185,7 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
     if (def.mode === "fixed") return def.unitCents!;
     if (def.mode === "per_unit") return def.unitCents! * (Number.parseInt(s.quantity, 10) || 0);
     if (def.mode === "amount_plus_fee") return (toCents(s.amount) ?? 0) + def.feeCents!;
-    if (def.mode === "snapshot") return ctx.extraKm.cents ?? 0;
+    if (def.mode === "snapshot") return ctx.extraKm.cents ?? (ctx.extraKm.rateCents ?? 0) * (Number.parseInt(s.quantity, 10) || 0);
     return toCents(s.amount) ?? 0;
   };
   const total = TYPES.filter((t) => sel[t].checked).reduce((s, t) => s + lineOf(t), 0);
@@ -342,17 +343,18 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
         <p className="text-xs text-muted-foreground">Nichts ist vorausgewählt. Bei jedem angeklickten Punkt steht, was abgezogen wird.</p>
         {TYPES.map((t) => {
           const def = DEDUCTION_DEFS[t]; const s = sel[t];
-          const disabled = finalized || (t === "extra_km" && (!ctx.extraKm.cents || ctx.extraKm.alreadyPaid)) || (t === "documentation_fee" && !ctx.docFee.allowed && !s.checked);
+          const disabled = finalized || (t === "extra_km" && ((!ctx.extraKm.cents && !ctx.extraKm.rateCents) || ctx.extraKm.alreadyPaid)) || (t === "documentation_fee" && !ctx.docFee.allowed && !s.checked);
           return (
             <div key={t} className="rounded-xl bg-secondary p-3 space-y-2">
               <label className="flex items-start gap-2 text-sm">
                 <input type="checkbox" checked={s.checked} disabled={disabled} onChange={(e) => setT(t, { checked: e.target.checked })} className="mt-1" />
                 <span className="flex-1"><strong>{def.label}</strong>{s.checked && <span className="float-right">{eur(lineOf(t))}</span>}
-                  <span className="block text-xs text-muted-foreground">{def.source}{t === "documentation_fee" ? ` · ${ctx.docFee.why}` : ""}{t === "extra_km" ? ` · ${ctx.extraKm.cents ? `${eur(ctx.extraKm.cents)}${ctx.extraKm.alreadyPaid ? " bereits bezahlt" : ""}` : "keine Forderung"}` : ""}</span>
+                  <span className="block text-xs text-muted-foreground">{def.source}{t === "documentation_fee" ? ` · ${ctx.docFee.why}` : ""}{t === "extra_km" ? ` · ${ctx.extraKm.cents ? `${eur(ctx.extraKm.cents)}${ctx.extraKm.alreadyPaid ? " bereits bezahlt" : ""}` : ctx.extraKm.rateCents ? `${eur(ctx.extraKm.rateCents)}/km · Anzahl km eingeben` : "keine Forderung"}` : ""}</span>
                 </span>
               </label>
               {s.checked && !finalized && (
                 <div className="grid gap-2">
+                  {t === "extra_km" && !ctx.extraKm.cents && <input value={s.quantity} onChange={(e) => setT(t, { quantity: e.target.value })} inputMode="numeric" placeholder="Mehrkilometer (km)" aria-label="Mehrkilometer (km)" className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />}
                   {def.mode === "per_unit" && <input value={s.quantity} onChange={(e) => setT(t, { quantity: e.target.value })} inputMode="numeric" placeholder={def.unitLabel} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />}
                   {(def.mode === "free" || def.mode === "amount_plus_fee") && <input value={s.amount} onChange={(e) => setT(t, { amount: e.target.value })} inputMode="decimal" placeholder={def.mode === "amount_plus_fee" ? "Tatsächliche Tankkosten in €" : t === "extension" ? "Vereinbarter Betrag in €" : "Betrag in €"} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />}
                   <input value={s.reason} onChange={(e) => setT(t, { reason: e.target.value })} placeholder={t === "extension" ? "Begründung (Pflicht), z. B. 1 Tag verlängert" : def.reasonRequired ? "Begründung (Pflicht, für Kunden sichtbar)" : "Begründung (optional, für Kunden sichtbar)"} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
