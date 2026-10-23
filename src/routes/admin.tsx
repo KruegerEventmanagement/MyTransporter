@@ -367,6 +367,26 @@ function AdminDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alertNotification, soundEnabled]);
 
+  // Pop-up schließen: X, Hintergrund, Escape, Zurück-Taste. Kaution = wie „Später“.
+  const closeAlert = () => {
+    setAlertNotification((cur) => {
+      if (cur) dismissedAlerts.current.add(cur.id);
+      return null;
+    });
+  };
+  useEffect(() => {
+    if (!alertNotification) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeAlert(); };
+    const onBack = () => closeAlert();
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("popstate", onBack);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("popstate", onBack);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alertNotification]);
+
   const loadAll = async () => {
     const [b, p, n] = await Promise.all([
       supabase.from("bookings").select("*").order("created_at", { ascending: false }),
@@ -811,15 +831,29 @@ function AdminDashboard() {
       </div>
     </main>
       {alertNotification && (
-        <div className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-6 animate-in fade-in">
-          <div className="bg-background border-4 border-foreground rounded-3xl max-w-xl w-full p-8 text-center shadow-2xl animate-in zoom-in-95">
-            <div className="w-20 h-20 rounded-full bg-foreground text-background flex items-center justify-center mx-auto mb-5 animate-pulse">
-              <BellRing className="w-10 h-10" />
+        <div
+          className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4 overflow-y-auto"
+          onClick={(e) => { if (e.target === e.currentTarget) closeAlert(); }}
+          role="dialog"
+          aria-modal="true"
+          data-testid="admin-alert"
+        >
+          <div className="relative bg-background border-2 border-foreground rounded-3xl max-w-xl w-full max-h-[90dvh] overflow-y-auto p-6 sm:p-8 text-center shadow-2xl">
+            <button
+              type="button"
+              aria-label="Schließen"
+              onClick={closeAlert}
+              className="absolute top-3 right-3 w-10 h-10 rounded-full bg-secondary flex items-center justify-center"
+            >
+              <span aria-hidden className="text-xl leading-none">×</span>
+            </button>
+            <div className="w-14 h-14 rounded-full bg-foreground text-background flex items-center justify-center mx-auto mb-4">
+              <BellRing className="w-7 h-7" />
             </div>
             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
               Neue Benachrichtigung
             </p>
-            <h2 className="text-3xl font-bold mb-3">{alertNotification.title}</h2>
+            <h2 className="text-2xl font-bold mb-3 break-words">{alertNotification.title}</h2>
             {alertNotification.body && (
               <p className="text-base text-muted-foreground mb-6 whitespace-pre-line">
                 {alertNotification.body.replace(/\s*\[kaution:(booking|manual):[0-9a-f-]{36}\]/i, "")}
