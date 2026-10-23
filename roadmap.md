@@ -1,8 +1,8 @@
 # Roadmap
 
 ## Android package handover (23.10.2026; preparation only)
-- [ ] Migrate Android to de.mytransporterr.app, preserve iOS identity and brand, gate Play uploads behind explicit opt-in.
-- [ ] Validate native package consistency and regression tests; document actual evidence.
+- [x] Migrate Android to de.mytransporterr.app, preserve iOS identity and brand, gate Play uploads behind explicit opt-in.
+- [x] Validate native package consistency and regression tests; 25 native tests passed, real Capacitor CLI identity selection checked, automatic preview build OK; evidence in docs/android-package-handover.md. No signed/native build claimed.
 - [ ] Signed release artifact via Android CI: blocked pending accessible GitHub Actions connection; no upload/deployment authorized.
 - [ ] Release approval: publishing team must verify rejection reason, existing/new Play listing status and new Play-signing certificate; no release authorized.
 
