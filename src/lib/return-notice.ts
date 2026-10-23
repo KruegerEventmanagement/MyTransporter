@@ -43,7 +43,7 @@ export function overdueStageDue(nowMs: number, endMs: number): OverdueKind | nul
 }
 export const DEPOSIT_DEDUCTION_LINE = "Ohne vollständige Rückgabefotos ziehen wir 30 € von deiner Kaution ab.";
 
-export const RETURN_FEE_SUBJECT = "Es drohen 30 € Bearbeitungsgebühr bei fehlenden Rückgabefotos …";
+export const RETURN_FEE_SUBJECT = "Vermeiden Sie 30 Euro Bearbeitungsgebühr.";
 export const RETURN_PHOTO_LIST = [
   "Tankbeleg",
   "Tacho mit Kilometerstand und Tankanzeige",
@@ -51,6 +51,14 @@ export const RETURN_PHOTO_LIST = [
   "Laderaum innen",
   "Außen: vorn, hinten, links und rechts",
 ];
+/** Hinweis in der Buchungsbestätigung: Vorher-/Nachher-Tachofoto. */
+export const PRE_TRIP_PHOTO_NOTICE = [
+  "Ganz wichtig: Fotografiere vor dem Losfahren den Kilometerstand (Tacho) – und nach der Fahrt noch einmal.",
+  "Nur mit Vorher- und Nachher-Foto ist dein Kilometerstand eindeutig belegt und dir können keine falschen Kilometer berechnet werden.",
+  "Fehlen die Fotos, droht ein Kautionsabzug von mindestens 30 €.",
+  "Über den Button unten kommst du direkt zu deiner Fahrt: Dort machst du das Tachofoto und auf Wunsch gleich die Fotos von außen und innen – sie werden sofort gespeichert.",
+];
+export const RETURN_NOTES_MAX = 1000;
 export const RETURN_FEE_OPENING = "Es müssen alle Fotos gemacht und hochgeladen werden:";
 export const RETURN_FEE_CONSEQUENCE = "Werden diese Fotos nicht hochgeladen und muss ein Mitarbeiter das Fahrzeug nachträglich prüfen, stellen wir dir zusätzlich 30 € Bearbeitungsgebühr in Rechnung.";
 export const RETURN_FEE_INTRO = [RETURN_FEE_OPENING, ...RETURN_PHOTO_LIST.map((p) => `• ${p}`), RETURN_FEE_CONSEQUENCE];

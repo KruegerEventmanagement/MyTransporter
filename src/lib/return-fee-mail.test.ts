@@ -5,7 +5,8 @@ const a = { firstName: "Max", endText: "21.10.2026, 17:00", vehicle: "Jumper (LE
 describe("Rückgabe-Mails mit 30-€-Hinweis", () => {
   for (const [name, m] of [["vorher", buildReturnReminderMail(a)], ["danach", buildOverdueMail({ ...a, final: false })], ["letzte", buildOverdueMail({ ...a, final: true })]] as const) {
     it(`${name}: Betreff und Fotoliste`, () => {
-      expect(m.subject).toContain("Es drohen 30 € Bearbeitungsgebühr");
+      expect(m.subject).toContain("Vermeiden Sie 30 Euro Bearbeitungsgebühr.");
+      if (name !== "letzte") expect(m.subject).toBe("Vermeiden Sie 30 Euro Bearbeitungsgebühr.");
       expect(m.text.split("\n")[1]).toBe("Es müssen alle Fotos gemacht und hochgeladen werden:");
       for (const p of ["Tankbeleg", "Kilometerstand", "Innenraum", "Laderaum", "Außen"]) expect(m.text).toContain(p);
     });

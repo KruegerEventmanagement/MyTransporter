@@ -1,4 +1,4 @@
-import { RETURN_NOTICE_TITLE, RETURN_NOTICE_FAST, RETURN_NOTICE_SLOW, DEPOSIT_BANK_NOTE } from "@/lib/return-notice";
+import { PRE_TRIP_PHOTO_NOTICE, RETURN_NOTICE_TITLE, RETURN_NOTICE_FAST, RETURN_NOTICE_SLOW, DEPOSIT_BANK_NOTE } from "@/lib/return-notice";
 import { isPhysicalAddon } from "@/lib/custom-km";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { pushToAdmins } from "@/lib/push.functions";
@@ -246,6 +246,7 @@ export async function sendBookingConfirmationImpl(data: {
     ],
     button: { label: "Zur Buchung", url: tripUrl },
     extraHtml:
+      noteBlock(`<strong>Vorher- und Nachher-Foto vom Kilometerstand – nicht vergessen!</strong><br />${PRE_TRIP_PHOTO_NOTICE.join(" ")}<br /><a href="${tripUrl}" style="color:#000;font-weight:bold;">Jetzt zur Fahrt und Fotos machen</a>`) +
       addonsHtmlBlock +
       listBlock("So geht es weiter", [
         "Deinen Schlüsselcode bekommst du automatisch 15 Minuten vor der Abholung per E-Mail.",

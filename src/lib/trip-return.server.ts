@@ -23,6 +23,8 @@ export interface ReportReturnInput {
   endFuelPercent: number | null;
   endKmManual: boolean;
   exceptions: ReturnExceptions;
+  /** Freitext „Sonstiges“ (Schäden, Defekte, Anregungen); keine Ausnahme, keine Gebührenwirkung. */
+  notes?: string | null;
   /** Geführter Wizard (v2): reduzierte Pflichtfotos + bedingter Tankbeleg. Fehlt bei Altclients. */
   mode?: ReturnFlowMode | null;
 }
@@ -49,6 +51,7 @@ export function parseReportInput(raw: unknown): ReportReturnInput {
     endKm,
     endFuelPercent: fuel,
     endKmManual: d.endKmManual === true,
+    notes: typeof d.notes === "string" && d.notes.trim() ? d.notes.trim().slice(0, 1000) : null,
     exceptions: {
       photos: typeof ex.photos === "string" ? ex.photos : undefined,
       fuel: typeof ex.fuel === "string" ? ex.fuel : undefined,
@@ -140,7 +143,7 @@ export async function performReturnReport(
     extra_km_charge_cents: km.chargeCents,
     return_reported_at: nowIso,
     return_review_reason: reviewReason,
-    return_exceptions: Object.keys(exceptions).length ? exceptions : null,
+    return_exceptions: Object.keys(exceptions).length || input.notes ? { ...exceptions, ...(input.notes ? { notes: input.notes } : {}) } : null,
   };
   if (input.endFuelPercent !== null) values.ai_end_fuel_percent = input.endFuelPercent;
 
