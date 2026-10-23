@@ -287,6 +287,17 @@ export async function requestDepositSettlement(
   const amounts = computeDepositSettlement({ depositEur: booking.deposit, deductCents: input.deductCents });
   if (amounts.refundCents > 0 && !booking.stripe_payment_intent_id) throw new Error("Keine Stripe-Zahlung für diese Buchung gefunden");
   const env = booking.stripe_payment_intent_id ? await resolveEnvironment(d, booking) : "live";
+  if (amounts.refundCents > 0 && booking.stripe_payment_intent_id) {
+    // Stripe ist maßgeblich: vorhandene (auch Dashboard-/pending) Erstattungen
+    // sperren die Auszahlung, bevor ein Auftrag entsteht. Stripe nicht
+    // erreichbar ⇒ Fehler (fail closed).
+    const existingRefunds = await d.stripe.listRefunds(env, booking.stripe_payment_intent_id);
+    const active = existingRefunds.filter((r) => r.status !== "failed" && r.status !== "canceled");
+    if (active.length > 0) {
+      const sum = active.reduce((s, r) => s + r.amount, 0);
+      throw new Error(`Auf dieser Zahlung gibt es bei Stripe bereits Erstattungen über ${(sum / 100).toFixed(2)} € – keine weitere Kautionsrückzahlung. Bitte in Stripe prüfen und manuell zuordnen.`);
+    }
+  }
   const id = (d.newId ?? (() => crypto.randomUUID()))();
   const inserted = await d.store.insertSettlement({
     id,
