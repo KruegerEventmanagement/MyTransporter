@@ -22,7 +22,7 @@ export function HomeIntroSection() {
         </h1>
         <p className="mt-4 text-muted-foreground leading-relaxed">
           MyTransporter vermietet Transporter direkt in Leonberg – online gebucht, Schlüssel vor Ort
-          in der Poststraße 60. Viele unserer Kunden kommen aus Stuttgart, Böblingen oder
+          in der Poststraße 63. Viele unserer Kunden kommen aus Stuttgart, Böblingen oder
           Sindelfingen: Abholung und Rückgabe sind immer in Leonberg, nicht in Stuttgart.
           Typische Einsätze sind Umzug, Möbeltransport, Baumarkt-Einkauf und die Abholung von
           Kleinanzeigen.

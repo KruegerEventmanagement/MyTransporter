@@ -21,7 +21,7 @@ export const BUSINESS = {
   email: "info@mytransporter.org",
   /** Einziger aktueller Abholort aller Transporter (keine Geschäftsadresse!). */
   leonberg: {
-    street: "Poststraße 60",
+    street: "Poststraße 63",
     postalCode: "71229",
     locality: "Leonberg",
     mapsUrl:

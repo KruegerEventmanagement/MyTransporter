@@ -250,7 +250,7 @@ export async function sendBookingConfirmationImpl(data: {
       addonsHtmlBlock +
       listBlock("So geht es weiter", [
         "Deinen Schlüsselcode bekommst du automatisch 15 Minuten vor der Abholung per E-Mail.",
-        "Schlüssel: OBI Leonberg, vor dem Eingang an den Fahrradständern. Transporter: Poststraße 60, 71229 Leonberg (ca. 500 m entfernt).",
+        "Schlüssel: OBI Leonberg, vor dem Eingang an den Fahrradständern. Transporter: an der Poststraße 63, 71229 Leonberg (ca. 500 m entfernt), neben dem Othalo-Gebäude an der Straße – bitte nicht bei Othalo klingeln.",
         "Du bekommst außerdem eine Erinnerung 24 Stunden vorher.",
         "Über den Button oben kommst du jederzeit zu deiner Buchung.",
       ]) +

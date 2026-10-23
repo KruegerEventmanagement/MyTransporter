@@ -80,8 +80,8 @@ describe("resolvePushTarget / Maps", () => {
     expect(resolvePushTarget("/admin")).toBe("/admin");
   });
   it("Maps-Link ist https und kodiert", () => {
-    expect(mapsDirectionsUrl("Poststraße 60, 71229 Leonberg")).toBe(
-      "https://www.google.com/maps/dir/?api=1&destination=Poststra%C3%9Fe%2060%2C%2071229%20Leonberg",
+    expect(mapsDirectionsUrl("Poststraße 63, 71229 Leonberg")).toBe(
+      "https://www.google.com/maps/dir/?api=1&destination=Poststra%C3%9Fe%2063%2C%2071229%20Leonberg",
     );
   });
 });
