@@ -465,7 +465,7 @@ export function ReturnFlow({
           setUploading(false);
           void (async () => {
             try {
-              const saved = await transferQueuedPhoto(supabase, store, item.id);
+              const saved = await transferQueuedPhoto(supabase, store, item.id, file);
               delete pendingTags.current[item.id];
               setPending((p) => {
                 const { [item.id]: done, ...rest } = p;
@@ -644,6 +644,17 @@ export function ReturnFlow({
     goTo(slide - 1, "prev");
   };
 
+  /** Fehlgeschlagene lokale Aufnahme verwerfen (z. B. vor dem Neu-Aufnehmen). */
+  const discardPending = (id: string) => {
+    delete pendingTags.current[id];
+    void storeRef.current?.remove(id).catch(() => {});
+    setPending((p) => {
+      const { [id]: gone, ...rest } = p;
+      if (gone?.preview) URL.revokeObjectURL?.(gone.preview);
+      return rest;
+    });
+  };
+
   const editSlot = (tag: string) => {
     const idx = slots.findIndex((s) => s.tag === tag);
     if (idx < 0) return;
@@ -761,20 +772,34 @@ export function ReturnFlow({
           </p>
           <ul className="space-y-1 text-xs text-muted-foreground">
             {pendingList.map((p) => (
-              <li key={p.id} className="flex items-center gap-2">
+              <li key={p.id} className="flex items-start gap-2">
                 {p.status === "uploading" ? <Loader2 className="w-3 h-3 animate-spin" /> : <span className="w-3 h-3 rounded-full border border-foreground inline-block" />}
-                <span>
+                <span className="flex-1">
+                  <span className="font-medium text-foreground">{slots.find((s) => s.tag === p.tag)?.title ?? (p.tag === "post_damage" ? "Schadenfoto" : "Foto")}</span>
+                  {" · "}
                   {p.status === "uploading"
                     ? "Wird übertragen"
                     : p.status === "error"
-                      ? "Auf diesem Gerät gespeichert · Übertragung fehlgeschlagen"
+                      ? `Übertragung fehlgeschlagen${p.message ? ` – ${p.message}` : ""}`
                       : "Auf diesem Gerät gespeichert"}
+                  {p.status === "error" && (
+                    <span className="mt-1 flex gap-2">
+                      {slots.some((s) => s.tag === p.tag) && (
+                        <button type="button" onClick={() => { discardPending(p.id); editSlot(p.tag); }} className="min-h-9 rounded-full border border-foreground px-3 text-[11px] font-semibold text-foreground">
+                          Neu aufnehmen
+                        </button>
+                      )}
+                      <button type="button" onClick={() => discardPending(p.id)} className="min-h-9 rounded-full border border-border px-3 text-[11px] font-medium">
+                        Entfernen
+                      </button>
+                    </span>
+                  )}
                 </span>
               </li>
             ))}
           </ul>
           <button type="button" onClick={transferAll} className="mt-3 min-h-11 rounded-full bg-foreground px-4 text-xs font-semibold text-background">
-            Jetzt übertragen
+            Erneut übertragen
           </button>
         </div>
       )}
