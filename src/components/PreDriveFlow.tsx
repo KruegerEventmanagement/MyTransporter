@@ -279,7 +279,8 @@ export function PreDriveFlow({ bookingId, onComplete }: PreDriveFlowProps) {
           {/* Step 2: Vehicle Photos */}
           <h3 className="text-xl font-bold text-foreground mb-2">Fahrzeug dokumentieren</h3>
           <p className="text-sm text-muted-foreground mb-3">
-            Fotografiere das Fahrzeug von allen 4 Seiten, bevor du losfährst.
+            Fotografiere das Fahrzeug von allen Seiten, bevor du losfährst. Du kannst Fotos auch aus deiner Galerie hochladen
+            und jedes Foto durch Antippen neu aufnehmen, falls es nicht gelungen ist.
           </p>
           <p className="text-xs text-muted-foreground mb-6 rounded-2xl border border-border p-3 leading-relaxed">
             Bitte dokumentiere den Zustand vor Fahrtbeginn vollständig, vorhandene Schäden eingeschlossen. Diese Fotos dienen bei der
@@ -313,7 +314,8 @@ export function PreDriveFlow({ bookingId, onComplete }: PreDriveFlowProps) {
               <button
                 key={side.id}
                 onClick={() => openCamera({ kind: "side", id: side.id })}
-                disabled={!!photos[side.id] || uploading}
+                disabled={uploading}
+                aria-label={photos[side.id] ? `${side.label} neu aufnehmen` : `${side.label} aufnehmen`}
                 className={`p-4 rounded-2xl border-2 text-center transition-all ${
                   photos[side.id]
                     ? "border-foreground bg-secondary"
@@ -330,6 +332,7 @@ export function PreDriveFlow({ bookingId, onComplete }: PreDriveFlowProps) {
                   </div>
                 )}
                 <p className="text-sm font-medium text-foreground">{side.icon} {side.label}</p>
+                {photos[side.id] && <p className="text-[11px] text-muted-foreground mt-1">Tippen zum Neu-Aufnehmen</p>}
               </button>
             ))}
           </div>
