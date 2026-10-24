@@ -465,7 +465,7 @@ export function ReturnFlow({
           setUploading(false);
           void (async () => {
             try {
-              const saved = await transferQueuedPhoto(supabase, store, item.id);
+              const saved = await transferQueuedPhoto(supabase, store, item.id, file);
               delete pendingTags.current[item.id];
               setPending((p) => {
                 const { [item.id]: done, ...rest } = p;

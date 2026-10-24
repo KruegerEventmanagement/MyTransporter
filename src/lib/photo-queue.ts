@@ -57,6 +57,20 @@ export function memoryQueueStore(): QueueStore & { items: Map<string, QueuedPhot
 }
 
 const DB = "mt-photo-queue";
+
+/** IndexedDB-Datensatz: Bytes statt Blob (ältere Einträge können noch einen Blob enthalten). */
+type StoredRecord = Omit<QueuedPhoto, "blob"> & { blob?: Blob; bytes?: ArrayBuffer; type?: string };
+
+async function toBytes(blob: Blob): Promise<ArrayBuffer> {
+  if (typeof blob.arrayBuffer === "function") return blob.arrayBuffer();
+  return new Response(blob).arrayBuffer();
+}
+
+function fromRecord(r: StoredRecord): QueuedPhoto {
+  const { bytes, type, blob, ...rest } = r;
+  const out = bytes ? new Blob([bytes], { type: type || "image/jpeg" }) : (blob ?? new Blob([], { type: "image/jpeg" }));
+  return { ...rest, blob: out };
+}
 const STORE = "items";
 
 function req<T>(r: IDBRequest<T>): Promise<T> {
@@ -108,8 +122,19 @@ export async function openIdbQueueStore(factory: IDBFactory | undefined = typeof
   const read = () => db.transaction(STORE, "readonly").objectStore(STORE);
   return {
     async put(i) {
+      // iOS/Safari: in IndexedDB gespeicherte Blobs sind nach dem Auslesen oft nicht mehr
+      // lesbar (Upload schlägt dann still fehl). Darum nur rohe Bytes speichern.
+      let bytes: ArrayBuffer;
       try {
-        await commit(db, (st) => st.put(i));
+        bytes = await toBytes(i.blob);
+      } catch {
+        throw new QueueUnavailableError("Fotos können auf diesem Gerät nicht zwischengespeichert werden. Das Foto wird direkt online übertragen.");
+      }
+      const { blob: _blob, ...rest } = i;
+      void _blob;
+      const record: StoredRecord = { ...rest, bytes, type: i.blob.type || "image/jpeg" };
+      try {
+        await commit(db, (st) => st.put(record));
       } catch (e) {
         const quota = (e as DOMException)?.name === "QuotaExceededError";
         throw new QueueUnavailableError(
@@ -120,10 +145,11 @@ export async function openIdbQueueStore(factory: IDBFactory | undefined = typeof
       }
     },
     async get(id) {
-      return (await req(read().get(id))) as QueuedPhoto | undefined;
+      const r = (await req(read().get(id))) as StoredRecord | undefined;
+      return r ? fromRecord(r) : undefined;
     },
     async list(u, b) {
-      const all = (await req(read().getAll())) as QueuedPhoto[];
+      const all = ((await req(read().getAll())) as StoredRecord[]).map(fromRecord);
       return all.filter((i) => i.userId === u && i.bookingId === b).sort((a, c) => a.createdAt - c.createdAt);
     },
     async remove(id) {
@@ -163,17 +189,41 @@ export async function enqueuePhoto(
 // Pro Tab: dieselbe Aufnahme wird nie parallel übertragen (Remount, Doppelklick, online-Event).
 const inFlight = new Map<string, Promise<StoredTripPhoto>>();
 
-export function transferQueuedPhoto(client: TripPhotoClient, store: QueueStore, id: string): Promise<StoredTripPhoto> {
+export class PhotoUnreadableError extends Error {
+  constructor() {
+    super("Dieses Foto ist auf dem Gerät nicht mehr lesbar. Bitte über „Neu aufnehmen“ erneut fotografieren oder aus der Galerie wählen.");
+    this.name = "PhotoUnreadableError";
+  }
+}
+
+/** Frische, sicher lesbare Kopie (Safari liefert aus IndexedDB teils kaputte Blob-Referenzen). */
+async function readableCopy(blob: Blob): Promise<Blob> {
+  let bytes: ArrayBuffer;
+  try {
+    bytes = await toBytes(blob);
+  } catch {
+    throw new PhotoUnreadableError();
+  }
+  if (!bytes.byteLength) throw new PhotoUnreadableError();
+  return new Blob([bytes], { type: blob.type || "image/jpeg" });
+}
+
+/**
+ * @param fresh optional die gerade aufgenommene Datei aus dem Arbeitsspeicher –
+ *   wird bevorzugt hochgeladen, damit ein Gerätespeicher-Problem den Upload nie blockiert.
+ */
+export function transferQueuedPhoto(client: TripPhotoClient, store: QueueStore, id: string, fresh?: Blob): Promise<StoredTripPhoto> {
   const running = inFlight.get(id);
   if (running) return running;
   const p = (async () => {
     const item = await store.get(id);
     if (!item) throw new Error("Aufnahme nicht mehr vorhanden.");
     try {
+      const file = item.uploaded ? item.blob : await readableCopy(fresh ?? item.blob);
       const saved = await saveTripPhoto(client, {
         bookingId: item.bookingId,
         tag: item.tag,
-        file: item.blob,
+        file,
         uploadedPath: item.uploaded ? (item.uploadedPath ?? item.path) : null,
         path: item.path,
       });
