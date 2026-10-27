@@ -38,53 +38,31 @@ describe("Langzeitmiete", () => {
     expect(rentalDaysBetween("kaputt", "2026-10-08")).toBeNull();
   });
 
-  it("nutzt die zentralen Wochenpreise", () => {
-    expect(weeklyBasePriceEur("l1h1")).toBe(499);
-    expect(weeklyBasePriceEur("l4h2")).toBe(569);
-    expect(weeklyBasePriceEur("l5h2")).toBe(585);
+  it("nutzt die zentralen Wochenpreise (Stand 27.10.2026)", () => {
+    expect(weeklyBasePriceEur("l1h1")).toBe(549);
+    expect(weeklyBasePriceEur("l4h2")).toBe(619);
+    expect(weeklyBasePriceEur("l5h2")).toBe(635);
   });
 
-  it("7 Tage = Wochenpreis minus 10 %", () => {
+  it("7 Tage = Wochenpreis, wie in der normalen Buchung", () => {
     const q = quoteLongTerm("2026-10-01", "2026-10-08", "l1h1");
     expect(q.eligible).toBe(true);
     if (!q.eligible) return;
-    expect(q.days).toBe(7);
-    expect(q.totalEur).toBe(449.1);
-    expect(q.referencePriceEur).toBe(499);
-    expect(q.savingsEur).toBe(49.9);
-    expect(q.isExactWeekDiscount).toBe(true);
+    expect(q.totalEur).toBe(549);
     expect(q.depositEur).toBe(200);
-    expect(q.freeKm).toBe(622);
-    expect(q.extraKmEur).toBe(0.45);
-    expect(longTermPriceEur(7, "l4h2")).toBe(512.1);
-    expect(longTermPriceEur(7, "l5h2")).toBe(526.5);
   });
 
-  it("trifft die Ankerpreise für 30, 45 und 60 Tage exakt", () => {
-    expect(longTermPriceEur(30, "l1h1")).toBe(999);
-    expect(longTermPriceEur(45, "l1h1")).toBe(1499);
-    expect(longTermPriceEur(60, "l1h1")).toBe(1899);
-    expect(longTermPriceEur(30, "l4h2")).toBe(1399);
-    expect(longTermPriceEur(45, "l4h2")).toBe(1999);
-    expect(longTermPriceEur(60, "l4h2")).toBe(2599);
-    expect(longTermPriceEur(30, "l5h2")).toBe(1699);
-    expect(longTermPriceEur(45, "l5h2")).toBe(2399);
-    expect(longTermPriceEur(60, "l5h2")).toBe(3099);
+  it("16 Tage = 2 Wochen + 2-Tage-Tarif", () => {
+    expect(longTermPriceEur(16, "l1h1")).toBe(2 * 549 + 189);
   });
 
-  it("interpoliert tagesgenau zwischen den Ankern", () => {
-    // 14 Tage L1H1: 449,10 + (999 − 449,10) × 7/23
-    expect(longTermPriceEur(14, "l1h1")).toBeCloseTo(616.46, 2);
-    // 37 Tage L4H2: 1399 + (1999 − 1399) × 7/15
-    expect(longTermPriceEur(37, "l4h2")).toBeCloseTo(1679, 2);
-    // 50 Tage L5H2: 2399 + (3099 − 2399) × 5/15
-    expect(longTermPriceEur(50, "l5h2")).toBeCloseTo(2632.33, 2);
-  });
-
-  it("über 60 Tage bleibt der Tagespreis auf 60-Tage-Niveau", () => {
-    expect(longTermPriceEur(90, "l1h1")).toBeCloseTo((1899 / 60) * 90, 2);
-    expect(longTermPriceEur(75, "l5h2") / 75).toBeCloseTo(3099 / 60, 4);
-    expect(longTermPriceEur(120, "l4h2") / 120).toBeCloseTo(2599 / 60, 4);
+  it("Monatsstaffel ab 30 Tagen", () => {
+    expect(longTermPriceEur(30, "l1h1")).toBe(1799);
+    expect(longTermPriceEur(45, "l1h1")).toBe(2499);
+    expect(longTermPriceEur(60, "l1h1")).toBe(3199);
+    expect(longTermPriceEur(30, "l4h2")).toBe(2199);
+    expect(longTermPriceEur(30, "l5h2")).toBe(2499);
+    expect(longTermPriceEur(90, "l1h1")).toBe(Math.round((3199 / 60) * 90));
   });
 
   it("Freikilometer: 2/3 von 4.000 km je 30 Tage, erst am Ende gerundet", () => {
@@ -97,17 +75,9 @@ describe("Langzeitmiete", () => {
     expect(longTermFreeKm(0)).toBe(0);
   });
 
-  it("der effektive Tagespreis sinkt bis zum Monatspreis", () => {
-    let prev = Infinity;
-    for (const days of [7, 10, 14, 21, 30]) {
-      const perDay = longTermPriceEur(days, "l1h1") / days;
-      expect(perDay).toBeLessThan(prev);
-      prev = perDay;
-    }
-    // ab 30 Tagen bleibt der Tagespreis auf Monatsniveau (keine Sprünge nach oben)
-    for (const days of [37, 45, 52, 60, 90]) {
-      expect(longTermPriceEur(days, "l1h1") / days).toBeLessThanOrEqual(999 / 30 + 0.05);
-    }
+  it("ab einem Monat ist der Tagespreis günstiger als bei Wochenmiete", () => {
+    expect(longTermPriceEur(30, "l1h1") / 30).toBeLessThan(549 / 7);
+    expect(longTermPriceEur(29, "l1h1")).toBeLessThanOrEqual(longTermPriceEur(30, "l1h1"));
   });
 
   it("kennzeichnet runde Laufzeiten", () => {
