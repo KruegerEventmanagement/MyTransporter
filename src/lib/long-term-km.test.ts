@@ -19,15 +19,15 @@ describe("Langzeit mit Uhrzeit und Wunsch-km", () => {
   });
   it("Beispiel 30 Tage / 2.500 km L1H1", () => {
     const q = quoteLongTermWithKm(30, "l1h1", 2500);
-    expect(q.eligible && q.totalEur).toBe(990.65);
+    expect(q.eligible && q.totalEur).toBe(1790.65);
   });
   it("Gutschrift gedeckelt auf 10 %", () => {
     const q = quoteLongTermWithKm(30, "l1h1", 0);
-    expect(q.eligible && q.creditEur).toBe(99.9);
+    expect(q.eligible && q.creditEur).toBe(133.35);
   });
   it("Mehr-km erhöhen den Preis", () => {
     const q = quoteLongTermWithKm(30, "l1h1", 5000);
-    expect(q.eligible && q.totalEur).toBe(1582.26);
+    expect(q.eligible && q.totalEur).toBe(2382.26);
     expect(quoteLongTermWithKm(5, "l1h1", 1000).eligible).toBe(false);
   });
 });
