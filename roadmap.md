@@ -107,3 +107,5 @@
 - [x] Kautionsabschluss (Offene Kautionen, Abzüge, Adminhinweis/Tagesdigest, Kundenmail) 18.10.2026, nicht veröffentlicht
 - [x] Review 263e9e9: failed-Auszahlung offen, fremde Refunds, Nullerstattung, Dirty-Draft, Mail-Precheck, manuelle Blocker/Fotos
 - [x] Review-Ergänzung: Mehrkilometer Karte vs. Kaution gegenseitig gesperrt, Legacy-settleDeposit verweigert bei Review
+
+- [ ] Exakte Mietdauer ab 8 Tagen live schalten: Migration flex_days_plan_and_pickup_63 (plan_end_at days_N + Abholadresse Poststraße 63 in vehicles) anwenden, dann FLEX_DAYS_ENABLED=true. Blocker: Backend am 27.10. nicht erreichbar.
