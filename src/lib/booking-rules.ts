@@ -333,6 +333,12 @@ function withClass(tpl: PlanTemplate, vehicleClass: VehicleClass): PlanEntry {
 
 
 
+/**
+ * Schalter für exakte Mieten ab 8 Tagen. Erst auf true setzen, wenn die
+ * DB-Funktion plan_end_at days_N kennt (Migration flex_days_plan_and_pickup_63).
+ */
+export const FLEX_DAYS_ENABLED = false;
+
 /** Ab dieser Mietdauer gilt die günstigere Monatsstaffel. */
 export const MONTH_DAYS = 30;
 /** Längste online buchbare Dauer (Tage). */
@@ -473,7 +479,10 @@ export function getAvailablePlans(
     candidates = catalog.filter((p) => p.days === nights);
   } else {
     // Genau die gewählte Anzahl Tage – nie auf volle Wochen aufrunden.
-    const synth = getPlanById(`days_${nights}`, vehicleClass);
+    // Nur wenn die Datenbank (plan_end_at) days_N kennt, sonst Doppelbuchungsgefahr.
+    const synth = FLEX_DAYS_ENABLED
+      ? getPlanById(`days_${nights}`, vehicleClass)
+      : getPlanById(`week_x${Math.ceil(nights / 7)}`, vehicleClass);
     candidates = synth ? [synth] : [];
   }
   if (startHour === null) return candidates;

@@ -5,7 +5,7 @@ import { planHours } from "@/lib/trip-time";
 
 describe("Exakte Mietdauer ab 8 Tagen", () => {
   it("16 Tage → genau 16 Tage, 2 × 549 + 189 = 1.287 €, 1.600 km", () => {
-    const [p] = getAvailablePlans(16, 9, "l1h1");
+    const p = getPlanById("days_16", "l1h1")!;
     expect(p.id).toBe("days_16");
     expect(p.price).toBe(1287);
     expect(p.freeKm).toBe(1600);
