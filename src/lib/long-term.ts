@@ -1,17 +1,13 @@
 /**
  * Langzeitmiete – reine Preislogik.
  *
- * Marktorientiertes Ankermodell: Für jede Fahrzeugklasse sind Zielpreise für
- * 7, 30, 45 und 60 Miettage hinterlegt. Zwischen den Ankern wird tagesgenau
- * linear interpoliert, damit es keine Preissprünge gibt. Über 60 Tage gilt der
- * effektive 60-Tage-Tagespreis, der Preis pro Tag steigt also nie wieder.
- *
- * Der 7-Tage-Anker leitet sich weiterhin aus dem zentralen Wochenmietpreis
- * (booking-rules.ts) minus 10 % ab, damit Tarifänderungen automatisch mitziehen.
+ * Preise kommen ausschließlich aus flexDaysPrice (booking-rules.ts), damit
+ * Langzeitseite und normale Buchung identisch rechnen: 7–29 Tage Wochen +
+ * Resttage, ab 30 Tagen günstigere Monatsstaffel (MONTH_ANCHORS).
  * Die Kaution bleibt immer unberührt und wird nicht rabattiert.
  */
 
-import { DEPOSIT_EUR, extraKmCentsFor, getPlanById, type VehicleClass } from "@/lib/booking-rules";
+import { DEPOSIT_EUR, extraKmCentsFor, flexDaysPrice, getPlanById, MONTH_ANCHORS, type VehicleClass } from "@/lib/booking-rules";
 
 export const LONG_TERM_MIN_DAYS = 7;
 /** Rabatt, der bei genau 7 Tagen gegenüber dem Wochenpreis gilt. */
@@ -119,7 +115,7 @@ export function quoteLongTerm(
     totalEur,
     savingsEur,
     savingsPercent: Math.round((savingsEur / referencePriceEur) * 100),
-    isExactWeekDiscount: days === LONG_TERM_MIN_DAYS,
+    isExactWeekDiscount: false,
     effectivePricePerDayEur: roundCents(totalEur / days),
     tierLabel: longTermTierLabel(days),
     depositEur: DEPOSIT_EUR,
