@@ -150,6 +150,22 @@ function withAuthTimeout<T>(promise: PromiseLike<T>): Promise<T> {
 }
 
 
+/** Verfügbarkeitsabfragen dürfen nie endlos laden: Zeitlimit + ein zweiter Versuch. */
+export const AVAILABILITY_TIMEOUT_MS = 10_000;
+export async function withRetryTimeout<T>(fn: () => Promise<T>, ms = AVAILABILITY_TIMEOUT_MS, attempts = 2): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        fn(),
+        new Promise<never>((_, rej) => { timer = setTimeout(() => rej(new Error("Zeitüberschreitung")), ms); }),
+      ]);
+    } catch (e) { lastErr = e; } finally { if (timer) clearTimeout(timer); }
+  }
+  throw lastErr;
+}
+
 export function BookingSection() {
   const [step, setStep] = useState(0);
   const [liabilityAccepted, setLiabilityAccepted] = useState(false);
@@ -241,7 +257,7 @@ export function BookingSection() {
   const refreshBusySlots = useCallback(() => {
     const seq = ++busySeqRef.current;
     setBusyLoading(true);
-    getBusySlots()
+    withRetryTimeout(() => getBusySlots())
       .then((slots) => {
         if (seq !== busySeqRef.current) return;
         setBusySlots(slots);
@@ -261,10 +277,10 @@ export function BookingSection() {
     setVehiclesLoading(true);
     void (async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await withRetryTimeout(async () => await supabase
           .from("vehicles")
           .select("id, name, plate, brand, model, fuel_type, max_weight_kg, empty_weight_kg, payload_kg, power_kw, seats, photo_urls, is_active, length_cm, width_cm, height_cm, cargo_length_cm, cargo_width_cm, cargo_height_cm, cargo_volume_m3, pickup_location, pickup_address, trailer_load_braked_kg, tank_liters, range_km, first_registration, cargo_width_between_arches_cm, rear_door_width_cm, rear_door_height_cm, side_door_width_cm, side_door_height_cm, specs_status, specs_source")
-          .order("created_at", { ascending: true });
+          .order("created_at", { ascending: true }));
         if (seq !== vehiclesSeqRef.current) return;
         if (error || !data) {
           setVehiclesError(true);
