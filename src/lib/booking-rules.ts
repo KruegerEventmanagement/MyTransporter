@@ -69,6 +69,19 @@ export function isVehicleClass(value: unknown): value is VehicleClass {
   return value === "l1h1" || value === "l4h2" || value === "l5h2";
 }
 
+/** Mindestmietdauer je Fahrzeugklasse in Tagen (Crafter L5H2 nur ab 5 Tagen). */
+export const MIN_DAYS_BY_CLASS: Partial<Record<VehicleClass, number>> = { l5h2: 5 };
+export const L5H2_MIN_DAYS_HINT = "Nur für Vermietungen ab fünf Tagen";
+
+/** true, wenn der Tarif für diese Fahrzeugklasse lang genug ist. Unbekannte Tarife (km-Tarif) gelten als 1 Tag. */
+export function planAllowedForClass(planId: string | null | undefined, vehicleClass: VehicleClass): boolean {
+  const min = MIN_DAYS_BY_CLASS[vehicleClass];
+  if (!min) return true;
+  if (!planId) return true;
+  const days = getPlanById(planId, vehicleClass)?.days ?? 1;
+  return days >= min;
+}
+
 /** Leitet die Fahrzeugklasse aus Name / Modell / Kennzeichen-Bezeichnung ab. */
 export function vehicleClassFromName(...parts: Array<string | null | undefined>): VehicleClass {
   const haystack = parts.filter(Boolean).join(" ").toLowerCase().replace(/[\s-]/g, "");

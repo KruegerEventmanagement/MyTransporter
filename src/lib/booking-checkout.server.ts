@@ -11,6 +11,8 @@ import {
   planLabelWithClass,
   vehicleClassFromName,
   isVehicleClass,
+  planAllowedForClass,
+  L5H2_MIN_DAYS_HINT,
   KM_TARIFF_CENTS_PER_KM,
   KM_TARIFF_MIN_EUR,
   VEHICLE_CLASS_SHORT_LABEL,
@@ -122,6 +124,8 @@ export async function runBookingCheckout(data: BookingCheckoutInput, context: Ct
     } else {
       vehicleClass = await resolveVehicleClass(data.vehiclePlate, data.vehicleName, data.vehicleClass);
     }
+
+    if (!planAllowedForClass(planId, vehicleClass)) return { error: `${L5H2_MIN_DAYS_HINT}.` };
 
     const stripe = createStripeClient(data.environment);
     const planEntry = getPlanById(planId, vehicleClass);
