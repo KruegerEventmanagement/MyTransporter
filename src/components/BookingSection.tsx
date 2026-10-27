@@ -930,7 +930,8 @@ export function BookingSection() {
     availabilityReady &&
     Boolean(currentVehicle?.is_active) &&
     Boolean(currentPlate) &&
-    !currentVehicleUnavailable;
+    !currentVehicleUnavailable &&
+    planAllowedForClass(selectedPlanId, vehicleClass);
 
 
   // Veraltete Verfügbarkeit / Rücksprung: nicht mehr freien Tarif abwählen.
