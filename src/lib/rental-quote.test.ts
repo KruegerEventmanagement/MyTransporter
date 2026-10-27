@@ -112,7 +112,7 @@ describe("Langzeit: angefragtes Kontingent = Wunschkilometer", () => {
   const cases: Array<[number, number, number, number]> = [
     // km, total, credit, contractKm
     [2500, 1790.65, 8.35, 2500],
-    [4000, 1362.26, 0, 4000],
+    [4000, 2162.26, 0, 4000],
     [5000, 2382.26, 0, 5000],
     [0, 1665.65, 133.35, 0],
   ];
