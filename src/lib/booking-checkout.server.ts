@@ -123,6 +123,8 @@ export async function runBookingCheckout(data: BookingCheckoutInput, context: Ct
       vehicleClass = await resolveVehicleClass(data.vehiclePlate, data.vehicleName, data.vehicleClass);
     }
 
+    if (!planAllowedForClass(planId, vehicleClass)) return { error: `${L5H2_MIN_DAYS_HINT}.` };
+
     const stripe = createStripeClient(data.environment);
     const planEntry = getPlanById(planId, vehicleClass);
     const plan = planEntry

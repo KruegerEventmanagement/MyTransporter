@@ -1575,6 +1575,8 @@ export function BookingSection() {
                       const v = vehicles.find((x) => x.id === pv.id);
                       if (!v) return undefined;
                       if (!v.is_active) return { label: "nicht verfügbar", dimmed: true };
+                      if (!planAllowedForClass(selectedPlanId, vehicleClassFromName(v.name, v.model, v.plate)))
+                        return { label: L5H2_MIN_DAYS_HINT, disabled: true };
                       if (!isPlateAvailable(v.plate ?? "")) return { label: "belegt", disabled: true };
                       return { label: "verfügbar" };
                     }}
