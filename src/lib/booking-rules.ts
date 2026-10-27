@@ -209,7 +209,7 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
   },
   {
     id: "multi_7d", label: "7 Tage Wochenmiete", shortLabel: "7 Tage Wochenmiete",
-    days: 7, durationHours: 168, basePrice: 499, basePriceL4h2: 569, freeKm: 700,
+    days: 7, durationHours: 168, basePrice: 549, basePriceL4h2: 619, freeKm: 700,
     returnRule: "Rückgabe nach 7 Tagen zur gleichen Uhrzeit",
     idealFor: "Komplette Projektwoche, Baustelle, Umzug, Firmen",
     highlight: "best_daily", highlightLabel: "Bester Tagespreis",
@@ -217,9 +217,9 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
 ];
 
 /** Aktuelle Kilometer-Katalogversion (wird in Stripe-Metadata festgehalten). */
-export const KM_CATALOG_VERSION = "km-2026-10-08";
+export const KM_CATALOG_VERSION = "km-2026-10-27";
 /** Vorherige Version (neue km, alte Sätze 0,35/0,29) – Snapshots daraus bleiben gültig. */
-export const PREVIOUS_KM_CATALOG_VERSIONS = ["km-2026-09-30", "km-2026-09-30b", "km-2026-10-06"] as const;
+export const PREVIOUS_KM_CATALOG_VERSIONS = ["km-2026-09-30", "km-2026-09-30b", "km-2026-10-06", "km-2026-10-08"] as const;
 
 export const KM_CATALOG_OUTDATED_MESSAGE =
   "Tarife wurden aktualisiert. Bitte Seite neu laden und die aktuellen Konditionen prüfen.";
@@ -332,6 +332,48 @@ function withClass(tpl: PlanTemplate, vehicleClass: VehicleClass): PlanEntry {
 }
 
 
+
+/** Ab dieser Mietdauer gilt die günstigere Monatsstaffel. */
+export const MONTH_DAYS = 30;
+/** Längste online buchbare Dauer (Tage). */
+export const MAX_ONLINE_DAYS = 365;
+/** Monatsstaffel (Mietpreis €) je Klasse – auch Basis der Langzeitmiete. */
+export const MONTH_ANCHORS: Record<VehicleClass, Record<30 | 45 | 60, number>> = {
+  l1h1: { 30: 1799, 45: 2499, 60: 3199 },
+  l4h2: { 30: 2199, 45: 2999, 60: 3899 },
+  l5h2: { 30: 2499, 45: 3399, 60: 4399 },
+};
+
+function templatePrice(id: string, cls: VehicleClass): number {
+  const tpl = PLAN_TEMPLATES.find((p) => p.id === id)!;
+  return priceForClass(cls, tpl.basePrice, tpl.basePriceL4h2, l5h2PriceFrom(tpl.basePriceL4h2));
+}
+
+function monthStaffelPrice(days: number, cls: VehicleClass): number {
+  const a = MONTH_ANCHORS[cls];
+  const pts: Array<[number, number]> = [[30, a[30]], [45, a[45]], [60, a[60]]];
+  if (days >= 60) return Math.round((a[60] / 60) * days);
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [d0, p0] = pts[i]!; const [d1, p1] = pts[i + 1]!;
+    if (days >= d0 && days <= d1) return Math.round(p0 + ((p1 - p0) * (days - d0)) / (d1 - d0));
+  }
+  return a[30];
+}
+
+/**
+ * Mietpreis für exakt `days` Tage (ab 7).
+ * 7–29 Tage: volle Wochen + passender Resttag-Tarif, nie teurer als die nächste
+ * volle Woche und nie teurer als der 30-Tage-Preis. Ab 30 Tagen: Monatsstaffel.
+ */
+export function flexDaysPrice(days: number, cls: VehicleClass): number {
+  if (days >= MONTH_DAYS) return monthStaffelPrice(days, cls);
+  const week = templatePrice("multi_7d", cls);
+  const weeks = Math.floor(days / 7);
+  const rest = days % 7;
+  const restPrice = rest === 0 ? 0 : rest === 1 ? templatePrice("24h_300", cls) : templatePrice(`multi_${rest}d`, cls);
+  return Math.min(weeks * week + restPrice, Math.ceil(days / 7) * week, MONTH_ANCHORS[cls][30]);
+}
+
 /** Tarif-Katalog für eine Fahrzeugklasse. */
 export function planCatalog(vehicleClass: VehicleClass = "l1h1"): PlanEntry[] {
   return PLAN_TEMPLATES.map((tpl) => withClass(tpl, vehicleClass));
@@ -344,6 +386,33 @@ export function getPlanById(planId: string, vehicleClass: VehicleClass = "l1h1")
   const resolvedId = LEGACY_PLAN_ALIASES[planId] ?? planId;
   const direct = PLAN_TEMPLATES.find((p) => p.id === resolvedId);
   if (direct) return withClass(direct, vehicleClass);
+
+  const dm = /^days_(\d+)$/.exec(resolvedId);
+  if (dm) {
+    const days = parseInt(dm[1], 10);
+    if (days < 8 || days > MAX_ONLINE_DAYS) return null;
+    const base = PLAN_TEMPLATES.find((p) => p.id === "multi_7d")!;
+    const basePrice = flexDaysPrice(days, "l1h1");
+    const priceL4h2 = flexDaysPrice(days, "l4h2");
+    const priceL5h2 = flexDaysPrice(days, "l5h2");
+    return {
+      ...withClass(base, vehicleClass),
+      id: resolvedId,
+      label: days >= MONTH_DAYS ? `${days} Tage Langzeitmiete` : `${days} Tage Miete`,
+      shortLabel: `${days} Tage`,
+      days,
+      durationHours: days * 24,
+      basePrice,
+      priceL4h2,
+      priceL5h2,
+      price: priceForClass(vehicleClass, basePrice, priceL4h2, priceL5h2),
+      freeKm: 100 * days,
+      returnRule: `Rückgabe nach ${days} Tagen zur gleichen Uhrzeit`,
+      idealFor: days >= MONTH_DAYS ? "Langzeitmiete mit Monatsvorteil" : "Längere Projekte – genau so viele Tage, wie du brauchst",
+      highlight: undefined,
+      highlightLabel: undefined,
+    };
+  }
 
   const m = /^week_x(\d+)$/.exec(resolvedId);
   if (m) {
@@ -386,7 +455,7 @@ export function planLabelWithClass(plan: PlanEntry): string {
  * 0 Nächte (selber Tag) → nur Tagesmiete unter 24h (3h/6h).
  * 1 Nacht → 24h-Tarife (Rückgabe Folgetag gleiche Uhrzeit).
  * 2-7 Nächte → passender Mehrtagestarif (days === nights).
- * 8+ Nächte → dynamisches Wochenpaket mit ceil(nights/7) × Wochenmiete.
+ * 8+ Nächte → dynamischer Tarif days_N (exakt N Tage, siehe flexDaysPrice).
  */
 export function getAvailablePlans(
   nights: number,
@@ -403,8 +472,8 @@ export function getAvailablePlans(
   } else if (nights >= 2 && nights <= 7) {
     candidates = catalog.filter((p) => p.days === nights);
   } else {
-    const n = Math.ceil(nights / 7);
-    const synth = getPlanById(`week_x${n}`, vehicleClass);
+    // Genau die gewählte Anzahl Tage – nie auf volle Wochen aufrunden.
+    const synth = getPlanById(`days_${nights}`, vehicleClass);
     candidates = synth ? [synth] : [];
   }
   if (startHour === null) return candidates;
