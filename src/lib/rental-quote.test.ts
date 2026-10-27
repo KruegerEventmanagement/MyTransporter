@@ -150,7 +150,7 @@ describe("Kilometer-Katalog 08.10.2026", () => {
     }
     expect(getPlanById("multi_3d", "l5h2")!.price).toBe(315);
     expect(getPlanById("week_x3", "l1h1")!.freeKm).toBe(2100);
-    expect(getPlanById("week_x3", "l1h1")!.price).toBe(1497);
+    expect(getPlanById("week_x3", "l1h1")!.price).toBe(1647);
     expect(getPlanById("24h_300", "l1h1")!.shortLabel).toBe("24 h · 150 km");
     expect(getPlanById("24h", "l1h1")!.freeKm).toBe(150);
     expect(getPlanById("24h_300km", "l5h2")!.price).toBe(165);
