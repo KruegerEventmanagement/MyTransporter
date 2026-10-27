@@ -53,6 +53,8 @@ import {
   getAvailablePlans,
   planLabelWithClass,
   vehicleClassFromName,
+  planAllowedForClass,
+  L5H2_MIN_DAYS_HINT,
   
   VEHICLE_CLASS_SHORT_LABEL,
   EARLIEST_START_HOUR,
