@@ -58,7 +58,7 @@ describe("quoteRental", () => {
     expect(ok(quoteRental({ ...t3, desiredKm: 0 }, "l1h1")).totalEur).toBe(269);
   });
   it("30 Tage / 2.667 km: Monatsanker je Klasse", () => {
-    const exp = { l1h1: 999, l4h2: 1399, l5h2: 1699 } as const;
+    const exp = { l1h1: 1799, l4h2: 2199, l5h2: 2499 } as const;
     for (const c of VEHICLE_CLASSES) {
       const q = ok(quoteRental({ ...t30, desiredKm: 2667 }, c));
       expect(q.kind).toBe("long_term");
@@ -73,7 +73,7 @@ describe("quoteRental", () => {
     expect(extraKmCostEur(5000, "l5h2")).toBe(290 + 880);
     expect(extraKmCostEur(5001, "l1h1")).toBe(1170.18);
     const q = ok(quoteRental({ ...t30, desiredKm: 5000 }, "l1h1"));
-    expect(q.totalEur).toBe(1582.26);
+    expect(q.totalEur).toBe(2382.26);
     expect(q.contractKm).toBe(5000);
   });
   it("1 Tag: günstigster 24h-Tarif je km", () => {
@@ -111,10 +111,10 @@ describe("quoteRental", () => {
 describe("Langzeit: angefragtes Kontingent = Wunschkilometer", () => {
   const cases: Array<[number, number, number, number]> = [
     // km, total, credit, contractKm
-    [2500, 990.65, 8.35, 2500],
-    [4000, 1362.26, 0, 4000],
-    [5000, 1582.26, 0, 5000],
-    [0, 899.1, 99.9, 0],
+    [2500, 1790.65, 8.35, 2500],
+    [4000, 2162.26, 0, 4000],
+    [5000, 2382.26, 0, 5000],
+    [0, 1665.65, 133.35, 0],
   ];
   for (const [kmv, total, credit, contract] of cases) {
     it(`30 Tage / ${kmv} km`, () => {
@@ -140,7 +140,7 @@ describe("Langzeit: angefragtes Kontingent = Wunschkilometer", () => {
 
 describe("Kilometer-Katalog 08.10.2026", () => {
   const NEW: Record<string, number> = { "3h": 70, "6h": 100, "24h_300": 150, "24h_300km": 300, "24h_500": 500, "24h_800": 800, multi_2d: 200, multi_3d: 300, multi_4d: 400, multi_5d: 500, multi_6d: 600, multi_7d: 700 };
-  const PRICES: Record<string, [number, number]> = { "3h": [49, 59], "6h": [69, 79], "24h_300": [99, 109], "24h_300km": [139, 149], "24h_500": [189, 199], "24h_800": [299, 309], multi_2d: [189, 209], multi_3d: [269, 299], multi_4d: [339, 379], multi_5d: [399, 449], multi_6d: [449, 509], multi_7d: [499, 569] };
+  const PRICES: Record<string, [number, number]> = { "3h": [49, 59], "6h": [69, 79], "24h_300": [99, 109], "24h_300km": [139, 149], "24h_500": [189, 199], "24h_800": [299, 309], multi_2d: [189, 209], multi_3d: [269, 299], multi_4d: [339, 379], multi_5d: [399, 449], multi_6d: [449, 509], multi_7d: [549, 619] };
   it("jede Klasse × jeder Tarif: neue km, unveränderte Preise", () => {
     for (const c of VEHICLE_CLASSES) for (const [id, km] of Object.entries(NEW)) {
       const p = getPlanById(id, c)!;
@@ -150,7 +150,7 @@ describe("Kilometer-Katalog 08.10.2026", () => {
     }
     expect(getPlanById("multi_3d", "l5h2")!.price).toBe(315);
     expect(getPlanById("week_x3", "l1h1")!.freeKm).toBe(2100);
-    expect(getPlanById("week_x3", "l1h1")!.price).toBe(1497);
+    expect(getPlanById("week_x3", "l1h1")!.price).toBe(1647);
     expect(getPlanById("24h_300", "l1h1")!.shortLabel).toBe("24 h · 150 km");
     expect(getPlanById("24h", "l1h1")!.freeKm).toBe(150);
     expect(getPlanById("24h_300km", "l5h2")!.price).toBe(165);

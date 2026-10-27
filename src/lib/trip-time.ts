@@ -32,6 +32,8 @@ export function planHours(planId: string | null | undefined): number | null {
   if (["24h", "24h_short", "24h_long", "24h_300", "24h_300km", "24h_500", "24h_800"].includes(p)) return 24;
   const multi = /^multi_([2-7])d$/.exec(p);
   if (multi) return Number(multi[1]) * 24;
+  const flex = /^days_([0-9]+)$/.exec(p);
+  if (flex) return Number(flex[1]) * 24;
   const week = /^week_x([0-9]+)$/.exec(p);
   if (week) return Math.max(1, Number(week[1])) * 168;
   return null;

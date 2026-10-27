@@ -17,7 +17,9 @@ import {
   type VehicleClass,
   KM_CATALOG_VERSION,
   checkoutKmCatalogError,
+  FLEX_DAYS_ENABLED,
 } from "@/lib/booking-rules";
+const CHECKOUT_FLEX_DISABLED = "Dieser Tarif ist gerade nicht buchbar. Bitte Seite neu laden.";
 import { resolveAddonSelection } from "@/lib/addons";
 import { customKmLabel, customKmMetadata, quoteCustomKm, type SnapshotAddon } from "@/lib/custom-km";
 
@@ -85,6 +87,7 @@ export async function runBookingCheckout(data: BookingCheckoutInput, context: Ct
     }
 
     const planId = data.plan.startsWith("rent_") ? data.plan.slice(5) : data.plan;
+    if (!FLEX_DAYS_ENABLED && /^days_\d+$/.test(planId)) return { error: CHECKOUT_FLEX_DISABLED };
     if (data.startDate && typeof data.startHour === "number") {
       let holdQuery = supabaseAdmin
         .from("booking_holds")

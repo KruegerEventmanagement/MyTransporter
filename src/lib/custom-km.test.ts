@@ -19,8 +19,8 @@ describe("Beispiele L1H1", () => {
     expect([300, 600, 900].map((k) => eur("multi_3d", k))).toEqual([269, 404, 539]);
     expect(eur("multi_3d", 600, "l4h2")).toBe(434);
     expect(eur("multi_3d", 600, "l5h2")).toBe(450);
-    expect(eur("multi_7d", 700)).toBe(499);
-    expect(eur("multi_7d", 1300)).toBe(769);
+    expect(eur("multi_7d", 700)).toBe(549);
+    expect(eur("multi_7d", 1300)).toBe(819);
     expect(quoteCustomKm("multi_7d", "l1h1", 1300)!.rateCents).toBe(45);
   });
   it("150/300-Grenzen ±1 km", () => {
@@ -83,7 +83,7 @@ describe("Anfragerechner (Katalog 0,45 €)", () => {
     expect(q.ok && q.totalEur).toBe(404);
     const t30 = { ...t3, endDate: "2026-11-04" };
     const l = quoteRental({ ...t30, desiredKm: 2667 }, "l1h1");
-    expect(l.ok && l.totalEur).toBe(999);
+    expect(l.ok && l.totalEur).toBe(1799);
   });
 });
 
