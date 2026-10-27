@@ -13,7 +13,7 @@ describe("Exakte Mietdauer ab 8 Tagen", () => {
     expect(planHours("days_16")).toBe(16 * 24);
   });
   it("14 Tage = 2 Wochen", () => expect(flexDaysPrice(14, "l1h1")).toBe(1098));
-  it("13 Tage nie teurer als 2 volle Wochen", () => expect(flexDaysPrice(13, "l1h1")).toBe(1098));
+  it("13 Tage = Woche + 6-Tage-Tarif", () => expect(flexDaysPrice(13, "l1h1")).toBe(998));
   it("8 Tage = Woche + Umzugstag", () => expect(flexDaysPrice(8, "l1h1")).toBe(648));
   it("29 Tage nie teurer als 30 Tage", () => expect(flexDaysPrice(29, "l1h1")).toBe(1799));
   it("ab 30 Tagen Monatsstaffel", () => {
