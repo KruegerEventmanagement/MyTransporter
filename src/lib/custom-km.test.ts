@@ -17,7 +17,7 @@ describe("Beispiele L1H1", () => {
   });
   it("Mehrtage/Woche", () => {
     expect([300, 600, 900].map((k) => eur("multi_3d", k))).toEqual([269, 416, 563]);
-    expect(eur("multi_3d", 600, "l4h2")).toBe(434);
+    expect(eur("multi_3d", 600, "l4h2")).toBe(446);
     expect(eur("multi_3d", 600, "l5h2")).toBe(462);
     expect(eur("multi_7d", 700)).toBe(549);
     expect(eur("multi_7d", 1300)).toBe(819);

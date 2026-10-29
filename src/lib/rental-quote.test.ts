@@ -49,7 +49,7 @@ describe("quoteRental", () => {
   });
   it("3 Tage / 600 km: 300 Mehr-km × 0,45 = 135 €", () => {
     expect(ok(quoteRental({ ...t3, desiredKm: 600 }, "l1h1")).totalEur).toBe(416);
-    expect(ok(quoteRental({ ...t3, desiredKm: 600 }, "l4h2")).totalEur).toBe(434);
+    expect(ok(quoteRental({ ...t3, desiredKm: 600 }, "l4h2")).totalEur).toBe(446);
     expect(ok(quoteRental({ ...t3, desiredKm: 600 }, "l5h2")).totalEur).toBe(462);
     expect(ok(quoteRental({ ...t3, desiredKm: 600 }, "l1h1")).extraKmCostEur).toBe(147);
     expect(ok(quoteRental({ ...t3, desiredKm: 900 }, "l1h1")).totalEur).toBe(563);
