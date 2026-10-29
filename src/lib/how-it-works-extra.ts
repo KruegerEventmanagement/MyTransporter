@@ -7,7 +7,7 @@ export const EXTRA: Record<"ar" | "tr" | "it" | "el", HowCopy> = {
     intro: "8 خطوات بسيطة للحصول على شاحنتك – من الحجز حتى الإرجاع.",
     cta: "احجز شاحنة الآن",
     steps: [
-      { title: "اختر التاريخ", text: ["اختر في التقويم من متى إلى متى تحتاج الشاحنة. اليوم فقط؟ اضغط على اليوم فقط.", "إذا احتجتها أكثر من 24 ساعة، اضغط أيضًا على اليوم التالي."] },
+      { title: "اختر التاريخ", text: ["اختر أولاً الزر المناسب في الأعلى:", "تأجير يومي (من 3 إلى 24 ساعة): اضغط مرة واحدة على اليوم المطلوب.", "عدة أيام (أكثر من 24 ساعة): اضغط أولاً على يوم الاستلام ثم على يوم الإرجاع."] },
       { title: "الوقت والتعرفة", text: ["اختر الساعة التي تريد استلام الشاحنة فيها. ثم اختر التعرفة: عادية أو مع كيلومترات أكثر."] },
       {
         title: "المركبة والإضافات",
@@ -53,7 +53,7 @@ export const EXTRA: Record<"ar" | "tr" | "it" | "el", HowCopy> = {
     intro: "8 basit adımda kamyonetine ulaş – rezervasyondan teslime kadar.",
     cta: "Hemen kamyonet kirala",
     steps: [
-      { title: "Tarihi seç", text: ["Takvimde kamyoneti hangi tarihten hangi tarihe kadar istediğini seç. Sadece bugün mü? O zaman sadece bugüne dokun.", "24 saatten uzun ihtiyacın varsa, ertesi güne de dokun."] },
+      { title: "Tarihi seç", text: ["Önce yukarıdaki uygun düğmeye dokun:", "Günlük kiralama (3 ila 24 saat): İstediğin güne bir kez dokun.", "Birden fazla gün (24 saatten uzun): Önce teslim alma gününe, sonra iade gününe dokun."] },
       { title: "Saat ve tarife", text: ["Kamyoneti saat kaçtan itibaren istediğini seç. Sonra tarifeni seç: normal veya daha fazla kilometreli."] },
       {
         title: "Araç ve ekstralar",
@@ -99,7 +99,7 @@ export const EXTRA: Record<"ar" | "tr" | "it" | "el", HowCopy> = {
     intro: "In 8 semplici passi al tuo furgone – dalla prenotazione alla riconsegna.",
     cta: "Prenota ora un furgone",
     steps: [
-      { title: "Scegli la data", text: ["Scegli nel calendario da quando a quando ti serve il furgone. Solo oggi? Allora tocca solo oggi.", "Se ti serve per più di 24 ore, tocca anche il giorno successivo."] },
+      { title: "Scegli la data", text: ["Per prima cosa tocca in alto il pulsante giusto:", "Noleggio giornaliero (da 3 a 24 ore): tocca una volta il giorno desiderato.", "Più giorni (oltre 24 ore): tocca prima il giorno di ritiro e poi il giorno di riconsegna."] },
       { title: "Orario e tariffa", text: ["Scegli da che ora vuoi il furgone. Poi scegli la tariffa: normale o con più chilometri."] },
       {
         title: "Veicolo e accessori",
@@ -145,7 +145,7 @@ export const EXTRA: Record<"ar" | "tr" | "it" | "el", HowCopy> = {
     intro: "Σε 8 απλά βήματα στο βαν σου – από την κράτηση μέχρι την επιστροφή.",
     cta: "Κλείσε τώρα βαν",
     steps: [
-      { title: "Επίλεξε ημερομηνία", text: ["Επίλεξε στο ημερολόγιο από πότε μέχρι πότε χρειάζεσαι το βαν. Μόνο σήμερα; Τότε πάτησε μόνο τη σημερινή μέρα.", "Αν το χρειάζεσαι για περισσότερες από 24 ώρες, πάτησε και την επόμενη μέρα."] },
+      { title: "Επίλεξε ημερομηνία", text: ["Πρώτα πάτησε το σωστό κουμπί επάνω:", "Ημερήσια ενοικίαση (3 έως 24 ώρες): Πάτησε μία φορά την ημέρα που θέλεις.", "Πολλές ημέρες (πάνω από 24 ώρες): Πάτησε πρώτα την ημέρα παραλαβής και μετά την ημέρα επιστροφής."] },
       { title: "Ώρα και τιμολόγιο", text: ["Επίλεξε από ποια ώρα θέλεις το βαν. Μετά επίλεξε τιμολόγιο: κανονικό ή με περισσότερα χιλιόμετρα."] },
       {
         title: "Όχημα και αξεσουάρ",

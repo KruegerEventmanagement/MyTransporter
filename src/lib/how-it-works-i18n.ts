@@ -26,7 +26,7 @@ export const HOW_COPY: Record<HowLang, HowCopy> = {
     intro: "In 8 einfachen Schritten zu deinem Transporter – von der Buchung bis zur Rückgabe.",
     cta: "Jetzt Transporter buchen",
     steps: [
-      { title: "Datum wählen", text: ["Wähle im Kalender, von wann bis wann du den Transporter brauchst. Nur heute? Dann tippe nur auf heute.", "Brauchst du ihn länger als 24 Stunden, tippe zusätzlich auf den nächsten Tag."] },
+      { title: "Datum wählen", text: ["Wähle oben zuerst die passende Schaltfläche:", "Tagesmiete (3 bis 24 Stunden): Tippe einmal auf deinen Wunschtag.", "Mehrere Tage (länger als 24 Stunden): Tippe zuerst auf den Abholtag und dann auf den Rückgabetag."] },
       { title: "Uhrzeit und Tarif", text: ["Wähle, ab wie viel Uhr du den Transporter möchtest. Dann wähle deinen Tarif: normal oder mit mehr Kilometern."] },
       {
         title: "Fahrzeug und Zubehör",
@@ -72,7 +72,7 @@ export const HOW_COPY: Record<HowLang, HowCopy> = {
     intro: "Get your van in 8 simple steps – from booking to return.",
     cta: "Book a van now",
     steps: [
-      { title: "Choose the date", text: ["Pick in the calendar from when to when you need the van. Only today? Then tap only today.", "If you need it for more than 24 hours, also tap the next day."] },
+      { title: "Choose the date", text: ["First tap the right button at the top:", "Day rental (3 to 24 hours): tap your day once.", "Several days (more than 24 hours): tap the pick-up day first, then the return day."] },
       { title: "Time and tariff", text: ["Choose the time you want to pick up the van. Then choose your tariff: standard or with more kilometres."] },
       {
         title: "Vehicle and extras",
@@ -118,7 +118,7 @@ export const HOW_COPY: Record<HowLang, HowCopy> = {
     intro: "8 простых шагов до вашего фургона – от бронирования до возврата.",
     cta: "Забронировать фургон",
     steps: [
-      { title: "Выберите дату", text: ["Выберите в календаре, с какого по какой день вам нужен фургон. Только сегодня? Нажмите только на сегодняшний день.", "Если нужен дольше 24 часов, нажмите также на следующий день."] },
+      { title: "Выберите дату", text: ["Сначала выберите вверху нужную кнопку:", "Аренда на день (от 3 до 24 часов): нажмите один раз на нужный день.", "Несколько дней (больше 24 часов): сначала нажмите на день получения, затем на день возврата."] },
       { title: "Время и тариф", text: ["Выберите, с какого времени вам нужен фургон. Затем выберите тариф: обычный или с большим количеством километров."] },
       {
         title: "Автомобиль и аксессуары",
