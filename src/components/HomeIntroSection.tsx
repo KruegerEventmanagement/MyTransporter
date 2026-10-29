@@ -15,11 +15,14 @@ const CRAFTER_24 = planCatalog("l5h2").find((p) => p.id === "24h_300")!;
 /** Kompakter, sichtbarer Einführungstext unterhalb der Buchung. */
 export function HomeIntroSection() {
   return (
-    <section className="px-4 sm:px-6 py-12 border-t border-border" aria-labelledby="home-intro">
-      <div className="max-w-3xl mx-auto">
-        <h1 id="home-intro" className="text-2xl sm:text-3xl font-bold text-foreground">
-          Transporter mieten in Leonberg
-        </h1>
+    <section className="px-4 sm:px-6 py-4 border-t border-border" aria-labelledby="home-intro">
+      <details className="group max-w-3xl mx-auto">
+        <summary className="flex cursor-pointer list-none items-center justify-center gap-2 text-sm text-muted-foreground [&::-webkit-details-marker]:hidden">
+          <h1 id="home-intro" className="text-sm font-medium text-muted-foreground">
+            Transporter mieten in Leonberg
+          </h1>
+          <span aria-hidden="true" className="transition-transform group-open:rotate-180">▾</span>
+        </summary>
         <p className="mt-4 text-muted-foreground leading-relaxed">
           MyTransporter vermietet Transporter direkt in Leonberg – online gebucht, Schlüssel vor Ort
           in der Poststraße 63. Viele unserer Kunden kommen aus Stuttgart, Böblingen oder
@@ -46,7 +49,7 @@ export function HomeIntroSection() {
           <Link to="/faq" className="underline underline-offset-2 text-foreground">FAQ</Link>
           <Link to="/kontakt" className="underline underline-offset-2 text-foreground">Kontakt</Link>
         </nav>
-      </div>
+      </details>
     </section>
   );
 }
