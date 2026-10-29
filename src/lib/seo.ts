@@ -53,6 +53,7 @@ export const PUBLIC_PAGES = [
   "/ueber-uns",
   "/werbung",
   "/mietratgeber",
+  "/so-funktionierts",
   "/impressum",
   "/agb",
   "/datenschutz",

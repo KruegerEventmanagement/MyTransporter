@@ -237,6 +237,12 @@ export function Navbar() {
           </button>
           <div className="hidden lg:flex mr-auto items-center gap-3 min-w-0">
             <Link
+              to="/so-funktionierts"
+              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+            >
+              So funktioniert's
+            </Link>
+            <Link
               to="/umzug"
               className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
             >
@@ -323,7 +329,7 @@ export function Navbar() {
         </div>
         {showMobileMenu && (
           <div className="lg:hidden border-t border-border/50 bg-background px-3 py-2">
-            {([["/umzug","Umzug"],["/preise","Preise"],["/langzeitmiete","Langzeitmiete"],["/werbung","Werbefläche"]] as const).map(([to,label]) => (
+            {([["/so-funktionierts","So funktioniert's"],["/umzug","Umzug"],["/preise","Preise"],["/langzeitmiete","Langzeitmiete"],["/werbung","Werbefläche"]] as const).map(([to,label]) => (
               <Link key={to} to={to} onClick={() => setShowMobileMenu(false)} className="flex min-h-11 items-center rounded-lg px-2 text-base font-medium text-foreground hover:bg-secondary">
                 {label}
               </Link>
