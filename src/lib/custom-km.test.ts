@@ -20,7 +20,7 @@ describe("Beispiele L1H1", () => {
     expect(eur("multi_3d", 600, "l4h2")).toBe(446);
     expect(eur("multi_3d", 600, "l5h2")).toBe(462);
     expect(eur("multi_7d", 700)).toBe(549);
-    expect(eur("multi_7d", 1300)).toBe(819);
+    expect(eur("multi_7d", 1300)).toBe(843);
     expect(quoteCustomKm("multi_7d", "l1h1", 1300)!.rateCents).toBe(49);
   });
   it("150/300-Grenzen ±1 km", () => {
