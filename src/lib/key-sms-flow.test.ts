@@ -7,6 +7,7 @@ import { smsSegments } from "./key-sms";
 
 const mig = (f: string) => readFileSync(new URL(`../../drizzle/migrations/${f}`, import.meta.url), "utf8");
 const STUB = `CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
+CREATE SCHEMA auth; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT NULL::uuid $$;
 CREATE FUNCTION public.has_role(uuid, text) RETURNS boolean LANGUAGE sql AS $$ SELECT false $$;`;
 const B = "11111111-2222-3333-4444-555555555555";
 
