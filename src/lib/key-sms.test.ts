@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildKeySms, normalizePhone, KEY_SMS_SENDER } from "./key-sms";
+import { buildKeySms, normalizePhone, smsSegments, KEY_SMS_SENDER } from "./key-sms";
 
 describe("Schlüsselcode-SMS", () => {
   it("nennt Box und Code passend zum Fahrzeug", () => {
@@ -23,5 +23,11 @@ describe("Schlüsselcode-SMS", () => {
     expect(normalizePhone("+1 555 123 4567")).toBeNull();
     expect(normalizePhone("abc")).toBeNull();
     expect(normalizePhone(null)).toBeNull();
+  });
+  it("Text bleibt im günstigen GSM-Zeichensatz (max. 4 Teile)", () => {
+    const t = buildKeySms("LEO MY 101", "63478791")!;
+    expect(smsSegments(t)).toBeLessThanOrEqual(4);
+    expect(smsSegments("–".repeat(71))).toBe(2); // Unicode erkannt
+    expect(smsSegments("a".repeat(161))).toBe(2);
   });
 });
