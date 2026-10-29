@@ -42,7 +42,15 @@ export const Route = createFileRoute("/api/public/hooks/return-reminders")({
             keyCodes = { ok: false };
             console.error("key-code reminders failed", e instanceof Error ? e.message : "unknown");
           }
-          return Response.json({ ok: true, ...r, mailDue: mail.due, mailSent: mail.sent, keyCodes: keyCodes.ok });
+          let keySms = true;
+          try {
+            const { runKeyCodeSms } = await import("@/lib/key-sms.server");
+            await runKeyCodeSms();
+          } catch (e) {
+            keySms = false;
+            console.error("key-code sms failed", e instanceof Error ? e.message : "unknown");
+          }
+          return Response.json({ ok: true, ...r, mailDue: mail.due, mailSent: mail.sent, keyCodes: keyCodes.ok, keySms });
         } catch (e) {
           console.error("return-reminders failed", e instanceof Error ? e.message : "unknown");
           return Response.json({ ok: false }, { status: 500 });

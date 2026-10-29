@@ -169,6 +169,13 @@
       "when": 1792765279185,
       "tag": "0023_stripe_refunds_app_legacy_origin",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793309011944,
+      "tag": "0024_key_code_sms",
+      "breakpoints": true
     }
   ]
 }
