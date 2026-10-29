@@ -160,3 +160,11 @@ export function dayOccupancy(
   const total = plates.length;
   return { total, fullyBooked: fully, partlyBooked: partly, percent: total && span > 0 ? Math.round((busyTotal / (total * span)) * 100) : 0 };
 }
+
+/** Kennzeichen, die bei dieser Mietdauer (Tage) überhaupt buchbar sind – z. B. Crafter erst ab 5 Tagen. */
+export function platesForDuration(
+  vehicles: { plate: string; minDays?: number }[],
+  days: number,
+): string[] {
+  return vehicles.filter((v) => v.plate && days >= (v.minDays ?? 0)).map((v) => v.plate);
+}
