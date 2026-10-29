@@ -67,7 +67,7 @@ export async function sendSeven(fetchFn: typeof fetch, apiKey: string, to: strin
     if (/^\d{3}$/.test(t) && t !== "100") return { kind: "rejected", error: `seven.io Code ${t}` };
     return { kind: "unknown", error: "Antwort unlesbar" };
   }
-  const code = String(j?.success ?? "");
+  const code = typeof j === "number" || typeof j === "string" ? String(j) : String(j?.success ?? "");
   const msg = j?.messages?.[0];
   if (code === "100") {
     if (msg && msg.success !== false && msg.id != null && String(msg.id) !== "") return { kind: "sent", id: String(msg.id) };
