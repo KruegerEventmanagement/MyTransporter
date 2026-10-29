@@ -1,4 +1,4 @@
-import { normalizeEmail, authErrorMessage } from "@/lib/auth-input";
+import { normalizeEmail, authErrorMessage, suggestsPasswordReset } from "@/lib/auth-input";
 import { ForgotPassword } from "@/components/ForgotPassword";
 import { publicOrigin } from "@/lib/native/platform";
 import { AddressFields } from "@/components/AddressFields";
