@@ -23,6 +23,7 @@ import {
 } from "@/lib/booking-rules";
 const CHECKOUT_FLEX_DISABLED = "Dieser Tarif ist gerade nicht buchbar. Bitte Seite neu laden.";
 import { resolveAddonSelection } from "@/lib/addons";
+import { checkCustomerBasics, missingBasicsMessage } from "@/lib/customer-basics";
 import { customKmLabel, customKmMetadata, quoteCustomKm, type SnapshotAddon } from "@/lib/custom-km";
 
 export const DEPOSIT_CENTS = 200_00;
@@ -48,7 +49,7 @@ export type BookingCheckoutInput = {
   reviewConsent?: boolean;
 };
 
-type Ctx = { supabase: { from: (t: string) => any }; userId: string };
+type Ctx = { supabase: { from: (t: string) => any }; userId: string; claims?: { email?: string } };
 export type CheckoutSessionResult = { clientSecret: string } | { error: string };
 
 const REQUIRED_DOC_TYPES = ["id_front", "id_back", "license_front", "license_back"] as const;
@@ -82,6 +83,12 @@ export async function runBookingCheckout(data: BookingCheckoutInput, context: Ct
   const catalogError = checkoutKmCatalogError(data.kmCatalog);
   if (catalogError) return { error: catalogError };
   try {
+    // Pflicht-Stammdaten serverseitig (Client-Prüfung ist nur Komfort).
+    const { data: prof, error: profErr } = await context.supabase.from("profiles").select("first_name, last_name, email, phone, birth_date").eq("id", context.userId).maybeSingle();
+    if (profErr) return { error: "Deine Kundendaten konnten nicht geprüft werden. Bitte erneut versuchen." };
+    const basics = checkCustomerBasics({ ...(prof ?? {}), email: prof?.email || context.claims?.email || null });
+    if (!basics.ok) return { error: missingBasicsMessage(basics) };
+
     const { data: docs } = await context.supabase.from("user_documents").select("doc_type").eq("user_id", context.userId).is("deleted_by_user_at", null).is("removed_from_account_at", null);
     const have = new Set((docs ?? []).map((d: { doc_type: string }) => d.doc_type));
     if (REQUIRED_DOC_TYPES.some((t) => !have.has(t))) {

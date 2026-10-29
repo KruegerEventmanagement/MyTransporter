@@ -19,6 +19,8 @@ import { REVIEW_CONSENT_TEXT } from "@/lib/customer-mail-outbox";
 import { KM_CATALOG_VERSION } from "@/lib/booking-rules";
 import { previewCoupon, type CouponPreview } from "@/lib/birthday.functions";
 import { ageOn, MIN_DRIVER_AGE } from "@/lib/birthday";
+import { checkCustomerBasics } from "@/lib/customer-basics";
+import { CustomerBasicsGate } from "@/components/CustomerBasicsGate";
 import { createBookingHold, releaseBookingHold } from "@/lib/booking-holds.functions";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "./PaymentTestModeBanner";
@@ -216,6 +218,7 @@ export function BookingSection() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
   const [profileComplete, setProfileComplete] = useState(false);
+  const [basicsOk, setBasicsOk] = useState(false);
   const [vehicles, setVehicles] = useState<DbVehicle[]>([]);
   /** Ausdrücklich vom Kunden gewähltes Fahrzeug (Kennzeichen) – hat Vorrang. */
   const [explicitPlate, setExplicitPlate] = useState<string | null>(null);
@@ -726,6 +729,11 @@ export function BookingSection() {
       setAuthError("Passwort muss mindestens 6 Zeichen lang sein.");
       return;
     }
+    const regBasics = checkCustomerBasics({ first_name: regForm.firstName, last_name: regForm.lastName, email: regForm.email, birth_date: regForm.birthDate, phone: regForm.phone });
+    if (!regBasics.ok) {
+      setAuthError(Object.values(regBasics.problems)[0] ?? "Bitte prüfe deine Angaben.");
+      return;
+    }
     const regAge = regForm.birthDate ? ageOn(regForm.birthDate) : null;
     if (regAge === null || regAge < MIN_DRIVER_AGE) {
       setAuthError(`Für eine Buchung musst du mindestens ${MIN_DRIVER_AGE} Jahre alt sein.`);
@@ -756,9 +764,9 @@ export function BookingSection() {
           options: {
             emailRedirectTo: AUTH_CONFIRM_URL,
             data: {
-              first_name: regForm.firstName,
-              last_name: regForm.lastName,
-              phone: regForm.phone,
+              first_name: regBasics.normalized.first_name,
+              last_name: regBasics.normalized.last_name,
+              phone: regBasics.normalized.phone,
               birth_date: regForm.birthDate,
               
               account_type: regForm.accountType,
@@ -1999,7 +2007,7 @@ export function BookingSection() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-foreground">Telefonnummer</label>
+                        <label className="text-sm font-medium text-foreground">Handynummer (für Schlüsselcode-SMS)</label>
                         <input
                           type="tel"
                           value={regForm.phone}
@@ -2246,6 +2254,8 @@ export function BookingSection() {
                 : "Bitte scanne deinen Ausweis und Führerschein, um die Buchung abzuschließen."}
             </p>
 
+            {isLoggedIn && <CustomerBasicsGate userId={authUser?.id ?? null} onChange={setBasicsOk} />}
+
             {/* Countdown der 15-Minuten-Reservierung */}
             {holdSecondsLeft !== null && !paid && (
               <div className="mt-6 rounded-2xl bg-secondary p-4 text-sm text-foreground">
@@ -2374,7 +2384,7 @@ export function BookingSection() {
                 <p className="mt-4 text-sm font-medium text-foreground" role="alert">Kilometerpaket: {customKmError}</p>
               )}
               <button
-                disabled={!liabilityAccepted || !!customKmError}
+                disabled={!liabilityAccepted || !!customKmError || !basicsOk}
                 onClick={async () => {
                   // Zahlung gestartet: Entwurf verwerfen (kein späteres Reaktivieren eines kostenpflichtigen Pakets)
                   try { sessionStorage.removeItem(BOOKING_DRAFT_KEY); } catch { /* ignorieren */ }
