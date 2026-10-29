@@ -46,13 +46,13 @@ export function VehiclePicker({ vehicles, selectedIndex, onSelect, statusFor, ch
   if (!v) return null;
   const pick = (i: number) => {
     const target = vehicles[i];
-    if (target && !statusFor?.(target)?.disabled) onSelect(i);
+    if (target) onSelect(i);
   };
   /** Nächstes/voriges wählbares Fahrzeug. */
   const step = (d: number) => {
     for (let k = 1; k <= vehicles.length; k++) {
       const i = (selectedIndex + d * k + vehicles.length * k) % vehicles.length;
-      if (!statusFor?.(vehicles[i]!)?.disabled) return onSelect(i);
+      return onSelect(i);
     }
   };
   const specs = vehicleSpecRows(v);
@@ -71,12 +71,11 @@ export function VehiclePicker({ vehicles, selectedIndex, onSelect, statusFor, ch
               key={veh.id}
               type="button"
               onClick={() => pick(i)}
-              disabled={st?.disabled}
               aria-label={`${veh.name}, ${veh.classLabel}, ${veh.plate} auswählen${st?.label ? ` (${st.label})` : ""}`}
               aria-pressed={sel}
               className={`flex min-w-0 flex-col overflow-hidden rounded-xl border-2 p-1 text-left transition ${
                 sel ? "border-foreground bg-muted" : "border-border bg-background hover:bg-muted"
-              } ${st?.dimmed || st?.disabled ? "opacity-50" : ""} disabled:cursor-not-allowed`}
+              } ${st?.dimmed || st?.disabled ? "opacity-50" : ""}`}
             >
               <span className="block aspect-square w-full overflow-hidden rounded-lg bg-muted">
                 {cover ? (

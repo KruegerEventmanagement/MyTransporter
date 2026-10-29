@@ -54,11 +54,11 @@ describe("VehiclePicker", () => {
     rerender(<VehiclePicker vehicles={[{ ...LEO102, id: "other" }]} selectedIndex={0} onSelect={() => {}} />);
     expect(screen.queryByText("Auf 100 km/h gedrosselt")).toBeNull();
   });
-  it("gesperrte Fahrzeuge nicht wählbar", () => {
+  it("belegte Fahrzeuge bleiben zum Ansehen anklickbar", () => {
     let sel = 0;
     render(<VehiclePicker vehicles={[LEO102, PF]} selectedIndex={0} onSelect={(i) => (sel = i)} statusFor={(v) => (v.id === PF.id ? { disabled: true, label: "belegt" } : undefined)} />);
     fireEvent.click(screen.getByLabelText(/PF MY 1003 auswählen/));
-    expect(sel).toBe(0);
+    expect(sel).toBe(1);
   });
   it("beginnt je Fahrzeug mit der vollständigen Seitenansicht nach links", () => {
     const crafter = mk("43261a5f-cd8a-4bd4-a3db-f89c4741c463", "OF-DK 1234", 6, { classLabel: "L5H2" });
