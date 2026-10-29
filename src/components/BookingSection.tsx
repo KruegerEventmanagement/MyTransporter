@@ -70,7 +70,7 @@ import {
   DEPOSIT_EUR,
   type VehicleClass,
 } from "@/lib/booking-rules";
-import { ADDONS, ADDON_NOTE, ADDON_TRUST, sumAddonsEur, buildAddonSnapshot, addonBaseId, resolveAddonSelection } from "@/lib/addons";
+import { ADDONS, sumAddonsEur, buildAddonSnapshot, addonBaseId, resolveAddonSelection } from "@/lib/addons";
 import { AddonPackageCard } from "./AddonPackageCard";
 import { CustomKmCard } from "./CustomKmCard";
 import { parseCustomKmInput, quoteCustomKm } from "@/lib/custom-km";
