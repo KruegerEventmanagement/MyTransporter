@@ -6,6 +6,7 @@ import {
   type CalendarEntryDetails,
   type DetailDoc,
 } from "@/lib/calendar-details.functions";
+import { BASICS_LABELS, checkCustomerBasics, type BasicsField } from "@/lib/customer-basics";
 import { birthAndAge, fmtBerlinDateTime, NOT_SET, NO_NOTES } from "@/lib/calendar-details";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -145,6 +146,20 @@ function DocDisclosure({
   );
 }
 
+/** Fehlende Pflichtangaben nur anzeigen – Daten werden nicht verändert. */
+function BasicsWarning({ d }: { d: CalendarEntryDetails }) {
+  const name = d.customer.name ?? "";
+  const c = checkCustomerBasics({ first_name: name, last_name: name, email: d.customer.email, birth_date: d.customer.birthDate, phone: d.customer.phone });
+  const list = (Object.keys(c.problems) as BasicsField[]).map((f) => (f === "first_name" || f === "last_name" ? "Name" : BASICS_LABELS[f]));
+  if (list.length === 0) return null;
+  return (
+    <p role="status" className="my-1 rounded-lg border border-foreground p-2 text-xs font-medium">
+      Fehlende/ungültige Pflichtangaben: {[...new Set(list)].join(", ")}.
+      {c.problems.phone ? " Keine Schlüssel-SMS möglich." : ""}
+    </p>
+  );
+}
+
 export function DetailsBody({ d, onRetry }: { d: CalendarEntryDetails; onRetry: () => void }) {
   const ba = birthAndAge(d.customer.birthDate);
   return (
@@ -194,6 +209,7 @@ export function DetailsBody({ d, onRetry }: { d: CalendarEntryDetails; onRetry: 
         {d.kind === "booking" && !d.customer.profileLinked && (
           <p className="text-xs text-muted-foreground py-1">Kein Kundenprofil mit dieser Buchung verknüpft.</p>
         )}
+        <BasicsWarning d={d} />
         <Row label="Name"><Value v={d.customer.name} /></Row>
         {d.customer.companyName && <Row label="Firma">{d.customer.companyName}</Row>}
         <Row label="Telefon">
