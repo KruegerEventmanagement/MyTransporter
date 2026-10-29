@@ -26,10 +26,24 @@ export function buildKeySms(plate: string, code: string): string | null {
   return [
     `MyTransporter: Dein Schlüsselcode für den Transporter ${plate}.`,
     `Dein Schlüssel liegt in Box ${safe} am OBI Leonberg (Eingang, Fahrradständer). Code: ${code}`,
-    "Der Transporter steht an der Poststraße 63 an der Straße – bitte nirgends klingeln.",
+    "Der Transporter steht an der Poststraße 63 an der Straße - bitte nirgends klingeln.",
     "",
-    "Bitte mach vor und nach der Fahrt Fotos in der App bzw. auf mytransporter.org: außen, innen, Tachostand und nach der Fahrt den Tankbeleg. Fehlen sie, müssen wir alles selbst prüfen lassen – dann werden mindestens 30 € von der Kaution abgezogen.",
+    "Bitte mach vor und nach der Fahrt Fotos in der App bzw. auf mytransporter.org: außen, innen, Tachostand und nach der Fahrt den Tankbeleg. Fehlen sie, müssen wir alles selbst prüfen lassen - dann werden mindestens 30 € von der Kaution abgezogen.",
     "Bitte nicht rauchen und Schäden sofort melden. Verschwiegene Schäden verursachen zusätzliche Kosten.",
     "Gute Fahrt!",
   ].join("\n");
+}
+
+const GSM = "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+const GSM_EXT = "^{}\\[~]|€";
+
+/** Anzahl SMS-Teile (GSM-7: 160/153, sonst Unicode 70/67). */
+export function smsSegments(text: string): number {
+  let units = 0;
+  for (const ch of text) {
+    if (GSM.includes(ch)) units += 1;
+    else if (GSM_EXT.includes(ch)) units += 2;
+    else { const n = [...text].length; return n <= 70 ? 1 : Math.ceil(n / 67); }
+  }
+  return units <= 160 ? 1 : Math.ceil(units / 153);
 }

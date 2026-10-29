@@ -1,7 +1,7 @@
 /** Schlüsselcode-SMS über seven.io. Eigener Sweep, unabhängig von der Code-Mail. */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { isKeyCodeDue } from "./key-handover";
-import { buildKeySms, normalizePhone, KEY_SMS_SENDER } from "./key-sms";
+import { buildKeySms, normalizePhone, smsSegments, KEY_SMS_SENDER } from "./key-sms";
 
 type Src = "booking" | "manual";
 
@@ -25,18 +25,23 @@ async function sendSeven(apiKey: string, to: string, text: string): Promise<{ ok
     const res = await fetch("https://gateway.seven.io/api/sms", {
       method: "POST",
       headers: { "X-Api-Key": apiKey, "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ to, text, from: KEY_SMS_SENDER }),
+      body: JSON.stringify({ to, text, from: KEY_SMS_SENDER, json: 1 }),
+      signal: AbortSignal.timeout(10_000),
     });
     const body = await res.text();
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
-    let j: { success?: string; messages?: { id?: string | number; success?: boolean; error_text?: string | null }[] } = {};
+    let j: { success?: string | number; messages?: { id?: string | number; success?: boolean; error_text?: string | null }[] } = {};
     try { j = JSON.parse(body); } catch { return { ok: false, error: `Antwort unlesbar: ${body.slice(0, 100)}` }; }
     const msg = j.messages?.[0];
-    if (j.success !== "100" || !msg?.id) return { ok: false, error: `seven.io Code ${j.success ?? "?"} ${msg?.error_text ?? ""}`.trim() };
+    if (String(j.success) !== "100" || !msg?.id) return { ok: false, error: `seven.io Code ${j.success ?? "?"} ${msg?.error_text ?? ""}`.trim() };
     return { ok: true, id: String(msg.id) };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message.slice(0, 200) : "Netzwerkfehler" };
   }
+}
+
+async function note(type: Src, id: string, title: string, body: string) {
+  await supabaseAdmin.from("admin_notifications").insert({ type: "key_sms", title, body, ...(type === "booking" ? { booking_id: id } : {}) });
 }
 
 async function handle(apiKey: string, type: Src, id: string, plate: string, rawPhone: string | null, label: string) {
@@ -47,18 +52,20 @@ async function handle(apiKey: string, type: Src, id: string, plate: string, rawP
   const text = code ? buildKeySms(plate, code) : null;
   if (!phone || !text) {
     await supabaseAdmin.from("key_code_sms").update({ status: "no_phone", last_error: !phone ? "keine gültige Handynummer" : "kein Code/Tresor", updated_at: new Date().toISOString() }).eq("source_type", type).eq("source_id", id);
+    await note(type, id, `Schlüssel-SMS nicht gesendet – ${label}`, `${plate}: ${!phone ? "keine gültige Handynummer" : "kein Code/Tresor"}`);
     return;
   }
   const r = await sendSeven(apiKey, phone, text);
   if (r.ok) {
     await supabaseAdmin.from("key_code_sms").update({ status: "sent", provider_id: r.id, last_error: null, updated_at: new Date().toISOString() }).eq("source_type", type).eq("source_id", id);
+    await note(type, id, `Schlüssel-SMS gesendet – ${label}`, `${plate} · ${smsSegments(text)} SMS-Teile`);
     return;
   }
   const { data: row } = await supabaseAdmin.from("key_code_sms").select("attempts").eq("source_type", type).eq("source_id", id).maybeSingle();
   const final = (row?.attempts ?? 3) >= 3;
   await supabaseAdmin.from("key_code_sms").update({ status: final ? "gave_up" : "failed", last_error: r.error, updated_at: new Date().toISOString() }).eq("source_type", type).eq("source_id", id);
   if (final) {
-    await supabaseAdmin.from("admin_notifications").insert({ type: "key_sms_failed", title: `Schlüssel-SMS fehlgeschlagen – ${label}`, body: `${plate}: ${r.error}`, ...(type === "booking" ? { booking_id: id } : {}) });
+    await note(type, id, `Schlüssel-SMS fehlgeschlagen – ${label}`, `${plate}: ${r.error}`);
   }
 }
 
