@@ -2,6 +2,7 @@
 
 Subdirectories (android/, src/test/) have their own AGENTS.md to read before changing files there.
 
+- UI-Übersetzungen nur über src/lib/i18n (useI18n, MESSAGES mit de als Schlüsselquelle, Test prüft Vollständigkeit); SSR immer Deutsch, Sprache erst nach Hydration, damit keine Hydration-Fehler entstehen; Rechtstexte bleiben deutsch.
 - Kamera/Foto nur über src/lib/image-capture.ts.
 - Fahrtfotos speichern via src/lib/trip-photo-store.ts (Upload + bestätigter DB-Eintrag); trip-photos.ts nur für Leser.
 - Page headers: one BrandHomeLink logo.

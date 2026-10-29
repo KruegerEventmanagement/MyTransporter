@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { HelpCircle, X, Phone, Mail, User, BookOpen } from "lucide-react";
+import { HelpCircle, X, Phone, Mail, User, BookOpen, ListChecks } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 import { Link } from "@tanstack/react-router";
 
 export function HelpBubble() {
   const [open, setOpen] = useState(false);
+  const { t } = useI18n();
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,22 +27,22 @@ export function HelpBubble() {
   return (
     <div
       ref={wrapRef}
-      className="fixed z-50 right-4 bottom-4"
+      className="fixed z-50 end-4 bottom-4"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {open && (
         <div className="mb-3 w-72 rounded-2xl bg-background border border-border shadow-2xl p-4 animate-in fade-in slide-in-from-bottom-2">
           <div className="flex items-start justify-between gap-3 mb-2">
             <div>
-              <p className="font-bold text-foreground text-sm">Benötigen Sie Hilfe?</p>
+              <p className="font-bold text-foreground text-sm">{t("help.title")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Ich helfe Ihnen gerne persönlich weiter.
+                {t("help.subtitle")}
               </p>
             </div>
             <button
               onClick={() => setOpen(false)}
               className="text-muted-foreground hover:text-foreground p-1 -m-1"
-              aria-label="Schließen"
+              aria-label={t("common.close")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -69,7 +71,15 @@ export function HelpBubble() {
               className="flex items-center gap-2.5 text-sm text-foreground rounded-xl bg-secondary px-3 py-2.5 hover:bg-secondary/70"
             >
               <BookOpen className="w-4 h-4 text-muted-foreground shrink-0" />
-              <span className="font-medium">Mietratgeber</span>
+              <span className="font-medium">{t("help.guide")}</span>
+            </Link>
+            <Link
+              to="/so-funktionierts"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 text-sm text-foreground rounded-xl bg-secondary px-3 py-2.5 hover:bg-secondary/70"
+            >
+              <ListChecks className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="font-medium">{t("nav.howItWorks")}</span>
             </Link>
           </div>
         </div>
@@ -77,7 +87,7 @@ export function HelpBubble() {
 
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label={open ? "Hilfe schließen" : "Hilfe öffnen"}
+        aria-label={open ? t("help.close") : t("help.open")}
         className="w-12 h-12 rounded-full bg-foreground text-background shadow-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition"
       >
         {open ? <X className="w-5 h-5" /> : <HelpCircle className="w-5 h-5" />}

@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Navbar } from "@/components/Navbar";
 import { pageHead } from "@/lib/seo";
-import { HOW_COPY, HOW_LANGS, parseHowLang, type HowLang, type VideoKey } from "@/lib/how-it-works-i18n";
+import { HOW_COPY, type VideoKey } from "@/lib/how-it-works-i18n";
+import { useI18n } from "@/lib/i18n";
 import openVideo from "@/assets/schluesselkasten-oeffnen.mp4.asset.json";
 import openPoster from "@/assets/schluesselkasten-oeffnen-poster.jpg.asset.json";
 import closeVideo from "@/assets/schluesselkasten-schliessen.mp4.asset.json";
@@ -16,13 +16,8 @@ const VIDEOS: Record<VideoKey, { src: string; poster: string }> = {
   obi: { src: obiVideo.url, poster: obiPoster.url },
 };
 
-const STORAGE_KEY = "mt-how-lang";
 
 export const Route = createFileRoute("/so-funktionierts")({
-  validateSearch: (s: Record<string, unknown>): { lang?: HowLang } => {
-    const lang = parseHowLang(s.lang);
-    return lang ? { lang } : {};
-  },
   head: () =>
     pageHead({
       path: "/so-funktionierts",
@@ -35,43 +30,15 @@ export const Route = createFileRoute("/so-funktionierts")({
 });
 
 function HowItWorksPage() {
-  const search = Route.useSearch();
-  const [lang, setLang] = useState<HowLang>(search.lang ?? "de");
-
-  useEffect(() => {
-    if (search.lang) return;
-    const stored = parseHowLang(window.localStorage.getItem(STORAGE_KEY));
-    if (stored) setLang(stored);
-  }, [search.lang]);
-
-  const choose = (l: HowLang) => {
-    setLang(l);
-    window.localStorage.setItem(STORAGE_KEY, l);
-  };
-
+  const { lang } = useI18n();
   const t = HOW_COPY[lang];
 
   return (
-    <main className="min-h-screen bg-background" lang={lang}>
+    <main className="min-h-screen bg-background">
       <Navbar />
       <div className="mx-auto max-w-3xl px-4 pb-20 pt-24">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-3xl font-bold text-foreground md:text-4xl">{t.heading}</h1>
-          <div role="group" aria-label={t.langLabel} className="flex rounded-full border border-border p-1">
-            {HOW_LANGS.map((l) => (
-              <button
-                key={l}
-                type="button"
-                onClick={() => choose(l)}
-                aria-pressed={lang === l}
-                className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                  lang === l ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
         </div>
         <p className="mt-3 text-muted-foreground">{t.intro}</p>
 

@@ -11,6 +11,8 @@ import { trackCompleteRegistration } from "@/lib/analytics";
 import { consumeLoginRequest, takeLoginRedirect } from "@/lib/login-redirect";
 import { useSuppressAds } from "@/lib/ad-visibility";
 import { BrandHomeLink } from "@/components/BrandHomeLink";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n";
 import {
   ageOnIsoDate,
   isValidIsoDate,
@@ -23,6 +25,7 @@ const AUTH_CONFIRM_URL = `${publicOrigin()}/auth/confirm`;
 
 export function Navbar() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [showModal, setShowModal] = useState<"login" | "register" | null>(null);
   useSuppressAds(showModal !== null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -229,7 +232,7 @@ export function Navbar() {
           <button
             type="button"
             onClick={() => setShowMobileMenu((v) => !v)}
-            aria-label={showMobileMenu ? "Menü schließen" : "Menü öffnen"}
+            aria-label={showMobileMenu ? t("nav.menuClose") : t("nav.menuOpen")}
             aria-expanded={showMobileMenu}
             className="lg:hidden mr-auto h-10 w-10 shrink-0 flex items-center justify-center rounded-full text-foreground hover:bg-secondary transition-colors"
           >
@@ -240,47 +243,48 @@ export function Navbar() {
               to="/so-funktionierts"
               className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
             >
-              So funktioniert's
+              {t("nav.howItWorks")}
             </Link>
             <Link
               to="/umzug"
               className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
             >
-              Umzug
+              {t("nav.move")}
             </Link>
             <Link
               to="/werbung"
               className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
             >
-              Werbefläche
+              {t("nav.ads")}
             </Link>
             <Link
               to="/langzeitmiete"
               className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
             >
-              Langzeitmiete
+              {t("nav.longTerm")}
             </Link>
           </div>
           <Link
             to="/preise"
             className="hidden lg:inline text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            Preise
+            {t("nav.prices")}
           </Link>
 
+          <LanguageSwitcher />
           {!isLoggedIn ? (
             <>
               <button
                 onClick={() => { setShowModal("login"); setError(null); setInfo(null); }}
                 className="min-h-10 px-2 sm:px-0 sm:min-h-0 text-sm sm:text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
-                Login
+                {t("nav.login")}
               </button>
               <button
                 onClick={() => { setShowModal("register"); setError(null); setInfo(null); }}
                 className="text-sm sm:text-xs font-medium px-3 py-2 sm:py-1.5 rounded-full bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors whitespace-nowrap"
               >
-                Registrieren
+                {t("nav.register")}
               </button>
             </>
           ) : (
@@ -296,7 +300,7 @@ export function Navbar() {
               </button>
               {showProfileMenu && (
                 <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-xl shadow-lg p-2 animate-fade-in">
-                  <p className="px-3 py-2 text-xs text-muted-foreground">Angemeldet als <span className="font-medium text-foreground">{userName}</span></p>
+                  <p className="px-3 py-2 text-xs text-muted-foreground">{t("nav.loggedInAs")} <span className="font-medium text-foreground">{userName}</span></p>
                   <hr className="border-border my-1" />
                   <Link
                     to="/profil"
@@ -304,7 +308,7 @@ export function Navbar() {
                     className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-secondary rounded-lg transition-colors"
                   >
                     <RouteIcon className="w-3.5 h-3.5" />
-                    Mein Profil & Fahrten
+                    {t("nav.profile")}
                   </Link>
                   {isAdmin && (
                     <Link
@@ -313,14 +317,14 @@ export function Navbar() {
                       className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-secondary rounded-lg transition-colors"
                     >
                       <Shield className="w-3.5 h-3.5" />
-                      Admin-Bereich
+                      {t("nav.admin")}
                     </Link>
                   )}
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-3 py-2 text-xs text-destructive hover:bg-destructive/5 rounded-lg transition-colors"
                   >
-                    Abmelden
+                    {t("nav.logout")}
                   </button>
                 </div>
               )}
@@ -329,9 +333,9 @@ export function Navbar() {
         </div>
         {showMobileMenu && (
           <div className="lg:hidden border-t border-border/50 bg-background px-3 py-2">
-            {([["/so-funktionierts","So funktioniert's"],["/umzug","Umzug"],["/preise","Preise"],["/langzeitmiete","Langzeitmiete"],["/werbung","Werbefläche"]] as const).map(([to,label]) => (
+            {([["/so-funktionierts","nav.howItWorks"],["/umzug","nav.move"],["/preise","nav.prices"],["/langzeitmiete","nav.longTerm"],["/werbung","nav.ads"]] as const).map(([to,key]) => (
               <Link key={to} to={to} onClick={() => setShowMobileMenu(false)} className="flex min-h-11 items-center rounded-lg px-2 text-base font-medium text-foreground hover:bg-secondary">
-                {label}
+                {t(key)}
               </Link>
             ))}
           </div>
@@ -357,10 +361,10 @@ export function Navbar() {
             </button>
 
             <h3 className="text-xl font-bold text-foreground mb-1">
-              {showModal === "login" ? "Willkommen zurück" : "Konto erstellen"}
+              {showModal === "login" ? t("auth.welcomeBack") : t("auth.createAccount")}
             </h3>
             <p className="text-sm text-muted-foreground mb-6">
-              {showModal === "login" ? "Melde dich an, um fortzufahren" : "Erstelle dein MyTransporter-Konto"}
+              {showModal === "login" ? t("auth.loginSub") : t("auth.registerSub")}
             </p>
 
             <div className="space-y-3">
@@ -372,14 +376,14 @@ export function Navbar() {
                       onClick={() => setForm({ ...form, accountType: "private" })}
                       className={`py-2 rounded-xl border text-sm font-medium transition-colors ${form.accountType === "private" ? "bg-foreground text-background border-foreground" : "bg-background text-foreground border-border hover:bg-muted"}`}
                     >
-                      Privat
+                      {t("auth.private")}
                     </button>
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, accountType: "business" })}
                       className={`py-2 rounded-xl border text-sm font-medium transition-colors ${form.accountType === "business" ? "bg-foreground text-background border-foreground" : "bg-background text-foreground border-border hover:bg-muted"}`}
                     >
-                      Firma
+                      {t("auth.company")}
                     </button>
                   </div>
                   {form.accountType === "business" && (
@@ -388,7 +392,7 @@ export function Navbar() {
                         type="text"
                         value={form.companyName}
                         onChange={(e) => setForm({ ...form, companyName: e.target.value })}
-                        placeholder="Firmenname"
+                        placeholder={t("auth.companyName")}
                         autoComplete="organization"
                         className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                       />
@@ -396,7 +400,7 @@ export function Navbar() {
                         type="text"
                         value={form.vatId}
                         onChange={(e) => setForm({ ...form, vatId: e.target.value })}
-                        placeholder="USt-IdNr. (optional)"
+                        placeholder={t("auth.vat")}
                         autoComplete="off"
                         className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                       />
@@ -410,7 +414,7 @@ export function Navbar() {
                     type="text"
                     value={form.firstName}
                     onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                    placeholder={form.accountType === "business" ? "Vorname (Ansprechp.)" : "Vorname"}
+                    placeholder={form.accountType === "business" ? t("auth.firstNameContact") : t("auth.firstName")}
                     autoComplete="given-name"
                     className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   />
@@ -418,7 +422,7 @@ export function Navbar() {
                     type="text"
                     value={form.lastName}
                     onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                    placeholder={form.accountType === "business" ? "Nachname (Ansprechp.)" : "Nachname"}
+                    placeholder={form.accountType === "business" ? t("auth.lastNameContact") : t("auth.lastName")}
                     autoComplete="family-name"
                     className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   />
@@ -431,7 +435,7 @@ export function Navbar() {
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
-                placeholder="E-Mail"
+                placeholder={t("auth.email")}
                 autoComplete={showModal === "login" ? "username" : "email"}
                 inputMode="email"
                 className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
@@ -441,7 +445,7 @@ export function Navbar() {
                   type="tel"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  placeholder="Telefonnummer"
+                  placeholder={t("auth.phone")}
                   autoComplete="tel"
                   inputMode="tel"
                   className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
@@ -450,7 +454,7 @@ export function Navbar() {
               {showModal === "register" && (
                 <label className="block">
                   <span className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Geburtsdatum (Mindestalter 25 Jahre)
+                    {t("auth.birthDate")}
                   </span>
                   <input
                     type="date"
@@ -471,7 +475,7 @@ export function Navbar() {
                   type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  placeholder="Passwort"
+                  placeholder={t("auth.password")}
                   autoComplete={showModal === "login" ? "current-password" : "new-password"}
                   className="w-full rounded-xl border border-border bg-background px-3 py-2.5 pr-10 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                 />
@@ -491,7 +495,7 @@ export function Navbar() {
               )}
               {error && <p className="text-xs text-destructive">{error}</p>}
               {error && showModal === "login" && suggestsPasswordReset(error) && (
-                <ForgotPassword key={`nav-reset-${form.email}`} initialEmail={form.email} label="Passwort jetzt zurücksetzen" prominent />
+                <ForgotPassword key={`nav-reset-${form.email}`} initialEmail={form.email} label={t("auth.resetNow")} prominent />
               )}
               {info && <p className="text-xs text-foreground bg-secondary p-2 rounded-lg">{info}</p>}
 
@@ -506,16 +510,16 @@ export function Navbar() {
                 }
                 className="w-full rounded-xl bg-accent py-2.5 text-accent-foreground font-medium text-sm transition-all hover:bg-accent/90 flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Bitte warten…" : showModal === "login" ? "Einloggen" : "Registrieren"}
+                {loading ? t("auth.wait") : showModal === "login" ? t("auth.loginBtn") : t("auth.registerBtn")}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             <p className="mt-4 text-center text-xs text-muted-foreground">
               {showModal === "login" ? (
-                <>Noch kein Konto? <button onClick={() => { setShowModal("register"); setError(null); setInfo(null); }} className="font-medium text-accent hover:underline">Registrieren</button></>
+                <>{t("auth.noAccount")} <button onClick={() => { setShowModal("register"); setError(null); setInfo(null); }} className="font-medium text-accent hover:underline">{t("auth.registerBtn")}</button></>
               ) : (
-                <>Bereits registriert? <button onClick={() => { setShowModal("login"); setError(null); setInfo(null); }} className="font-medium text-accent hover:underline">Einloggen</button></>
+                <>{t("auth.haveAccount")} <button onClick={() => { setShowModal("login"); setError(null); setInfo(null); }} className="font-medium text-accent hover:underline">{t("auth.loginBtn")}</button></>
               )}
             </p>
           </form>
