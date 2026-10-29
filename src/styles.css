@@ -266,7 +266,8 @@ html.halloween #booking {
   color: var(--foreground);
   border-radius: 2rem;
 }
-html.halloween img[alt="MyTransporter"] {
+html.halloween img[alt="MyTransporter"],
+html.halloween img[alt="MyTransporter Logo"] {
   filter: brightness(0) invert(1) sepia(1) saturate(12) hue-rotate(55deg) brightness(1.05)
     drop-shadow(1px 0 0 oklch(0 0 0)) drop-shadow(-1px 0 0 oklch(0 0 0))
     drop-shadow(0 1px 0 oklch(0 0 0)) drop-shadow(0 -1px 0 oklch(0 0 0))
