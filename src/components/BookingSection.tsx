@@ -344,6 +344,11 @@ export function BookingSection() {
   const rangeDays = nights; // semantisch = Nächte
   const date = rangeFrom; // bestehender Code unten verwendet `date` als Startdatum
 
+  // Wiederhergestellte Mehrtagesauswahl → Umschalter passend setzen.
+  useEffect(() => {
+    if (range?.from && range.to && differenceInCalendarDays(range.to, range.from) >= 1) setRentalMode("multi");
+  }, [range]);
+
   const handleRangeSelect = (next: { from?: Date; to?: Date } | undefined) => {
     if (!next?.from) {
       setRange(undefined);
