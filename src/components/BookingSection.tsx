@@ -1,4 +1,4 @@
-import { normalizeEmail, authErrorMessage, emailInputProps } from "@/lib/auth-input";
+import { normalizeEmail, authErrorMessage, emailInputProps, suggestsPasswordReset } from "@/lib/auth-input";
 import { ForgotPassword } from "@/components/ForgotPassword";
 import { publicOrigin } from "@/lib/native/platform";
 import { AddressFields } from "@/components/AddressFields";
@@ -1911,8 +1911,10 @@ export function BookingSection() {
                         <label className="text-sm font-medium text-foreground">Passwort</label>
                         <div className="relative mt-1">
                           <input
+                            name="new-password"
                             type={showRegPassword ? "text" : "password"}
                             value={regPassword}
+                            autoComplete="new-password"
                             onChange={(e) => setRegPassword(e.target.value)}
                             className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-12 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                             placeholder="Mindestens 6 Zeichen"
@@ -1931,8 +1933,10 @@ export function BookingSection() {
                         <label className="text-sm font-medium text-foreground">Passwort wiederholen</label>
                         <div className="relative mt-1">
                           <input
+                            name="new-password-confirm"
                             type={showRegPassword ? "text" : "password"}
                             value={regPasswordConfirm}
+                            autoComplete="new-password"
                             onChange={(e) => setRegPasswordConfirm(e.target.value)}
                             className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-12 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                             placeholder="Passwort erneut eingeben"
@@ -1973,26 +1977,43 @@ export function BookingSection() {
                     </button>
                   </>
                 ) : (
-                  <>
+                  <form
+                    method="post"
+                    action="#"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!loginForm.email || !loginForm.password || authLoading) return;
+                      void handleLogin();
+                    }}
+                  >
                     <p className="text-center text-muted-foreground text-lg mb-8">Willkommen zurück</p>
                     <div className="space-y-4">
                       <div>
-                        <label className="text-sm font-medium text-foreground">E-Mail</label>
+                        <label htmlFor="booking-login-email" className="text-sm font-medium text-foreground">E-Mail</label>
                         <input
+                          id="booking-login-email"
+                          name="email"
                           type="email"
                           value={loginForm.email}
                           {...emailInputProps}
+                          autoComplete="username"
                           onChange={(e) => setLoginForm({ ...loginForm, email: normalizeEmail(e.target.value) })}
                           className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                           placeholder="max@beispiel.de"
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-foreground">Passwort</label>
+                        <label htmlFor="booking-login-password" className="text-sm font-medium text-foreground">Passwort</label>
                         <div className="relative mt-1">
                           <input
+                            id="booking-login-password"
+                            name="password"
                             type={showLoginPassword ? "text" : "password"}
                             value={loginForm.password}
+                            autoComplete="current-password"
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck={false}
                             onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                             className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-12 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                             placeholder="••••••••"
@@ -2006,6 +2027,9 @@ export function BookingSection() {
                             {showLoginPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                           </button>
                         </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Bitte dein eigenes Passwort eingeben – nicht das vom iPhone vorgeschlagene neue Passwort.
+                        </p>
                       </div>
                     </div>
                     <div className="mt-3 text-right">
@@ -2014,20 +2038,31 @@ export function BookingSection() {
                     {authError && (
                       <p className="mt-4 text-sm text-destructive text-center">{authError}</p>
                     )}
+                    {authError && suggestsPasswordReset(authError) && (
+                      <div className="mt-3">
+                        <ForgotPassword
+                          key={`reset-${loginForm.email}`}
+                          initialEmail={loginForm.email}
+                          label="Passwort jetzt zurücksetzen"
+                          prominent
+                        />
+                      </div>
+                    )}
                     <button
-                      onClick={handleLogin}
+                      type="submit"
                       disabled={!loginForm.email || !loginForm.password || authLoading}
                       className="mt-8 w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {authLoading ? "Wird geprüft..." : "Einloggen"}
                     </button>
                     <button
+                      type="button"
                       onClick={() => setShowLogin(false)}
                       className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
                     >
                       Noch kein Konto? <span className="font-medium underline">Jetzt registrieren</span>
                     </button>
-                  </>
+                  </form>
                 )}
               </>
             ) : (
