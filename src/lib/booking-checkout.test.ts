@@ -2,7 +2,7 @@
  * Echter Checkout-Handler (runBookingCheckout) + echte Webhook-Persistenzauflösung
  * (resolveBookingPricing) mit gemocktem Stripe/Backend. Keine echten Writes.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   vehicles: [] as Array<{ name: string; model: string | null; plate: string; is_active: boolean }>,
@@ -68,6 +68,7 @@ const FULL_PROFILE = { first_name: "Eva", last_name: "Muster", email: "eva@examp
 
 describe("Pflicht-Stammdaten vor Bezahlung (serverseitig)", () => {
   beforeEach(() => { state.sessions = []; state.vehicles = [L1]; state.profile = { ...FULL_PROFILE }; });
+  afterEach(() => { state.profile = { ...FULL_PROFILE }; });
   it("vollständiges Profil → Checkout-Session", async () => {
     const { res } = await checkout();
     expect(res).toEqual({ clientSecret: "cs_test_secret" });
