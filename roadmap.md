@@ -1,5 +1,11 @@
 # Roadmap
 
+## Mehrsprachigkeit (29.10.2026, 7 Sprachen)
+- [x] Sprachwahl oben neben Login/Registrieren, gemerkt, Arabisch von rechts nach links; Menü, Login/Registrierung, Hilfe-Knopf (+ „So funktioniert's"), Fußzeile, „So funktioniert's" übersetzt; Hinweis „deutsche Fassung verbindlich" auf AGB/Datenschutz/Impressum.
+- [ ] Startseite-Texte und Buchungsablauf (BookingSection, Fahrzeugwahl, Tarife, Verifizierung, Zahlung, Fehlermeldungen) übersetzen.
+- [ ] Profil, Fahrtseite/Fotos/Rückgabe, Preise, FAQ, Kontakt, Langzeitmiete, Umzug, Mietratgeber, Über uns übersetzen.
+- [ ] Später: Kundenmails in Kundensprache (Sprache bei Buchung speichern).
+
 ## Android package handover (23.10.2026; preparation only)
 - [x] Migrate Android to de.mytransporterr.app, preserve iOS identity and brand, gate Play uploads behind explicit opt-in.
 - [x] Validate native package consistency and regression tests; 25 native tests passed, real Capacitor CLI identity selection checked, automatic preview build OK; evidence in docs/android-package-handover.md. No signed/native build claimed.
