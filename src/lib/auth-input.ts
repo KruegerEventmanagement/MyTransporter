@@ -23,6 +23,12 @@ export function authErrorMessage(raw: string | null | undefined): string {
   return m || "Etwas ist schiefgelaufen. Bitte versuche es erneut.";
 }
 
+/** Fehler, bei denen ein Passwort-Reset der richtige nächste Schritt ist (roh oder übersetzt). */
+export function suggestsPasswordReset(text: string | null | undefined): boolean {
+  const m = String(text ?? "");
+  return /invalid login credentials|E-Mail oder Passwort stimmt nicht|bereits registriert|schon ein Konto|already registered|already exists/i.test(m);
+}
+
 /** Eingabe-Attribute, damit iPhone nichts automatisch verändert. */
 export const emailInputProps = {
   autoComplete: "email",

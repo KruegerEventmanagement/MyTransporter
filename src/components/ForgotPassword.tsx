@@ -3,7 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { requestPasswordReset } from "@/lib/password-reset";
 
 /** Link „Passwort vergessen?“ mit kleinem Formular – für alle Login-Einstiege. */
-export function ForgotPassword({ initialEmail = "" }: { initialEmail?: string }) {
+export function ForgotPassword({
+  initialEmail = "",
+  label = "Passwort vergessen?",
+  prominent = false,
+}: {
+  initialEmail?: string;
+  label?: string;
+  /** Großer schwarzer Knopf statt kleinem Link (z. B. nach falschem Passwort). */
+  prominent?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState(initialEmail);
   const [busy, setBusy] = useState(false);
@@ -17,9 +26,13 @@ export function ForgotPassword({ initialEmail = "" }: { initialEmail?: string })
           setEmail(initialEmail);
           setOpen(true);
         }}
-        className="text-sm font-medium text-foreground underline underline-offset-2"
+        className={
+          prominent
+            ? "min-h-11 w-full rounded-full border border-foreground px-4 text-sm font-medium text-foreground"
+            : "text-sm font-medium text-foreground underline underline-offset-2"
+        }
       >
-        Passwort vergessen?
+        {label}
       </button>
     );
   }
