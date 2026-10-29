@@ -239,3 +239,72 @@
 @utility top-trip-bar {
   top: var(--mt-trip-bar, 0px);
 }
+
+/* ===== Halloween-Aktion (bis 07.11.2026, gesteuert über src/lib/halloween.ts) ===== */
+:root {
+  --halloween-neon: oklch(0.88 0.27 142);
+}
+html.halloween #booking {
+  --background: oklch(0.13 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.17 0 0);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.17 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.97 0 0);
+  --primary-foreground: oklch(0.13 0 0);
+  --secondary: oklch(0.24 0 0);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.24 0 0);
+  --muted-foreground: oklch(0.75 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.13 0 0);
+  --border: oklch(0.32 0 0);
+  --input: oklch(0.32 0 0);
+  --ring: oklch(0.85 0 0);
+  background-color: var(--background);
+  color: var(--foreground);
+  border-radius: 2rem;
+}
+html.halloween img[alt="MyTransporter"] {
+  filter: brightness(0) invert(1) sepia(1) saturate(12) hue-rotate(55deg) brightness(1.05)
+    drop-shadow(1px 0 0 oklch(0 0 0)) drop-shadow(-1px 0 0 oklch(0 0 0))
+    drop-shadow(0 1px 0 oklch(0 0 0)) drop-shadow(0 -1px 0 oklch(0 0 0))
+    drop-shadow(0 0 6px var(--halloween-neon));
+}
+.hw-layer { position: fixed; inset: 0; pointer-events: none; z-index: 40; overflow: hidden; }
+.hw-layer > span { position: absolute; line-height: 1; user-select: none; }
+.hw-spider { top: 0; font-size: 1.6rem; animation: hw-drop 9s ease-in-out infinite; }
+.hw-spider::before {
+  content: ""; position: absolute; left: 50%; bottom: 100%; width: 1px; height: 60vh;
+  background: oklch(0.6 0 0 / 0.7);
+}
+.hw-web { top: 0; font-size: 3.5rem; opacity: 0.55; }
+.hw-bat { left: -3rem; font-size: 1.8rem; animation: hw-fly 20s linear infinite; }
+.hw-pumpkin { bottom: 6px; font-size: 2rem; animation: hw-wobble 3s ease-in-out infinite; }
+.hw-vampire {
+  left: 50%; top: 40%; font-size: 6rem; transform: translate(-50%, -50%);
+  animation: hw-vamp 1.8s ease-out forwards;
+}
+@keyframes hw-drop {
+  0%, 100% { transform: translateY(-2.5rem); }
+  45%, 60% { transform: translateY(min(30vh, 14rem)); }
+}
+@keyframes hw-fly {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(30vw, -3rem); }
+  50% { transform: translate(60vw, 2rem); }
+  75% { transform: translate(90vw, -2rem); }
+  100% { transform: translate(115vw, 0); }
+}
+@keyframes hw-wobble { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+@keyframes hw-vamp {
+  0% { opacity: 0; transform: translate(-50%, -20%) scale(0.4); }
+  25% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  75% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -80%) scale(0.8); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hw-spider, .hw-bat, .hw-pumpkin, .hw-vampire { animation: none; }
+  .hw-bat { display: none; }
+}

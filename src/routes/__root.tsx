@@ -1,3 +1,4 @@
+import { HalloweenLayer } from "@/components/HalloweenLayer";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -139,6 +140,7 @@ function RootComponent() {
       <ActiveTripBanner />
       <HelpBubble />
       <CookieConsent />
+      <HalloweenLayer />
       <Toaster position="top-center" offset="calc(16px + var(--mt-trip-bar, 0px))" />
       </LanguageProvider>
     </QueryClientProvider>
