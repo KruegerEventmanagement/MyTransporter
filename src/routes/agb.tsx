@@ -52,6 +52,11 @@ function AgbPage() {
           </div>
 
           <div>
+            <h2 className="font-bold text-lg text-foreground mb-2">Zusatzpakete</h2>
+            <p>Zusatzpakete (Zubehör, Fahrer/Umzugshelfer) sind optional und nur nach Verfügbarkeit buchbar. Zubehör muss vollständig und unbeschädigt zurückgegeben werden; bei Verlust oder Beschädigung können Ersatzkosten entstehen. Fahrer / Umzugshelfer werden ab Mietbeginn stundenweise berechnet, Mindestabnahme 3 Stunden.</p>
+          </div>
+
+          <div>
             <h2 className="font-bold text-lg text-foreground mb-2">§ 4 Preise und Tarife</h2>
             <p className="mb-2">Alle Preise verstehen sich in Euro und enthalten die gesetzliche Umsatzsteuer von 19 %. Die Mietpreise gelten je gebuchtem Mietzeitraum und Transporter inklusive der angegebenen Freikilometer. Angegeben ist jeweils der Preis für den kurzen Transporter L1H1; für den langen Transporter L4H2 erhöht sich der jeweilige Festpreis um 10 € je Miettag (Eintagestarife +10 €, Mehrtagestarife +10 € pro Tag).</p>
             <ul className="list-disc pl-5 space-y-1">

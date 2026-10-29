@@ -1612,6 +1612,26 @@ export function BookingSection() {
               <FuelInfoNote freeKm={contractKmShown} />
             )}
 
+              {selectedPlanEntry && (
+              <div className="mt-6">
+              <CustomKmCard
+                enabled={customKmEnabled}
+                onEnabledChange={(v) => setCustomKmEnabled(v)}
+                value={customKmInput}
+                onValueChange={setCustomKmInput}
+                error={customKmError}
+                quote={customKmQuote}
+                includedKm={selectedPlanEntry?.freeKm ?? null}
+                includedRateCents={selectedPlanEntry?.extraKmCents ?? null}
+                addonsCents={Math.round(addonsTotal * 100)}
+                depositEur={DEPOSIT}
+                presets={selectedPlanEntry ? kmBonusPackages(vehicleClass)
+                  .filter((b) => b.durationHours === selectedPlanEntry.durationHours && b.freeKm > selectedPlanEntry.freeKm)
+                  .map((b) => ({ km: b.freeKm, label: `${b.shortLabel} für ${b.price} €` })) : []}
+              />
+              <p className="mt-2 text-xs text-muted-foreground text-center">Preis für den kurzen Transporter – beim langen Transporter etwas mehr. Endpreis im nächsten Schritt.</p>
+              </div>
+              )}
             <div className="mt-10 flex justify-between">
               <button
                 onClick={() => setStep(0)}
@@ -1620,7 +1640,7 @@ export function BookingSection() {
                 <ChevronLeft className="w-5 h-5" /> Zurück
               </button>
               <button
-                disabled={!canProceedStep1 || (getReturnInfo() !== null && !getReturnInfo()!.valid)}
+                disabled={!canProceedStep1 || !!customKmError || (getReturnInfo() !== null && !getReturnInfo()!.valid)}
                 onClick={() => setStep(2)}
                 className="inline-flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-accent-foreground font-medium transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
               >
@@ -1772,25 +1792,6 @@ export function BookingSection() {
                 })}
               </div>
 
-              <p className="mt-6 text-xs text-muted-foreground text-center">{ADDON_NOTE}</p>
-              <div className="mt-4 rounded-xl border border-border bg-secondary/50 p-4">
-                <p className="text-xs text-foreground text-center">{ADDON_TRUST}</p>
-              </div>
-              <CustomKmCard
-                enabled={customKmEnabled}
-                onEnabledChange={(v) => setCustomKmEnabled(v)}
-                value={customKmInput}
-                onValueChange={setCustomKmInput}
-                error={customKmError}
-                quote={customKmQuote}
-                includedKm={selectedPlanEntry?.freeKm ?? null}
-                includedRateCents={selectedPlanEntry?.extraKmCents ?? null}
-                addonsCents={Math.round(addonsTotal * 100)}
-                depositEur={DEPOSIT}
-                presets={selectedPlanEntry ? kmBonusPackages(vehicleClass)
-                  .filter((b) => b.durationHours === selectedPlanEntry.durationHours && b.freeKm > selectedPlanEntry.freeKm)
-                  .map((b) => ({ km: b.freeKm, label: `${b.shortLabel} für ${b.price} €` })) : []}
-              />
             </div>
 
             {/* Summary */}
