@@ -1,5 +1,5 @@
-export type HowLang = "de" | "en" | "ru";
-export const HOW_LANGS: readonly HowLang[] = ["de", "en", "ru"];
+import type { Lang } from "@/lib/i18n/messages";
+export type HowLang = Lang;
 
 export type VideoKey = "open" | "close" | "obi";
 
@@ -11,19 +11,19 @@ export interface HowStep {
   after?: string[];
 }
 
+import { EXTRA } from "./how-it-works-extra";
 export interface HowCopy {
   heading: string;
   intro: string;
-  langLabel: string;
   cta: string;
   steps: HowStep[];
 }
 
 export const HOW_COPY: Record<HowLang, HowCopy> = {
+  ...EXTRA,
   de: {
     heading: "So funktioniert's",
     intro: "In 8 einfachen Schritten zu deinem Transporter – von der Buchung bis zur Rückgabe.",
-    langLabel: "Sprache",
     cta: "Jetzt Transporter buchen",
     steps: [
       { title: "Datum wählen", text: ["Wähle im Kalender, von wann bis wann du den Transporter brauchst. Nur heute? Dann tippe nur auf heute.", "Brauchst du ihn länger als 24 Stunden, tippe zusätzlich auf den nächsten Tag."] },
@@ -70,7 +70,6 @@ export const HOW_COPY: Record<HowLang, HowCopy> = {
   en: {
     heading: "How it works",
     intro: "Get your van in 8 simple steps – from booking to return.",
-    langLabel: "Language",
     cta: "Book a van now",
     steps: [
       { title: "Choose the date", text: ["Pick in the calendar from when to when you need the van. Only today? Then tap only today.", "If you need it for more than 24 hours, also tap the next day."] },
@@ -117,7 +116,6 @@ export const HOW_COPY: Record<HowLang, HowCopy> = {
   ru: {
     heading: "Как это работает",
     intro: "8 простых шагов до вашего фургона – от бронирования до возврата.",
-    langLabel: "Язык",
     cta: "Забронировать фургон",
     steps: [
       { title: "Выберите дату", text: ["Выберите в календаре, с какого по какой день вам нужен фургон. Только сегодня? Нажмите только на сегодняшний день.", "Если нужен дольше 24 часов, нажмите также на следующий день."] },
@@ -163,6 +161,3 @@ export const HOW_COPY: Record<HowLang, HowCopy> = {
   },
 };
 
-export function parseHowLang(v: unknown): HowLang | null {
-  return v === "de" || v === "en" || v === "ru" ? v : null;
-}
