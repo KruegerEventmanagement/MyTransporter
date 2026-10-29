@@ -1,4 +1,5 @@
 import { platesForDuration } from "@/lib/availability-logic";
+import { MIN_DAYS_BY_CLASS } from "@/lib/booking-rules";
 import { normalizeEmail, authErrorMessage, emailInputProps, suggestsPasswordReset } from "@/lib/auth-input";
 import { ForgotPassword } from "@/components/ForgotPassword";
 import { publicOrigin } from "@/lib/native/platform";
