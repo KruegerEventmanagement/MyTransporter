@@ -2007,7 +2007,7 @@ export function BookingSection() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-foreground">Telefonnummer</label>
+                        <label className="text-sm font-medium text-foreground">Handynummer (für Schlüsselcode-SMS)</label>
                         <input
                           type="tel"
                           value={regForm.phone}
