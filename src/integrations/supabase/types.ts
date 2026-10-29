@@ -1207,6 +1207,45 @@ export type Database = {
           },
         ]
       }
+      key_code_sms: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: string
+          last_error: string | null
+          lease_until: string | null
+          provider_id: string | null
+          source_id: string
+          source_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          lease_until?: string | null
+          provider_id?: string | null
+          source_id: string
+          source_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          lease_until?: string | null
+          provider_id?: string | null
+          source_id?: string
+          source_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mail_provider_attempts: {
         Row: {
           ambiguous: boolean
@@ -2341,6 +2380,10 @@ export type Database = {
       claim_gmail_attempt: {
         Args: { _hash: string; _key: string }
         Returns: Json
+      }
+      claim_key_code_sms: {
+        Args: { _id: string; _type: string }
+        Returns: boolean
       }
       claim_mail_test: {
         Args: {
