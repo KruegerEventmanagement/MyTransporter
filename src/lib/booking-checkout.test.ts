@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   sessions: [] as any[],
   priceBumpEur: 0,
   coupon: { ok: true, discountCents: 0 } as any,
+  profile: { first_name: "Eva", last_name: "Muster", email: "eva@example.com", phone: "0171 2345678", birth_date: "1990-05-01" } as any,
 }));
 
 vi.mock("@/lib/booking-rules", async (orig) => {
@@ -56,8 +57,41 @@ import { CUSTOM_KM_ADDON_ID, paidCustomKmCents } from "./custom-km";
 
 const ctx = {
   userId: "user-1",
-  supabase: { from: () => query(["id_front", "id_back", "license_front", "license_back"].map((doc_type) => ({ doc_type }))) },
+  supabase: {
+    from: (t: string) =>
+      t === "profiles"
+        ? query([state.profile])
+        : query(["id_front", "id_back", "license_front", "license_back"].map((doc_type) => ({ doc_type }))),
+  },
 };
+const FULL_PROFILE = { first_name: "Eva", last_name: "Muster", email: "eva@example.com", phone: "0171 2345678", birth_date: "1990-05-01" };
+
+describe("Pflicht-Stammdaten vor Bezahlung (serverseitig)", () => {
+  beforeEach(() => { state.sessions = []; state.vehicles = [L1]; state.profile = { ...FULL_PROFILE }; });
+  it("vollständiges Profil → Checkout-Session", async () => {
+    const { res } = await checkout();
+    expect(res).toEqual({ clientSecret: "cs_test_secret" });
+  });
+  it.each([
+    ["phone", null, "Handynummer"],
+    ["phone", "07152 12345", "Handynummer"],
+    ["birth_date", null, "Geburtsdatum"],
+    ["first_name", "   ", "Vorname"],
+    ["last_name", "", "Nachname"],
+  ])("fehlt/ungültig %s=%s → keine Stripe-Session", async (k, v, label) => {
+    state.profile = { ...FULL_PROFILE, [k]: v };
+    const { res } = await checkout();
+    expect((res as { error: string }).error).toContain(label);
+    expect(state.sessions).toHaveLength(0);
+  });
+  it("fehlendes Profil-E-Mail nutzt die Login-E-Mail", async () => {
+    state.profile = { ...FULL_PROFILE, email: null };
+    const res = await runBookingCheckout({ plan: "24h_300", returnUrl: "https://x.test/r", environment: "sandbox", vehiclePlate: "TEST L1", vehicleName: "Citroen Jumper L1H1", startDate: "2026-10-05", startHour: 9, kmCatalog: KM_CATALOG_VERSION } as any, { ...ctx, claims: { email: "eva@example.com" } });
+    expect(res).toEqual({ clientSecret: "cs_test_secret" });
+    const res2 = await runBookingCheckout({ plan: "24h_300", returnUrl: "https://x.test/r", environment: "sandbox", vehiclePlate: "TEST L1", vehicleName: "Citroen Jumper L1H1", startDate: "2026-10-05", startHour: 9, kmCatalog: KM_CATALOG_VERSION } as any, ctx);
+    expect((res2 as { error: string }).error).toContain("E-Mail");
+  });
+});
 const L1 = { name: "Citroen Jumper L1H1", model: "Jumper", plate: "TEST L1", is_active: true };
 
 async function checkout(over: Record<string, unknown> = {}) {
