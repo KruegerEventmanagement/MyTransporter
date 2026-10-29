@@ -125,13 +125,13 @@ export type ExtraKmBand = "day" | "multi" | "week";
 
 /**
  * Mehrkilometersätze (ct/km) je Fahrzeugklasse und Band – einzige Quelle.
- * Seit 30.09.2026 (Eigentümerauftrag) einheitlich 0,45 € für alle Klassen und Bänder.
+ * Seit 29.10.2026 (Eigentümerauftrag) einheitlich 0,49 € für alle Klassen und Bänder (vorher 0,45 €).
  * Frühere Sätze (0,45 / 0,35 / 0,29) stehen in LEGACY_EXTRA_KM_CENTS für Altsessions.
  */
 export const EXTRA_KM_CENTS_BY_CLASS: Record<VehicleClass, Record<ExtraKmBand, number>> = {
-  l1h1: { day: 45, multi: 45, week: 45 },
-  l4h2: { day: 45, multi: 45, week: 45 },
-  l5h2: { day: 45, multi: 45, week: 45 },
+  l1h1: { day: 49, multi: 49, week: 49 },
+  l4h2: { day: 49, multi: 49, week: 49 },
+  l5h2: { day: 49, multi: 49, week: 49 },
 };
 
 /** Mehrkilometersätze vor der Vereinheitlichung auf 0,45 € – nur für alte Checkouts. */
@@ -230,9 +230,9 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
 ];
 
 /** Aktuelle Kilometer-Katalogversion (wird in Stripe-Metadata festgehalten). */
-export const KM_CATALOG_VERSION = "km-2026-10-27";
+export const KM_CATALOG_VERSION = "km-2026-10-29";
 /** Vorherige Version (neue km, alte Sätze 0,35/0,29) – Snapshots daraus bleiben gültig. */
-export const PREVIOUS_KM_CATALOG_VERSIONS = ["km-2026-09-30", "km-2026-09-30b", "km-2026-10-06", "km-2026-10-08"] as const;
+export const PREVIOUS_KM_CATALOG_VERSIONS = ["km-2026-09-30", "km-2026-09-30b", "km-2026-10-06", "km-2026-10-08", "km-2026-10-27"] as const;
 
 export const KM_CATALOG_OUTDATED_MESSAGE =
   "Tarife wurden aktualisiert. Bitte Seite neu laden und die aktuellen Konditionen prüfen.";
@@ -391,6 +391,29 @@ export function flexDaysPrice(days: number, cls: VehicleClass): number {
   const rest = days % 7;
   const restPrice = rest === 0 ? 0 : rest === 1 ? templatePrice("24h_300", cls) : templatePrice(`multi_${rest}d`, cls);
   return Math.min(weeks * week + restPrice, Math.ceil(days / 7) * week, MONTH_ANCHORS[cls][30]);
+}
+
+/**
+ * Kilometer-Vorteilspakete (seit 29.10.2026): kein eigener Tarif, keine eigene plan_id.
+ * Sie fließen nur als günstigere Variante gleicher Dauer in das individuelle
+ * Kilometerpaket (custom-km.ts) ein – die Buchung behält ihren Grundtarif.
+ */
+const KM_BONUS_TEMPLATES: PlanTemplate[] = [
+  {
+    id: "3h_150", label: "3 Stunden · 150 km", shortLabel: "3 h · 150 km",
+    days: 1, durationHours: 3, basePrice: 74, basePriceL4h2: 84, freeKm: 150,
+    returnRule: "Rückgabe nach 3 Stunden",
+  },
+  {
+    id: "6h_200", label: "6 Stunden · 200 km", shortLabel: "6 h · 200 km",
+    days: 1, durationHours: 6, basePrice: 94, basePriceL4h2: 104, freeKm: 200,
+    returnRule: "Rückgabe nach 6 Stunden",
+  },
+];
+
+/** Vorteilspakete je Klasse (nur für das Kilometerpaket, nie als plan_id). */
+export function kmBonusPackages(vehicleClass: VehicleClass = "l1h1"): PlanEntry[] {
+  return KM_BONUS_TEMPLATES.map((tpl) => withClass(tpl, vehicleClass));
 }
 
 /** Tarif-Katalog für eine Fahrzeugklasse. */

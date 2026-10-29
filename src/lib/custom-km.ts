@@ -9,7 +9,7 @@
  * Mehrkilometer über diesem Kontingent: Satz des berücksichtigten Tarifs.
  * Katalogpreise und -sätze kommen ausschließlich aus booking-rules.ts.
  */
-import { getPlanById, planCatalog, type PlanEntry, type VehicleClass } from "@/lib/booking-rules";
+import { getPlanById, kmBonusPackages, planCatalog, type PlanEntry, type VehicleClass } from "@/lib/booking-rules";
 import { LONG_TERM_MAX_KM } from "@/lib/long-term";
 
 /** Version der Paketberechnung (Stripe-Metadata). */
@@ -59,7 +59,7 @@ export function quoteCustomKm(planId: string, vehicleClass: VehicleClass, desire
   if (!Number.isSafeInteger(desiredKm) || desiredKm < 0 || desiredKm > CUSTOM_KM_MAX) return null;
   const orig = getPlanById(planId, vehicleClass);
   if (!orig || planId === "km") return null;
-  const sameDuration = planCatalog(vehicleClass).filter(
+  const sameDuration = [...planCatalog(vehicleClass), ...kmBonusPackages(vehicleClass)].filter(
     (p) => p.durationHours === orig.durationHours && p.days === orig.days && p.freeKm >= orig.freeKm && p.id !== orig.id,
   );
   const candidates = [orig, ...sameDuration];

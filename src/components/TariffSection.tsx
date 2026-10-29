@@ -129,7 +129,7 @@ export function TariffSection() {
             </table>
           </div>
           <p className="mt-3 text-xs text-muted-foreground text-center">
-            Mehrkilometer: 0,45 €/km bei allen Tarifen · Kaution 200 € (wird zurückerstattet)
+            Mehrkilometer: 0,49 €/km bei allen Tarifen · Kaution 200 € (wird zurückerstattet)
           </p>
         </div>
       </div>
