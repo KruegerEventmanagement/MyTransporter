@@ -56,6 +56,7 @@ import {
   vehicleClassFromName,
   planAllowedForClass,
   L5H2_MIN_DAYS_HINT,
+  kmBonusPackages,
   
   VEHICLE_CLASS_SHORT_LABEL,
   EARLIEST_START_HOUR,
@@ -1672,6 +1673,9 @@ export function BookingSection() {
                 includedRateCents={selectedPlanEntry?.extraKmCents ?? null}
                 addonsCents={Math.round(addonsTotal * 100)}
                 depositEur={DEPOSIT}
+                presets={selectedPlanEntry ? kmBonusPackages(vehicleClass)
+                  .filter((b) => b.durationHours === selectedPlanEntry.durationHours && b.freeKm > selectedPlanEntry.freeKm)
+                  .map((b) => ({ km: b.freeKm, label: `${b.shortLabel} für ${b.price} €` })) : []}
               />
             </div>
 

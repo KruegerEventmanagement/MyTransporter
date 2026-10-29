@@ -17,6 +17,8 @@ export function CustomKmCard(props: {
   includedRateCents: number | null;
   addonsCents: number;
   depositEur: number;
+  /** Vorteilspakete passend zur Tarifdauer, z. B. 3 h · 150 km für 74 €. */
+  presets?: Array<{ km: number; label: string }>;
 }) {
   const { enabled, value, error, quote, includedKm } = props;
   return (
@@ -36,6 +38,21 @@ export function CustomKmCard(props: {
           <span className="block text-xs text-muted-foreground mt-1">Optional. Ohne Auswahl gilt dein Tarif unverändert.</span>
         </span>
       </label>
+
+      {props.presets && props.presets.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2" data-testid="km-bonus-presets">
+          {props.presets.map((p) => (
+            <button
+              key={p.km}
+              type="button"
+              onClick={() => { props.onEnabledChange(true); props.onValueChange(String(p.km)); }}
+              className={`min-h-[44px] rounded-full border px-4 text-sm font-medium transition-colors ${enabled && value.trim() === String(p.km) ? "bg-foreground text-background border-foreground" : "border-border bg-secondary text-foreground hover:bg-secondary/70"}`}
+            >
+              Vorteilspaket: {p.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {enabled && (
         <div className="mt-4">
