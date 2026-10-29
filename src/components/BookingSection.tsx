@@ -1,3 +1,4 @@
+import { platesForDuration } from "@/lib/availability-logic";
 import { normalizeEmail, authErrorMessage, emailInputProps, suggestsPasswordReset } from "@/lib/auth-input";
 import { ForgotPassword } from "@/components/ForgotPassword";
 import { publicOrigin } from "@/lib/native/platform";
@@ -445,6 +446,15 @@ export function BookingSection() {
   const activePlates = useMemo(
     () => bookableVehicles.map((v) => v.plate ?? "").filter(Boolean),
     [bookableVehicles],
+  );
+  const occupancyPlates = useMemo(
+    () =>
+      platesForDuration(
+        bookableVehicles.map((v) => ({ plate: v.plate ?? "", minDays: MIN_DAYS_BY_CLASS[classOfVehicle(v)] })),
+        Math.max(1, nights),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bookableVehicles, nights],
   );
   /**
    * Flotte für die Verfügbarkeitsprüfung: immer ALLE freigegebenen Fahrzeuge,
@@ -1334,8 +1344,8 @@ export function BookingSection() {
               />
 
 
-              {rangeFrom && availabilityReady && activePlates.length > 0 && (() => {
-                const o = dayOccupancy(busyMap, activePlates, rangeFrom, EARLIEST_START_HOUR, LATEST_RETURN_HOUR);
+              {rangeFrom && availabilityReady && occupancyPlates.length > 0 && (() => {
+                const o = dayOccupancy(busyMap, occupancyPlates, rangeFrom, EARLIEST_START_HOUR, LATEST_RETURN_HOUR);
                 const free = o.total - o.fullyBooked;
                 return (
                   <div className="mt-4 w-full max-w-md rounded-2xl border border-border bg-secondary p-4 text-sm" data-testid="day-occupancy">

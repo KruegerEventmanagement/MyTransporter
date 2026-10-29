@@ -92,3 +92,10 @@ describe("Blockierende Buchungsstatus", () => {
     expect(BLOCKING_BOOKING_STATUSES).not.toContain("completed" as never);
   });
 });
+
+import { platesForDuration } from "./availability-logic";
+describe("platesForDuration", () => {
+  const fleet = [{ plate: "LEO MY 101" }, { plate: "LEO MY 102" }, { plate: "PF MY 1003" }, { plate: "OF-DK 1234", minDays: 5 }];
+  it("Crafter zählt bei 1 Tag nicht mit", () => expect(platesForDuration(fleet, 1)).toHaveLength(3));
+  it("Crafter zählt ab 5 Tagen mit", () => expect(platesForDuration(fleet, 5)).toHaveLength(4));
+});
