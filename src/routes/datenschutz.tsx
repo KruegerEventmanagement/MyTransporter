@@ -1,3 +1,4 @@
+import { LegalLangNotice } from "@/components/LegalLangNotice";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { pageHead } from "@/lib/seo";
 import { openConsentSettings } from "@/components/CookieConsent";
@@ -19,6 +20,7 @@ function DatenschutzPage() {
     <main className="min-h-screen bg-background px-4 py-12">
       <div className="max-w-2xl mx-auto">
         <BrandHomeLink className="mb-8" imageClassName="h-8 w-auto" />
+        <LegalLangNotice />
         <h1 className="text-3xl font-bold text-foreground mb-8">Datenschutzerklärung</h1>
 
         <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
