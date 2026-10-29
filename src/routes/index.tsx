@@ -48,7 +48,7 @@ function Index() {
           <Link to="/kontakt" className="hover:text-foreground transition-colors">Kontakt</Link>
           <Link to="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
           <Link to="/mietratgeber" className="hover:text-foreground transition-colors">Mietratgeber</Link>
-          <Link to="/so-funktionierts" className="hover:text-foreground transition-colors">So funktioniert's</Link>
+          <HowLink />
           <Link to="/ueber-uns" className="hover:text-foreground transition-colors">Über uns</Link>
           <Link to="/werbung" className="hover:text-foreground transition-colors">Werbung am Transporter</Link>
           <Link to="/werbeflaeche" className="hover:text-foreground transition-colors">Partnerangebote</Link>
@@ -65,4 +65,9 @@ function Index() {
 function FooterRights() {
   const { t } = useI18n();
   return <p>{t("footer.rights")}</p>;
+}
+
+function HowLink() {
+  const { t } = useI18n();
+  return <Link to="/so-funktionierts" className="hover:text-foreground transition-colors">{t("nav.howItWorks")}</Link>;
 }
