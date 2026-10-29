@@ -103,7 +103,8 @@ export function vehicleSpecRows(v: SpecVehicle): SpecRow[] {
   add("Sitzplätze", pos(v.seats) ? String(v.seats) : null);
   add("Anhängelast (gebremst)", pos(v.trailer_load_braked_kg) ? kg(v.trailer_load_braked_kg) : null);
   add("Erstzulassung", v.first_registration ? fmtDate(v.first_registration) : null, ["first_registration"]);
-  add("Abholort", v.pickup_address?.trim() || v.pickup_location?.trim() || null);
+  add("Transporter-Abholort", "An der Poststraße 63. Bitte an keiner Haustür klingeln. Die Transporter stehen an der Straße.");
+  add("Schlüsselabholort", "Am OBI Leonberg.");
   return rows;
 }
 
