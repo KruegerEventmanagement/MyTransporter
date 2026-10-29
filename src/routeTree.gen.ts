@@ -25,6 +25,7 @@ import { Route as PreiseRouteImport } from './routes/preise'
 import { Route as ProfilRouteImport } from './routes/profil'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SoFunktioniertsRouteImport } from './routes/so-funktionierts'
 import { Route as TransporterMietenPforzheimCalwRouteImport } from './routes/transporter-mieten-pforzheim-calw'
 import { Route as UeberUnsRouteImport } from './routes/ueber-uns'
 import { Route as UmzugRouteImport } from './routes/umzug'
@@ -129,6 +130,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SoFunktioniertsRoute = SoFunktioniertsRouteImport.update({
+  id: '/so-funktionierts',
+  path: '/so-funktionierts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TransporterMietenPforzheimCalwRoute =
@@ -289,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/profil': typeof ProfilRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/so-funktionierts': typeof SoFunktioniertsRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
   '/umzug': typeof UmzugRoute
@@ -332,6 +339,7 @@ export interface FileRoutesByTo {
   '/profil': typeof ProfilRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/so-funktionierts': typeof SoFunktioniertsRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
   '/umzug': typeof UmzugRoute
@@ -376,6 +384,7 @@ export interface FileRoutesById {
   '/profil': typeof ProfilRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/so-funktionierts': typeof SoFunktioniertsRoute
   '/transporter-mieten-pforzheim-calw': typeof TransporterMietenPforzheimCalwRoute
   '/ueber-uns': typeof UeberUnsRoute
   '/umzug': typeof UmzugRoute
@@ -421,6 +430,7 @@ export interface FileRouteTypes {
     | '/profil'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/so-funktionierts'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
     | '/umzug'
@@ -464,6 +474,7 @@ export interface FileRouteTypes {
     | '/profil'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/so-funktionierts'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
     | '/umzug'
@@ -507,6 +518,7 @@ export interface FileRouteTypes {
     | '/profil'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/so-funktionierts'
     | '/transporter-mieten-pforzheim-calw'
     | '/ueber-uns'
     | '/umzug'
@@ -551,6 +563,7 @@ export interface RootRouteChildren {
   ProfilRoute: typeof ProfilRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SoFunktioniertsRoute: typeof SoFunktioniertsRoute
   TransporterMietenPforzheimCalwRoute: typeof TransporterMietenPforzheimCalwRoute
   UeberUnsRoute: typeof UeberUnsRoute
   UmzugRoute: typeof UmzugRoute
@@ -690,6 +703,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/so-funktionierts': {
+      id: '/so-funktionierts'
+      path: '/so-funktionierts'
+      fullPath: '/so-funktionierts'
+      preLoaderRoute: typeof SoFunktioniertsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/transporter-mieten-pforzheim-calw': {
@@ -887,6 +907,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfilRoute: ProfilRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SoFunktioniertsRoute: SoFunktioniertsRoute,
   TransporterMietenPforzheimCalwRoute: TransporterMietenPforzheimCalwRoute,
   UeberUnsRoute: UeberUnsRoute,
   UmzugRoute: UmzugRoute,
