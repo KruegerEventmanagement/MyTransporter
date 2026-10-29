@@ -176,6 +176,13 @@
       "when": 1793309011944,
       "tag": "0024_key_code_sms",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793311004631,
+      "tag": "0025_key_sms_fencing",
+      "breakpoints": true
     }
   ]
 }

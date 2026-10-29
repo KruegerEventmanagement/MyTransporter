@@ -1213,6 +1213,7 @@ export type Database = {
           created_at: string
           id: string
           last_error: string | null
+          lease_token: string | null
           lease_until: string | null
           provider_id: string | null
           source_id: string
@@ -1225,6 +1226,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_error?: string | null
+          lease_token?: string | null
           lease_until?: string | null
           provider_id?: string | null
           source_id: string
@@ -1237,6 +1239,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_error?: string | null
+          lease_token?: string | null
           lease_until?: string | null
           provider_id?: string | null
           source_id?: string
@@ -2627,6 +2630,22 @@ export type Database = {
           _plate: string
           _start: string
         }
+        Returns: boolean
+      }
+      key_sms_claim: { Args: { _id: string; _type: string }; Returns: Json }
+      key_sms_finish: {
+        Args: {
+          _error: string
+          _id: string
+          _provider_id: string
+          _status: string
+          _token: string
+          _type: string
+        }
+        Returns: string
+      }
+      key_sms_mark_sending: {
+        Args: { _id: string; _token: string; _type: string }
         Returns: boolean
       }
       local_start_at: {

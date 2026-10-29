@@ -1,4 +1,5 @@
 import { AdminMailTest } from "@/components/admin/AdminMailTest";
+import { AdminKeySmsTest } from "@/components/admin/AdminKeySmsTest";
 import { AdminPrivacy } from "@/components/admin/AdminPrivacy";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { privateHead } from "@/lib/seo";
@@ -754,6 +755,7 @@ function AdminDashboard() {
         )}
 
         {tab === "notifications" && <AdminMailTest />}
+        {tab === "notifications" && <AdminKeySmsTest />}
         {tab === "notifications" && (
           <>
             {unreadCount > 0 && (
