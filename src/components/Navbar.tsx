@@ -1,3 +1,4 @@
+import { normalizeEmail, authErrorMessage } from "@/lib/auth-input";
 import { ForgotPassword } from "@/components/ForgotPassword";
 import { publicOrigin } from "@/lib/native/platform";
 import { AddressFields } from "@/components/AddressFields";
@@ -114,12 +115,12 @@ export function Navbar() {
     setError(null);
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
-      email: form.email,
+      email: normalizeEmail(form.email),
       password: form.password,
     });
     setLoading(false);
     if (error) {
-      setError(error.message);
+      setError(authErrorMessage(error.message));
       return;
     }
     closeModal();
@@ -149,7 +150,7 @@ export function Navbar() {
     }
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
-      email: form.email,
+      email: normalizeEmail(form.email),
       password: form.password,
       options: {
         emailRedirectTo: AUTH_CONFIRM_URL,
@@ -167,7 +168,7 @@ export function Navbar() {
     });
     setLoading(false);
     if (error) {
-      setError(error.message);
+      setError(authErrorMessage(error.message));
       return;
     }
     // Konto serverseitig angelegt → CompleteRegistration (einmalig pro User-ID).
@@ -420,7 +421,10 @@ export function Navbar() {
               <input
                 type="email"
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onChange={(e) => setForm({ ...form, email: normalizeEmail(e.target.value) })}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 placeholder="E-Mail"
                 autoComplete={showModal === "login" ? "username" : "email"}
                 inputMode="email"

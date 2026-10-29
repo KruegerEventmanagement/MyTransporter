@@ -1,3 +1,4 @@
+import { normalizeEmail, authErrorMessage, emailInputProps } from "@/lib/auth-input";
 import { ForgotPassword } from "@/components/ForgotPassword";
 import { publicOrigin } from "@/lib/native/platform";
 import { AddressFields } from "@/components/AddressFields";
@@ -866,13 +867,13 @@ export function BookingSection() {
     try {
       const { data, error } = await withAuthTimeout(
         supabase.auth.signInWithPassword({
-          email: loginForm.email,
+          email: normalizeEmail(loginForm.email),
           password: loginForm.password,
         }),
       );
       setAuthLoading(false);
       if (error) {
-        setAuthError(error.message);
+        setAuthError(authErrorMessage(error.message));
         return;
       }
       if (data.user) {
@@ -1872,7 +1873,8 @@ export function BookingSection() {
                         <input
                           type="email"
                           value={regForm.email}
-                          onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
+                          {...emailInputProps}
+                          onChange={(e) => setRegForm({ ...regForm, email: normalizeEmail(e.target.value) })}
                           className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                           placeholder="max@beispiel.de"
                         />
@@ -1979,7 +1981,8 @@ export function BookingSection() {
                         <input
                           type="email"
                           value={loginForm.email}
-                          onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                          {...emailInputProps}
+                          onChange={(e) => setLoginForm({ ...loginForm, email: normalizeEmail(e.target.value) })}
                           className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                           placeholder="max@beispiel.de"
                         />
