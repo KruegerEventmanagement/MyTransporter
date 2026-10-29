@@ -17,9 +17,10 @@ interface BIPEvent extends Event {
 
 const DISMISS_KEY = "mt-install-dismissed";
 
-type Platform = "ios-safari" | "ios-other" | "android" | "desktop";
+type Platform = "ios-safari" | "ios-other" | "in-app" | "android" | "desktop";
 
 function detectPlatform(ua: string): Platform {
+  if (/FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|Snapchat|TikTok|musical_ly|LinkedInApp|Twitter/i.test(ua)) return "in-app";
   const isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && "ontouchend" in document);
   if (isIOS) {
     const isSafari = !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua);
@@ -97,7 +98,7 @@ export function InstallBanner() {
   if (!visible || onTrip) return null;
 
   const hint =
-    platform === "ios-other" ? "In Safari öffnen" : "Auf dem Homescreen speichern";
+    platform === "ios-other" || platform === "in-app" ? "In Safari öffnen" : "Auf dem Homescreen speichern";
 
   return (
     <>
@@ -139,11 +140,18 @@ function InstallGuide({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  const [copied, setCopied] = useState(false);
   const steps =
-    platform === "ios-safari"
+    platform === "in-app"
       ? [
-          { icon: <Share className="w-5 h-5" />, text: "Tippe unten in Safari auf das Teilen-Symbol." },
-          { icon: <Plus className="w-5 h-5" />, text: "Wähle „Zum Home-Bildschirm“." },
+          { icon: <MoreVertical className="w-5 h-5" />, text: "Du bist gerade in WhatsApp, Instagram o. ä. – dort kann keine App installiert werden." },
+          { icon: <Share className="w-5 h-5" />, text: "Tippe unten auf „Link kopieren“ und öffne Safari (iPhone) bzw. Chrome (Android)." },
+          { icon: <Plus className="w-5 h-5" />, text: "Link einfügen, öffnen und dann erneut auf „App installieren“ tippen." },
+        ]
+      : platform === "ios-safari"
+      ? [
+          { icon: <Share className="w-5 h-5" />, text: "Tippe unten in Safari auf das Teilen-Symbol (Quadrat mit Pfeil nach oben – evtl. erst „…“ antippen)." },
+          { icon: <Plus className="w-5 h-5" />, text: "Nach unten scrollen und „Zum Home-Bildschirm“ wählen." },
           { icon: <Download className="w-5 h-5" />, text: "Tippe oben rechts auf „Hinzufügen“." },
         ]
       : platform === "ios-other"
@@ -186,6 +194,15 @@ function InstallGuide({
             </li>
           ))}
         </ol>
+        {platform === "in-app" && (
+          <button
+            type="button"
+            onClick={() => { void navigator.clipboard?.writeText(window.location.href).then(() => setCopied(true)).catch(() => setCopied(false)); }}
+            className="mt-2 w-full rounded-xl bg-foreground py-3 text-sm font-semibold text-background"
+          >
+            {copied ? "Link kopiert ✓" : "Link kopieren"}
+          </button>
+        )}
         <p className="text-xs text-muted-foreground mt-2">
           Nach der Installation öffnet sich MyTransporter wie eine native App – ohne Browser-Leiste.
         </p>

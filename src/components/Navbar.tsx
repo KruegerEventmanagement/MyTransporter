@@ -1,4 +1,4 @@
-import { normalizeEmail, authErrorMessage, emailInputProps } from "@/lib/auth-input";
+import { normalizeEmail, authErrorMessage } from "@/lib/auth-input";
 import { ForgotPassword } from "@/components/ForgotPassword";
 import { publicOrigin } from "@/lib/native/platform";
 import { AddressFields } from "@/components/AddressFields";
@@ -421,7 +421,10 @@ export function Navbar() {
               <input
                 type="email"
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onChange={(e) => setForm({ ...form, email: normalizeEmail(e.target.value) })}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 placeholder="E-Mail"
                 autoComplete={showModal === "login" ? "username" : "email"}
                 inputMode="email"
