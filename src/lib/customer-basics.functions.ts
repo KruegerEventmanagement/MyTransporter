@@ -37,7 +37,7 @@ export const saveCustomerBasics = createServerFn({ method: "POST" })
     const email = cur?.email || claimEmail(context) || "";
     const c = checkCustomerBasics({ ...data, email });
     if (!c.ok) return { ok: false as const, problems: c.problems };
-    const patch: Record<string, string> = {
+    const patch: { first_name: string; last_name: string; birth_date: string; phone: string; email?: string } = {
       first_name: c.normalized.first_name, last_name: c.normalized.last_name,
       birth_date: c.normalized.birth_date, phone: c.normalized.phone!,
     };
