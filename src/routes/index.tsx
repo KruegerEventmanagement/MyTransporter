@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { createFileRoute } from "@tanstack/react-router";
 import { InFlowAd } from "@/components/ads/InFlowAd";
 import { pageHead } from "@/lib/seo";
@@ -37,7 +38,7 @@ function Index() {
         <HomeIntroSection />
       </AdRails>
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
-        <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
+        <FooterRights />
         <div className="mt-3 flex flex-wrap justify-center gap-4">
           <Link to="/preise" className="hover:text-foreground transition-colors">Tarife & Preise</Link>
           <Link to="/impressum" className="hover:text-foreground transition-colors">Impressum</Link>
@@ -59,4 +60,9 @@ function Index() {
       </footer>
     </main>
   );
+}
+
+function FooterRights() {
+  const { t } = useI18n();
+  return <p>{t("footer.rights")}</p>;
 }

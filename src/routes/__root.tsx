@@ -16,6 +16,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ActiveTripBanner } from "@/components/ActiveTripBanner";
 import { safeJsonLd, siteJsonLd } from "@/lib/seo";
 import { BrandHomeLink } from "@/components/BrandHomeLink";
+import { LanguageProvider } from "@/lib/i18n";
 
 function NotFoundComponent() {
   return (
@@ -115,7 +116,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de">
+    <html lang="de" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
@@ -132,12 +133,14 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <LanguageProvider>
       <InstallBanner />
       <Outlet />
       <ActiveTripBanner />
       <HelpBubble />
       <CookieConsent />
       <Toaster position="top-center" offset="calc(16px + var(--mt-trip-bar, 0px))" />
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }
