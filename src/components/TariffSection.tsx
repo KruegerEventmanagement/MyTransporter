@@ -1,4 +1,4 @@
-import { PLAN_CATALOG, L4H2_SURCHARGE_PER_DAY_EUR, L5H2_SURCHARGE_EUR } from "@/lib/booking-rules";
+import { kmBonusPackages, PLAN_CATALOG, L4H2_SURCHARGE_PER_DAY_EUR, L5H2_SURCHARGE_EUR } from "@/lib/booking-rules";
 
 const SINGLE = PLAN_CATALOG.filter((p) => p.days === 1);
 const MULTI = PLAN_CATALOG.filter((p) => p.days > 1);
@@ -129,7 +129,10 @@ export function TariffSection() {
             </table>
           </div>
           <p className="mt-3 text-xs text-muted-foreground text-center">
-            Mehrkilometer: 0,45 €/km bei allen Tarifen · Kaution 200 € (wird zurückerstattet)
+            Mehrkilometer: 0,49 €/km bei allen Tarifen · Kaution 200 € (wird zurückerstattet)
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground text-center">
+            Mehr Kilometer günstiger: {kmBonusPackages("l1h1").map((b) => `${b.shortLabel} für ${b.price} €`).join(" · ")} (L1H1) – direkt in der Buchung wählbar.
           </p>
         </div>
       </div>

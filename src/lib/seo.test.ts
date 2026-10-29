@@ -75,7 +75,7 @@ describe("routes", () => {
     expect(root).toContain('{ name: "google-site-verification", content: "RtHXueJEpVbh7zZoqhrwrpD2ZqqYZIRRNVdVimE-48I" }');
     expect(root).toContain('{ name: "google-adsense-account", content: "ca-pub-6974851907377988" }');
     expect(root).toContain('{ name: "verification", content: "b7cde8d0588c5c053a4219e04e38801f" }');
-    expect(root).toContain('<html lang="de">');
+    expect(root).toContain('<html lang="de"');
     expect(root).not.toMatch(/Transporter Hub|twitter:site|og:image|lovable\.app/);
   });
 

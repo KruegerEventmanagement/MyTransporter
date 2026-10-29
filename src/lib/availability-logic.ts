@@ -117,3 +117,46 @@ export function anyPlateFreeForWindows(
 ): boolean {
   return windows.some((w) => plates.some((p) => isVehicleFree(map, p, w.start, w.end)));
 }
+
+export type DayOccupancy = {
+  total: number;
+  /** Fahrzeuge, die im Buchungsfenster komplett belegt sind. */
+  fullyBooked: number;
+  /** Fahrzeuge mit teilweiser Belegung. */
+  partlyBooked: number;
+  /** Belegte Fahrzeugstunden ÷ alle Fahrzeugstunden im Fenster, 0–100. */
+  percent: number;
+};
+
+/**
+ * Zeitgenaue Tagesauslastung im Buchungsfenster (Standard 8–22 Uhr Berliner Zeit).
+ * Ein Transporter, der nur 9–12 Uhr gebucht ist, zählt nur mit 3 von 14 Stunden.
+ */
+export function dayOccupancy(
+  map: Map<string, SlotRange[]>,
+  plates: string[],
+  day: Date,
+  fromHour = 8,
+  toHour = 22,
+): DayOccupancy {
+  const winStart = berlinDayHourToMs(day, fromHour);
+  const winEnd = berlinDayHourToMs(day, toHour);
+  const span = winEnd - winStart;
+  let busyTotal = 0, fully = 0, partly = 0;
+  for (const plate of plates) {
+    const ranges = rangesFor(map, plate)
+      .map((r) => ({ start: Math.max(r.start, winStart), end: Math.min(r.end, winEnd) }))
+      .filter((r) => r.end > r.start)
+      .sort((a, b) => a.start - b.start);
+    let busy = 0, cursor = winStart;
+    for (const r of ranges) {
+      const s = Math.max(r.start, cursor);
+      if (r.end > s) { busy += r.end - s; cursor = r.end; }
+    }
+    busyTotal += busy;
+    if (busy >= span) fully++;
+    else if (busy > 0) partly++;
+  }
+  const total = plates.length;
+  return { total, fullyBooked: fully, partlyBooked: partly, percent: total && span > 0 ? Math.round((busyTotal / (total * span)) * 100) : 0 };
+}

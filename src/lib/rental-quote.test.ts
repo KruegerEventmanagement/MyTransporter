@@ -21,14 +21,14 @@ describe("Katalog unverändert", () => {
   });
   it("Mehrkilometer 0,45/0,35/0,29 für alle Klassen, gleich wie vorher", () => {
     for (const c of VEHICLE_CLASSES) {
-      expect(EXTRA_KM_CENTS_BY_CLASS[c]).toEqual({ day: 45, multi: 45, week: 45 });
+      expect(EXTRA_KM_CENTS_BY_CLASS[c]).toEqual({ day: 49, multi: 49, week: 49 });
       const cat = planCatalog(c);
-      expect(cat.find((p) => p.id === "3h")!.extraKmCents).toBe(45);
-      expect(cat.find((p) => p.id === "24h_800")!.extraKmCents).toBe(45);
-      expect(cat.find((p) => p.id === "multi_6d")!.extraKmCents).toBe(45);
-      expect(cat.find((p) => p.id === "multi_7d")!.extraKmCents).toBe(45);
-      expect(getPlanById("week_x3", c)!.extraKmCents).toBe(45);
-      expect(LONG_TERM_KM_CONFIG[c].returnExtraKmEur).toBe(0.45);
+      expect(cat.find((p) => p.id === "3h")!.extraKmCents).toBe(49);
+      expect(cat.find((p) => p.id === "24h_800")!.extraKmCents).toBe(49);
+      expect(cat.find((p) => p.id === "multi_6d")!.extraKmCents).toBe(49);
+      expect(cat.find((p) => p.id === "multi_7d")!.extraKmCents).toBe(49);
+      expect(getPlanById("week_x3", c)!.extraKmCents).toBe(49);
+      expect(LONG_TERM_KM_CONFIG[c].returnExtraKmEur).toBe(0.49);
     }
   });
 });
@@ -44,15 +44,15 @@ describe("quoteRental", () => {
       expect(q.includedKm).toBe(300);
       expect(q.creditEur).toBe(0);
       expect(q.depositEur).toBe(200);
-      expect(q.returnExtraKmEur).toBe(0.45);
+      expect(q.returnExtraKmEur).toBe(0.49);
     }
   });
   it("3 Tage / 600 km: 300 Mehr-km × 0,45 = 135 €", () => {
-    expect(ok(quoteRental({ ...t3, desiredKm: 600 }, "l1h1")).totalEur).toBe(404);
-    expect(ok(quoteRental({ ...t3, desiredKm: 600 }, "l4h2")).totalEur).toBe(434);
-    expect(ok(quoteRental({ ...t3, desiredKm: 600 }, "l5h2")).totalEur).toBe(450);
-    expect(ok(quoteRental({ ...t3, desiredKm: 600 }, "l1h1")).extraKmCostEur).toBe(135);
-    expect(ok(quoteRental({ ...t3, desiredKm: 900 }, "l1h1")).totalEur).toBe(539);
+    expect(ok(quoteRental({ ...t3, desiredKm: 600 }, "l1h1")).totalEur).toBe(416);
+    expect(ok(quoteRental({ ...t3, desiredKm: 600 }, "l4h2")).totalEur).toBe(446);
+    expect(ok(quoteRental({ ...t3, desiredKm: 600 }, "l5h2")).totalEur).toBe(462);
+    expect(ok(quoteRental({ ...t3, desiredKm: 600 }, "l1h1")).extraKmCostEur).toBe(147);
+    expect(ok(quoteRental({ ...t3, desiredKm: 900 }, "l1h1")).totalEur).toBe(563);
   });
   it("3 Tage / 0 km: keine Gutschrift auf Standardpaket", () => {
     expect(ok(quoteRental({ ...t3, desiredKm: 0 }, "l1h1")).totalEur).toBe(269);
@@ -102,7 +102,7 @@ describe("quoteRental", () => {
   it("Anfragemail enthält alle Posten", () => {
     const q = ok(quoteRental({ ...t3, desiredKm: 900 }, "l1h1"));
     const m = buildRequestMail({ name: "Citroen Jumper L1H1", plate: "LEO MY 102" }, "l1h1", q, t3, true);
-    for (const s of ["LEO MY 102", "269,00 €", "600 km × 0,45 €", "539,00 €", "Kaution", "200,00 €", "unverbindliche", "maximal 100 km/h"]) {
+    for (const s of ["LEO MY 102", "269,00 €", "600 km × 0,49 €", "563,00 €", "Kaution", "200,00 €", "unverbindliche", "maximal 100 km/h"]) {
       expect(m).toContain(s);
     }
   });
@@ -133,7 +133,7 @@ describe("Langzeit: angefragtes Kontingent = Wunschkilometer", () => {
   }
   it("Standard 3 Tage unverändert", () => {
     const q = ok(quoteRental({ ...t3, desiredKm: 600 }, "l1h1"));
-    expect([q.includedKm, q.contractKm, q.extraKmCostEur, q.creditEur]).toEqual([300, 300, 135, 0]);
+    expect([q.includedKm, q.contractKm, q.extraKmCostEur, q.creditEur]).toEqual([300, 300, 147, 0]);
     expect(returnLabel(q)).toBe("Mehrkilometer bei Rückgabe über 300 km");
   });
 });
@@ -160,7 +160,7 @@ describe("Kilometer-Katalog 08.10.2026", () => {
     const a = ok(quoteRental({ ...d, desiredKm: 150 }, "l1h1"));
     expect([a.planId, a.totalEur, a.extraKmCostEur]).toEqual(["24h_300", 99, 0]);
     const b = ok(quoteRental({ ...d, desiredKm: 200 }, "l1h1"));
-    expect([b.planId, b.totalEur, b.extraKmCostEur]).toEqual(["24h_300", 121.5, 22.5]);
+    expect([b.planId, b.totalEur, b.extraKmCostEur]).toEqual(["24h_300", 123.5, 24.5]);
   });
   it("Paketinvariante: größeres 24h-Paket nie teurer als kleineres + Mehr-km", () => {
     for (const c of VEHICLE_CLASSES) {
@@ -196,7 +196,7 @@ describe("Kilometer-Katalog 08.10.2026", () => {
     expect(resolveCheckoutKmSnapshot({ kmCatalog: "alt" }, "24h_300", "l4h2")).toEqual({ freeKm: 300, kmPriceCents: 45 });
     expect(resolveCheckoutKmSnapshot({ kmCatalog: KM_CATALOG_VERSION, freeKm: "600", kmPriceCents: "35" }, "multi_3d", "l1h1")).toEqual({ freeKm: 600, kmPriceCents: 35 });
     // manipulierte/defekte Snapshot-Werte → nie gekürzt ohne gültigen Snapshot
-    expect(resolveCheckoutKmSnapshot({ kmCatalog: KM_CATALOG_VERSION, freeKm: "abc" }, "multi_3d", "l1h1")).toEqual({ freeKm: 300, kmPriceCents: 45 });
+    expect(resolveCheckoutKmSnapshot({ kmCatalog: KM_CATALOG_VERSION, freeKm: "abc" }, "multi_3d", "l1h1")).toEqual({ freeKm: 300, kmPriceCents: 49 });
     expect(resolveCheckoutKmSnapshot({ kmCatalog: KM_CATALOG_VERSION, freeKm: "0" }, "multi_3d", "l1h1").freeKm).toBe(0);
     expect(resolveCheckoutKmSnapshot({}, "km", "l1h1")).toEqual({ freeKm: 0, kmPriceCents: KM_TARIFF_CENTS_PER_KM });
     expect(resolveCheckoutKmSnapshot({}, "24h_800", "l1h1").freeKm).toBe(800);

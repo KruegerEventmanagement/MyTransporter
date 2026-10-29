@@ -38,6 +38,7 @@ import {
   nextFreeFrom,
   isDayBookable,
   anyPlateFreeForWindows,
+  dayOccupancy,
 } from "@/lib/availability-logic";
 import {
   availableClassesForWindow,
@@ -56,6 +57,7 @@ import {
   vehicleClassFromName,
   planAllowedForClass,
   L5H2_MIN_DAYS_HINT,
+  kmBonusPackages,
   
   VEHICLE_CLASS_SHORT_LABEL,
   EARLIEST_START_HOUR,
@@ -174,6 +176,7 @@ export function BookingSection() {
   const [liabilityAccepted, setLiabilityAccepted] = useState(false);
   const [reviewConsent, setReviewConsent] = useState(false);
   const [range, setRange] = useState<{ from?: Date; to?: Date } | undefined>();
+  const [rentalMode, setRentalMode] = useState<"day" | "multi">("day");
   const [startHour, setStartHour] = useState<number | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -340,6 +343,11 @@ export function BookingSection() {
   // Für UI-Anzeige: 0 Nächte → "Tagesmiete", sonst N Tage = N Nächte
   const rangeDays = nights; // semantisch = Nächte
   const date = rangeFrom; // bestehender Code unten verwendet `date` als Startdatum
+
+  // Wiederhergestellte Mehrtagesauswahl → Umschalter passend setzen.
+  useEffect(() => {
+    if (range?.from && range.to && differenceInCalendarDays(range.to, range.from) >= 1) setRentalMode("multi");
+  }, [range]);
 
   const handleRangeSelect = (next: { from?: Date; to?: Date } | undefined) => {
     if (!next?.from) {
@@ -1283,10 +1291,37 @@ export function BookingSection() {
             <p className="text-center text-muted-foreground text-lg mb-8">Wähle deinen Zeitraum</p>
 
             <div className="flex flex-col items-center">
+              <div className="mb-5 inline-flex rounded-full border border-border bg-secondary p-1" role="tablist" aria-label="Mietart">
+                {([["day", "Tagesmiete (3 h bis 24 h)"], ["multi", "Mehrere Tage"]] as const).map(([m, label]) => (
+                  <button
+                    key={m}
+                    type="button"
+                    role="tab"
+                    aria-selected={rentalMode === m}
+                    onClick={() => { setRentalMode(m); handleRangeSelect(undefined); }}
+                    className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-colors ${rentalMode === m ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="mb-4 text-sm text-muted-foreground text-center max-w-md">
+                {rentalMode === "day"
+                  ? "Tippe einfach auf deinen Wunschtag. 24 Stunden wählst du im nächsten Schritt."
+                  : "Tippe zuerst auf den Abholtag und dann auf den Rückgabetag."}
+              </p>
               <Calendar
-                mode="range"
-                selected={range as { from: Date | undefined; to: Date | undefined }}
-                onSelect={handleRangeSelect}
+                {...(rentalMode === "day"
+                  ? {
+                      mode: "single" as const,
+                      selected: rangeFrom,
+                      onSelect: (d: Date | undefined) => handleRangeSelect(d ? { from: d, to: d } : undefined),
+                    }
+                  : {
+                      mode: "range" as const,
+                      selected: range as { from: Date | undefined; to: Date | undefined },
+                      onSelect: handleRangeSelect,
+                    })}
                 numberOfMonths={1}
                 locale={de}
                 disabled={(d) => {
@@ -1298,6 +1333,26 @@ export function BookingSection() {
                 className="rounded-3xl border border-border p-3 sm:p-8 shadow-lg pointer-events-auto text-base sm:text-lg [--cell-size:2.5rem] min-[360px]:[--cell-size:2.75rem] min-[390px]:[--cell-size:3rem] sm:[--cell-size:3.5rem]"
               />
 
+
+              {rangeFrom && availabilityReady && activePlates.length > 0 && (() => {
+                const o = dayOccupancy(busyMap, activePlates, rangeFrom, EARLIEST_START_HOUR, LATEST_RETURN_HOUR);
+                const free = o.total - o.fullyBooked;
+                return (
+                  <div className="mt-4 w-full max-w-md rounded-2xl border border-border bg-secondary p-4 text-sm" data-testid="day-occupancy">
+                    <p className="font-semibold text-foreground">
+                      {format(rangeFrom, "EEEE, d. MMMM", { locale: de })}: zu {o.percent} % ausgebucht
+                    </p>
+                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-background" aria-hidden="true">
+                      <div className="h-full bg-foreground" style={{ width: `${o.percent}%` }} />
+                    </div>
+                    <p className="mt-2 text-muted-foreground">
+                      {o.fullyBooked > 0 && <>{o.fullyBooked} von {o.total} Transportern den ganzen Tag gebucht. </>}
+                      {o.partlyBooked > 0 && <>{o.partlyBooked} nur zu bestimmten Uhrzeiten belegt. </>}
+                      {free === o.total && o.partlyBooked === 0 ? "Alle Transporter frei." : free > 0 ? `Noch ${free} ${free === 1 ? "Transporter" : "Transporter"} mit freien Zeiten (${EARLIEST_START_HOUR}–${LATEST_RETURN_HOUR} Uhr).` : "Leider alles belegt."}
+                    </p>
+                  </div>
+                );
+              })()}
 
               {rangeFrom && !rangeTo && (
                 <p className="mt-4 text-sm text-muted-foreground text-center">
@@ -1609,9 +1664,58 @@ export function BookingSection() {
                           </p>
                         ) : null;
                       })()}
-                      <p className="text-muted-foreground mt-1">
-                        Bitte ein anderes Fahrzeug wählen oder eine andere Uhrzeit bzw. ein anderes Datum auswählen.
-                      </p>
+                      {(() => {
+                        const freeAt = plateFreeAgainAt(currentPlate);
+                        if (!freeAt || !date) return null;
+                        const d = new Date(freeAt);
+                        const sameDay = d.toDateString() === date.toDateString();
+                        const hour = d.getMinutes() > 0 ? d.getHours() + 1 : d.getHours();
+                        if (!sameDay || hour > 20) return null;
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => { setStartHour(hour); setSelectedPlanId(null); setStep(1); }}
+                            className="mt-2 min-h-[44px] rounded-full bg-foreground px-4 text-sm font-medium text-background"
+                          >
+                            Stattdessen ab {hour}:00 Uhr buchen
+                          </button>
+                        );
+                      })()}
+                      {(() => {
+                        const alts = vehicles
+                          .map((v, i) => ({ v, i }))
+                          .filter(({ v }) => v.is_active && v.plate !== currentPlate && isPlateAvailable(v.plate ?? "")
+                            && planAllowedForClass(selectedPlanId, vehicleClassFromName(v.name, v.model, v.plate)));
+                        if (alts.length === 0) return (
+                          <p className="text-muted-foreground mt-2">Bitte eine andere Uhrzeit oder ein anderes Datum wählen.</p>
+                        );
+                        return (
+                          <div className="mt-3 space-y-2">
+                            <p className="font-medium text-foreground">Zur gleichen Zeit frei:</p>
+                            {alts.map(({ v, i }) => {
+                              const facts = [
+                                v.cargo_length_cm ? `Ladelänge ${cmToM(v.cargo_length_cm)}` : null,
+                                v.cargo_height_cm ? `Innenhöhe ${cmToM(v.cargo_height_cm)}` : null,
+                                v.cargo_volume_m3 ? `${String(v.cargo_volume_m3).replace(".", ",")} m³` : null,
+                                v.payload_kg ? `Nutzlast ${v.payload_kg.toLocaleString("de-DE")} kg` : null,
+                              ].filter(Boolean).join(" · ");
+                              return (
+                                <div key={v.id} className="rounded-xl border border-border bg-background p-3">
+                                  <p className="font-semibold text-foreground">{v.name} · {v.plate}</p>
+                                  {facts && <p className="text-xs text-muted-foreground mt-0.5">{facts}</p>}
+                                  <button
+                                    type="button"
+                                    onClick={() => chooseVehicle(i)}
+                                    className="mt-2 min-h-[44px] rounded-full bg-foreground px-4 text-sm font-medium text-background"
+                                  >
+                                    Diesen Transporter nehmen
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                   {selectedPlanEntry && (
@@ -1672,6 +1776,9 @@ export function BookingSection() {
                 includedRateCents={selectedPlanEntry?.extraKmCents ?? null}
                 addonsCents={Math.round(addonsTotal * 100)}
                 depositEur={DEPOSIT}
+                presets={selectedPlanEntry ? kmBonusPackages(vehicleClass)
+                  .filter((b) => b.durationHours === selectedPlanEntry.durationHours && b.freeKm > selectedPlanEntry.freeKm)
+                  .map((b) => ({ km: b.freeKm, label: `${b.shortLabel} für ${b.price} €` })) : []}
               />
             </div>
 
