@@ -484,6 +484,9 @@ export function Navbar() {
                 </div>
               )}
               {error && <p className="text-xs text-destructive">{error}</p>}
+              {error && showModal === "login" && suggestsPasswordReset(error) && (
+                <ForgotPassword key={`nav-reset-${form.email}`} initialEmail={form.email} label="Passwort jetzt zurücksetzen" prominent />
+              )}
               {info && <p className="text-xs text-foreground bg-secondary p-2 rounded-lg">{info}</p>}
 
               <button
