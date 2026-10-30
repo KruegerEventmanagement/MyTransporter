@@ -35,6 +35,7 @@ import { AdminLogin } from "@/components/admin/AdminLogin";
 import { DepositsAdmin } from "@/components/admin/DepositsAdmin";
 import { VehiclesAdmin } from "@/components/admin/VehiclesAdmin";
 import { CalendarAdmin } from "@/components/admin/CalendarAdmin";
+import { FleetTimeline } from "@/components/admin/FleetTimeline";
 import { DocumentBuilder } from "@/components/admin/DocumentBuilder";
 import { IssuedDocumentsArchive } from "@/components/admin/IssuedDocumentsArchive";
 import { CustomerMailsAdmin, BookingMailStatus } from "@/components/admin/CustomerMailsAdmin";
@@ -132,7 +133,7 @@ interface AdminNotification {
   created_at: string;
 }
 
-type Tab = "deposits" | "customers" | "bookings" | "calendar" | "vehicles" | "documents" | "birthdays" | "notifications" | "privacy";
+type Tab = "timeline" | "deposits" | "customers" | "bookings" | "calendar" | "vehicles" | "documents" | "birthdays" | "notifications" | "privacy";
 
 function AdminDashboard() {
   const [authReady, setAuthReady] = useState(false);
@@ -641,6 +642,9 @@ function AdminDashboard() {
           <TabButton active={tab === "calendar"} onClick={() => setTab("calendar")}>
             <CalendarDays className="w-4 h-4" /> Kalender
           </TabButton>
+          <TabButton active={tab === "timeline"} onClick={() => setTab("timeline")}>
+            <CalendarDays className="w-4 h-4" /> Zeitleiste
+          </TabButton>
           <TabButton active={tab === "vehicles"} onClick={() => setTab("vehicles")}>
             <Car className="w-4 h-4" /> Fahrzeuge
           </TabButton>
@@ -818,6 +822,7 @@ function AdminDashboard() {
         {tab === "deposits" && <DepositsAdmin initial={depositDeepLink} />}
 
         {tab === "calendar" && <CalendarAdmin />}
+        {tab === "timeline" && <FleetTimeline />}
 
         {tab === "vehicles" && <VehiclesAdmin />}
 
