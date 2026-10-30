@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Globe } from "lucide-react";
 import { LANGS, useI18n } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
 
 export function LanguageSwitcher() {
   const { lang, setLang, t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const current = LANGS.find((l) => l.code === lang)!;
+  const current = LANGS.find((l) => l.code === lang) ?? LANGS[0];
 
   useEffect(() => {
     if (!open) return;
@@ -19,7 +20,8 @@ export function LanguageSwitcher() {
 
   return (
     <div ref={ref} className="relative">
-      <button
+      <Button
+        variant="ghost"
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={t("lang.label")}
@@ -27,8 +29,8 @@ export function LanguageSwitcher() {
         className="flex min-h-10 items-center gap-1 rounded-full px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
       >
         <Globe className="h-4 w-4" />
-        {current.short}
-      </button>
+        {current?.short}
+      </Button>
       {open && (
         <ul
           role="listbox"
@@ -37,7 +39,8 @@ export function LanguageSwitcher() {
         >
           {LANGS.map((l) => (
             <li key={l.code}>
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 role="option"
                 aria-selected={l.code === lang}
@@ -50,7 +53,7 @@ export function LanguageSwitcher() {
                 }`}
               >
                 {l.label}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>

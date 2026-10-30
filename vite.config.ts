@@ -5,6 +5,7 @@
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { localizeJsx } from "./scripts/localize-jsx";
 // Server-Funktions-IDs: Compiler-Default sha256(<projektrelativer Pfad>--<Name>)
 // ist bereits verzeichnisunabhängig; bewusst kein Override, damit Web/Native/Live gleich bleiben.
 
@@ -25,5 +26,8 @@ export default defineConfig({
     : {
         server: { entry: "server" },
       },
-  vite: NATIVE ? { define: { "import.meta.env.VITE_MT_NATIVE": JSON.stringify("1") } } : {},
+  vite: {
+    plugins: [localizeJsx()],
+    ...(NATIVE ? { define: { "import.meta.env.VITE_MT_NATIVE": JSON.stringify("1") } } : {}),
+  },
 });
