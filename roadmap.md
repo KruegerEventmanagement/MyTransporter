@@ -1,10 +1,10 @@
 # Roadmap
 
 ## Mehrsprachigkeit (29.10.2026, 7 Sprachen)
-- [ ] Auftrag 30.10.: Sofortiger Sprachwechsel für alle Seiten und Buchungsschritte; sinngemäße Übersetzungen, deutsche Rechtstexte erhalten, ohne Veröffentlichung oder Versand.
+- [x] Auftrag 30.10.: Sofortiger React-Sprachwechsel mit 2.385 statischen Texten je Sprache für Seiten/Buchung/Profil/Fahrt/Admin; Kalender lokalisiert, Rechtstexte deutsch, Eingaben bleiben erhalten. Sieben Sprachen, Preise/FAQ/Rechtstexte und Datum→Uhrzeit im Browser geprüft; keine Veröffentlichung/Versand. Externe Stripe-Oberflächen, Logos und nicht katalogisierte Servermeldungen ausgenommen; angemeldete Profil-/Fahrtabläufe nicht vollständig visuell geprüft.
 - [x] Sprachwahl oben neben Login/Registrieren, gemerkt, Arabisch von rechts nach links; Menü, Login/Registrierung, Hilfe-Knopf (+ „So funktioniert's"), Fußzeile, „So funktioniert's" übersetzt; Hinweis „deutsche Fassung verbindlich" auf AGB/Datenschutz/Impressum.
-- [ ] Startseite-Texte und Buchungsablauf (BookingSection, Fahrzeugwahl, Tarife, Verifizierung, Zahlung, Fehlermeldungen) übersetzen.
-- [ ] Profil, Fahrtseite/Fotos/Rückgabe, Preise, FAQ, Kontakt, Langzeitmiete, Umzug, Mietratgeber, Über uns übersetzen.
+- [x] Startseite-Texte und Buchungsablauf über gemeinsamen statischen UI-Katalog übersetzt; unbekannte Servermeldungen bleiben unverändert statt unsicherer Live-Übersetzung.
+- [x] Profil, Fahrtseite/Fotos/Rückgabe, Preise, FAQ, Kontakt, Langzeitmiete, Umzug, Mietratgeber, Über uns in gemeinsamen UI-Katalog aufgenommen.
 - [ ] Später: Kundenmails in Kundensprache (Sprache bei Buchung speichern).
 
 ## Android package handover (23.10.2026; preparation only)

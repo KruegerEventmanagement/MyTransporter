@@ -21,13 +21,13 @@ export function translateText(source: string, lang: Lang): string {
   const key = source.replace(/\s+/g, " ").trim();
   const translated = PAGE_COPY[lang][key];
   if (translated) return source.replace(source.trim(), translated);
-  const dateMatch = /^(?:(Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag),? )?(\d{1,2})\. (\p{L}+) (\d{4})$/u.exec(key);
+  const dateMatch = /(?:(Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag),? )?(\d{1,2})\. (Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember) (\d{4})/u.exec(key);
   if (dateMatch) {
     const month = germanMonths.indexOf(dateMatch[3]);
     if (month >= 0) {
       const date = new Date(Date.UTC(Number(dateMatch[4]), month, Number(dateMatch[2]), 12));
       const formatted = new Intl.DateTimeFormat(locales[lang], { day: "numeric", month: "long", year: "numeric", ...(dateMatch[1] ? { weekday: "long" } : {}), timeZone: "Europe/Berlin" }).format(date);
-      return source.replace(source.trim(), formatted);
+      return translateText(source.replace(dateMatch[0], formatted), lang);
     }
   }
   for (const { pattern, translation } of templatePatterns(lang)) {
