@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Mehrsprachigkeit (29.10.2026, 7 Sprachen)
+- [ ] Auftrag 30.10.: Sofortiger Sprachwechsel für alle Seiten und Buchungsschritte; sinngemäße Übersetzungen, deutsche Rechtstexte erhalten, ohne Veröffentlichung oder Versand.
 - [x] Sprachwahl oben neben Login/Registrieren, gemerkt, Arabisch von rechts nach links; Menü, Login/Registrierung, Hilfe-Knopf (+ „So funktioniert's"), Fußzeile, „So funktioniert's" übersetzt; Hinweis „deutsche Fassung verbindlich" auf AGB/Datenschutz/Impressum.
 - [ ] Startseite-Texte und Buchungsablauf (BookingSection, Fahrzeugwahl, Tarife, Verifizierung, Zahlung, Fehlermeldungen) übersetzen.
 - [ ] Profil, Fahrtseite/Fotos/Rückgabe, Preise, FAQ, Kontakt, Langzeitmiete, Umzug, Mietratgeber, Über uns übersetzen.
