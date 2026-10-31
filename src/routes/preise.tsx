@@ -5,6 +5,9 @@ import { pageHead, SITE_URL, ORG_ID } from "@/lib/seo";
 import { Navbar } from "@/components/Navbar";
 import { TariffSection } from "@/components/TariffSection";
 import { AddonPackagesSection } from "@/components/AddonPackagesSection";
+import { AdvantagesSection } from "@/components/AdvantagesSection";
+import { CompareSection } from "@/components/CompareSection";
+import { BookingInfoSection } from "@/components/BookingInfoSection";
 import {
   PLAN_CATALOG,
   L4H2_SURCHARGE_PER_DAY_EUR,
@@ -149,6 +152,9 @@ function PreisePage() {
       <InFlowAd placement="inFlowTop" />
       <TariffSection />
       <AddonPackagesSection />
+      <AdvantagesSection />
+      <CompareSection />
+      <BookingInfoSection />
       <InFlowAd placement="inFlowBottom" />
 
       <section className="pb-16 px-4">

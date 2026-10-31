@@ -1,13 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { InFlowAd } from "@/components/ads/InFlowAd";
 import { pageHead } from "@/lib/seo";
 import { Navbar } from "@/components/Navbar";
-import { TariffSection } from "@/components/TariffSection";
-import { AdvantagesSection } from "@/components/AdvantagesSection";
-import { CompareSection } from "@/components/CompareSection";
-import { BookingInfoSection } from "@/components/BookingInfoSection";
-import { AddonPackagesSection } from "@/components/AddonPackagesSection";
-import { AdRails } from "@/components/ads/AdRails";
 import { AdConsentRevokeButton } from "@/components/ads/AdConsentRevokeButton";
 import founderPhoto from "@/assets/christian-krueger.jpeg.asset.json";
 
@@ -32,9 +25,6 @@ function UeberUnsPage() {
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground">
             Über MyTransporter
           </h1>
-          <p className="mt-4 text-muted-foreground">
-            Transporter L1H1 und L4H2 zum fairen Festpreis. Mehr Platz, faire Kilometer, ehrlich kommuniziert.
-          </p>
         </div>
       </section>
       <section className="px-4 pb-12">
@@ -57,14 +47,6 @@ function UeberUnsPage() {
           </div>
         </div>
       </section>
-      <AdRails>
-        <TariffSection />
-        <AddonPackagesSection />
-        <AdvantagesSection />
-        <InFlowAd placement="inFlowTop" />
-        <CompareSection />
-        <BookingInfoSection />
-      </AdRails>
       <footer className="py-12 text-center text-sm text-muted-foreground border-t border-border">
         <p>© 2026 MyTransporter. Alle Rechte vorbehalten.</p>
         <div className="mt-3 flex flex-wrap justify-center gap-4">
