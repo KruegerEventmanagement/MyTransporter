@@ -8,7 +8,7 @@ export const Route = createFileRoute("/ueber-uns")({
   head: () =>
     pageHead({
       path: "/ueber-uns",
-      title: "Über MyTransporter – lokale Transporter-Vermietung aus Leonberg",
+      title: "Über MyTransporter | Transporter-Vermietung aus Leonberg",
       description: "Wer hinter MyTransporter steht: Transporter-Vermietung mit kurzen und langen Fahrzeugen, fairen Kilometern und ehrlicher Beschreibung des Fahrzeugzustands.",
       webPageType: "AboutPage",
       breadcrumbs: [{ name: "Start", path: "/" }, { name: "Über uns", path: "/ueber-uns" }],
@@ -38,10 +38,10 @@ function UeberUnsPage() {
           <p className="mt-4 text-center font-semibold text-foreground">Christian Krüger</p>
           <p className="text-center text-sm text-muted-foreground">Gründer von MyTransporter</p>
           <div className="mt-8 space-y-5 text-foreground/90 leading-relaxed">
-            <p>Hallo, mein Name ist Christian Krüger. Die Idee zu MyTransporter ist aus einem ganz alltäglichen Problem entstanden: Ich wollte einmal einen Tisch von Leonberg-Ezach nach Leonberg-Eltingen bringen – eigentlich nur ein paar Minuten Fahrt. Doch in ganz Leonberg war kein freier Transporter zu finden. Am Ende musste ich bis nach Stuttgart fahren, dort reservieren, abholen und alles wieder zurückbringen. Für einen einzigen Tisch war das ein enormer Aufwand.</p>
-            <p>Genau da dachte ich mir: Das muss doch einfacher gehen. Ein Transporter direkt hier vor Ort, unkompliziert online buchbar, ohne lange Wege und zu einem Preis, der fair bleibt. So ist MyTransporter entstanden – ein kleines, lokales Angebot von hier für die Menschen hier.</p>
+            <p>Hallo, mein Name ist Christian Krüger. Die Idee zu MyTransporter ist aus einem ganz alltäglichen Problem entstanden: Ich wollte einmal einen Tisch von Leonberg-Ezach nach Leonberg-Eltingen bringen. Eigentlich nur ein paar Minuten Fahrt. Doch in ganz Leonberg war kein freier Transporter zu finden. Am Ende musste ich bis nach Stuttgart fahren, dort reservieren, abholen und alles wieder zurückbringen. Für einen einzigen Tisch war das ein enormer Aufwand.</p>
+            <p>Genau da dachte ich mir: Das muss doch einfacher gehen. Ein Transporter direkt hier vor Ort, unkompliziert online buchbar, ohne lange Wege und zu einem Preis, der fair bleibt. So ist MyTransporter entstanden: ein kleines, lokales Angebot von hier für die Menschen hier.</p>
             <p>Dabei ist mir Ehrlichkeit besonders wichtig. Unsere Transporter sind rund 18 Jahre alt, und das sieht man ihnen auch an. Es gibt Kratzer, kleine Dellen und hier und da eine Tür, die nicht ganz so will, wie sie soll. Was aber zählt: Die Fahrzeuge sind fahrbereit, haben TÜV, neue Bremsen und werden laufend gewartet und erneuert. Ihre Sicherheit steht an erster Stelle und ist zu keinem Zeitpunkt gefährdet.</p>
-            <p>Gerade weil wir auf neue, teure Fahrzeuge verzichten, können wir Ihnen so faire Preise anbieten. Ich wünsche mir deshalb ein bisschen Verständnis und Gelassenheit, wenn nicht alles wie neu aussieht – und ein freundliches, faires Miteinander, so wie man es unter Nachbarn eben pflegt.</p>
+            <p>Gerade weil wir auf neue, teure Fahrzeuge verzichten, können wir Ihnen so faire Preise anbieten. Ich wünsche mir deshalb ein bisschen Verständnis und Gelassenheit, wenn nicht alles wie neu aussieht, und ein freundliches, faires Miteinander, so wie man es unter Nachbarn eben pflegt.</p>
             <p>Ich freue mich, wenn MyTransporter Ihnen bei Ihrem nächsten Umzug, Möbelkauf oder Projekt ein Stück weiterhilft. Danke für Ihr Vertrauen!</p>
             <p className="font-semibold">Herzliche Grüße<br />Christian</p>
           </div>
