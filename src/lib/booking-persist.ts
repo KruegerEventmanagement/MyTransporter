@@ -6,6 +6,7 @@
  */
 import {
   getPlanById,
+  bookingPlanPriceForCatalogVersion,
   planLabelWithClass,
   KM_TARIFF_MIN_EUR,
   resolveCheckoutKmSnapshot,
@@ -58,7 +59,7 @@ export function resolveBookingPricing(params: {
   // Bisheriger Pfad (unverändert).
   const planEntry = getPlanById(planId, vehicleClass);
   const planLabel = planEntry ? planLabelWithClass(planEntry) : (md.plan ?? "Transporter-Miete");
-  const planPriceFull = planEntry?.price ?? KM_TARIFF_MIN_EUR[vehicleClass];
+  const planPriceFull = bookingPlanPriceForCatalogVersion(planId, vehicleClass, md.kmCatalog) ?? KM_TARIFF_MIN_EUR[vehicleClass];
   const appliedDiscountCents = Math.min(couponDiscountCents, Math.max(0, Math.round(planPriceFull * 100) - 100));
   const kmSnap = resolveCheckoutKmSnapshot(md, planId, vehicleClass);
   const addons = buildAddonSnapshot(addonIds);

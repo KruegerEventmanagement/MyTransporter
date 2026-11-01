@@ -81,7 +81,8 @@ describe("quoteRental", () => {
     expect(ok(quoteRental({ ...d, desiredKm: 150 }, "l1h1")).planId).toBe("24h_300");
     expect(ok(quoteRental({ ...d, desiredKm: 300 }, "l1h1")).planId).toBe("24h_300km");
     expect(ok(quoteRental({ ...d, desiredKm: 500 }, "l1h1")).planId).toBe("24h_500");
-    expect(ok(quoteRental({ ...d, desiredKm: 800 }, "l1h1")).planId).toBe("24h_800");
+    expect(ok(quoteRental({ ...d, desiredKm: 800 }, "l1h1")).planId).toBe("24h_500");
+    expect(ok(quoteRental({ ...d, desiredKm: 800 }, "l1h1")).totalEur).toBe(346);
     const h3 = { ...d, endDate: "2026-10-05", endTime: "12:00" };
     expect(ok(quoteRental({ ...h3, desiredKm: 50 }, "l1h1")).planId).toBe("3h");
   });
@@ -140,7 +141,7 @@ describe("Langzeit: angefragtes Kontingent = Wunschkilometer", () => {
 
 describe("Kilometer-Katalog 08.10.2026", () => {
   const NEW: Record<string, number> = { "3h": 70, "6h": 100, "24h_300": 150, "24h_300km": 300, "24h_500": 500, "24h_800": 800, multi_2d: 200, multi_3d: 300, multi_4d: 400, multi_5d: 500, multi_6d: 600, multi_7d: 700 };
-  const PRICES: Record<string, [number, number]> = { "3h": [49, 59], "6h": [69, 79], "24h_300": [99, 109], "24h_300km": [139, 149], "24h_500": [189, 199], "24h_800": [299, 309], multi_2d: [189, 209], multi_3d: [269, 299], multi_4d: [339, 379], multi_5d: [399, 449], multi_6d: [449, 509], multi_7d: [549, 619] };
+  const PRICES: Record<string, [number, number]> = { "3h": [49, 59], "6h": [69, 79], "24h_300": [99, 109], "24h_300km": [139, 149], "24h_500": [199, 209], "24h_800": [349, 359], multi_2d: [189, 209], multi_3d: [269, 299], multi_4d: [339, 379], multi_5d: [399, 449], multi_6d: [449, 509], multi_7d: [549, 619] };
   it("jede Klasse × jeder Tarif: neue km, unveränderte Preise", () => {
     for (const c of VEHICLE_CLASSES) for (const [id, km] of Object.entries(NEW)) {
       const p = getPlanById(id, c)!;
@@ -162,12 +163,14 @@ describe("Kilometer-Katalog 08.10.2026", () => {
     const b = ok(quoteRental({ ...d, desiredKm: 200 }, "l1h1"));
     expect([b.planId, b.totalEur, b.extraKmCostEur]).toEqual(["24h_300", 123.5, 24.5]);
   });
-  it("Paketinvariante: größeres 24h-Paket nie teurer als kleineres + Mehr-km", () => {
+  it("24h-Pakete: 800 km ist bewusst 3 € teurer als 500 km plus Mehrkilometer", () => {
     for (const c of VEHICLE_CLASSES) {
       const day = planCatalog(c).filter((p) => p.durationHours === 24).sort((a, b) => a.freeKm - b.freeKm);
       for (let i = 1; i < day.length; i++) {
         const lower = day[i - 1]!, upper = day[i]!;
-        expect(upper.price).toBeLessThan(lower.price + ((upper.freeKm - lower.freeKm) * lower.extraKmCents) / 100);
+        const lowerWithExtra = lower.price + ((upper.freeKm - lower.freeKm) * lower.extraKmCents) / 100;
+        if (upper.id === "24h_800") expect(upper.price - lowerWithExtra).toBe(3);
+        else expect(upper.price).toBeLessThan(lowerWithExtra);
       }
     }
   });

@@ -10,7 +10,7 @@ const eur = (planId: string, km: number, c: "l1h1" | "l4h2" | "l5h2" = "l1h1") =
 
 describe("Beispiele L1H1", () => {
   it("24 h", () => {
-    expect([150, 300, 303, 500, 800, 803].map((k) => eur("24h_300", k))).toEqual([99, 139, 140.47, 189, 299, 300.47]);
+    expect([150, 300, 303, 500, 800, 803].map((k) => eur("24h_300", k))).toEqual([99, 139, 140.47, 199, 346, 347.47]);
     const q = quoteCustomKm("24h_300", "l1h1", 303)!;
     expect([q.consideredPlanId, q.contractKm, q.surchargeCents, q.rateCents]).toEqual(["24h_300km", 303, 4147, 49]);
     expect(quoteCustomKm("24h_300", "l1h1", 100)!.contractKm).toBe(150);
