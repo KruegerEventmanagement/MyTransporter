@@ -1,5 +1,8 @@
 # Roadmap
 
+## 24h-Kilometerpakete 01.11.2026
+- [ ] Nur 500/800-km-Paketpreise ändern, Größenaufschläge erhalten, alle aktiven Preisquellen/Checkout/Anzeigen prüfen und Regressionstests durchführen; keine Veröffentlichung.
+
 ## Mehrsprachigkeit (29.10.2026, 7 Sprachen)
 - [x] Auftrag 30.10.: Sofortiger React-Sprachwechsel mit 2.385 statischen Texten je Sprache für Seiten/Buchung/Profil/Fahrt/Admin; Kalender lokalisiert, Rechtstexte deutsch, Eingaben bleiben erhalten. Sieben Sprachen, Preise/FAQ/Rechtstexte und Datum→Uhrzeit im Browser geprüft; keine Veröffentlichung/Versand. Externe Stripe-Oberflächen, Logos und nicht katalogisierte Servermeldungen ausgenommen; angemeldete Profil-/Fahrtabläufe nicht vollständig visuell geprüft.
 - [x] Sprachwahl oben neben Login/Registrieren, gemerkt, Arabisch von rechts nach links; Menü, Login/Registrierung, Hilfe-Knopf (+ „So funktioniert's"), Fußzeile, „So funktioniert's" übersetzt; Hinweis „deutsche Fassung verbindlich" auf AGB/Datenschutz/Impressum.
