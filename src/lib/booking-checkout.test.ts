@@ -121,6 +121,34 @@ beforeEach(() => {
 });
 
 describe("echter Checkout-Handler + Webhook-Persistenz", () => {
+  it.each([
+    ["24h_500", "L1H1", 199, 500],
+    ["24h_800", "L1H1", 349, 800],
+    ["24h_500", "L4H2", 209, 500],
+    ["24h_800", "L4H2", 359, 800],
+  ])("%s %s: neuer Betrag wird bezahlt und gespeichert", async (plan, cls, rent, km) => {
+    state.vehicles = [{ ...L1, name: `Citroen Jumper ${cls}` }];
+    const { res, total, md } = await checkout({ plan });
+    expect(res).toEqual({ clientSecret: "cs_test_secret" });
+    expect(total).toBe((rent + 200) * 100);
+    const b = resolveBookingPricing({ md, planId: plan, vehicleClass: cls === "L4H2" ? "l4h2" : "l1h1", addonIds: [], couponDiscountCents: 0, paid: { amountTotal: total, currency: "eur" } });
+    if (b.kind !== "ok") throw new Error(b.reason);
+    expect([b.planPrice, b.freeKm, b.kmPriceCents]).toEqual([rent, km, 49]);
+  });
+
+  it.each([["24h_500", 189, 500], ["24h_800", 299, 800]])("%s: alte offene Session behält ihren bezahlten Preis", (planId, rent, km) => {
+    const b = persist({ planId, kmCatalog: "km-2026-10-29", freeKm: String(km), kmPriceCents: "49" }, (Number(rent) + 200) * 100);
+    if (b.kind !== "ok") throw new Error(b.reason);
+    expect(b.planPrice).toBe(rent);
+    expect(b.freeKm).toBe(km);
+  });
+
+  it("alter Browser-Tab wird vor neuer Zahlungsanlage gestoppt", async () => {
+    const { res } = await checkout({ plan: "24h_800", kmCatalog: "km-2026-10-29" });
+    expect(res).toEqual({ error: "Tarife wurden aktualisiert. Bitte Seite neu laden und die aktuellen Konditionen prüfen." });
+    expect(state.sessions).toHaveLength(0);
+  });
+
   it("24 h + 173 km + Umzugspaket + 10 % Gutschein: Stripe-Summe = gespeicherte Summe", async () => {
     state.coupon = { ok: true, discountCents: 990, discountPercent: 10, code: "BDAY" };
     const { res, s, total, md } = await checkout({ customKm: 173, addonIds: ["umzugspaket"], couponCode: "BDAY" });
