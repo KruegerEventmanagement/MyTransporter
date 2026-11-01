@@ -1,5 +1,8 @@
 # Roadmap
 
+## 24h-Kilometerpakete 01.11.2026
+- [x] 500/800-km-Pakete L1H1 199/349 €, L4H2 209/359 €, Crafter rechnerisch 225/375 € (weiter erst ab 5 Tagen); FAQ/AGB/Vorteile und sieben Sprachen abgeglichen. Checkout-Version aktualisiert, offene alte Sessions behalten Preise; 146 Tests und Preis-/FAQ-/AGB-Browserprüfung bestanden, automatische Prüfung build OK. Keine Veröffentlichung, Zahlung oder Nachricht. Grundtarif unverändert 99 €/150 km; Vergleich 99 €/200 km ergibt 47/44 € Ersparnis; individuelle 800-km-Quote bleibt günstigere 500 km + 300 Mehr-km = 346 €.
+
 ## Mehrsprachigkeit (29.10.2026, 7 Sprachen)
 - [x] Auftrag 30.10.: Sofortiger React-Sprachwechsel mit 2.385 statischen Texten je Sprache für Seiten/Buchung/Profil/Fahrt/Admin; Kalender lokalisiert, Rechtstexte deutsch, Eingaben bleiben erhalten. Sieben Sprachen, Preise/FAQ/Rechtstexte und Datum→Uhrzeit im Browser geprüft; keine Veröffentlichung/Versand. Externe Stripe-Oberflächen, Logos und nicht katalogisierte Servermeldungen ausgenommen; angemeldete Profil-/Fahrtabläufe nicht vollständig visuell geprüft.
 - [x] Sprachwahl oben neben Login/Registrieren, gemerkt, Arabisch von rechts nach links; Menü, Login/Registrierung, Hilfe-Knopf (+ „So funktioniert's"), Fußzeile, „So funktioniert's" übersetzt; Hinweis „deutsche Fassung verbindlich" auf AGB/Datenschutz/Impressum.

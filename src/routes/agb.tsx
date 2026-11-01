@@ -64,8 +64,8 @@ function AgbPage() {
               <li>6-Stunden-Tarif „Umzug Mini": 69 € (L4H2 79 €) inklusive 100 Freikilometern (Rückgabe nach 6 Stunden).</li>
               <li>24-Stunden-Tarif „Umzugstag": 99 € (L4H2 109 €) inklusive 150 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
               <li>24-Stunden-Tarif „Langstrecke": 139 € (L4H2 149 €) inklusive 300 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
-              <li>24-Stunden-Tarif „Weitstrecke": 189 € (L4H2 199 €) inklusive 500 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
-              <li>24-Stunden-Tarif „Fernstrecke": 299 € (L4H2 309 €) inklusive 800 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
+              <li>24-Stunden-Tarif „Weitstrecke": 199 € (L4H2 209 €) inklusive 500 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
+              <li>24-Stunden-Tarif „Fernstrecke": 349 € (L4H2 359 €) inklusive 800 Freikilometern (Rückgabe am Folgetag zur gleichen Uhrzeit).</li>
               <li>2-Tage-Tarif „Kurzprojekt": 189 € (L4H2 209 €) inklusive 200 Freikilometern.</li>
               <li>3-Tage-Tarif „Umzug Plus": 269 € (L4H2 299 €) inklusive 300 Freikilometern.</li>
               <li>4-Tage-Tarif „Renovierungs-Tarif": 339 € (L4H2 379 €) inklusive 400 Freikilometern.</li>
@@ -134,7 +134,7 @@ function AgbPage() {
             <p>Es gilt das Recht der Bundesrepublik Deutschland. Gerichtsstand ist Leonberg. Sollten einzelne Bestimmungen unwirksam sein, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.</p>
           </div>
 
-          <p className="text-xs text-muted-foreground mt-8">Stand: 8. Oktober 2026. Für bereits abgeschlossene Buchungen gelten unverändert die bei der Buchung bestätigten Freikilometer und Mehrkilometersätze.</p>
+          <p className="text-xs text-muted-foreground mt-8">Stand: 1. November 2026. Für bereits abgeschlossene Buchungen gelten unverändert die bei der Buchung bestätigten Freikilometer und Mehrkilometersätze.</p>
         </div>
       </div>
     </main>

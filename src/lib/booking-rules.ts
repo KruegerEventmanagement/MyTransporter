@@ -5,10 +5,9 @@
  * als auch serverseitig (Stripe-Checkout, Webhook, Buchungsanlage) verwendet.
  * Der Zahlbetrag wird ausschließlich serverseitig aus diesem Katalog berechnet.
  *
- * Preis-Invariante: Grundtarif + Mehrkilometer ist nie günstiger als ein
- * beworbenes Kilometerpaket. Beispiel L1H1: 24h/150 km (99 €) + 150 km × 0,45 €
- * = 166,50 € (24h/300-km-Paket 139 €). Stand 08.10.2026: 3h 70, 6h 100, 24h 150/300/500/800,
- * Mehrtage 100 km je Miettag (2 Tage 200 … 7 Tage 700).
+ * Individuelle Kilometerberechnungen wählen weiterhin den günstigsten Tarif.
+ * Seit 01.11.2026 kostet das feste 800-km-Paket 349 €; 500 km + 300 Mehr-km
+ * sind mit 346 € günstiger. Der Grundtarif bleibt 99 € inklusive 150 km.
  *
  * Kilometer-Katalogversion: Seit KM_CATALOG_VERSION sind die zeitabhängigen
  * Inklusivkilometer um ein Drittel reduziert (Faktor 2/3). Bestehende Buchungen
@@ -178,13 +177,13 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
   },
   {
     id: "24h_500", label: "24 Stunden Weitstrecke", shortLabel: "24 h · 500 km",
-    days: 1, durationHours: 24, basePrice: 189, basePriceL4h2: 199, freeKm: 500,
+    days: 1, durationHours: 24, basePrice: 199, basePriceL4h2: 209, freeKm: 500,
     returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit",
     idealFor: "Weitere Strecken, größere Abholungen, Transporte außerhalb der Region",
   },
   {
     id: "24h_800", label: "24 Stunden Fernstrecke", shortLabel: "24 h · 800 km",
-    days: 1, durationHours: 24, basePrice: 299, basePriceL4h2: 309, freeKm: 800,
+    days: 1, durationHours: 24, basePrice: 349, basePriceL4h2: 359, freeKm: 800,
     returnRule: "Rückgabe am Folgetag zur gleichen Uhrzeit",
     idealFor: "Lange Einzelfahrten, Fernumzug, Abholung in einer anderen Region",
     highlight: "best_km", highlightLabel: "Bester Kilometer-Deal",
@@ -230,9 +229,19 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
 ];
 
 /** Aktuelle Kilometer-Katalogversion (wird in Stripe-Metadata festgehalten). */
-export const KM_CATALOG_VERSION = "km-2026-10-29";
+export const KM_CATALOG_VERSION = "km-2026-11-01";
 /** Vorherige Version (neue km, alte Sätze 0,35/0,29) – Snapshots daraus bleiben gültig. */
-export const PREVIOUS_KM_CATALOG_VERSIONS = ["km-2026-09-30", "km-2026-09-30b", "km-2026-10-06", "km-2026-10-08", "km-2026-10-27"] as const;
+export const PREVIOUS_KM_CATALOG_VERSIONS = ["km-2026-09-30", "km-2026-09-30b", "km-2026-10-06", "km-2026-10-08", "km-2026-10-27", "km-2026-10-29"] as const;
+
+/** Old sessions without a full price snapshot retain the two pre-update package prices. */
+export function bookingPlanPriceForCatalogVersion(planId: string, vehicleClass: VehicleClass, version: string | undefined): number | null {
+  const plan = getPlanById(planId, vehicleClass);
+  if (!plan) return null;
+  if (version === KM_CATALOG_VERSION) return plan.price;
+  const oldBase = plan.id === "24h_500" ? 189 : plan.id === "24h_800" ? 299 : null;
+  if (oldBase === null) return plan.price;
+  return priceForClass(vehicleClass, oldBase, oldBase + 10, l5h2PriceFrom(oldBase + 10));
+}
 
 export const KM_CATALOG_OUTDATED_MESSAGE =
   "Tarife wurden aktualisiert. Bitte Seite neu laden und die aktuellen Konditionen prüfen.";
