@@ -189,6 +189,17 @@ export async function createPrivacyStore(client?: AnyDb): Promise<PrivacyStore> 
       throw new Error(`Auth-Konto: ${error.message}`);
     },
     async deleteProfile(uid) {
+      // Admin-Snapshot der Kontaktdaten sichern, bevor das Profil entfernt wird.
+      const { data: prof } = await db.from("profiles").select("*").eq("id", uid).maybeSingle();
+      if (prof) {
+        const { error: snapErr } = await db.from("deleted_customer_contacts").upsert({
+          former_user_id: uid,
+          first_name: prof.first_name, last_name: prof.last_name, email: prof.email,
+          phone: prof.phone, birth_date: prof.birth_date,
+          address: { street: prof.address_street, postal_code: prof.address_postal_code, city: prof.address_city, country: prof.address_country },
+        }, { onConflict: "former_user_id", ignoreDuplicates: true });
+        check(snapErr, "Kontakt-Snapshot sichern");
+      }
       const { error } = await db.from("profiles").delete().eq("id", uid);
       check(error, "Profil löschen");
     },
