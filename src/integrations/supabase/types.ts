@@ -800,6 +800,39 @@ export type Database = {
         }
         Relationships: []
       }
+      deleted_customer_contacts: {
+        Row: {
+          address: Json | null
+          birth_date: string | null
+          created_at: string
+          email: string | null
+          first_name: string | null
+          former_user_id: string
+          last_name: string | null
+          phone: string | null
+        }
+        Insert: {
+          address?: Json | null
+          birth_date?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          former_user_id: string
+          last_name?: string | null
+          phone?: string | null
+        }
+        Update: {
+          address?: Json | null
+          birth_date?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          former_user_id?: string
+          last_name?: string | null
+          phone?: string | null
+        }
+        Relationships: []
+      }
       deposit_reminders: {
         Row: {
           created_at: string

@@ -1,3 +1,4 @@
+import { getDeletedCustomerInfo, type DeletedCustomerInfo } from "@/lib/deleted-customer.functions";
 import { AdminMailTest } from "@/components/admin/AdminMailTest";
 import { AdminKeySmsTest } from "@/components/admin/AdminKeySmsTest";
 import { AdminPrivacy } from "@/components/admin/AdminPrivacy";
@@ -1040,9 +1041,24 @@ function CustomerDetail({
     });
   }, [customer.id]);
 
+  const fetchDeleted = useServerFn(getDeletedCustomerInfo);
+  const [deletedInfo, setDeletedInfo] = useState<DeletedCustomerInfo | null>(null);
+  useEffect(() => {
+    if (customer.profile) return;
+    let alive = true;
+    fetchDeleted({ data: { userId: customer.id } })
+      .then((r) => alive && setDeletedInfo(r))
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [customer.id, customer.profile, fetchDeleted]);
+
+  const contactEmail = customer.profile?.email ?? deletedInfo?.email ?? null;
+  const contactPhone = customer.profile?.phone ?? deletedInfo?.phone ?? null;
   const name =
     [customer.profile?.first_name, customer.profile?.last_name].filter(Boolean).join(" ") ||
     customer.profile?.email ||
+    deletedInfo?.name ||
+    deletedInfo?.email ||
     "Unbekannter Kunde";
 
   const totalRentals = customer.bookings.length;
@@ -1071,6 +1087,9 @@ function CustomerDetail({
             <h1 className="text-lg font-bold truncate">{name}</h1>
             <p className="text-xs text-muted-foreground truncate">
               Kunden-ID {customer.id.slice(0, 8)}
+              {deletedInfo?.deleted && (
+                <> · Konto vom Kunden gelöscht{deletedInfo.deletedAt ? ` am ${new Date(deletedInfo.deletedAt).toLocaleDateString("de-DE")}` : ""}</>
+              )}
             </p>
           </div>
         </div>
@@ -1082,18 +1101,18 @@ function CustomerDetail({
             Kontakt
           </h2>
           <a
-            href={`mailto:${customer.profile?.email ?? ""}`}
+            href={`mailto:${contactEmail ?? ""}`}
             className="flex items-center gap-2 text-sm hover:underline"
           >
             <Mail className="w-4 h-4 text-muted-foreground" />
-            {customer.profile?.email || "-"}
+            {contactEmail || "-"}
           </a>
           <a
-            href={`tel:${customer.profile?.phone ?? ""}`}
+            href={`tel:${contactPhone ?? ""}`}
             className="flex items-center gap-2 text-sm hover:underline"
           >
             <Phone className="w-4 h-4 text-muted-foreground" />
-            {customer.profile?.phone || "Keine Telefonnummer"}
+            {contactPhone || "Keine Telefonnummer"}
           </a>
         </section>
 
@@ -1101,7 +1120,18 @@ function CustomerDetail({
           <h2 className="text-sm font-semibold mb-2 uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
             <IdCard className="w-4 h-4" /> Ausweis & Führerschein
           </h2>
-          {documents.length === 0 ? (
+          {documents.length === 0 && (deletedInfo?.docs.length ?? 0) > 0 ? (
+            <div className="grid grid-cols-2 gap-2">
+              {deletedInfo!.docs.map((doc) => (
+                <a key={doc.id} href={doc.url} target="_blank" rel="noreferrer" className="relative block rounded-xl overflow-hidden border border-border bg-secondary">
+                  <img src={doc.url} alt={doc.doc_type} className="w-full aspect-[1.586/1] object-cover" />
+                  <span className="absolute bottom-1 left-1 right-1 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded truncate">
+                    {docLabels[doc.doc_type] ?? doc.doc_type} · Archiv bis {new Date(doc.retention_until).toLocaleDateString("de-DE")}
+                  </span>
+                </a>
+              ))}
+            </div>
+          ) : documents.length === 0 ? (
             <p className="text-xs text-muted-foreground p-4 rounded-2xl bg-secondary">
               Keine Dokumente hochgeladen.
             </p>
