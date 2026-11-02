@@ -22,8 +22,8 @@ export const EXCEPTION_KIND_LABEL: Record<ExceptionKind, string> = {
   not_provided: "Ich kann/möchte den Nachweis nicht bereitstellen",
 };
 
-export function exceptionKind(value: string | null | undefined): ExceptionKind | null {
-  if (!value) return null;
+export function exceptionKind(value: unknown): ExceptionKind | null {
+  if (typeof value !== "string" || !value) return null;
   for (const k of Object.keys(EXCEPTION_KIND_PREFIX) as ExceptionKind[]) {
     if (value.startsWith(EXCEPTION_KIND_PREFIX[k])) return k;
   }
@@ -31,7 +31,7 @@ export function exceptionKind(value: string | null | undefined): ExceptionKind |
 }
 
 export function stripExceptionKind(value: string | null | undefined): string {
-  const v = value ?? "";
+  const v = typeof value === "string" ? value : "";
   const k = exceptionKind(v);
   return k ? v.slice(EXCEPTION_KIND_PREFIX[k].length) : v;
 }
@@ -44,12 +44,12 @@ export function withExceptionKind(kind: ExceptionKind, text: string): string {
  * Einordnung für die manuelle Prüfung. autoCharge ist immer false.
  * Nur bewusst nicht bereitgestellte Nachweise können nach Prüfung zur Pauschale führen.
  */
-export function classifyDocumentationGaps(exceptions: Record<string, string | undefined>) {
+export function classifyDocumentationGaps(exceptions: Record<string, unknown>) {
   const technical: string[] = [];
   const notProvided: string[] = [];
   const unclassified: string[] = [];
   for (const [key, value] of Object.entries(exceptions)) {
-    if (!value) continue;
+    if (typeof value !== "string" || !value) continue;
     const k = exceptionKind(value);
     if (k === "technical") technical.push(key);
     else if (k === "not_provided") notProvided.push(key);
