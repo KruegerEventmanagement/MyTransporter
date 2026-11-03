@@ -517,7 +517,8 @@ export function getAvailablePlans(
   const catalog = planCatalog(vehicleClass);
   let candidates: PlanEntry[];
   if (nights === 0) {
-    candidates = catalog.filter((p) => p.days === 1 && p.durationHours < 24);
+    // Ein Tag angeklickt: alle Tagestarife (3h, 6h und 24h mit Rückgabe am Folgetag).
+    candidates = catalog.filter((p) => p.days === 1);
   } else if (nights === 1) {
     candidates = catalog.filter((p) => p.days === 1 && p.durationHours === 24);
   } else if (nights >= 2 && nights <= 7) {

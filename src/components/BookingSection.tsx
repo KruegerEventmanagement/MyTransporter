@@ -978,6 +978,15 @@ export function BookingSection() {
   // Tarife passend zur gewählten Nächtezahl + Startstunde + Fahrzeugklasse
   const availablePlans = getAvailablePlans(nights, startHour, vehicleClass);
 
+  // Tagesmiete: nach Wahl der Startzeit ist „24 Stunden Umzugstag“ vorausgewählt (wenn frei).
+  const default24hAvailable =
+    step === 1 && startHour !== null && selectedPlanId === null && availabilityReady &&
+    (nights === 0 || nights === 1) &&
+    availablePlans.some((p) => p.id === "24h_300") && !isPlanUnavailable("24h_300");
+  useEffect(() => {
+    if (default24hAvailable) setSelectedPlanId("24h_300");
+  }, [default24hAvailable]);
+
   const selectedPlanEntry = selectedPlanId ? getPlanById(selectedPlanId, vehicleClass) : null;
 
   // Return info for selected plan
@@ -1385,7 +1394,7 @@ export function BookingSection() {
                     <> bis <strong className="text-foreground">{format(rangeTo, "PPP", { locale: de })}</strong></>
                   )}
                   {" "}· {nights === 0
-                    ? "Tagesmiete (3h/6h)"
+                    ? "Tagesmiete (3 h, 6 h oder 24 h)"
                     : `${nights} ${nights === 1 ? "Tag" : "Tage"} (${nights} ${nights === 1 ? "Nacht" : "Nächte"})`}
                 </p>
               )}
