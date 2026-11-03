@@ -76,6 +76,7 @@ interface Booking {
   start_hour: number;
   start_km: number | null;
   end_km: number | null;
+  return_reported_at?: string | null;
   pickup_code: string;
   return_code: string | null;
   status: string;
