@@ -293,6 +293,11 @@ export function adjustmentCents(t: Totals): number {
 /** Kandidatenauswahl für die 48h-Erinnerung (rein, testbar). Filtert nach effektivem
  *  Mietende (nicht Startdatum), überspringt bereits beanspruchte Versionen VOR dem Limit. */
 export type ReminderCandidate = { source: "booking" | "manual"; id: string; name: string; baseMs: number };
+/** Keep the database's microseconds for the exact optimistic-lock version. */
+export function reminderEndVersion(endMs: number, reportedAt: string | null): string {
+  if (reportedAt && Date.parse(reportedAt) >= endMs) return reportedAt;
+  return new Date(endMs).toISOString();
+}
 export function reminderCandidates(
   rows: { source: "booking" | "manual"; id: string; name: string; endMs: number; returnReportedMs: number | null; skip: boolean }[],
   fromMs: number,

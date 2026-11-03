@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
+import { reminderEndVersion } from "./deposit-review";
 
 const M12 = readFileSync(new URL("../../drizzle/migrations/0012_deposit_reviews.sql", import.meta.url), "utf8");
 const M13 = readFileSync(new URL("../../drizzle/migrations/0013_extra_km_mutual_lock.sql", import.meta.url), "utf8");
@@ -79,6 +80,18 @@ describe("Abschluss mit freiem Rückzahlungsbetrag (konsistente Rechnung)", () =
 });
 
 describe("Atomarer Erinnerungs-Claim", () => {
+  it("late return retains microseconds and creates exactly one reminder", async () => {
+    const later = "2026-10-21T10:00:00.123456Z";
+    await db.query(`UPDATE public.bookings SET return_reported_at = $1`, [later]);
+    const version = reminderEndVersion(Date.parse(END), later);
+    expect(version).toBe(later);
+    expect((await claim("booking", B, version)).result).toBe("created");
+    expect((await claim("booking", B, version)).result).toBe("exists");
+    expect((await db.query(`SELECT count(*)::int c FROM public.admin_notifications`)).rows[0]).toEqual({ c: 1 });
+  });
+  it("early return retains the planned end version", () => {
+    expect(reminderEndVersion(Date.parse(END), "2026-10-20T09:00:00.123456Z")).toBe("2026-10-20T10:00:00.000Z");
+  });
   it("erzeugt Dedupe + In-App-Aufgabe genau einmal je Version", async () => {
     expect((await claim("booking", B, END)).result).toBe("created");
     expect((await claim("booking", B, END)).result).toBe("exists");

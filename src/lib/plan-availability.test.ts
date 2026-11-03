@@ -129,6 +129,30 @@ describe("Fahrzeugwahl", () => {
   });
 });
 
+describe("Crafter minimum duration in plan selection", () => {
+  const map = slotsByPlate([]);
+  for (const planId of ["3h", "6h", "24h_300", "24h_500", "24h_800", "days_2", "days_3", "days_4"]) {
+    it(`${planId}: Crafter alone cannot make a short plan bookable`, () => {
+      const window = win(planId);
+      expect(isWindowBookable(map, [CRAFTER], window, planId)).toBe(false);
+      expect(availableClassesForWindow(map, [CRAFTER], window, planId)).toEqual([]);
+      expect(pickVehicleForWindow(map, [CRAFTER], window, { planId })).toBeNull();
+      expect(isSelectedPlanStillValid(map, [CRAFTER], window, planId)).toBe(false);
+    });
+  }
+  it("ignores a previously preferred Crafter for 24h and picks an eligible van", () => {
+    expect(pickVehicleForWindow(map, [CRAFTER, SHORT], win("24h_300"), {
+      planId: "24h_300", preferredPlate: CRAFTER.plate,
+    })).toBe(SHORT.plate);
+  });
+  it("five days still allows the Crafter and preserves the preferred plate", () => {
+    expect(isWindowBookable(map, [CRAFTER], win("days_5"), "days_5")).toBe(true);
+    expect(pickVehicleForWindow(map, [CRAFTER, SHORT], win("days_5"), {
+      planId: "days_5", preferredPlate: CRAFTER.plate,
+    })).toBe(CRAFTER.plate);
+  });
+});
+
 describe("Zeitraum-Navigation (Datum/Uhrzeit/Rückgabe)", () => {
   it("24h ab 10:00 am 25.09. ist über den kurzen Transporter buchbar", () => {
     const map = slotsByPlate([longBusy, ...crafterBusy]);
