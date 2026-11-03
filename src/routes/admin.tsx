@@ -76,6 +76,7 @@ interface Booking {
   start_hour: number;
   start_km: number | null;
   end_km: number | null;
+  return_reported_at?: string | null;
   pickup_code: string;
   return_code: string | null;
   status: string;
@@ -1219,6 +1220,11 @@ function CustomerDetail({
                         <Stat label="Start-KM" value={b.start_km ?? "-"} />
                         <Stat label="End-KM" value={b.end_km ?? "-"} />
                       </div>
+                      {b.return_reported_at && (
+                        <p className="text-sm text-foreground" data-testid="return-reported-at">
+                          Vom Kunden zurückgegeben am {new Date(b.return_reported_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin", dateStyle: "short", timeStyle: "short" })} Uhr
+                        </p>
+                      )}
                       {(b.ai_start_km != null || b.ai_end_km != null || b.ai_start_fuel_percent != null || b.ai_end_fuel_percent != null) && (
                         <div className="rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground space-y-0.5">
                           <p className="font-medium text-foreground">🤖 KI-Erkennung</p>
@@ -1241,7 +1247,7 @@ function CustomerDetail({
                           onClick={() => onConfirmReturn(b.id)}
                           className="w-full rounded-full bg-foreground text-background py-3 font-semibold flex items-center justify-center gap-2"
                         >
-                          <Check className="w-4 h-4" /> Rückgabe bestätigen
+                          <Check className="w-4 h-4" /> Rückgabe bestätigen (Altfall)
                         </button>
                       )}
 

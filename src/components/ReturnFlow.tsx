@@ -190,6 +190,7 @@ export function ReturnFlow({
   const [syncTick, setSyncTick] = useState(0);
   const [kmLocalOnly, setKmLocalOnly] = useState(false);
   const [awaitingAdmin, setAwaitingAdmin] = useState(!!initialCode);
+  const [confirmFinal, setConfirmFinal] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [aiRecognition, setAiRecognition] = useState<{ km: number | null; fuelPercent: number | null; confidence: string } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
@@ -1065,14 +1066,34 @@ export function ReturnFlow({
           <p className="mb-3 rounded-2xl border border-foreground p-3 text-xs font-medium" data-testid="report-pending">Abschluss ausstehend – noch nicht serverseitig bestätigt.</p>
         )}
         {actionError && <TripErrorBanner message={actionError} onRetry={() => void submitReport()} busy={saving} />}
-        <button
-          type="button"
-          disabled={!allDone || !addonsOk || saving || uploading}
-          onClick={() => void submitReport()}
-          className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Buchung abschließen
-        </button>
+        {confirmFinal ? (
+          <div role="dialog" aria-modal="true" data-testid="final-return-confirm" className="rounded-2xl border border-foreground p-4">
+            <p className="font-semibold text-foreground">Möchten Sie das Fahrzeug jetzt zurückgeben?</p>
+            <p className="mt-1 text-sm text-muted-foreground">Danach können Sie an Ihrer Buchung nichts mehr ändern.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setConfirmFinal(false)} className="min-h-11 rounded-full border border-border font-medium">
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                disabled={saving || uploading}
+                onClick={() => { setConfirmFinal(false); void submitReport(); }}
+                className="min-h-11 rounded-full bg-accent text-accent-foreground font-medium disabled:opacity-40"
+              >
+                Ja, jetzt zurückgeben
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            disabled={!allDone || !addonsOk || saving || uploading}
+            onClick={() => setConfirmFinal(true)}
+            className="w-full rounded-full bg-accent py-4 text-accent-foreground font-medium text-lg transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Fahrzeug zurückgeben
+          </button>
+        )}
         {!allDone && <p className="mt-3 text-center text-xs text-muted-foreground">Bitte zuerst alle Pflichtfotos und den Kilometerstand erfassen.</p>}
         <button type="button" onClick={() => { setStep("wizard"); goTo(slots.length - 1, "prev"); }} className="mt-3 w-full min-h-11 text-sm font-medium flex items-center justify-center gap-1">
           <ChevronLeft className="w-4 h-4" /> Zurück
