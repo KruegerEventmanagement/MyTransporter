@@ -2,7 +2,7 @@
 
 ## Gmail Live-Betrieb 03.11.2026
 - [x] Gmail-Freigabe true, verbundener Absender info@mytransporter.org und gmail.send bestätigt; bestehende Providerbindungen und Wiederholungssperren erhalten.
-- [ ] Aktuellen Stand veröffentlichen und Gmail-Versand auf der Live-Website sicher prüfen; keine Kundenmail-Replays oder Erstattungen auslösen.
+- [x] Veröffentlichung angefordert; auf https://mytransporter.org/admin im eigenen Betreiberkonto eine interne Testmail angenommen (Test 45c2ad27), Gmail-Nachricht nachgelesen; 64 Regressionstests und automatische Prüfung build OK. Kundenmail-Cron aktiv alle fünf Minuten, Refund-Abgleich aktiv stündlich. Keine Kundenmail-Replays oder Erstattungen ausgelöst.
 
 ## Monitoring 03.11.2026
 - [x] Email finding stale: Gmail release already true; connected profile GET 200 confirms info@mytransporter.org. No email sent, legacy Resend fences unchanged.
