@@ -1241,7 +1241,7 @@ function CustomerDetail({
                           onClick={() => onConfirmReturn(b.id)}
                           className="w-full rounded-full bg-foreground text-background py-3 font-semibold flex items-center justify-center gap-2"
                         >
-                          <Check className="w-4 h-4" /> Rückgabe bestätigen
+                          <Check className="w-4 h-4" /> Rückgabe bestätigen (Altfall)
                         </button>
                       )}
 
