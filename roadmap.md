@@ -1,11 +1,11 @@
 # Roadmap
 
 ## Monitoring 03.11.2026
-- [ ] Verify email provider readiness without replay or automatic fallback.
-- [ ] Exclude ineligible Crafter from short-plan availability and auto-selection.
-- [ ] Persist return notes through the authoritative return RPC.
-- [ ] Preserve timestamp precision for late-return deposit reminders.
-- [ ] Run focused regressions and resolve verified findings.
+- [x] Email finding stale: Gmail release already true; connected profile GET 200 confirms info@mytransporter.org. No email sent, legacy Resend fences unchanged.
+- [x] Plan-aware availability, price classes, start-hour checks and auto-selection exclude Crafter below five days; 24h remains available for eligible vans.
+- [x] Return notes forward migration 0027 applied and read back with active-account guard intact; saves trimmed strings up to 1000 characters without evidence exemption.
+- [x] Late-return reminder versions preserve raw timestamp precision, including manual end timestamps; exact RPC compare and dedupe unchanged.
+- [x] 200 focused tests passed; automatic build OK; real preview date→24h→eligible vehicle verified with active booking button. SQL tests exercise note persistence and late-return claims with microseconds. No real customer return/refund/email or push performed; code changes still need publication. Three findings fixed, email finding stale.
 
 ## 24h-Kilometerpakete 01.11.2026
 - [x] 500/800-km-Pakete L1H1 199/349 €, L4H2 209/359 €, Crafter rechnerisch 225/375 € (weiter erst ab 5 Tagen); FAQ/AGB/Vorteile und sieben Sprachen abgeglichen. Checkout-Version aktualisiert, offene alte Sessions behalten Preise; 146 Tests und Preis-/FAQ-/AGB-Browserprüfung bestanden, automatische Prüfung build OK. Keine Veröffentlichung, Zahlung oder Nachricht. Grundtarif unverändert 99 €/150 km; Vergleich 99 €/200 km ergibt 47/44 € Ersparnis; individuelle 800-km-Quote bleibt günstigere 500 km + 300 Mehr-km = 346 €.
