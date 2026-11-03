@@ -8,7 +8,7 @@ import {
   priceItems, computeTotals, photoChecklist, buildCustomerClosingMail,
   documentationFeeAllowed, eur, MAX_MESSAGE,
   bookingDepositState, allocateApplied, closingMailStillValid, safePhotoRows,
-  resolveRefund, shouldSendClosingMail, effectiveTotals, adjustmentCents, reminderCandidates,
+  resolveRefund, shouldSendClosingMail, effectiveTotals, adjustmentCents, reminderCandidates, reminderEndVersion,
   type PricedItem, type ReviewFacts, type Totals, type PayoutState
 } from "@/lib/deposit-review";
 import { resolveTripWindow } from "@/lib/trip-time";
@@ -496,10 +496,15 @@ export async function runDepositReminderSweep(nowMs = Date.now()): Promise<numbe
     })),
   ];
   const cands = reminderCandidates(rows, fromMs, nowMs, claimed, 25);
+  const versions = new Map([
+    ...bookings.map((b) => [`booking:${b.id}`, reminderEndVersion(resolveTripWindow(b).endMs, b.return_reported_at)] as const),
+    ...manual.map((m) => [`manual:${m.id}`, m.end_at as string] as const),
+  ]);
 
   let created = 0;
   for (const c of cands) {
-    const version = new Date(c.baseMs).toISOString();
+    const version = versions.get(`${c.source}:${c.id}`);
+    if (!version) continue;
     const body = `Kaution offen. Seit zwei Tagen offen: bitte Rückgabe und Nachweise prüfen und die Kaution abschließen. [kaution:${c.source}:${c.id}]`;
     // Atomar: Dedupe + In-App-Aufgabe in einer Transaktion, mit erneuter Prüfung
     // (Storno, erledigte Kaution, geändertes Mietende) unmittelbar vor Erzeugung.

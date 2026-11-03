@@ -503,16 +503,15 @@ export function BookingSection() {
   const isHourUnavailable = (hour: number) => {
     if (!date || activePlates.length === 0) return false;
     const wins = getAvailablePlans(nights, hour)
-      .map((p) => windowFor(p.id, hour))
-      .filter((w): w is { start: number; end: number } => w !== null);
+      .map((p) => ({ planId: p.id, window: windowFor(p.id, hour) }));
     if (wins.length === 0) return true;
     // Jeweils ein einzelnes Fahrzeug muss das GANZE Fenster frei haben.
-    return !wins.some((w) => isWindowBookable(busyMap, fleetLite, w));
+    return !wins.some(({ planId, window }) => window && isWindowBookable(busyMap, fleetLite, window, planId));
   };
 
   /** Fahrzeuge, die im gewählten Tarif-Zeitraum wirklich komplett frei sind. */
-  const classesForWindow = (w: { start: number; end: number } | null) =>
-    w ? availableClassesForWindow(busyMap, fleetLite, w) : [];
+  const classesForWindow = (w: { start: number; end: number } | null, planId: string) =>
+    w ? availableClassesForWindow(busyMap, fleetLite, w, planId) : [];
 
   // Fahrzeug passend zum Zeitraum wählen: günstigste verfügbare Klasse,
   // ausdrückliche gültige Kundenauswahl hat Vorrang.
@@ -528,12 +527,13 @@ export function BookingSection() {
     if (cur && !cur.is_active) return;
     const plate = pickVehicleForWindow(busyMap, fleetLite, selectionWindow, {
       preferredPlate: explicitPlate,
+      planId: selectedPlanId,
     });
     if (!plate) return;
     const next = vehicles.findIndex((v) => (v.plate ?? "") === plate);
     if (next >= 0 && next !== vehicleIdx) setVehicleIdx(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, availabilityReady, selectionWindow, busyMap, vehicles, vehicleIdx, fleetLite, explicitPlate]);
+  }, [step, availabilityReady, selectionWindow, busyMap, vehicles, vehicleIdx, fleetLite, explicitPlate, selectedPlanId]);
 
   /** Ausdrückliche Fahrzeugwahl des Kunden (bleibt erhalten, solange sie gültig ist). */
   const chooseVehicle = (i: number) => {
@@ -576,7 +576,7 @@ export function BookingSection() {
     if (fleetLite.length === 0) return true;
     const w = windowFor(planId, startHour);
     if (!w) return false;
-    return !isWindowBookable(busyMap, fleetLite, w);
+    return !isWindowBookable(busyMap, fleetLite, w, planId);
   };
 
   const registrationComplete = isLoggedIn || profileComplete;
@@ -942,7 +942,7 @@ export function BookingSection() {
   const canProceedStep0 = rangeFrom !== undefined && rangeTo !== undefined;
   /** Fahrzeug, das für die aktuelle Auswahl wirklich frei ist (null = keins). */
   const selectableVehiclePlate = selectionWindow
-    ? pickVehicleForWindow(busyMap, fleetLite, selectionWindow, { preferredPlate: explicitPlate })
+    ? pickVehicleForWindow(busyMap, fleetLite, selectionWindow, { preferredPlate: explicitPlate, planId: selectedPlanId })
     : null;
   // Fail closed: ohne geladene Verfügbarkeit und ohne wirklich freies Fahrzeug kein „Weiter“.
   const canProceedStep1 =
@@ -969,7 +969,7 @@ export function BookingSection() {
     if (step > 1 || !selectedPlanId) return;
     if (!availabilityReady) return;
     const w = startHour === null ? null : windowFor(selectedPlanId, startHour);
-    if (!isSelectedPlanStillValid(busyMap, fleetLite, w)) {
+    if (!isSelectedPlanStillValid(busyMap, fleetLite, w, selectedPlanId)) {
       setSelectedPlanId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1506,7 +1506,7 @@ export function BookingSection() {
                 const planBlocked = isPlanUnavailable(plan.id);
                 // Nur Klassen, für die in genau diesem Zeitraum ein Fahrzeug frei ist
                 const planClasses =
-                  startHour === null ? [] : classesForWindow(windowFor(plan.id, startHour));
+                  startHour === null ? [] : classesForWindow(windowFor(plan.id, startHour), plan.id);
                 const planFromPrice = lowestAvailablePlanPrice(plan, planClasses) ?? plan.basePrice;
                 return (
                 <button

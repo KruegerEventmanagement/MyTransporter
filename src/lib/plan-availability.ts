@@ -9,6 +9,7 @@
  * - Gesperrte Fahrzeuge (`is_active = false`) zählen nie als verfügbar.
  */
 import type { PlanEntry, VehicleClass } from "@/lib/booking-rules";
+import { planAllowedForClass } from "@/lib/booking-rules";
 import { isVehicleFree, type SlotRange } from "@/lib/availability-logic";
 
 export type VehicleLite = {
@@ -27,11 +28,13 @@ export function availableVehiclesForWindow(
   map: BusyMap,
   vehicles: VehicleLite[],
   window: SlotRange,
+  planId?: string | null,
 ): VehicleLite[] {
   return vehicles.filter(
     (v) =>
       v.isActive &&
       Boolean(v.plate) &&
+      planAllowedForClass(planId, v.vehicleClass) &&
       isVehicleFree(map, v.plate, window.start, window.end),
   );
 }
@@ -41,9 +44,10 @@ export function availableClassesForWindow(
   map: BusyMap,
   vehicles: VehicleLite[],
   window: SlotRange,
+  planId?: string | null,
 ): VehicleClass[] {
   const found = new Set(
-    availableVehiclesForWindow(map, vehicles, window).map((v) => v.vehicleClass),
+    availableVehiclesForWindow(map, vehicles, window, planId).map((v) => v.vehicleClass),
   );
   return CLASS_PRICE_ORDER.filter((c) => found.has(c));
 }
@@ -53,8 +57,9 @@ export function isWindowBookable(
   map: BusyMap,
   vehicles: VehicleLite[],
   window: SlotRange,
+  planId?: string | null,
 ): boolean {
-  return availableVehiclesForWindow(map, vehicles, window).length > 0;
+  return availableVehiclesForWindow(map, vehicles, window, planId).length > 0;
 }
 
 /** Preis eines Tarifs für eine Klasse (aus dem unveränderten Preiskatalog). */
@@ -81,9 +86,9 @@ export function pickVehicleForWindow(
   map: BusyMap,
   vehicles: VehicleLite[],
   window: SlotRange,
-  opts?: { preferredPlate?: string | null },
+  opts?: { preferredPlate?: string | null; planId?: string | null },
 ): string | null {
-  const free = availableVehiclesForWindow(map, vehicles, window);
+  const free = availableVehiclesForWindow(map, vehicles, window, opts?.planId);
   if (free.length === 0) return null;
   const preferred = opts?.preferredPlate;
   if (preferred && free.some((v) => v.plate === preferred)) return preferred;
@@ -104,7 +109,8 @@ export function isSelectedPlanStillValid(
   map: BusyMap,
   vehicles: VehicleLite[],
   window: SlotRange | null,
+  planId?: string | null,
 ): boolean {
   if (!window) return true;
-  return isWindowBookable(map, vehicles, window);
+  return isWindowBookable(map, vehicles, window, planId);
 }
