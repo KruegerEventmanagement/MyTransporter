@@ -1,5 +1,9 @@
 # Roadmap
 
+## Gmail Live-Betrieb 03.11.2026
+- [x] Gmail-Freigabe true, verbundener Absender info@mytransporter.org und gmail.send bestätigt; bestehende Providerbindungen und Wiederholungssperren erhalten.
+- [ ] Aktuellen Stand veröffentlichen und Gmail-Versand auf der Live-Website sicher prüfen; keine Kundenmail-Replays oder Erstattungen auslösen.
+
 ## Monitoring 03.11.2026
 - [x] Email finding stale: Gmail release already true; connected profile GET 200 confirms info@mytransporter.org. No email sent, legacy Resend fences unchanged.
 - [x] Plan-aware availability, price classes, start-hour checks and auto-selection exclude Crafter below five days; 24h remains available for eligible vans.
