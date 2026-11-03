@@ -190,6 +190,13 @@
       "when": 1793621193101,
       "tag": "0026_deleted_customer_contacts",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793691288571,
+      "tag": "0027_persist_return_notes",
+      "breakpoints": true
     }
   ]
 }
