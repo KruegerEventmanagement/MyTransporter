@@ -1596,7 +1596,7 @@ export function BookingSection() {
                 </div>
               )}
                 </div>
-                {nights === 1 && availablePlans.length > 0 && (
+                {(nights === 1 || (nights === 0 && selectedPlanEntry?.durationHours === 24)) && availablePlans.length > 0 && (
                   <p className="mt-3 text-xs text-muted-foreground text-center">
                     Rückgabe am Folgetag zur gleichen Uhrzeit. Brauchst du länger? Wähle im Kalender mehr Tage.
                   </p>
