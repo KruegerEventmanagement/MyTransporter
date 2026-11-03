@@ -131,7 +131,7 @@ describe("Fahrzeugwahl", () => {
 
 describe("Crafter minimum duration in plan selection", () => {
   const map = slotsByPlate([]);
-  for (const planId of ["3h", "6h", "24h_300", "24h_500", "24h_800", "days_2", "days_3", "days_4"]) {
+  for (const planId of ["3h", "6h", "24h_300", "24h_500", "24h_800", "multi_2d", "multi_3d", "multi_4d"]) {
     it(`${planId}: Crafter alone cannot make a short plan bookable`, () => {
       const window = win(planId);
       expect(isWindowBookable(map, [CRAFTER], window, planId)).toBe(false);
@@ -146,9 +146,9 @@ describe("Crafter minimum duration in plan selection", () => {
     })).toBe(SHORT.plate);
   });
   it("five days still allows the Crafter and preserves the preferred plate", () => {
-    expect(isWindowBookable(map, [CRAFTER], win("days_5"), "days_5")).toBe(true);
-    expect(pickVehicleForWindow(map, [CRAFTER, SHORT], win("days_5"), {
-      planId: "days_5", preferredPlate: CRAFTER.plate,
+    expect(isWindowBookable(map, [CRAFTER], win("multi_5d"), "multi_5d")).toBe(true);
+    expect(pickVehicleForWindow(map, [CRAFTER, SHORT], win("multi_5d"), {
+      planId: "multi_5d", preferredPlate: CRAFTER.plate,
     })).toBe(CRAFTER.plate);
   });
 });

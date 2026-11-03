@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 
 const SQL = readFileSync(new URL("../test/sql/trip-return.sql", import.meta.url), "utf8");
+const NOTES_MIGRATION = readFileSync(new URL("../../drizzle/migrations/0027_persist_return_notes.sql", import.meta.url), "utf8");
 const B = "11111111-2222-3333-4444-555555555555";
 const U1 = "aaaaaaaa-0000-0000-0000-000000000001";
 const U2 = "aaaaaaaa-0000-0000-0000-000000000002";
@@ -62,10 +63,46 @@ beforeEach(async () => {
   db = new PGlite();
   await db.exec(STUB);
   await db.exec(SQL);
+  await db.exec(NOTES_MIGRATION);
   await db.query(`INSERT INTO public.user_roles VALUES ($1,'admin')`, [ADMIN]);
 });
 
 describe("report_trip_return (SQL)", () => {
+  it("persists customer notes through the real migration and keeps them on retry", async () => {
+    await as(null);
+    await seed();
+    for (const tag of ALL) await photo(tag);
+    await as(U1);
+    expect((await report(1100, { notes: "  Blinker hinten links defekt  " })).ok).toBe(true);
+    expect((await booking()).return_exceptions).toEqual({ notes: "Blinker hinten links defekt" });
+    expect((await report(1100, { notes: "changed on retry" })).alreadyReported).toBe(true);
+    expect((await booking()).return_exceptions).toEqual({ notes: "Blinker hinten links defekt" });
+  });
+  it("caps notes at 1000 characters", async () => {
+    await as(null);
+    await seed();
+    for (const tag of ALL) await photo(tag);
+    await as(U1);
+    await report(1100, { notes: "x".repeat(1500) });
+    expect((await booking()).return_exceptions).toEqual({ notes: "x".repeat(1000) });
+  });
+  for (const notes of ["   ", false, { text: "invalid" }]) {
+    it(`ignores empty or non-string notes ${JSON.stringify(notes)}`, async () => {
+      await as(null);
+      await seed();
+      for (const tag of ALL) await photo(tag);
+      await as(U1);
+      await report(1100, { notes });
+      expect((await booking()).return_exceptions).toBeNull();
+    });
+  }
+  it("notes do not bypass missing evidence", async () => {
+    await as(null);
+    await seed();
+    await as(U1);
+    expect((await report(1100, { notes: "Photos are missing" })).ok).toBe(false);
+    expect((await booking()).return_reported_at).toBeNull();
+  });
   it("fehlender Start-Kilometerstand: Rückgabe gelingt mit Prüfvermerk, ohne erfundene Kosten", async () => {
     await as(null);
     await seed({ start_km: null });
