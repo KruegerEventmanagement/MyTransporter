@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { urlBase64ToUint8Array } from "./push-config";
-import { IS_NATIVE_BUILD } from "./native/platform";
+import { IS_NATIVE_BUILD, isNativeApp } from "./native/platform";
 import { getVapidPublicKey } from "./push.functions";
 
 let keyPromise: Promise<string | null> | null = null;
@@ -45,7 +45,7 @@ async function subscribeCurrent(reg: ServiceWorkerRegistration): Promise<PushSub
 
 export function pushSupported(): boolean {
   // Im nativen WebView kein Web-Push/Service Worker (native Push ist getrennt).
-  if (IS_NATIVE_BUILD) return false;
+  if (IS_NATIVE_BUILD || isNativeApp()) return false;
   return (
     typeof window !== "undefined" &&
     "serviceWorker" in navigator &&

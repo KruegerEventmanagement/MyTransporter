@@ -16,7 +16,12 @@
 <main>
   <h1>Keine Internetverbindung</h1>
   <p>Diese Seite braucht eine Verbindung. Bereits aufgenommene Rückgabefotos bleiben auf diesem Gerät gespeichert und werden übertragen, sobald du wieder online bist.</p>
-  <button onclick="location.reload()">Erneut versuchen</button>
+  <button onclick="retry()">Erneut versuchen</button>
 </main>
+<script>
+  // In der App (Capacitor errorPath) zurück zur Live-Website, im Browser neu laden.
+  function retry(){ if (location.hostname === "localhost" || location.protocol === "capacitor:") location.href = "https://mytransporter.org/"; else location.reload(); }
+  window.addEventListener("online", retry);
+</script>
 </body>
 </html>

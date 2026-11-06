@@ -1,4 +1,4 @@
-import { IS_NATIVE_BUILD } from "@/lib/native/platform";
+import { IS_NATIVE_BUILD, isNativeApp } from "@/lib/native/platform";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { privateHead } from "@/lib/seo";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -129,7 +129,7 @@ function TripView({ bookingId }: { bookingId: string }) {
 
   // Offline-Hinweis für Navigationen ohne Netz (keine privaten Daten im Cache).
   useEffect(() => {
-    if (IS_NATIVE_BUILD || typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    if (IS_NATIVE_BUILD || isNativeApp() || typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
     navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
   }, []);
 
