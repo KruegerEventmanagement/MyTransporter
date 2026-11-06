@@ -204,6 +204,13 @@
       "when": 1793721701091,
       "tag": "0028_final_customer_return",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793987105445,
+      "tag": "0029_customer_change_log",
+      "breakpoints": true
     }
   ]
 }

@@ -587,6 +587,36 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_change_log: {
+        Row: {
+          changed_at: string
+          field: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          source: string
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string
+          field: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          source?: string
+          user_id: string
+        }
+        Update: {
+          changed_at?: string
+          field?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       customer_coupons: {
         Row: {
           code: string
