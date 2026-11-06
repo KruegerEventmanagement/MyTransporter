@@ -518,6 +518,8 @@ function ProfilePage() {
           )}
         </section>
 
+        <AccountCredentialsSection currentEmail={profile?.email ?? null} />
+
         <DeleteAccountSection />
       </div>
     </main>
