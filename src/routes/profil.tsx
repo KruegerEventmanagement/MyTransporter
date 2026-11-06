@@ -1,3 +1,4 @@
+import { AccountCredentialsSection } from "@/components/AccountCredentialsSection";
 import { DocumentRemoval } from "@/components/DocumentRemoval";
 import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 import { AddressFields } from "@/components/AddressFields";
@@ -516,6 +517,8 @@ function ProfilePage() {
             </ul>
           )}
         </section>
+
+        <AccountCredentialsSection currentEmail={profile?.email ?? null} />
 
         <DeleteAccountSection />
       </div>

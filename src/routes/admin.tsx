@@ -1,3 +1,4 @@
+import { CustomerChangeLog } from "@/components/CustomerChangeLog";
 import { getDeletedCustomerInfo, type DeletedCustomerInfo } from "@/lib/deleted-customer.functions";
 import { AdminMailTest } from "@/components/admin/AdminMailTest";
 import { AdminKeySmsTest } from "@/components/admin/AdminKeySmsTest";
@@ -1097,6 +1098,7 @@ function CustomerDetail({
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        <CustomerChangeLog userId={customer.id} />
         <section className="rounded-2xl bg-card border border-border p-4 space-y-2">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
             Kontakt
