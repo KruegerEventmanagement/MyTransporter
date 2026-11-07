@@ -41,7 +41,7 @@ function statusTexts(part: GmailPart | undefined, inStatus = false, out: string[
 }
 
 export function maskDiagnostic(v: string): string {
-  return v.replace(/\s+/g, " ").replace(/\d{4,}/g, "…").trim().slice(0, 300);
+  return v.replace(/\s+/g, " ").replace(/\b\d{4,}\b/g, "…").trim().slice(0, 300);
 }
 
 export function parseGmailBounce(msg: GmailMessage): ParsedBounce | null {
