@@ -1,5 +1,10 @@
 # Roadmap
 
+## Schlüsselcode-Zustellung 07.11.2026
+- [x] Gmail-DSN geprüft: Outlook 550 5.7.1 AS9031519 (fehlende SPF/DKIM/DMARC-Authentifizierung). Öffentliche DNS-Abfrage: Google-DKIM vorhanden, SPF und DMARC fehlen. Gmail-Providerannahme um 07:45 UTC mit genau einem Versuch bestätigt; keine App-Versandsperre gefunden.
+- [x] 53 Regressionstests für Gmail, Schlüsselcode-Zeitfenster, App-Abruf und SMS bestanden; keine Codes ausgelesen, keine Nachrichten erneut versendet, keine Daten/Preise geändert.
+- [ ] SPF und DMARC in der Lovable/Name.com-Domainverwaltung ergänzen und danach Outlook-Zustellung überprüfen; blockiert, weil kein DNS-Schreibwerkzeug verfügbar ist. Wiederholung einer abgewiesenen Code-Mail erst gezielt nach Korrektur und Prüfung der aktuellen Miete, kein pauschaler Replay.
+
 ## Gmail Live-Betrieb 03.11.2026
 - [x] Gmail-Freigabe true, verbundener Absender info@mytransporter.org und gmail.send bestätigt; bestehende Providerbindungen und Wiederholungssperren erhalten.
 - [x] Veröffentlichung angefordert; auf https://mytransporter.org/admin im eigenen Betreiberkonto eine interne Testmail angenommen (Test 45c2ad27), Gmail-Nachricht nachgelesen; 64 Regressionstests und automatische Prüfung build OK. Kundenmail-Cron aktiv alle fünf Minuten, Refund-Abgleich aktiv stündlich. Keine Kundenmail-Replays oder Erstattungen ausgelöst.
