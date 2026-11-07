@@ -211,6 +211,13 @@
       "when": 1793987105445,
       "tag": "0029_customer_change_log",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794037969737,
+      "tag": "0030_mail_bounces",
+      "breakpoints": true
     }
   ]
 }

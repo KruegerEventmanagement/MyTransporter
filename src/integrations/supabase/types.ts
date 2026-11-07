@@ -1312,6 +1312,57 @@ export type Database = {
         }
         Relationships: []
       }
+      mail_bounces: {
+        Row: {
+          bounced_at: string | null
+          created_at: string
+          diagnostic: string | null
+          dsn_message_id: string
+          id: string
+          mail_kind: string | null
+          notified: boolean
+          original_thread_id: string | null
+          outbox_id: string | null
+          permanent: boolean
+          recipient_email: string | null
+          smtp_status: string | null
+          source_id: string | null
+          source_type: string | null
+        }
+        Insert: {
+          bounced_at?: string | null
+          created_at?: string
+          diagnostic?: string | null
+          dsn_message_id: string
+          id?: string
+          mail_kind?: string | null
+          notified?: boolean
+          original_thread_id?: string | null
+          outbox_id?: string | null
+          permanent?: boolean
+          recipient_email?: string | null
+          smtp_status?: string | null
+          source_id?: string | null
+          source_type?: string | null
+        }
+        Update: {
+          bounced_at?: string | null
+          created_at?: string
+          diagnostic?: string | null
+          dsn_message_id?: string
+          id?: string
+          mail_kind?: string | null
+          notified?: boolean
+          original_thread_id?: string | null
+          outbox_id?: string | null
+          permanent?: boolean
+          recipient_email?: string | null
+          smtp_status?: string | null
+          source_id?: string | null
+          source_type?: string | null
+        }
+        Relationships: []
+      }
       mail_provider_attempts: {
         Row: {
           ambiguous: boolean
