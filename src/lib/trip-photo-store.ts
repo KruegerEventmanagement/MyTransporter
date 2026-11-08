@@ -7,6 +7,32 @@
 export const TRIP_PHOTO_BUCKET = "trip-photos";
 const SIGNED_URL_TTL = 60 * 60;
 
+export function tripPhotoPath(bookingId: string, tag: string, mime = "image/jpeg"): string {
+  const id = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const extension = mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : /hei[cf]/i.test(mime) ? "heic" : "jpg";
+  return `${bookingId}/${tag}_${id}.${extension}`;
+}
+
+async function bounded<T>(task: PromiseLike<T>, timeoutMs = 45000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([Promise.resolve(task), new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error("PHOTO_NETWORK_TIMEOUT")), timeoutMs);
+    })]);
+  } finally { if (timer) clearTimeout(timer); }
+}
+
+function photoFailure(error: unknown, fallback: string): string {
+  const detail = error as { statusCode?: string | number; status?: number; message?: string; code?: string } | null;
+  const status = String(detail?.statusCode ?? detail?.status ?? "");
+  if (status === "401" || /jwt|token.*expired|not authenticated/i.test(detail?.message ?? "")) {
+    return "Deine Anmeldung ist abgelaufen. Bitte erneut anmelden. Das Foto bleibt für einen erneuten Versuch erhalten.";
+  }
+  if (status === "413" || /maximum.*size|too large|exceeded.*size/i.test(detail?.message ?? "")) return "Das Foto ist für den Upload zu groß. Bitte mit der Geräte-Kamera neu aufnehmen.";
+  if (status === "403" || detail?.code === "42501" || /row.level.security/i.test(detail?.message ?? "")) return "Das Foto wurde nicht freigegeben. Bitte die Anmeldung und die eigene Buchung prüfen und erneut versuchen.";
+  return fallback;
+}
+
 export interface StoredTripPhoto {
   /** Storage-Pfad im privaten Bucket. */
   path: string;
@@ -37,9 +63,9 @@ type Client = TripPhotoClient;
 export async function signTripPhoto(client: Client, path: string): Promise<string | null> {
   if (/^(https?:|data:)/.test(path)) return path;
   try {
-    const { data, error } = await client.storage
+    const { data, error } = await bounded(client.storage
       .from(TRIP_PHOTO_BUCKET)
-      .createSignedUrl(path, SIGNED_URL_TTL);
+      .createSignedUrl(path, SIGNED_URL_TTL), 10000);
     if (error || !data?.signedUrl) return null;
     return data.signedUrl;
   } catch {
@@ -56,19 +82,26 @@ export async function saveTripPhoto(
     uploadedPath?: string | null;
     /** Stabiler Zielpfad (Warteschlange). Ein "existiert bereits" gilt dann als hochgeladen. */
     path?: string;
+    timeoutMs?: number;
+    onStage?: (stage: "upload" | "record" | "confirmed") => void;
   },
 ): Promise<StoredTripPhoto> {
   let path = args.uploadedPath ?? null;
   if (!path) {
-    const candidate = args.path ?? `${args.bookingId}/${args.tag}_${Date.now()}.jpg`;
+    const candidate = args.path ?? tripPhotoPath(args.bookingId, args.tag, args.file.type);
+    args.onStage?.("upload");
     let upErr: unknown = null;
     try {
-      const res = await client.storage
+      // Bytes avoid Safari's fragile Blob/FormData transport and preserve the
+      // explicit MIME type (Storage SDK ignores contentType for Blob bodies).
+      const bytes = new Uint8Array(await bounded(args.file.arrayBuffer(), args.timeoutMs));
+      if (!bytes.byteLength) throw new Error("empty photo");
+      const res = await bounded(client.storage
         .from(TRIP_PHOTO_BUCKET)
-        .upload(candidate, args.file, {
+        .upload(candidate, bytes, {
           contentType: /^image\//.test(args.file.type) ? args.file.type : "image/jpeg",
           upsert: false,
-        });
+        }), args.timeoutMs);
       upErr = res.error;
     } catch (e) {
       upErr = e;
@@ -81,7 +114,7 @@ export async function saveTripPhoto(
     if (alreadyThere) alreadyThere = (await signTripPhoto(client, candidate)) !== null;
     if (upErr && !alreadyThere) {
       throw new TripPhotoError(
-        "Das Foto konnte nicht hochgeladen werden. Bitte Internetverbindung prüfen und erneut versuchen.",
+        photoFailure(upErr, "Das Foto konnte nicht hochgeladen werden. Bitte Internetverbindung prüfen und erneut versuchen."),
         "upload",
         null,
       );
@@ -90,26 +123,27 @@ export async function saveTripPhoto(
   }
 
   let recordOk = false;
+  args.onStage?.("record");
   // Retry nach verlorener Antwort: gibt es den Eintrag für genau diesen Pfad schon?
   if (args.uploadedPath || args.path) {
     try {
-      const { data: existing, error } = await client
+      const { data: existing, error } = await bounded(client
         .from("trip_photos")
         .select("id")
         .eq("booking_id", args.bookingId)
         .eq("photo_url", path)
-        .maybeSingle();
-      if (!error && existing) return { path, url: await signTripPhoto(client, path) };
+        .maybeSingle(), args.timeoutMs);
+      if (!error && existing) { args.onStage?.("confirmed"); return { path, url: await signTripPhoto(client, path) }; }
     } catch {
       /* dann regulär eintragen */
     }
   }
   try {
-    const { data, error } = await client
+    const { data, error } = await bounded(client
       .from("trip_photos")
       .insert({ booking_id: args.bookingId, photo_url: path, photo_type: args.tag })
       .select("id")
-      .single();
+      .single(), args.timeoutMs);
     recordOk = !error && !!data;
   } catch {
     recordOk = false;
@@ -122,6 +156,7 @@ export async function saveTripPhoto(
     );
   }
 
+  args.onStage?.("confirmed");
   return { path, url: await signTripPhoto(client, path) };
 }
 

@@ -226,11 +226,21 @@ export async function normalizeImageFile(
   try {
     return await decodeToJpeg(file, maxDimension, decodeTimeoutMs);
   } catch (err) {
-    // HEIC/HEIF kann z. B. Android Chrome nicht dekodieren: Original unverändert übernehmen
-    // statt das Foto grundlos abzulehnen (iOS Safari liefert meist schon JPEG).
+    // Android kann HEIC nicht nativ lesen. Lokal konvertieren statt ein nicht
+    // darstellbares, unkomprimiertes Original als fertigen Nachweis anzunehmen.
     if (isHeicFile(file) && err instanceof CaptureError && err.code === "decode_failed") {
-      const mime = /heif/i.test(file.type) || /\.heif$/i.test(file.name) ? "image/heif" : "image/heic";
-      return new Blob([await file.arrayBuffer()], { type: mime });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const converted = await Promise.race([
+          import("heic-to/csp").then(({ heicTo }) => heicTo({ blob: file, type: "image/jpeg", quality: 0.94 })),
+          new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("timeout")), 30000); }),
+        ]);
+        return await decodeToJpeg(new File([converted], "converted.jpg", { type: "image/jpeg" }), maxDimension, decodeTimeoutMs);
+      } catch {
+        throw new CaptureError("Dieses HEIC-Foto konnte nicht gelesen werden. Bitte ein JPEG-Foto wählen oder mit der Geräte-Kamera neu aufnehmen.", "decode_failed");
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
     }
     throw err;
   }
@@ -265,7 +275,11 @@ async function decodeToJpeg(file: File, maxDimension: number, decodeTimeoutMs: n
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new CaptureError("Foto konnte nicht verarbeitet werden.", "encode_failed");
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return await canvasToJpegBlob(canvas);
+    // Hohe Qualität für Kratzer, Tacho und Belege. Nur bei großen Ausgaben
+    // vorsichtig nachkomprimieren; niemals unter 0.86 oder erneut verkleinern.
+    let encoded = await canvasToJpegBlob(canvas, { quality: 0.92 });
+    if (encoded.size > 4 * 1024 * 1024) encoded = await canvasToJpegBlob(canvas, { quality: 0.86 });
+    return encoded;
   } finally {
     URL.revokeObjectURL(url);
   }
