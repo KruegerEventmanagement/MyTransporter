@@ -30,6 +30,7 @@ import { TripErrorBanner, TripPhotoThumb } from "./TripPhotoParts";
 import {
   loadTripPhotos,
   saveTripPhoto,
+  tripPhotoPath,
   TripPhotoError,
   BookingUpdateError,
   updateBookingChecked,
@@ -199,6 +200,8 @@ export function ReturnFlow({
   const [addonsReturned, setAddonsReturned] = useState(draft0?.addonsReturned ?? false);
   const recognize = useServerFn(recognizeOdometer);
   const report = useServerFn(reportReturn);
+  const uploadLock = useRef(false);
+  const directPath = useRef<string | null>(null);
   const storeRef = useRef<QueueStore | null>(null);
   const endKmManualRef = useRef(endKmManual);
   endKmManualRef.current = endKmManual;
@@ -311,7 +314,7 @@ export function ReturnFlow({
     async (id: string, tag: string) => {
       const store = storeRef.current;
       if (!store) return;
-      setPending((p) => (p[id] ? { ...p, [id]: { ...p[id]!, status: "uploading" } } : p));
+      setPending((p) => (p[id] ? { ...p, [id]: { ...p[id], status: "uploading" } } : p));
       try {
         const saved = await transferQueuedPhoto(supabase, store, id);
         delete pendingTags.current[id];
@@ -323,7 +326,7 @@ export function ReturnFlow({
         applySaved(tag, saved);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Übertragung fehlgeschlagen.";
-        setPending((p) => (p[id] ? { ...p, [id]: { ...p[id]!, status: "error", message } } : p));
+        setPending((p) => (p[id] ? { ...p, [id]: { ...p[id], status: "error", message } } : p));
       }
     },
     [applySaved],
@@ -455,6 +458,8 @@ export function ReturnFlow({
   /** Speichert ein BESTÄTIGTES Foto: erst dauerhaft lokal (IndexedDB-Commit), dann Übertragung. */
   const savePhoto = useCallback(
     async (file: Blob, tag: string, uploadedPath: string | null = null): Promise<boolean> => {
+      if (uploadLock.current) return false;
+      uploadLock.current = true;
       setUploading(true);
       setPhotoError(null);
       const store = storeRef.current;
@@ -463,7 +468,9 @@ export function ReturnFlow({
           const item = await enqueuePhoto(store, { userId, bookingId, tag, blob: file });
           pendingTags.current[item.id] = tag;
           setPending((p) => ({ ...p, [item.id]: { id: item.id, tag, status: "local", preview: makePreview(file), createdAt: item.createdAt } }));
+          uploadLock.current = false;
           setUploading(false);
+          setPending((p) => ({ ...p, [item.id]: { ...p[item.id], status: "uploading" } }));
           void (async () => {
             try {
               const saved = await transferQueuedPhoto(supabase, store, item.id, file);
@@ -477,13 +484,14 @@ export function ReturnFlow({
               if (tag === RETURN_DASHBOARD_TAG) void runOdometerAi(saved.path);
             } catch (err) {
               const message = err instanceof Error ? err.message : "Übertragung fehlgeschlagen.";
-              setPending((p) => (p[item.id] ? { ...p, [item.id]: { ...p[item.id]!, status: "error", message } } : p));
+              setPending((p) => (p[item.id] ? { ...p, [item.id]: { ...p[item.id], status: "error", message } } : p));
             }
             setSyncTick((n) => n + 1);
           })();
           return true;
         } catch (err) {
           if (!(err instanceof QueueUnavailableError)) {
+            uploadLock.current = false;
             setUploading(false);
             setPhotoError({ message: "Das Foto konnte auf diesem Gerät nicht gespeichert werden. Bitte erneut versuchen.", tag, file, uploadedPath: null });
             return false;
@@ -494,7 +502,9 @@ export function ReturnFlow({
       }
       try {
         // Erfolg erst nach Storage-Upload UND bestätigtem Datenbankeintrag.
-        const saved = await saveTripPhoto(supabase, { bookingId, tag, file, uploadedPath });
+        directPath.current ??= tripPhotoPath(bookingId, tag, file.type);
+        const saved = await saveTripPhoto(supabase, { bookingId, tag, file, uploadedPath, path: directPath.current });
+        directPath.current = null;
         applySaved(tag, saved);
         if (tag === RETURN_DASHBOARD_TAG) void runOdometerAi(saved.path);
         return true;
@@ -508,6 +518,7 @@ export function ReturnFlow({
         });
         return false;
       } finally {
+        uploadLock.current = false;
         setUploading(false);
       }
     },
@@ -528,6 +539,7 @@ export function ReturnFlow({
 
   const acceptFile = useCallback(async (file: File, source: Candidate["source"]) => {
     setPickError(null);
+    directPath.current = null;
     const seq = ++pickSeq.current;
     try {
       const blob = await normalizeImageFile(file);
@@ -559,7 +571,7 @@ export function ReturnFlow({
     setSlide(index);
   };
 
-  const current = slots[Math.min(slide, slots.length - 1)]!;
+  const current = slots[Math.min(slide, slots.length - 1)] ?? RETURN_RECEIPT_SLOT;
 
   const confirmCandidate = async () => {
     if (!candidate || uploading) return;
@@ -1182,7 +1194,7 @@ export function ReturnFlow({
               {confirmedThumb ?? <ReturnSlotOutline kind={current.outline} className="max-h-56" />}
               {done && (
                 <p className="mt-2 text-xs font-semibold text-foreground flex items-center gap-1" data-testid="slot-confirmed">
-                  <Check className="w-4 h-4" /> {hasPhoto(current.tag) ? (photos[current.tag] ? "Bestätigt und übertragen" : "Bestätigt – auf diesem Gerät gespeichert") : "Problem gemeldet – wird geprüft"}
+                  <Check className="w-4 h-4" /> {hasPhoto(current.tag) ? (photos[current.tag] ? "Bestätigt und übertragen" : "Noch nicht übertragen – auf diesem Gerät gespeichert") : "Problem gemeldet – wird geprüft"}
                 </p>
               )}
             </div>

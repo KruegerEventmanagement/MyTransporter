@@ -1,5 +1,10 @@
 # Roadmap
 
+## Mobile Fotos und Installation 08.11.2026
+- [ ] Fotoaufnahme, Formate, Uploadbestätigung, Wiederholungen und Wiederherstellung prüfen und reparieren; keine Kundenbuchungen oder Beweisfotos verändern.
+- [ ] Samsung/Chrome/iOS-Installationshilfe und Prompt-Fallback reparieren; bestehende Push-Worker erhalten.
+- [ ] Regressionstests und mobile Browserprüfung ausführen, Änderungen und Veröffentlichungsstatus dokumentieren.
+
 ## Schlüsselcode-Zustellung 07.11.2026
 - [x] Gmail-DSN geprüft: Outlook 550 5.7.1 AS9031519 (fehlende SPF/DKIM/DMARC-Authentifizierung). Öffentliche DNS-Abfrage: Google-DKIM vorhanden, SPF und DMARC fehlen. Gmail-Providerannahme um 07:45 UTC mit genau einem Versuch bestätigt; keine App-Versandsperre gefunden.
 - [x] 53 Regressionstests für Gmail, Schlüsselcode-Zeitfenster, App-Abruf und SMS bestanden; keine Codes ausgelesen, keine Nachrichten erneut versendet, keine Daten/Preise geändert.

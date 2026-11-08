@@ -1,6 +1,6 @@
 import { DocumentationFeeNotice } from "./DocumentationFeeNotice";
 import { PickupKeyStep } from "./PickupKeyStep";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Camera, ChevronRight, MessageSquare, Key, Plus, X, AlertTriangle, ChevronLeft } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { TripErrorBanner, TripPhotoThumb } from "./TripPhotoParts";
 import {
   loadTripPhotos,
   saveTripPhoto,
+  tripPhotoPath,
   TripPhotoError,
   updateBookingChecked,
   type StoredTripPhoto,
@@ -46,6 +47,8 @@ interface PreDriveFlowProps {
 }
 
 export function PreDriveFlow({ bookingId, onComplete }: PreDriveFlowProps) {
+  const uploadLock = useRef(false);
+  const capturePath = useRef<string | null>(null);
   const [photos, setPhotos] = useState<Record<string, StoredTripPhoto>>({});
   const [interiorPhoto, setInteriorPhoto] = useState<StoredTripPhoto | null>(null);
   const [damagePhotos, setDamagePhotos] = useState<StoredTripPhoto[]>([]);
@@ -135,6 +138,8 @@ export function PreDriveFlow({ bookingId, onComplete }: PreDriveFlowProps) {
 
   const savePhoto = useCallback(
     async (file: File, target: CaptureTarget, uploadedPath: string | null = null) => {
+      if (uploadLock.current) return;
+      uploadLock.current = true;
       setUploading(true);
       setPhotoError(null);
       const tag =
@@ -147,7 +152,9 @@ export function PreDriveFlow({ bookingId, onComplete }: PreDriveFlowProps) {
           : "pre_damage";
       try {
         // Erfolg erst nach Storage-Upload UND bestätigtem Datenbankeintrag.
-        const saved = await saveTripPhoto(supabase, { bookingId, tag, file, uploadedPath });
+        capturePath.current ??= tripPhotoPath(bookingId, tag, file.type);
+        const saved = await saveTripPhoto(supabase, { bookingId, tag, file, uploadedPath, path: capturePath.current });
+        capturePath.current = null;
         setCurrentTarget(null);
         if (target.kind === "side") {
           setPhotos((prev) => ({ ...prev, [target.id]: saved }));
@@ -182,6 +189,7 @@ export function PreDriveFlow({ bookingId, onComplete }: PreDriveFlowProps) {
           uploadedPath: err instanceof TripPhotoError ? err.uploadedPath : uploadedPath,
         });
       } finally {
+        uploadLock.current = false;
         setUploading(false);
       }
     },
@@ -198,6 +206,7 @@ export function PreDriveFlow({ bookingId, onComplete }: PreDriveFlowProps) {
 
   const openCamera = (target: CaptureTarget) => {
     setPhotoError(null);
+    capturePath.current = null;
     setCurrentTarget(target);
   };
 

@@ -4,7 +4,7 @@
  * eine stabile ID und einen stabilen Storagepfad; ein Retry nach verlorener
  * Antwort verwendet denselben Pfad. "Übertragen" erst nach Upload UND DB.
  */
-import { saveTripPhoto, TripPhotoError, type StoredTripPhoto, type TripPhotoClient } from "./trip-photo-store";
+import { saveTripPhoto, TripPhotoError, tripPhotoPath, type StoredTripPhoto, type TripPhotoClient } from "./trip-photo-store";
 
 export interface QueuedPhoto {
   id: string;
@@ -177,7 +177,7 @@ export async function enqueuePhoto(
     bookingId: args.bookingId,
     tag: args.tag,
     blob: args.blob,
-    path: `${args.bookingId}/${args.tag}_${id}.jpg`,
+    path: tripPhotoPath(args.bookingId, args.tag, args.blob.type),
     uploaded: false,
     createdAt: Date.now(),
     lastError: null,
@@ -188,6 +188,8 @@ export async function enqueuePhoto(
 
 // Pro Tab: dieselbe Aufnahme wird nie parallel übertragen (Remount, Doppelklick, online-Event).
 const inFlight = new Map<string, Promise<StoredTripPhoto>>();
+// Avoid concurrent image bodies saturating mobile connections/memory on reconnect.
+let tail: Promise<unknown> = Promise.resolve();
 
 export class PhotoUnreadableError extends Error {
   constructor() {
@@ -215,7 +217,7 @@ async function readableCopy(blob: Blob): Promise<Blob> {
 export function transferQueuedPhoto(client: TripPhotoClient, store: QueueStore, id: string, fresh?: Blob): Promise<StoredTripPhoto> {
   const running = inFlight.get(id);
   if (running) return running;
-  const p = (async () => {
+  const p = tail.catch(() => {}).then(async () => {
     const item = await store.get(id);
     if (!item) throw new Error("Aufnahme nicht mehr vorhanden.");
     try {
@@ -234,7 +236,8 @@ export function transferQueuedPhoto(client: TripPhotoClient, store: QueueStore, 
       await store.put({ ...item, uploaded, uploadedPath: uploaded ? item.path : null, lastError: e instanceof Error ? e.message : "Übertragung fehlgeschlagen." }).catch(() => {});
       throw e;
     }
-  })();
+  });
+  tail = p.catch(() => {});
   inFlight.set(id, p);
   p.then(
     () => inFlight.delete(id),
