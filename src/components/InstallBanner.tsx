@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
+import { Capacitor } from "@capacitor/core";
 import { isTripPath } from "@/lib/active-trip";
 import { Download, X, Share, Plus, MoreVertical } from "lucide-react";
 import {
@@ -53,6 +54,13 @@ export function InstallBanner() {
     }
 
     if (sessionStorage.getItem(DISMISS_KEY) === "1") return;
+
+    // Native Capacitor-App ist bereits installiert: nie PWA-Hinweis zeigen.
+    try {
+      if (Capacitor.isNativePlatform()) return;
+    } catch {
+      /* Browser ohne Capacitor-Bridge: normal weiter */
+    }
 
     const ua = window.navigator.userAgent;
     const p = detectPlatform(ua);
