@@ -13,7 +13,8 @@ export function tripPhotoPath(bookingId: string, tag: string, mime = "image/jpeg
   return `${bookingId}/${tag}_${id}.${extension}`;
 }
 
-async function bounded<T>(task: PromiseLike<T>, timeoutMs = 45000): Promise<T> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function bounded<T = any>(task: PromiseLike<T>, timeoutMs = 45000): Promise<T extends unknown ? (unknown extends T ? any : T) : T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([Promise.resolve(task), new Promise<never>((_, reject) => {
