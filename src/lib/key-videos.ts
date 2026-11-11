@@ -61,18 +61,21 @@ const escAttr = (s: string) =>
 /** Mail-kompatibler Block: verlinkte Vorschaubilder + klare Textlinks als Fallback. */
 export function keyVideosHtml(): string {
   const cells = KEY_VIDEO_LINKS.map(
-    (v) => `<td valign="top" width="50%" style="padding:6px;text-align:center;">
+    (v) => `<td valign="top" width="50%" style="padding:6px;text-align:center;font-family:Arial,Helvetica,sans-serif;">
       <a href="${escAttr(v.pageUrl)}" style="text-decoration:none;color:#000;">
         <img src="${escAttr(v.posterUrl)}" width="160" alt="${escAttr(v.title)}" style="display:block;margin:0 auto 8px;width:160px;max-width:100%;height:auto;border:0;border-radius:10px;" />
       </a>
       <a href="${escAttr(v.pageUrl)}" style="color:#000;font-weight:bold;font-size:14px;">▶ ${escAttr(v.title)}</a>
     </td>`,
   ).join("");
-  return `<div style="margin:18px 0;padding:14px;border:2px solid #000;border-radius:14px;font-family:system-ui,-apple-system,Segoe UI,sans-serif;">
-    <p style="margin:0 0 10px;font-size:15px;line-height:1.5;color:#000;"><strong>${escAttr(KEY_VIDEO_HINT)}</strong></p>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${cells}</tr></table>
-    <p style="margin:10px 0 0;font-size:12px;color:#555;">Bilder werden nicht angezeigt? Hier direkt öffnen: ${KEY_VIDEO_LINKS.map((v) => `<a href="${escAttr(v.videoUrl)}" style="color:#000;">${escAttr(v.title)}</a>`).join(" · ")}</p>
-  </div>`;
+  const font = "Arial,Helvetica,sans-serif";
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0;border:2px solid #000000;border-radius:14px;border-collapse:separate;">
+    <tr><td style="padding:14px;font-family:${font};">
+      <p style="margin:0 0 10px;font-family:${font};font-size:15px;line-height:1.5;color:#000000;"><strong>${escAttr(KEY_VIDEO_HINT)}</strong></p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${cells}</tr></table>
+      <p style="margin:10px 0 0;font-family:${font};font-size:12px;color:#555555;">Bilder werden nicht angezeigt? Hier direkt öffnen: ${KEY_VIDEO_LINKS.map((v) => `<a href="${escAttr(v.videoUrl)}" style="color:#000000;">${escAttr(v.title)}</a>`).join(" · ")}</p>
+    </td></tr>
+  </table>`;
 }
 
 /** Plaintext-Variante für Mails. */
