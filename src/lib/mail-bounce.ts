@@ -67,7 +67,7 @@ export function parseGmailBounce(msg: GmailMessage): ParsedBounce | null {
 /** Verständlicher Grund für den Betreiber. */
 export function bounceReason(b: Pick<ParsedBounce, "diagnostic" | "status">): string {
   const d = b.diagnostic ?? "";
-  if (/SPF|DKIM|DMARC|AS9031519/i.test(d)) return "Empfänger lehnt ab: Absender-Domain nicht authentifiziert (SPF/DMARC fehlen)";
+  if (/SPF|DKIM|DMARC|AS9031519/i.test(d)) return "Empfänger lehnt ab: Absender-Authentifizierung nicht akzeptiert (Ursache laut Empfängerserver, DNS-Einträge nicht automatisch fehlerhaft)";
   if (/5\.1\.1|does not exist|unknown user|user unknown|no such user/i.test(d)) return "E-Mail-Adresse existiert nicht";
   if (/5\.2\.2|quota|mailbox full/i.test(d)) return "Postfach des Empfängers voll";
   return `Zustellung fehlgeschlagen${b.status ? ` (${b.status})` : ""}`;
