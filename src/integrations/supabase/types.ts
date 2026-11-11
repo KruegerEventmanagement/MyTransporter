@@ -1314,6 +1314,10 @@ export type Database = {
       }
       mail_bounces: {
         Row: {
+          alert_attempts: number
+          alert_due: boolean
+          alert_last_error: string | null
+          alert_notification_id: string | null
           bounced_at: string | null
           created_at: string
           diagnostic: string | null
@@ -1330,6 +1334,10 @@ export type Database = {
           source_type: string | null
         }
         Insert: {
+          alert_attempts?: number
+          alert_due?: boolean
+          alert_last_error?: string | null
+          alert_notification_id?: string | null
           bounced_at?: string | null
           created_at?: string
           diagnostic?: string | null
@@ -1346,6 +1354,10 @@ export type Database = {
           source_type?: string | null
         }
         Update: {
+          alert_attempts?: number
+          alert_due?: boolean
+          alert_last_error?: string | null
+          alert_notification_id?: string | null
           bounced_at?: string | null
           created_at?: string
           diagnostic?: string | null
@@ -2619,6 +2631,15 @@ export type Database = {
         }[]
       }
       delete_expired_booking_holds: { Args: never; Returns: undefined }
+      deliver_mail_bounce_alert: {
+        Args: {
+          p_body: string
+          p_booking_id: string
+          p_bounce_id: string
+          p_title: string
+        }
+        Returns: string
+      }
       deposit_review_due_sources: {
         Args: { _from: string; _limit: number }
         Returns: {
