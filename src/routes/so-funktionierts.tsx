@@ -3,18 +3,14 @@ import { Navbar } from "@/components/Navbar";
 import { pageHead } from "@/lib/seo";
 import { HOW_COPY, type VideoKey } from "@/lib/how-it-works-i18n";
 import { useI18n } from "@/lib/i18n";
-import openVideo from "@/assets/schluesselkasten-oeffnen.mp4.asset.json";
-import openPoster from "@/assets/schluesselkasten-oeffnen-poster.jpg.asset.json";
-import closeVideo from "@/assets/schluesselkasten-schliessen.mp4.asset.json";
-import closePoster from "@/assets/schluesselkasten-schliessen-poster.jpg.asset.json";
-import obiVideo from "@/assets/schluesselkasten-obi.mp4.asset.json";
-import obiPoster from "@/assets/schluesselkasten-obi-poster.jpg.asset.json";
+import { KEY_VIDEO_ASSETS as VIDEOS, KEY_VIDEO_ANCHORS } from "@/lib/key-videos";
 
-const VIDEOS: Record<VideoKey, { src: string; poster: string }> = {
-  open: { src: openVideo.url, poster: openPoster.url },
-  close: { src: closeVideo.url, poster: closePoster.url },
-  obi: { src: obiVideo.url, poster: obiPoster.url },
-};
+function stepAnchor(keys: VideoKey[] | undefined): string | undefined {
+  if (!keys) return undefined;
+  if (keys.includes("open")) return KEY_VIDEO_ANCHORS.bedienung;
+  if (keys.includes("obi")) return KEY_VIDEO_ANCHORS.standort;
+  return undefined;
+}
 
 
 export const Route = createFileRoute("/so-funktionierts")({
@@ -32,6 +28,7 @@ export const Route = createFileRoute("/so-funktionierts")({
 function HowItWorksPage() {
   const { lang } = useI18n();
   const t = HOW_COPY[lang];
+  const firstVideoStep = t.steps.findIndex((s) => stepAnchor(s.videos?.map((v) => v.key)));
 
   return (
     <main className="min-h-screen bg-background">
@@ -44,7 +41,8 @@ function HowItWorksPage() {
 
         <ol className="mt-10 space-y-6">
           {t.steps.map((step, i) => (
-            <li key={i} className="rounded-2xl border border-border bg-card p-5 md:p-6">
+            <li key={i} id={stepAnchor(step.videos?.map((v) => v.key))} className="scroll-mt-24 rounded-2xl border border-border bg-card p-5 md:p-6">
+              {i === firstVideoStep && <span id={KEY_VIDEO_ANCHORS.videos} className="block scroll-mt-24" aria-hidden="true" />}
               <div className="flex items-start gap-4">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground">
                   {i + 1}

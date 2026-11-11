@@ -5,6 +5,7 @@ import { pushToAdmins } from "@/lib/push.functions";
 import { renderEmail, noteBlock, listBlock, rawListBlock, esc } from "@/lib/email-template";
 import { bookingWindowMs } from "@/lib/booking-window";
 import { loadBookingEmailSnapshot, sendDurableBookingMail } from "@/lib/booking-email-recovery.server";
+import { keyVideosHtml, keyVideosText } from "@/lib/key-videos";
 import {
   formatBerlin,
   LABEL_BOOKING_ID,
@@ -247,6 +248,7 @@ export async function sendBookingConfirmationImpl(data: {
     button: { label: "Zur Buchung", url: tripUrl },
     extraHtml:
       noteBlock(`<strong>Vorher- und Nachher-Foto vom Kilometerstand – nicht vergessen!</strong><br />${PRE_TRIP_PHOTO_NOTICE.join(" ")}<br /><a href="${tripUrl}" style="color:#000;font-weight:bold;">Jetzt zur Fahrt und Fotos machen</a>`) +
+      keyVideosHtml() +
       addonsHtmlBlock +
       listBlock("So geht es weiter", [
         "Deinen Schlüsselcode bekommst du automatisch 15 Minuten vor der Abholung per E-Mail.",
@@ -260,12 +262,34 @@ export async function sendBookingConfirmationImpl(data: {
       ),
   });
 
+  const text = [
+    `Hallo${profile?.first_name ? ` ${profile.first_name}` : ""},`,
+    "",
+    "deine Buchung bei MyTransporter ist bestätigt.",
+    "",
+    `Fahrzeug: ${booking.vehicle_name} · ${booking.vehicle_plate}`,
+    `Tarif: ${booking.plan_label}`,
+    `Abholung: ${startStr} Uhr`,
+    `Rückgabe spätestens: ${returnStr} Uhr`,
+    `Zur Buchung: ${tripUrl}`,
+    "",
+    ...keyVideosText(),
+    "",
+    "Deinen Schlüsselcode bekommst du automatisch 15 Minuten vor der Abholung per E-Mail.",
+    "Schlüssel: OBI Leonberg, vor dem Eingang an den Fahrradständern. Transporter: an der Poststraße 63, 71229 Leonberg, an der Straße – bitte nicht bei Othalo klingeln.",
+    "Bitte vor und nach der Fahrt Fotos vom Kilometerstand machen.",
+    `Stornieren: ${profilUrl} (bis 13 Stunden vor Abfahrt kostenlos).`,
+    "",
+    "Herzliche Grüße",
+    "Dein MyTransporter-Team",
+  ].join("\n");
+
   // Die Rechnung kommt als eigene E-Mail über die Kunden-Mail-Outbox (genau einmal,
   // mit archiviertem PDF). So kann die Bestätigung schnell raus und es gibt kein
   // Duplikat zwischen Anhang und separatem Rechnungsversand.
   const delivery = await sendDurableBookingMail(booking.id, "booking_confirmation", {
     from: PERSONAL_FROM, to: email, reply_to: DEFAULT_ADMIN_EMAIL,
-    subject: `MyTransporter · Buchungsbestätigung für ${startStr} Uhr`, html, text: "", attachment: null,
+    subject: `MyTransporter · Buchungsbestätigung für ${startStr} Uhr`, html, text, attachment: null,
   });
 
   if (delivery.sent) {

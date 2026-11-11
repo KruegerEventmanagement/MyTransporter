@@ -6,6 +6,7 @@
 import { formatBerlin, escapeHtml } from "@/lib/manual-notifications";
 import { formatCents } from "@/lib/money-input";
 import { BUSINESS } from "@/lib/seo";
+import { keyVideosHtml, keyVideosText } from "@/lib/key-videos";
 
 export const CONFIRMATION_FROM = "MyTransporter <info@mytransporter.org>";
 export const CONFIRMATION_REPLY_TO = "info@mytransporter.org";
@@ -86,6 +87,8 @@ export function buildCustomerConfirmation(i: ConfirmationInput): {
     "Alle Zeiten in deutscher Ortszeit (Europe/Berlin).",
     "Bitte bring zur Abholung deinen Führerschein und Personalausweis mit.",
     "",
+    ...keyVideosText(),
+    "",
     `Fragen oder Änderungen? Antworte einfach auf diese E-Mail oder ruf uns an: ${BUSINESS.phoneDisplay}.`,
     "",
     "Viele Grüße",
@@ -104,6 +107,7 @@ export function buildCustomerConfirmation(i: ConfirmationInput): {
     <table style="width:100%;border-collapse:collapse;font-size:14px;">${rows.map(([k, v]) => tr(k, v)).join("")}</table>
     <p style="font-size:12px;color:#666;margin:12px 0 0;">Alle Zeiten in deutscher Ortszeit (Europe/Berlin).</p>
     <p style="margin:16px 0 0;">Bitte bring zur Abholung deinen Führerschein und Personalausweis mit.</p>
+    ${keyVideosHtml()}
     <p style="margin:16px 0 0;">Fragen oder Änderungen? Antworte einfach auf diese E-Mail oder ruf uns an:
       <a href="tel:${escapeHtml(BUSINESS.phone)}" style="color:#000;">${escapeHtml(BUSINESS.phoneDisplay)}</a>.</p>
     <p style="margin:24px 0 0;">Viele Grüße<br />Dein MyTransporter-Team<br />

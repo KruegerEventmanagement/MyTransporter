@@ -1,5 +1,6 @@
 /** Schlüsselcode-SMS: reiner Textbaukasten + Telefonnummernprüfung (ohne Serverzugriff). */
 import { keySafeFor } from "./key-handover";
+import { KEY_VIDEOS_SHORT_LINK } from "./key-videos";
 
 export const KEY_SMS_SENDER = "MyTransport"; // max. 11 Zeichen
 
@@ -27,6 +28,7 @@ export function buildKeySms(plate: string, code: string): string | null {
     `MyTransporter: Dein Schlüsselcode für den Transporter ${plate}.`,
     `Dein Schlüssel liegt in Box ${safe} am OBI Leonberg (Eingang, Fahrradständer). Code: ${code}`,
     "Der Transporter steht an der Poststraße 63 an der Straße - bitte nirgends klingeln.",
+    `Videos zu Standort und Schlüsselkasten: ${KEY_VIDEOS_SHORT_LINK}`,
     "",
     "Bitte mach vor und nach der Fahrt Fotos in der App bzw. auf mytransporter.org: außen, innen, Tachostand und nach der Fahrt den Tankbeleg. Fehlen sie, müssen wir alles selbst prüfen lassen - dann werden mindestens 30 € von der Kaution abgezogen.",
     "Bitte nicht rauchen und Schäden sofort melden. Verschwiegene Schäden verursachen zusätzliche Kosten.",

@@ -71,7 +71,7 @@ describe("Bounce-Scan: Pagination und retryfähige Alarmierung", () => {
     expect(third.alerted).toBe(0);
     expect(m.notifications).toHaveLength(1);
     expect(m.notifications[0]).toContain("Schlüsselcode-Mail NICHT zugestellt");
-    expect(m.notifications[0]).toContain("SPF/DMARC");
+    expect(m.notifications[0]).toContain("Absender-Authentifizierung nicht akzeptiert");
   });
   it("erfasst nicht lesbare DSN nicht, damit der nächste Lauf sie erneut holt", async () => {
     const m = memStore();
