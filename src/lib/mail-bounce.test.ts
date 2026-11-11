@@ -28,7 +28,7 @@ describe("Gmail-Bounce-Auswertung", () => {
     expect(b.diagnostic).not.toMatch(/2026/); // Ziffernfolgen maskiert
   });
   it("erkennt fehlende Domain-Authentifizierung als Grund", () => {
-    expect(bounceReason(parseGmailBounce(dsn("1"))!)).toMatch(/SPF\/DMARC/);
+    expect(bounceReason(parseGmailBounce(dsn("1"))!)).toMatch(/Absender-Authentifizierung nicht akzeptiert/);
   });
   it("ignoriert normale Mails ohne Zustellstatus", () => {
     expect(parseGmailBounce({ id: "x", payload: { mimeType: "text/plain", body: { data: enc("Hallo") } } })).toBeNull();

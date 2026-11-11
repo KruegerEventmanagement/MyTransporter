@@ -5,6 +5,7 @@ import { pushToAdmins } from "@/lib/push.functions";
 import { renderEmail, noteBlock, listBlock, rawListBlock, esc } from "@/lib/email-template";
 import { bookingWindowMs } from "@/lib/booking-window";
 import { loadBookingEmailSnapshot, sendDurableBookingMail } from "@/lib/booking-email-recovery.server";
+import { keyVideosHtml, keyVideosText } from "@/lib/key-videos";
 import {
   formatBerlin,
   LABEL_BOOKING_ID,
