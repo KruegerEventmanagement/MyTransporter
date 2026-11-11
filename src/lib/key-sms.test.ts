@@ -24,9 +24,9 @@ describe("Schlüsselcode-SMS", () => {
     expect(normalizePhone("abc")).toBeNull();
     expect(normalizePhone(null)).toBeNull();
   });
-  it("Text bleibt im günstigen GSM-Zeichensatz (max. 4 Teile)", () => {
+  it("Text bleibt im günstigen GSM-Zeichensatz (max. 5 Teile inkl. Videolink)", () => {
     const t = buildKeySms("LEO MY 101", "63478791")!;
-    expect(smsSegments(t)).toBeLessThanOrEqual(4);
+    expect(smsSegments(t)).toBeLessThanOrEqual(5);
     expect(smsSegments("–".repeat(71))).toBe(2); // Unicode erkannt
     expect(smsSegments("a".repeat(161))).toBe(2);
   });
