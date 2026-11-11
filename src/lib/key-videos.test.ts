@@ -14,7 +14,10 @@ describe("Schlüssel-Videos", () => {
   });
   it("Mailblock: verlinkte Vorschaubilder, absolute URLs, kein Videoplayer", () => {
     const h = keyVideosHtml();
-    expect(h).not.toMatch(/<video|<iframe/);
+    expect(h).not.toMatch(/<video|<iframe|<div/);
+    expect(h.startsWith("<table role=\"presentation\"")).toBe(true);
+    expect(h).toContain("Arial,Helvetica,sans-serif");
+    expect(h).toMatch(/<img [^>]*width="160"[^>]*alt="Video 1/);
     expect(KEY_VIDEO_LINKS.map((v) => v.key)).toEqual(["obi", "open"]);
     for (const v of KEY_VIDEO_LINKS) {
       expect(v.posterUrl.startsWith("https://mytransporter.org/")).toBe(true);
