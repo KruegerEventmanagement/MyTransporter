@@ -137,7 +137,8 @@ export function ensureGoogleTag(): void {
   }
 
   gtag("js", new Date());
-  gtag("config", GOOGLE_ADS_ID, { send_page_view: false });
+  // Standard-Seitenaufruf erlaubt (nur nach Marketing-Einwilligung), damit Google den Tag erkennt.
+  gtag("config", GOOGLE_ADS_ID);
 }
 
 /* ------------------------------------------------ Interne Struktur-Events */
