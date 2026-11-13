@@ -18,7 +18,7 @@ export function authErrorMessage(raw: string | null | undefined): string {
     return "Bitte gib eine gültige E-Mail-Adresse ein.";
   if (/rate limit|too many/i.test(m))
     return "Zu viele Versuche. Bitte warte kurz und versuche es dann erneut.";
-  if (/timeout|timed out|zeitüberschreitung|failed to fetch|network/i.test(m))
+  if (/timeout|timed out|zeitüberschreitung|failed to fetch|network|load failed/i.test(m))
     return "Keine Verbindung. Bitte prüfe dein Internet und versuche es erneut.";
   return m || "Etwas ist schiefgelaufen. Bitte versuche es erneut.";
 }
