@@ -18,7 +18,7 @@ export function authErrorMessage(raw: string | null | undefined): string {
     return "Bitte gib eine gültige E-Mail-Adresse ein.";
   if (/rate limit|too many/i.test(m))
     return "Zu viele Versuche. Bitte warte kurz und versuche es dann erneut.";
-  if (/timeout|timed out|zeitüberschreitung|failed to fetch|network/i.test(m))
+  if (/timeout|timed out|zeitüberschreitung|failed to fetch|network|load failed/i.test(m))
     return "Keine Verbindung. Bitte prüfe dein Internet und versuche es erneut.";
   return m || "Etwas ist schiefgelaufen. Bitte versuche es erneut.";
 }
@@ -37,3 +37,29 @@ export const emailInputProps = {
   spellCheck: false,
   inputMode: "email",
 } as const;
+
+/**
+ * Auth-Aufruf mit Zeitlimit und Absturzschutz: In der Handy-App kann ein Aufruf
+ * hängen (z. B. App kurz gewechselt) oder werfen; dann nie endloser Spinner,
+ * sondern eine klare Meldung mit erneutem Versuch.
+ */
+export async function runAuthCall<T extends { error: { message: string } | null }>(
+  call: () => Promise<T>,
+  timeoutMs = 20000,
+): Promise<T | { data: null; error: { message: string } }> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      call(),
+      new Promise<{ data: null; error: { message: string } }>((resolve) => {
+        timer = setTimeout(() => resolve({ data: null, error: { message: "timeout" } }), timeoutMs);
+      }),
+    ]);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[auth] Anmeldung fehlgeschlagen:", msg.slice(0, 200));
+    return { data: null, error: { message: /fetch|network|load/i.test(msg) ? "network" : msg } };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}

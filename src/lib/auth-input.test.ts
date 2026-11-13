@@ -24,3 +24,15 @@ describe("auth-input", () => {
     expect(authErrorMessage("Email not confirmed")).toMatch(/bestätige/);
   });
 });
+
+import { runAuthCall as _run } from "./auth-input";
+describe("runAuthCall", () => {
+  it("bricht hängende Anmeldung nach Zeitlimit mit Verbindungsmeldung ab", async () => {
+    const r = await _run(() => new Promise<never>(() => {}), 20);
+    expect(authErrorMessage(r.error?.message)).toMatch(/Keine Verbindung/);
+  });
+  it("fängt Absturz ab statt endlos zu laden", async () => {
+    const r = await _run(() => Promise.reject(new TypeError("Failed to fetch")), 1000);
+    expect(authErrorMessage(r.error?.message)).toMatch(/Keine Verbindung/);
+  });
+});

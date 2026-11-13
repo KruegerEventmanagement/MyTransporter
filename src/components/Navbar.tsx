@@ -1,4 +1,4 @@
-import { normalizeEmail, authErrorMessage, suggestsPasswordReset } from "@/lib/auth-input";
+import { normalizeEmail, authErrorMessage, suggestsPasswordReset, runAuthCall } from "@/lib/auth-input";
 import { ForgotPassword } from "@/components/ForgotPassword";
 import { publicOrigin } from "@/lib/native/platform";
 import { AddressFields } from "@/components/AddressFields";
@@ -117,10 +117,12 @@ export function Navbar() {
   const handleLogin = async () => {
     setError(null);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: normalizeEmail(form.email),
-      password: form.password,
-    });
+    const { error } = await runAuthCall(() =>
+      supabase.auth.signInWithPassword({
+        email: normalizeEmail(form.email),
+        password: form.password,
+      }),
+    );
     setLoading(false);
     if (error) {
       setError(authErrorMessage(error.message));
@@ -152,7 +154,7 @@ export function Navbar() {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
+    const signUpResult = await runAuthCall(() => supabase.auth.signUp({
       email: normalizeEmail(form.email),
       password: form.password,
       options: {
@@ -168,12 +170,13 @@ export function Navbar() {
           ...addressSignUpMetadata(address),
         },
       },
-    });
+    }));
     setLoading(false);
-    if (error) {
-      setError(authErrorMessage(error.message));
+    if (signUpResult.error || !signUpResult.data) {
+      setError(authErrorMessage(signUpResult.error?.message));
       return;
     }
+    const data = signUpResult.data;
     // Konto serverseitig angelegt → CompleteRegistration (einmalig pro User-ID).
     const isExisting =
       !data.session && Array.isArray(data.user?.identities) && data.user!.identities!.length === 0;
