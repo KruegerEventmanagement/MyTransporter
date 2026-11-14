@@ -1,3 +1,4 @@
+import { refundBlockReasons } from "@/lib/deposit-refund-block";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -255,6 +256,7 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
   const settlement = ctx.settlements?.find((s: any) => s.id === ctx.review?.settlement_id);
   const externalRefundCents = (ctx.stripeRefunds ?? []).filter((r: any) => r.origin === "external" && r.status !== "failed" && r.status !== "canceled").reduce((a: number, r: any) => a + r.amount_cents, 0);
   const stripeBlocked = source === "booking" && externalRefundCents > 0;
+  const blockReasons = refundBlockReasons({ busy, itemsError: draftItems.error, refundError, stripeBlocked, externalRefundLabel: eur(externalRefundCents), refundCents });
 
   const docLink = (d: { label: string; signedUrl: string | null; fileState: string; removedByUser: boolean } | null) =>
     !d ? null : (
@@ -347,7 +349,7 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
           const def = DEDUCTION_DEFS[t]; const s = sel[t];
           const disabled = finalized || (t === "extra_km" && ((!ctx.extraKm.cents && !ctx.extraKm.rateCents) || ctx.extraKm.alreadyPaid)) || (t === "documentation_fee" && !ctx.docFee.allowed && !s.checked);
           return (
-            <div key={t} className="rounded-xl bg-secondary p-3 space-y-2">
+            <div key={t} className={`rounded-xl bg-secondary p-3 space-y-2 ${s.checked && (def.mode === "free" || def.mode === "amount_plus_fee") && !toCents(s.amount) ? "ring-2 ring-foreground" : ""}`}>
               <label className="flex items-start gap-2 text-sm">
                 <input type="checkbox" checked={s.checked} disabled={disabled} onChange={(e) => setT(t, { checked: e.target.checked })} className="mt-1" />
                 <span className="flex-1"><strong>{def.label}</strong>{s.checked && <span className="float-right">{eur(lineOf(t))}</span>}
@@ -394,9 +396,8 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
             {deviates && (
               <input value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder="Begründung der Anpassung (Pflicht), z. B. Kulanz oder zusätzlicher Abzug" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
             )}
-            {refundError && (refundTouched || deviates) && <p className="text-xs font-semibold">{refundError}</p>}
-            {stripeBlocked && <p className="text-xs font-semibold">Bei Stripe wurde direkt bereits {eur(externalRefundCents)} erstattet. Rückzahlung gesperrt – bitte in Stripe prüfen.</p>}
-            <button disabled={busy || !!refundError || !!draftItems.error || (stripeBlocked && (refundCents ?? 0) > 0)} onClick={doPayNow} className="w-full rounded-full bg-foreground text-background py-2.5 text-sm font-semibold disabled:opacity-50">
+                        {blockReasons.length > 0 && <ul className="rounded-lg border border-foreground px-3 py-2 text-xs font-semibold space-y-1">{blockReasons.map((r) => <li key={r}>⚠ {r}</li>)}</ul>}
+            <button disabled={blockReasons.length > 0} onClick={doPayNow} className="w-full rounded-full bg-foreground text-background py-2.5 text-sm font-semibold disabled:opacity-50">
               {(refundCents ?? 0) === 0 ? "Kaution einbehalten und abschließen" : source === "booking" ? `${eur(refundCents ?? 0)} jetzt per Stripe zurückzahlen` : `${eur(refundCents ?? 0)} manuell auszahlen & abschließen`}
             </button>
           </div>
