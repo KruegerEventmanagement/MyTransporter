@@ -15,7 +15,6 @@ import { de } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { FuelInfoNote } from "./FuelInfoNote";
 import { createBookingCheckout } from "@/lib/payments.functions";
-import { REVIEW_CONSENT_TEXT } from "@/lib/customer-mail-outbox";
 import { KM_CATALOG_VERSION } from "@/lib/booking-rules";
 import { previewCoupon, type CouponPreview } from "@/lib/birthday.functions";
 import { ageOn, MIN_DRIVER_AGE } from "@/lib/birthday";
@@ -2326,18 +2325,9 @@ export function BookingSection() {
                     </span>
                   </span>
                 </label>
-                <label className="mt-4 flex items-start gap-3 text-left rounded-2xl border border-border bg-background p-4 cursor-pointer">
-                  <Checkbox
-                    checked={reviewConsent}
-                    onCheckedChange={(v) => setReviewConsent(v === true)}
-                    className="mt-1"
-                    aria-label="Einwilligung Bewertungs-E-Mail"
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    <span className="font-semibold text-foreground block mb-1">Freiwillig: Bitte um Bewertung</span>
-                    {REVIEW_CONSENT_TEXT} Für die Buchung ist das nicht nötig.
-                  </span>
-                </label>
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Nach der Miete schicken wir dir eine kurze Feedback-Mail. Du kannst sie jederzeit über den Link in der Mail abbestellen.
+                </p>
               <FuelInfoNote freeKm={selectedPlanEntry ? contractKmShown : undefined} className="mt-4" />
 
               {/* Gutscheincode (z. B. Geburtstagsvorteil) – Prüfung erfolgt serverseitig */}

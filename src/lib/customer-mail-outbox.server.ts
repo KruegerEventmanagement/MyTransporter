@@ -156,14 +156,15 @@ export async function recordReviewConsent(r: {
   recordedBy?: string | null;
   grantedAt: string;
 }): Promise<void> {
-  const { REVIEW_CONSENT_TEXT, REVIEW_CONSENT_VERSION } = await import("@/lib/customer-mail-outbox");
-  if (r.version !== REVIEW_CONSENT_VERSION) throw new Error("Unbekannte Einwilligungsversion");
+  const { REVIEW_CONSENT_TEXT, REVIEW_CONSENT_VERSION, OPERATOR_PHONE_CONSENT_VERSION, OPERATOR_PHONE_CONSENT_TEXT } = await import("@/lib/customer-mail-outbox");
+  const text = r.version === REVIEW_CONSENT_VERSION ? REVIEW_CONSENT_TEXT : r.version === OPERATOR_PHONE_CONSENT_VERSION ? OPERATOR_PHONE_CONSENT_TEXT : null;
+  if (!text) throw new Error("Unbekannte Einwilligungsversion");
   const db = await admin();
   const { error } = await db.from("review_mail_consents").upsert(
     {
       source_type: r.source, source_id: r.sourceId, user_id: r.userId ?? null,
       email_lower: r.email ? r.email.trim().toLowerCase() : null, granted: true,
-      consent_version: r.version, consent_text: REVIEW_CONSENT_TEXT, origin: r.origin,
+      consent_version: r.version, consent_text: text, origin: r.origin,
       recorded_by: r.recordedBy ?? null, granted_at: r.grantedAt,
     } as never,
     { onConflict: "source_type,source_id", ignoreDuplicates: true },

@@ -225,7 +225,7 @@ function emptyForm(day: Date): FormState {
     price: "",
     hadPrice: false,
     sendConfirmation: true,
-    reviewConsent: false,
+    reviewConsent: true,
   };
 }
 

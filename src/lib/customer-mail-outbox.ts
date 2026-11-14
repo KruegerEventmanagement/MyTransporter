@@ -25,6 +25,10 @@ export const REVIEW_LINK_TEXT = "Google-Profil öffnen";
 export function effectiveReviewUrl(stored: string | null | undefined): string {
   return validateGoogleReviewUrl(stored) ?? GOOGLE_REVIEW_URL;
 }
+/** Ab 14.11.2026: kein Häkchen mehr; Betreiber holt die Zustimmung vor jeder Buchung telefonisch ein. */
+export const OPERATOR_PHONE_CONSENT_VERSION = "operator-phone-v1-2026-11-14";
+export const OPERATOR_PHONE_CONSENT_TEXT =
+  "Betreiber Christian Krüger hat bestätigt (14.11.2026), dass er vor jeder Buchung telefonisch die Zustimmung des Kunden zur Feedback-/Bewertungsmail einholt. Widerruf jederzeit per Abmeldelink oder an info@mytransporter.org.";
 export const REVIEW_CONSENT_VERSION = "review-mail-v1-2026-10-15";
 export const REVIEW_CONSENT_TEXT =
   "Ja, MyTransporter darf mir 24 Stunden nach dieser Buchung einmalig eine E-Mail mit der Bitte um eine freiwillige Google-Bewertung senden. Ich kann jederzeit widersprechen (Abmeldelink in der E-Mail oder an info@mytransporter.org).";

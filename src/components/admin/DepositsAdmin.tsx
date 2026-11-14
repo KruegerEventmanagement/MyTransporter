@@ -262,7 +262,10 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
     !d ? null : (
       <li key={d.label}>
         {d.signedUrl ? (
-          <a href={d.signedUrl} target="_blank" rel="noreferrer" className="underline">{d.label}</a>
+          <figure className="space-y-1">
+            <img src={d.signedUrl} alt={d.label} draggable={false} className="pointer-events-none select-none w-full aspect-[3/2] object-contain rounded-lg border border-border bg-muted" loading="lazy" />
+            <figcaption className="text-xs text-muted-foreground">{d.label}</figcaption>
+          </figure>
         ) : (
           <span>{d.label} ({d.removedByUser ? "vom Kunden entfernt" : d.fileState === "path_rejected" ? "Zuordnung ungültig" : "nicht verfügbar"})</span>
         )}
@@ -314,7 +317,7 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
       {details && (details.documents.license.front || details.documents.license.back || details.documents.id.front || details.documents.id.back || details.documents.others.length > 0) && (
         <div className="rounded-2xl border border-border bg-card p-4 space-y-1 text-sm">
           <h3 className="text-sm font-semibold">Kundendokumente</h3>
-          <ul className="list-disc pl-5 space-y-1">
+          <ul className="grid grid-cols-2 gap-3 list-none">
             {docLink(details.documents.license.front)}
             {docLink(details.documents.license.back)}
             {docLink(details.documents.id.front)}
