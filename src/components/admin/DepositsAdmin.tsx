@@ -349,7 +349,7 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
           const def = DEDUCTION_DEFS[t]; const s = sel[t];
           const disabled = finalized || (t === "extra_km" && ((!ctx.extraKm.cents && !ctx.extraKm.rateCents) || ctx.extraKm.alreadyPaid)) || (t === "documentation_fee" && !ctx.docFee.allowed && !s.checked);
           return (
-            <div key={t} className="rounded-xl bg-secondary p-3 space-y-2">
+            <div key={t} className={`rounded-xl bg-secondary p-3 space-y-2 ${s.checked && (def.mode === "free" || def.mode === "amount_plus_fee") && !toCents(s.amount) ? "ring-2 ring-foreground" : ""}`}>
               <label className="flex items-start gap-2 text-sm">
                 <input type="checkbox" checked={s.checked} disabled={disabled} onChange={(e) => setT(t, { checked: e.target.checked })} className="mt-1" />
                 <span className="flex-1"><strong>{def.label}</strong>{s.checked && <span className="float-right">{eur(lineOf(t))}</span>}
