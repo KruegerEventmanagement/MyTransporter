@@ -1,4 +1,4 @@
-import { refundBlockReasons } from "@/lib/deposit-refund-block";
+import { refundBlockReasons, parseLenientEuro } from "@/lib/deposit-refund-block";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -170,8 +170,8 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
       if (t === "extra_km" && !ctx.extraKm.cents) it.quantity = Number.parseInt(s.quantity, 10);
       if (def.mode === "per_unit") it.quantity = Number.parseInt(s.quantity, 10);
       if (def.mode === "free" || def.mode === "amount_plus_fee") {
-        const c = toCents(s.amount);
-        if (c == null || c === 0) return { items: [], error: `${def.label}: Betrag eingeben` };
+        const c = parseLenientEuro(s.amount);
+        if (c == null || c === 0) return { items: [], error: s.amount.trim() ? `${def.label}: Bitte nur den Betrag als Zahl eingeben, z. B. 20` : `${def.label}: Betrag eingeben` };
         it.amount_cents = c;
       }
       out.push(it);
@@ -185,9 +185,9 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
     const def = DEDUCTION_DEFS[t]; const s = sel[t];
     if (def.mode === "fixed") return def.unitCents!;
     if (def.mode === "per_unit") return def.unitCents! * (Number.parseInt(s.quantity, 10) || 0);
-    if (def.mode === "amount_plus_fee") return (toCents(s.amount) ?? 0) + def.feeCents!;
+    if (def.mode === "amount_plus_fee") return (parseLenientEuro(s.amount) ?? 0) + def.feeCents!;
     if (def.mode === "snapshot") return ctx.extraKm.cents ?? (ctx.extraKm.rateCents ?? 0) * (Number.parseInt(s.quantity, 10) || 0);
-    return toCents(s.amount) ?? 0;
+    return parseLenientEuro(s.amount) ?? 0;
   };
   const total = TYPES.filter((t) => sel[t].checked).reduce((s, t) => s + lineOf(t), 0);
   const suggestedRefund = dep == null ? 0 : Math.max(0, dep - Math.min(total, dep));
@@ -349,7 +349,7 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
           const def = DEDUCTION_DEFS[t]; const s = sel[t];
           const disabled = finalized || (t === "extra_km" && ((!ctx.extraKm.cents && !ctx.extraKm.rateCents) || ctx.extraKm.alreadyPaid)) || (t === "documentation_fee" && !ctx.docFee.allowed && !s.checked);
           return (
-            <div key={t} className={`rounded-xl bg-secondary p-3 space-y-2 ${s.checked && (def.mode === "free" || def.mode === "amount_plus_fee") && !toCents(s.amount) ? "ring-2 ring-foreground" : ""}`}>
+            <div key={t} className={`rounded-xl bg-secondary p-3 space-y-2 ${s.checked && (def.mode === "free" || def.mode === "amount_plus_fee") && !parseLenientEuro(s.amount) ? "ring-2 ring-foreground" : ""}`}>
               <label className="flex items-start gap-2 text-sm">
                 <input type="checkbox" checked={s.checked} disabled={disabled} onChange={(e) => setT(t, { checked: e.target.checked })} className="mt-1" />
                 <span className="flex-1"><strong>{def.label}</strong>{s.checked && <span className="float-right">{eur(lineOf(t))}</span>}
@@ -360,8 +360,17 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
                 <div className="grid gap-2">
                   {t === "extra_km" && !ctx.extraKm.cents && <input value={s.quantity} onChange={(e) => setT(t, { quantity: e.target.value })} inputMode="numeric" placeholder="Mehrkilometer (km)" aria-label="Mehrkilometer (km)" className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />}
                   {def.mode === "per_unit" && <input value={s.quantity} onChange={(e) => setT(t, { quantity: e.target.value })} inputMode="numeric" placeholder={def.unitLabel} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />}
-                  {(def.mode === "free" || def.mode === "amount_plus_fee") && <input value={s.amount} onChange={(e) => setT(t, { amount: e.target.value })} inputMode="decimal" placeholder={def.mode === "amount_plus_fee" ? "Tatsächliche Tankkosten in €" : t === "extension" ? "Vereinbarter Betrag in €" : "Betrag in €"} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />}
-                  <input value={s.reason} onChange={(e) => setT(t, { reason: e.target.value })} placeholder={t === "extension" ? "Begründung (Pflicht), z. B. 1 Tag verlängert" : def.reasonRequired ? "Begründung (Pflicht, für Kunden sichtbar)" : "Begründung (optional, für Kunden sichtbar)"} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+                  {(def.mode === "free" || def.mode === "amount_plus_fee") && (
+                    <label className="grid gap-1 text-xs font-semibold">
+                      {def.mode === "amount_plus_fee" ? "Tankkosten in € (nur Zahl)" : t === "extension" ? "Vereinbarter Betrag in € (nur Zahl)" : "Betrag in € (nur Zahl)"}
+                      <input value={s.amount} onChange={(e) => setT(t, { amount: e.target.value })} inputMode="decimal" placeholder="z. B. 20" className="rounded-lg border border-border bg-background px-3 py-2 text-sm font-normal" />
+                      {s.amount.trim() !== "" && parseLenientEuro(s.amount) == null && <span>⚠ Bitte nur den Betrag als Zahl eingeben, z. B. 20</span>}
+                    </label>
+                  )}
+                  <label className="grid gap-1 text-xs font-semibold">
+                    {t === "extension" || def.reasonRequired ? "Begründung (Pflicht, für Kunden sichtbar)" : "Begründung (optional, für Kunden sichtbar)"}
+                    <input value={s.reason} onChange={(e) => setT(t, { reason: e.target.value })} placeholder={t === "extension" ? "z. B. 1 Tag verlängert" : "z. B. Tank nicht voll zurückgegeben"} className="rounded-lg border border-border bg-background px-3 py-2 text-sm font-normal" />
+                  </label>
                 </div>
               )}
             </div>
