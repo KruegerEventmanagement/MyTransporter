@@ -1,3 +1,4 @@
+import { isFeedbackExcluded } from "@/lib/feedback-exclusions";
 /**
  * Server-Anbindung der Kunden-Mail-Outbox (public.customer_mail_outbox).
  * Nur aus Server-Routen/Server-Funktionen verwenden.
@@ -427,7 +428,7 @@ export async function enqueueFeedbackRequest(source: OutboxSource, sourceId: str
   if (endDue - 24 * 3600_000 < new Date(from).getTime()) return { state: "before_activation" };
   if (endDue > Date.now()) return { state: "blocked" };
   const lower = email.toLowerCase();
-  if (!email.includes("@") || MARKETING_EXCLUDED_EMAILS.includes(lower) || (await isOptedOut(email))) return { state: "cancelled" };
+  if (!email.includes("@") || MARKETING_EXCLUDED_EMAILS.includes(lower) || isFeedbackExcluded(lower) || (await isOptedOut(email))) return { state: "cancelled" };
   // Nachholzeitraum: bereits (z. B. am 18.10.) angeschriebene Kunden nicht erneut anschreiben.
   if (endDue - 24 * 3600_000 < new Date(FEEDBACK_BACKFILL_UNTIL).getTime() && (contacted ?? (await contactedEmails())).has(lower))
     return { state: "legacy_sent" };
@@ -505,6 +506,9 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
         if (error) throw new Error(error.message);
         if (!r) return "Termin gelöscht";
         if (row.kind === "return_reminder" && (!r.confirmation_requested || Date.now() >= new Date(r.end_at).getTime())) return "Rückgabe-Erinnerung abgelaufen/zurückgezogen";
+      }
+      if (row.kind === "feedback_request" || row.kind === "review_request") {
+        if (isFeedbackExcluded(row.recipient_email)) return "Vom Betreiber ausgeschlossen";
       }
       if (row.kind === "feedback_request") {
         if (!row.recipient_email || !(await hasFeedbackConsent(row.source_type, row.source_id, row.recipient_email))) return "Keine Einwilligung für Feedbackmail";
