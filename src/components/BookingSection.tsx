@@ -2326,18 +2326,9 @@ export function BookingSection() {
                     </span>
                   </span>
                 </label>
-                <label className="mt-4 flex items-start gap-3 text-left rounded-2xl border border-border bg-background p-4 cursor-pointer">
-                  <Checkbox
-                    checked={reviewConsent}
-                    onCheckedChange={(v) => setReviewConsent(v === true)}
-                    className="mt-1"
-                    aria-label="Einwilligung Bewertungs-E-Mail"
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    <span className="font-semibold text-foreground block mb-1">Freiwillig: Bitte um Bewertung</span>
-                    {REVIEW_CONSENT_TEXT} Für die Buchung ist das nicht nötig.
-                  </span>
-                </label>
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Nach der Miete schicken wir dir eine kurze Feedback-Mail. Du kannst sie jederzeit über den Link in der Mail abbestellen.
+                </p>
               <FuelInfoNote freeKm={selectedPlanEntry ? contractKmShown : undefined} className="mt-4" />
 
               {/* Gutscheincode (z. B. Geburtstagsvorteil) – Prüfung erfolgt serverseitig */}

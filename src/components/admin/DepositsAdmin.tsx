@@ -262,7 +262,10 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
     !d ? null : (
       <li key={d.label}>
         {d.signedUrl ? (
-          <a href={d.signedUrl} target="_blank" rel="noreferrer" className="underline">{d.label}</a>
+          <figure className="space-y-1">
+            <img src={d.signedUrl} alt={d.label} draggable={false} className="pointer-events-none select-none w-full aspect-[3/2] object-contain rounded-lg border border-border bg-muted" loading="lazy" />
+            <figcaption className="text-xs text-muted-foreground">{d.label}</figcaption>
+          </figure>
         ) : (
           <span>{d.label} ({d.removedByUser ? "vom Kunden entfernt" : d.fileState === "path_rejected" ? "Zuordnung ungültig" : "nicht verfügbar"})</span>
         )}
