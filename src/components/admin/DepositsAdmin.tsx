@@ -317,7 +317,7 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
       {details && (details.documents.license.front || details.documents.license.back || details.documents.id.front || details.documents.id.back || details.documents.others.length > 0) && (
         <div className="rounded-2xl border border-border bg-card p-4 space-y-1 text-sm">
           <h3 className="text-sm font-semibold">Kundendokumente</h3>
-          <ul className="list-disc pl-5 space-y-1">
+          <ul className="grid grid-cols-2 gap-3 list-none">
             {docLink(details.documents.license.front)}
             {docLink(details.documents.license.back)}
             {docLink(details.documents.id.front)}
