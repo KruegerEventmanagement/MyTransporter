@@ -13,3 +13,12 @@ describe("refundBlockReasons", () => {
     expect(refundBlockReasons({ ...base, stripeBlocked: true })).toHaveLength(1);
   });
 });
+
+import { parseLenientEuro } from "./deposit-refund-block";
+describe("parseLenientEuro", () => {
+  it("reine Zahl", () => expect(parseLenientEuro("20")).toBe(2000));
+  it("Zahl mit Text", () => expect(parseLenientEuro("20 euro reine Tankkosten die gefehlt haben laut Kunde danach.")).toBe(2000));
+  it("Komma-Betrag mit €", () => expect(parseLenientEuro("20,50 €")).toBe(2050));
+  it("keine Zahl", () => expect(parseLenientEuro("Tank leer")).toBeNull());
+  it("mehrere Zahlen werden nicht geraten", () => expect(parseLenientEuro("20 oder 30")).toBeNull());
+});

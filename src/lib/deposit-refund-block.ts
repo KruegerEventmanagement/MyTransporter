@@ -17,3 +17,16 @@ export function refundBlockReasons(i: RefundBlockInput): string[] {
     r.push(`Bei Stripe wurde direkt bereits ${i.externalRefundLabel ?? "ein Betrag"} erstattet. Rückzahlung gesperrt – bitte in Stripe prüfen.`);
   return r;
 }
+
+import { parseEuroToCents } from "@/lib/money-input";
+
+/**
+ * Liest einen Betrag auch aus Freitext ("20 euro reine Tankkosten" → 2000).
+ * Nur wenn genau eine Zahl vorkommt; sonst null (nie raten).
+ */
+export function parseLenientEuro(text: string): number | null {
+  const matches = text.match(/\d+(?:[.,]\d+)*/g) ?? [];
+  if (matches.length !== 1) return null;
+  const r = parseEuroToCents(matches[0]);
+  return r.ok && r.cents >= 0 ? r.cents : null;
+}
