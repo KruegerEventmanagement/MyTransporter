@@ -15,7 +15,6 @@ import { de } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { FuelInfoNote } from "./FuelInfoNote";
 import { createBookingCheckout } from "@/lib/payments.functions";
-import { REVIEW_CONSENT_TEXT } from "@/lib/customer-mail-outbox";
 import { KM_CATALOG_VERSION } from "@/lib/booking-rules";
 import { previewCoupon, type CouponPreview } from "@/lib/birthday.functions";
 import { ageOn, MIN_DRIVER_AGE } from "@/lib/birthday";
