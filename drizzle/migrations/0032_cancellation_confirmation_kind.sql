@@ -1,0 +1,2 @@
+ALTER TABLE public.customer_mail_outbox DROP CONSTRAINT customer_mail_outbox_kind_check;
+ALTER TABLE public.customer_mail_outbox ADD CONSTRAINT customer_mail_outbox_kind_check CHECK (kind = ANY (ARRAY['invoice','review_request','reminder_24h','reminder_30min','return_reminder','return_overdue_1','return_overdue_2','booking_confirmation','admin_booking','deposit_review_admin','deposit_digest','deposit_closing','feedback_request','cancellation_confirmation']));
