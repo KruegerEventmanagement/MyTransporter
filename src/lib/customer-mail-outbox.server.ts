@@ -666,7 +666,7 @@ export async function enqueueCancellationConfirmation(
   let email = "", firstName: string | null = null, reference: string | null = null, vehicle: string | null = null;
   let start: string | null = null, end: string | null = null;
   if (source === "booking") {
-    const { data: b, error } = await db.from("bookings").select("id, user_id, pickup_code, vehicle_name, start_date, start_hour, plan_end_at").eq("id", sourceId).maybeSingle();
+    const { data: b, error } = await db.from("bookings").select("id, user_id, pickup_code, vehicle_name, start_date, start_hour, plan_id, plan_end_at").eq("id", sourceId).maybeSingle();
     if (error) throw new Error(error.message);
     if (!b) return { state: "not_found" };
     const { data: p } = await db.from("profiles").select("email, first_name").eq("id", b.user_id).maybeSingle();
