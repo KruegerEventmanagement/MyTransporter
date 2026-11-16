@@ -34,7 +34,7 @@ export const REVIEW_CONSENT_TEXT =
   "Ja, MyTransporter darf mir 24 Stunden nach dieser Buchung einmalig eine E-Mail mit der Bitte um eine freiwillige Google-Bewertung senden. Ich kann jederzeit widersprechen (Abmeldelink in der E-Mail oder an info@mytransporter.org).";
 export const REVIEW_DELAY_MS = 24 * 3600_000;
 
-export type OutboxKind = "invoice" | "review_request" | "reminder_24h" | "reminder_30min" | "return_reminder" | "return_overdue_1" | "return_overdue_2" | "booking_confirmation" | "admin_booking" | "deposit_review_admin" | "deposit_digest" | "deposit_closing" | "feedback_request";
+export type OutboxKind = "invoice" | "review_request" | "reminder_24h" | "reminder_30min" | "return_reminder" | "return_overdue_1" | "return_overdue_2" | "booking_confirmation" | "admin_booking" | "deposit_review_admin" | "deposit_digest" | "deposit_closing" | "feedback_request" | "cancellation_confirmation";
 export type OutboxSource = "booking" | "manual" | "digest";
 
 export type FrozenOutboxMail = {
@@ -447,4 +447,42 @@ export function outboxStatusLabel(status: string, ambiguous: boolean): string {
     default:
       return status;
   }
+}
+
+
+export type CancellationMailInput = {
+  firstName: string | null;
+  to: string;
+  reference: string | null;
+  vehicle: string | null;
+  start: string | null; // Berlin-formatiert
+  end: string | null;
+  refundCents: number | null;
+};
+
+/** Freundliche Stornobestätigung (reine Bestätigung, keine Werbung, ohne Gedankenstriche). */
+export function buildCancellationMail(i: CancellationMailInput): FrozenOutboxMail {
+  const subject = "Ihre Stornierung ist bestätigt · MyTransporter";
+  const what = [
+    i.reference ? `Ihre Buchung ${i.reference}` : "Ihre Buchung",
+    i.vehicle ? ` für den ${i.vehicle}` : "",
+    i.start && i.end ? ` vom ${i.start} Uhr bis ${i.end} Uhr` : "",
+  ].join("");
+  const intro = [
+    "vielen Dank für Ihre Nachricht.",
+    `Hiermit bestätigen wir Ihnen gern, dass ${what} storniert wurde. Sie müssen nichts weiter tun.`,
+    ...(i.refundCents && i.refundCents > 0
+      ? [`Ihre Erstattung über ${eur(i.refundCents)} haben wir veranlasst. Je nach Bank kann es einige Werktage dauern, bis der Betrag auf Ihrem Konto sichtbar ist.`]
+      : []),
+    "Wir bedauern sehr, dass es diesmal nicht geklappt hat, und würden uns sehr freuen, Sie künftig wieder bei uns begrüßen zu dürfen. Wenn Sie Fragen haben, antworten Sie einfach auf diese E-Mail, wir helfen Ihnen jederzeit gern weiter.",
+  ];
+  const name = (i.firstName ?? "").trim();
+  const html = renderEmail({
+    firstName: i.firstName,
+    heading: "Ihre Stornierung ist bestätigt",
+    intro,
+    signature: "Christian Krüger und das MyTransporter-Team",
+  });
+  const text = [name ? `Hallo ${name},` : "Hallo,", "", ...intro.flatMap((p) => [p, ""]), "Herzliche Grüße", "Christian Krüger und das MyTransporter-Team"].join("\n");
+  return { from: OUTBOX_FROM, to: i.to, reply_to: OUTBOX_REPLY_TO, subject, html, text, attachment: null };
 }
