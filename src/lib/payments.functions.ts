@@ -271,6 +271,10 @@ export const cancelBookingWithRefund = createServerFn({ method: "POST" })
       if (msg.includes("DEPOSIT_ALREADY_REVIEWED")) throw new Error("Die Kaution dieser Buchung wurde bereits abgerechnet; Stornierung bitte mit uns klären.");
       throw e;
     }
+    {
+      const { sendCancellationConfirmation } = await import("@/lib/customer-mail-outbox.server");
+      await sendCancellationConfirmation("booking", data.bookingId, { refundCents: res.settlement.refund_cents });
+    }
     // Storno im Kalender: Sofortversuch nur für diese Buchung, Fehler bleiben retrybar.
     try {
       const { kickCalendarSync } = await import("@/lib/calendar-sync.server");

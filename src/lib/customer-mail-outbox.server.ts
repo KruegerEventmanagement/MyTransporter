@@ -7,6 +7,7 @@ import {
   buildInvoiceMail,
   buildReviewMail,
   buildFeedbackMail,
+  buildCancellationMail,
   berlinDateTime,
   outboxIdempotencyKey,
   processOutboxRow,
@@ -480,7 +481,7 @@ export async function createOutboxDeps(): Promise<OutboxDeps> {
   const { ISSUED_DOCUMENTS_BUCKET } = await import("@/lib/document-archive.server");
   return {
     precheck: async (row) => {
-      if (row.kind === "invoice") return null;
+      if (row.kind === "invoice" || row.kind === "cancellation_confirmation") return null;
       if (row.kind === "deposit_review_admin" || row.kind === "deposit_digest" || row.kind === "deposit_closing") {
         const { depositMailPrecheck } = await import("@/lib/deposit-review.server");
         return depositMailPrecheck(row);
@@ -649,4 +650,51 @@ export async function sendReminderViaOutbox(args: {
   const sent = out.status === "sent" || out.status === "accepted_unrecorded" || (out.status === "skipped" && out.reason === "sent");
   const final = sent || out.status === "cancelled" || (out.status === "skipped" && ["needs_review", "expired", "cancelled", "blocked"].includes(out.reason));
   return { done: final, sent };
+}
+
+
+/**
+ * Stornobestätigung: genau eine pro Buchung/Termin (Unique source+kind), Inhalt beim Einreihen eingefroren.
+ * Für manuelle Termine VOR dem Löschen aufrufen. Fehler hier dürfen den Storno nie verhindern.
+ */
+export async function enqueueCancellationConfirmation(
+  source: OutboxSource,
+  sourceId: string,
+  opts: { refundCents?: number | null } = {},
+): Promise<{ state: "queued"; rowId: string } | { state: "no_email" | "not_found" }> {
+  const db = await admin();
+  let email = "", firstName: string | null = null, reference: string | null = null, vehicle: string | null = null;
+  let start: string | null = null, end: string | null = null;
+  if (source === "booking") {
+    const { data: b, error } = await db.from("bookings").select("id, user_id, pickup_code, vehicle_name, start_date, start_hour, plan_end_at").eq("id", sourceId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!b) return { state: "not_found" };
+    const { data: p } = await db.from("profiles").select("email, first_name").eq("id", b.user_id).maybeSingle();
+    email = p?.email?.trim() ?? ""; firstName = p?.first_name ?? null;
+    reference = b.pickup_code ?? b.id.slice(0, 8).toUpperCase(); vehicle = b.vehicle_name ?? null;
+    const { resolveTripWindow } = await import("@/lib/trip-time");
+    const w = resolveTripWindow(b as never);
+    if (Number.isFinite(w.startMs) && Number.isFinite(w.endMs)) { start = berlinDateTime(new Date(w.startMs)); end = berlinDateTime(new Date(w.endMs)); }
+  } else {
+    const { data: r, error } = await db.from("manual_reservations").select("id, customer_email, customer_name, start_at, end_at, vehicle_id").eq("id", sourceId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!r) return { state: "not_found" };
+    email = (r.customer_email ?? "").trim(); firstName = (r.customer_name ?? "").trim().split(/\s+/)[0] || null;
+    reference = r.id.slice(0, 8).toUpperCase(); start = berlinDateTime(r.start_at); end = berlinDateTime(r.end_at);
+    if (r.vehicle_id) { const { data: v } = await db.from("vehicles").select("name").eq("id", r.vehicle_id).maybeSingle(); vehicle = v?.name ?? null; }
+  }
+  if (!email.includes("@")) return { state: "no_email" };
+  const payload = buildCancellationMail({ firstName, to: email, reference, vehicle, start, end, refundCents: opts.refundCents ?? null });
+  const row = await insertRow({ source_type: source, source_id: sourceId, kind: "cancellation_confirmation", due_at: new Date().toISOString(), recipient_email: email, payload });
+  return { state: "queued", rowId: row.id };
+}
+
+/** Einreihen + Sofortversuch; Fehler nur protokollieren (Sweep/Retry übernimmt). */
+export async function sendCancellationConfirmation(source: OutboxSource, sourceId: string, opts: { refundCents?: number | null } = {}): Promise<void> {
+  try {
+    const r = await enqueueCancellationConfirmation(source, sourceId, opts);
+    if (r.state === "queued") await processOutboxRowById(r.rowId);
+  } catch (e) {
+    console.warn("[storno] Bestätigungsmail nicht eingereiht/gesendet", String((e as Error)?.message ?? e).slice(0, 200));
+  }
 }

@@ -484,5 +484,5 @@ export function buildCancellationMail(i: CancellationMailInput): FrozenOutboxMai
     signature: "Christian Krüger und das MyTransporter-Team",
   });
   const text = [name ? `Hallo ${name},` : "Hallo,", "", ...intro.flatMap((p) => [p, ""]), "Herzliche Grüße", "Christian Krüger und das MyTransporter-Team"].join("\n");
-  return { from: MAIL_FROM_DEFAULT, to: i.to, reply_to: MAIL_REPLY_TO_DEFAULT, subject, html, text, attachment: null };
+  return { from: OUTBOX_FROM, to: i.to, reply_to: OUTBOX_REPLY_TO, subject, html, text, attachment: null };
 }

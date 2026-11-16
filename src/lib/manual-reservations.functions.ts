@@ -323,6 +323,16 @@ export const deleteManualReservation = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
 
+    // Stornobestätigung vor dem Löschen einfrieren (Inhalt braucht die Termindaten).
+    let cancelRowId: string | null = null;
+    try {
+      const { enqueueCancellationConfirmation } = await import("@/lib/customer-mail-outbox.server");
+      const r = await enqueueCancellationConfirmation("manual", data.id);
+      if (r.state === "queued") cancelRowId = r.rowId;
+    } catch (e) {
+      console.warn("[storno] Bestätigung nicht eingereiht", e);
+    }
+
     // Dateien im geschützten Speicher mit aufräumen (Zeilen entfernt die Kaskade)
     const { data: docs } = await context.supabase
       .from("manual_reservation_documents")
@@ -338,7 +348,21 @@ export const deleteManualReservation = createServerFn({ method: "POST" })
       .from("manual_reservations")
       .delete()
       .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (cancelRowId) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.from("customer_mail_outbox").delete().eq("id", cancelRowId).eq("status", "scheduled");
+      }
+      throw new Error(error.message);
+    }
+    if (cancelRowId) {
+      try {
+        const { processOutboxRowById } = await import("@/lib/customer-mail-outbox.server");
+        await processOutboxRowById(cancelRowId);
+      } catch (e) {
+        console.warn("[storno] Bestätigung nicht sofort gesendet", e);
+      }
+    }
     await kickOutbox(data.id);
     return { ok: true as const };
   });
