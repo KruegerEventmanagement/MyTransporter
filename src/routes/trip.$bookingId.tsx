@@ -321,8 +321,19 @@ function TripView({ bookingId }: { bookingId: string }) {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center" aria-busy="true">
+      <main className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-6 text-center" aria-busy="true">
         <Loader2 className="w-8 h-8 animate-spin text-foreground" />
+        {/* Reines CSS: erscheint auch, wenn ein Mail-Browser die Seite nie fertig startet. */}
+        <div className="mt-loading-help max-w-sm space-y-3">
+          <p className="text-sm text-muted-foreground">Das Laden dauert ungewöhnlich lange.</p>
+          <a href={`/trip/${bookingId}`} className="block rounded-xl bg-primary px-4 py-3 text-primary-foreground font-medium">
+            Erneut versuchen
+          </a>
+          <a href={`/buchung/${bookingId}#fotos`} className="block rounded-xl border border-border px-4 py-3 font-medium">
+            Zur Buchung und zu den Fotos
+          </a>
+          <p className="text-xs text-muted-foreground">Klappt es weiterhin nicht, tippe oben auf ••• und wähle „In Safari öffnen“ bzw. „Im Browser öffnen“.</p>
+        </div>
       </main>
     );
   }

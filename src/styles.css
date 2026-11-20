@@ -322,3 +322,7 @@ html.halloween img[alt="MyTransporter Logo"] {
   .hw-spider, .hw-bat, .hw-pumpkin, .hw-vampire { animation: none; }
   .hw-bat { display: none; }
 }
+
+/* Hilfe beim Ladekreis erst nach 10 s zeigen, ohne JavaScript. */
+@keyframes mt-loading-help-in { to { opacity: 1; visibility: visible; } }
+.mt-loading-help { opacity: 0; visibility: hidden; animation: mt-loading-help-in 0.3s ease-out 10s forwards; }
