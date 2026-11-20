@@ -8,7 +8,7 @@
 
 ## Schritte
 1. **Fehler nachstellen:** Den Mail-Link mit Playwright öffnen, angemeldet und abgemeldet, wie ein Android- und ein iPhone-Browser. Dabei die genaue Fehlermeldung festhalten. Der gemeldete Fehler wird erst behoben, wenn er nachgestellt ist.
-2. **Android-App öffnet den Link:** In `assetlinks.json` die echte Kennung `de.mytransporterr.app` eintragen und den SHA-256-Fingerabdruck des Play-Signaturschlüssels verwenden. Die alte Kennung bleibt zusätzlich drin.
+2. **Android-App öffnet den Link:** In `assetlinks.json` die echte Kennung `de.mytransporterr.app` eintragen. Dafür fehlt noch der Fingerabdruck des Play-Signaturschlüssels. Ich schicke dir dazu eine Klick-für-Klick-Anleitung mit Bildbeschreibung: In der Play Console die App öffnen, dann „Testen und veröffentlichen“, „App-Integrität“, „App-Signatur“, die Zeile „SHA-256-Zertifikat-Fingerabdruck“ kopieren und hier einfügen. Bis dahin öffnen die Links zuverlässig im Browser, angemeldet und direkt beim Fotobereich. Die alte Kennung bleibt zusätzlich drin.
 3. **iPhone-App:** Eine `apple-app-site-association` für `/trip/*` und `/buchung/*` anlegen, sobald Team-ID und Bundle-ID bekannt sind. Danach die Associated Domains in der iOS-App eintragen.
 4. **Ohne Anmeldung zurück zur Fahrt:** Das Ziel zusätzlich in der Adresse mitgeben, also `/?login=1&redirect=/trip/<id>`, und nach dem Login dorthin springen. Erlaubt sind dabei nur interne Pfade.
 5. **Fotobereich sofort sichtbar:** Nach dem Laden über den Link scrollt die Seite direkt zum Bereich „Foto aufnehmen / Aus Galerie wählen“.
