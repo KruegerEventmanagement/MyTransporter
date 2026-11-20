@@ -24,6 +24,12 @@ export function requireLogin(navigate: (opts: { to: string }) => void, target: s
     if (isSafeInternalPath(target)) sessionStorage.setItem(TARGET_KEY, target);
     sessionStorage.setItem(OPEN_KEY, "1");
   } catch {
+    /* ignoriert */
+  }
+  try {
+    // Mail-Browser verlieren sessionStorage oft beim Tab-Wechsel; kurz zusätzlich lokal merken.
+    if (isSafeInternalPath(target)) localStorage.setItem(TARGET_KEY, JSON.stringify({ t: target, at: Date.now() }));
+  } catch {
     /* Storage kann blockiert sein – Login ist dann trotzdem erreichbar */
   }
   navigate({ to: "/" });
@@ -41,12 +47,30 @@ export function consumeLoginRequest(): boolean {
 }
 
 /** Gemerktes Ziel auslesen und löschen. */
-export function takeLoginRedirect(): string | null {
+export const LOCAL_TARGET_TTL_MS = 30 * 60 * 1000;
+
+function takeLocalTarget(now: number): string | null {
   try {
-    const v = sessionStorage.getItem(TARGET_KEY);
-    if (v) sessionStorage.removeItem(TARGET_KEY);
-    return isSafeInternalPath(v) ? v : null;
+    const raw = localStorage.getItem(TARGET_KEY);
+    if (!raw) return null;
+    localStorage.removeItem(TARGET_KEY);
+    const v = JSON.parse(raw) as { t?: unknown; at?: unknown };
+    if (typeof v.at !== "number" || now - v.at > LOCAL_TARGET_TTL_MS || now < v.at) return null;
+    return isSafeInternalPath(v.t) ? v.t : null;
   } catch {
     return null;
   }
+}
+
+export function takeLoginRedirect(now: number = Date.now()): string | null {
+  let session: string | null = null;
+  try {
+    const v = sessionStorage.getItem(TARGET_KEY);
+    if (v) sessionStorage.removeItem(TARGET_KEY);
+    session = isSafeInternalPath(v) ? v : null;
+  } catch {
+    session = null;
+  }
+  const local = takeLocalTarget(now);
+  return session ?? local;
 }

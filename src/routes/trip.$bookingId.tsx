@@ -231,7 +231,7 @@ function TripView({ bookingId }: { bookingId: string }) {
         if (b.status === "completed" || b.status === "cancelled") {
           clearReturnDraft(uid, bookingId);
           if (!loadedOnce.current) {
-            navigate({ to: "/buchung/$bookingId", params: { bookingId } });
+            navigate({ to: "/buchung/$bookingId", params: { bookingId }, hash: "fotos" });
             return;
           }
           setPhase("done");

@@ -365,7 +365,7 @@ function BookingDetailPage() {
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
             <ImageIcon className="w-3.5 h-3.5" /> Fotos ({photos.length})
           </h2>
-          <BookingPhotoUpload bookingId={booking.id} status={booking.status} onUploaded={() => void reloadPhotos()} />
+          <div id="fotos" className="scroll-mt-24"><BookingPhotoUpload bookingId={booking.id} status={booking.status} onUploaded={() => void reloadPhotos()} /></div>
           <div className="mt-3" />
           {photos.length === 0 ? (
             <p className="text-xs text-muted-foreground">Für diese Buchung wurden noch keine Fotos hochgeladen.</p>
