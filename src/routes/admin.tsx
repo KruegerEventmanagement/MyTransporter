@@ -1019,6 +1019,12 @@ function CustomerDetail({
       if (p.data) {
         const rows = p.data as TripPhoto[];
         setPhotos(rows);
+        if (!initialBookingId) {
+          const withPhotos = customer.bookings
+            .filter((b) => rows.some((r) => r.booking_id === b.id))
+            .sort((a, b) => (a.start_date < b.start_date ? 1 : -1));
+          if (withPhotos[0]) setOpenBooking((cur) => cur ?? withPhotos[0]!.id);
+        }
         // Signed URLs für den privaten trip-photos Bucket auflösen
         const entries = await Promise.all(
           rows.map(async (ph) => [ph.id, await resolveTripPhotoUrl(ph.photo_url)] as const)
@@ -1210,6 +1216,16 @@ function CustomerDetail({
                       <p className="text-xs text-muted-foreground">
                         Code {b.pickup_code}
                       </p>
+                      <p className={`text-xs mt-1 font-semibold ${bphotos.length ? "text-foreground" : "text-muted-foreground"}`}>
+                        {bphotos.length ? `📷 ${bphotos.length} Fotos` : "Keine Fotos"}
+                      </p>
+                      {!isOpen && bphotos.length > 0 && (
+                        <div className="flex gap-1 mt-2 overflow-hidden">
+                          {bphotos.slice(0, 6).map((ph) => (
+                            <img key={ph.id} src={photoUrls[ph.id] ?? ph.photo_url} alt="" className="w-10 h-10 object-cover rounded border border-border" />
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <StatusBadge status={b.status} />
                   </button>
@@ -1267,6 +1283,7 @@ function CustomerDetail({
                             photos={bphotos.filter(
                               (p) =>
                                 !p.photo_type.startsWith("post_") &&
+                                p.photo_type !== "additional" &&
                                 p.photo_type !== "tank_receipt"
                             )}
                             urls={photoUrls}
@@ -1281,7 +1298,15 @@ function CustomerDetail({
                             photos={bphotos.filter((p) => p.photo_type === "tank_receipt")}
                             urls={photoUrls}
                           />
+                          <PhotoGroup
+                            title="Nachgereicht"
+                            photos={bphotos.filter((p) => p.photo_type === "additional")}
+                            urls={photoUrls}
+                          />
                         </div>
+                      )}
+                      {bphotos.length === 0 && (
+                        <p className="text-sm text-muted-foreground">Für diese Buchung wurden keine Fotos hochgeladen.</p>
                       )}
 
                       {bgps.length > 0 && (
