@@ -743,12 +743,12 @@ function AdminDashboard() {
                   >
                     <div className="min-w-0">
                       <p className="font-semibold truncate">{name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="text-xs text-muted-foreground break-words">
                         {b.vehicle_plate} · {b.plan_label}
                         {b.free_km != null ? ` · ${b.free_km.toLocaleString("de-DE")} km inkl.` : ""} · {formatBookingRange(b as unknown as { start_date: string; start_hour: number; plan_id: string | null })}
                       </p>
                       {Array.isArray(b.addons) && b.addons.length > 0 && (
-                        <p className="text-[11px] text-foreground mt-0.5 truncate">
+                        <p className="text-[11px] text-foreground mt-0.5 break-words">
                           📦 {b.addons.map((a) => a.label).join(", ")}
                         </p>
                       )}
@@ -1206,10 +1206,15 @@ function CustomerDetail({
                     className="w-full text-left p-4 flex items-center justify-between gap-3"
                   >
                     <div className="min-w-0">
-                      <p className="font-semibold truncate">
+                      <p className="font-semibold break-words">
                         {b.vehicle_plate} · {b.plan_label}
-                        {b.free_km != null ? ` · ${b.free_km.toLocaleString("de-DE")} km inkl.` : ""}
                       </p>
+                      {b.free_km != null && (
+                        <p className="text-sm font-semibold">{b.free_km.toLocaleString("de-DE")} km inklusive</p>
+                      )}
+                      {Array.isArray(b.addons) && b.addons.length > 0 && (
+                        <p className="text-xs break-words">📦 {b.addons.map((a) => a.label).join(", ")}</p>
+                      )}
                       <p className="text-xs text-muted-foreground">
                         {formatBookingRange(b as unknown as { start_date: string; start_hour: number; plan_id: string | null })}
                       </p>
