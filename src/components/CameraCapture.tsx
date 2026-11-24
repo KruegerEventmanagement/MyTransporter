@@ -320,7 +320,7 @@ export function CameraCapture({
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className="fixed inset-x-0 top-0 z-50 h-[100dvh] max-h-[100dvh] overflow-hidden bg-black flex flex-col"
+      className="fixed inset-x-0 top-0 z-[100] h-[100dvh] max-h-[100dvh] overflow-hidden bg-black flex flex-col"
     >
       <NativePhotoInputs
         cameraId={cameraInputId}
