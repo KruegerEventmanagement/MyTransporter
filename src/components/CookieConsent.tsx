@@ -45,7 +45,7 @@ export function CookieConsent() {
       role="dialog"
       aria-label="Cookie-Einstellungen"
       style={{ marginBottom: "env(safe-area-inset-bottom)" }}
-      className="fixed inset-x-3 bottom-3 z-[60] mx-auto max-w-xl rounded-2xl border border-border bg-card p-5 pr-12 shadow-xl"
+      className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-xl rounded-2xl border border-border bg-card p-5 pr-12 shadow-xl"
     >
       {/* Wegklicken erteilt keine Einwilligung: nur ausblenden, nichts speichern. */}
       <button
