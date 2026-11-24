@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { X } from "lucide-react";
 import { getConsent, setConsent, ensureGoogleTag, hasMarketingConsent } from "@/lib/analytics";
 import { ensureMetaPixel } from "@/lib/meta-pixel";
 import { captureAttribution } from "@/lib/attribution";
@@ -44,8 +45,17 @@ export function CookieConsent() {
       role="dialog"
       aria-label="Cookie-Einstellungen"
       style={{ marginBottom: "env(safe-area-inset-bottom)" }}
-      className="fixed inset-x-3 bottom-3 z-[60] mx-auto max-w-xl rounded-2xl border border-border bg-card p-5 shadow-xl"
+      className="fixed inset-x-3 bottom-3 z-[60] mx-auto max-w-xl rounded-2xl border border-border bg-card p-5 pr-12 shadow-xl"
     >
+      {/* Wegklicken erteilt keine Einwilligung: nur ausblenden, nichts speichern. */}
+      <button
+        type="button"
+        aria-label="Cookie-Hinweis schließen"
+        onClick={() => setOpen(false)}
+        className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+      >
+        <X className="h-5 w-5" aria-hidden="true" />
+      </button>
       <h2 className="text-base font-bold text-foreground">Cookies & Einwilligung</h2>
       <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
         Technisch notwendige Cookies benötigen wir für Login, Buchung und Zahlung – sie sind immer
