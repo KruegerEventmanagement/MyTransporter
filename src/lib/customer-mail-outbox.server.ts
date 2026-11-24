@@ -661,7 +661,7 @@ export async function enqueueCancellationConfirmation(
   source: OutboxSource,
   sourceId: string,
   opts: { refundCents?: number | null } = {},
-): Promise<{ state: "queued"; rowId: string } | { state: "no_email" | "not_found" }> {
+): Promise<{ state: "queued"; rowId: string } | { state: "no_email" | "not_found" | "past" }> {
   const db = await admin();
   let email = "", firstName: string | null = null, reference: string | null = null, vehicle: string | null = null;
   let start: string | null = null, end: string | null = null;
@@ -679,6 +679,8 @@ export async function enqueueCancellationConfirmation(
     const { data: r, error } = await db.from("manual_reservations").select("id, customer_email, customer_name, start_at, end_at, vehicle_name").eq("id", sourceId).maybeSingle();
     if (error) throw new Error(error.message);
     if (!r) return { state: "not_found" };
+    // Bereits begonnene/vergangene Termine (Aufräumen im Kalender) nie als Storno anschreiben.
+    if (!r.start_at || new Date(r.start_at).getTime() <= Date.now()) return { state: "past" };
     email = (r.customer_email ?? "").trim(); firstName = (r.customer_name ?? "").trim().split(/\s+/)[0] || null;
     reference = r.id.slice(0, 8).toUpperCase(); start = berlinDateTime(r.start_at); end = berlinDateTime(r.end_at);
     vehicle = r.vehicle_name ?? null;

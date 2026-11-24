@@ -258,10 +258,12 @@ function DepositEditor({ source, id, ctx, details, photoUrls, onBack, onReload, 
   const stripeBlocked = source === "booking" && externalRefundCents > 0;
   const blockReasons = refundBlockReasons({ busy, itemsError: draftItems.error, refundError, stripeBlocked, externalRefundLabel: eur(externalRefundCents), refundCents });
 
-  const docLink = (d: { label: string; signedUrl: string | null; fileState: string; removedByUser: boolean } | null) =>
+  const docLink = (d: { label: string; signedUrl: string | null; fileState: string; removedByUser: boolean; isPdf?: boolean } | null) =>
     !d ? null : (
       <li key={d.label}>
-        {d.signedUrl ? (
+        {d.signedUrl && d.isPdf ? (
+          <a href={d.signedUrl} target="_blank" rel="noopener noreferrer" className="underline">{d.label}: PDF öffnen</a>
+        ) : d.signedUrl ? (
           <figure className="space-y-1">
             <img src={d.signedUrl} alt={d.label} draggable={false} className="pointer-events-none select-none w-full aspect-[3/2] object-contain rounded-lg border border-border bg-muted" loading="lazy" />
             <figcaption className="text-xs text-muted-foreground">{d.label}</figcaption>

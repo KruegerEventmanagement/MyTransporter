@@ -8,7 +8,7 @@ export function canUploadBookingPhotos(status: string): boolean {
   return status !== "cancelled" && status !== "pending" && status !== "expired";
 }
 
-type Item = { name: string; state: "busy" | "ok" | "error"; error?: string; file: File };
+type Item = { key: string; name: string; state: "busy" | "ok" | "error"; error?: string; file: File };
 
 export function BookingPhotoUpload({ bookingId, status, onUploaded }: { bookingId: string; status: string; onUploaded: () => void }) {
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -20,18 +20,18 @@ export function BookingPhotoUpload({ bookingId, status, onUploaded }: { bookingI
   const upload = async (files: File[]) => {
     if (!files.length) return;
     setBusy(true);
-    const start = items.length;
-    setItems((prev) => [...prev, ...files.map((f) => ({ name: f.name, state: "busy" as const, file: f }))]);
+    const keys = files.map(() => `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    setItems((prev) => [...prev, ...files.map((f, i) => ({ key: keys[i]!, name: f.name, state: "busy" as const, file: f }))]);
     for (let i = 0; i < files.length; i++) {
-      const idx = start + i;
+      const key = keys[i]!;
       try {
         const blob = await normalizeImageFile(files[i]);
         await saveTripPhoto(supabase, { bookingId, tag: "additional", file: blob, timeoutMs: 60000 });
-        setItems((prev) => prev.map((it, j) => (j === idx ? { ...it, state: "ok" } : it)));
+        setItems((prev) => prev.map((it) => (it.key === key ? { ...it, state: "ok" } : it)));
         onUploaded();
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Upload fehlgeschlagen.";
-        setItems((prev) => prev.map((it, j) => (j === idx ? { ...it, state: "error", error: msg } : it)));
+        setItems((prev) => prev.map((it) => (it.key === key ? { ...it, state: "error", error: msg } : it)));
       }
     }
     setBusy(false);
@@ -39,7 +39,8 @@ export function BookingPhotoUpload({ bookingId, status, onUploaded }: { bookingI
 
   const retry = async (idx: number) => {
     const it = items[idx];
-    setItems((prev) => prev.filter((_, j) => j !== idx));
+    if (!it) return;
+    setItems((prev) => prev.filter((x) => x.key !== it.key));
     await upload([it.file]);
   };
 
@@ -66,7 +67,7 @@ export function BookingPhotoUpload({ bookingId, status, onUploaded }: { bookingI
       {items.length > 0 && (
         <ul className="space-y-1 text-xs">
           {items.map((it, i) => (
-            <li key={i} className="flex items-center justify-between gap-2">
+            <li key={it.key} className="flex items-center justify-between gap-2">
               <span className="truncate">{it.name || "Foto"}</span>
               {it.state === "busy" && <span className="flex items-center gap-1 text-muted-foreground"><Loader2 className="w-3 h-3 animate-spin" /> Wird hochgeladen…</span>}
               {it.state === "ok" && <span className="font-semibold">Gespeichert</span>}
