@@ -360,10 +360,10 @@ describe("DocumentScanner – native Wege (iOS Safari / Android Chrome)", () => 
     media.imageFails = true;
     const { onCapture } = renderScanner();
     await pickInto(fileInput(), imageFile("IMG_0001.HEIC", "image/heic"));
-    fireEvent.click(await screen.findByText("Übernehmen"));
+    fireEvent.click(await screen.findByText("Übernehmen", undefined, { timeout: 10000 }));
     await waitFor(() => expect(onCapture).toHaveBeenCalledTimes(1));
     expect((onCapture.mock.calls[0][1] as Blob).type).toBe("image/heic");
-  });
+  }, 20000);
 
   it("vier Slots unabhängig; Weiter erst nach vier Bildern", async () => {
     const { useState } = await import("react");

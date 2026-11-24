@@ -115,7 +115,7 @@ describe("Rückgabe-Wizard", () => {
   it("Start: CTA „Jetzt Fotos hochladen“, Pauschalen-Hinweis, kein Abschluss vor Fotos", async () => {
     mount();
     expect(screen.getByTestId("documentation-fee-notice").textContent).toMatch(/Bearbeitungspauschale von 30 €/);
-    expect(screen.queryByText("Buchung abschließen")).toBeNull();
+    expect(screen.queryByText("Fahrzeug zurückgeben")).toBeNull();
     await start();
     expect(progress()).toBe("1 von 7");
     expect(screen.getByTestId("outline-front")).toBeTruthy();
@@ -175,7 +175,8 @@ describe("Rückgabe-Wizard", () => {
     fireEvent.click(nextBtn());
     await screen.findByTestId("return-overview");
     await waitFor(() => expect(confirmedTags.has("tank_receipt")).toBe(true));
-    fireEvent.click(screen.getByText("Buchung abschließen"));
+    fireEvent.click(screen.getByText("Fahrzeug zurückgeben"));
+    fireEvent.click(screen.getByText("Ja, jetzt zurückgeben"));
     expect(await screen.findByText(RETURN_DONE_TITLE)).toBeTruthy();
     expect(screen.getByTestId("key-return-hint").textContent).toBe(KEY_RETURN_HINT);
     expect(screen.getByText("ABC234")).toBeTruthy();
@@ -243,7 +244,7 @@ describe("Rückgabe-Wizard", () => {
     mount();
     await screen.findByTestId("return-overview");
     await waitFor(() => expect(screen.getAllByLabelText("Foto gespeichert").length).toBe(6));
-    expect((screen.getByText("Buchung abschließen") as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByText("Fahrzeug zurückgeben") as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByTestId("card-post_dashboard").textContent).toMatch(/Fehlt noch/);
   });
 
@@ -312,7 +313,8 @@ describe("Rückgabe-Wizard – Offline-Warteschlange", () => {
     expect(queueTags()).toEqual([...CORE, "tank_receipt"].sort());
     expect(screen.getByTestId("photo-queue").textContent).toMatch(/7 Foto\(s\) noch nicht übertragen/);
     expect(screen.getByTestId("km-local")).toBeTruthy();
-    fireEvent.click(screen.getByText("Buchung abschließen"));
+    fireEvent.click(screen.getByText("Fahrzeug zurückgeben"));
+    fireEvent.click(screen.getByText("Ja, jetzt zurückgeben"));
     expect(screen.getByTestId("report-pending").textContent).toMatch(/noch nicht serverseitig bestätigt/);
     expect(reportImpl).not.toHaveBeenCalled();
 

@@ -38,3 +38,4 @@ Subdirectories (android/, src/test/) have their own AGENTS.md to read before cha
 - Web-Push: Schlüssel nur via src/lib/vapid.server.ts (VAPID_SEED_V2); push_failed-Meldungen nie pushen/poppen, gedrosselt (src/lib/push-issue-log.ts), sonst Endlosschleife.
 
 - Feedback-Mail (Outbox kind feedback_request, 24h nach Rückgabe/Mietende) und Gutscheine (customer_coupons/birthday_campaigns, Reservierung beim Checkout, Einlösung im Webhook) nur über customer-mail-outbox.server.ts bzw. birthday.server.ts; Werbemails nur mit Buchungs-Consent oder marketing_consent_attestations, damit Einwilligung nachweisbar bleibt.
+- Browser storage is guarded by STORAGE_GUARD_SCRIPT (src/lib/storage-guard.ts) as the first head script, swapping throwing localStorage/sessionStorage for in-memory storage so in-app browsers (e.g. Gmail on iOS) start instead of crashing.

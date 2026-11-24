@@ -61,16 +61,16 @@ describe("Safari: unlesbare Blobs aus dem Gerätespeicher", () => {
     const broken = new Blob([new Uint8Array([1])], { type: "image/jpeg" });
     Object.defineProperty(broken, "arrayBuffer", { value: () => Promise.reject(new Error("WebKitBlobResource error 1")) });
     const item = await enqueuePhoto(store, { userId: "u1", bookingId: "b1", tag: "post_front", blob: broken });
-    const uploads: Blob[] = [];
+    const uploads: Array<Blob | Uint8Array> = [];
     const client = {
-      storage: { from: () => ({ upload: async (_p: string, f: Blob) => { uploads.push(f); return { error: null }; }, createSignedUrl: async () => ({ data: { signedUrl: "u" }, error: null }) }) },
+      storage: { from: () => ({ upload: async (_p: string, f: Blob | Uint8Array) => { uploads.push(f); return { error: null }; }, createSignedUrl: async () => ({ data: { signedUrl: "u" }, error: null }) }) },
       from: () => ({
         select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }),
         insert: () => ({ select: () => ({ single: async () => ({ data: { id: "x" }, error: null }) }) }),
       }),
     };
     await expect(transferQueuedPhoto(client, store, item.id, blob())).resolves.toMatchObject({ path: item.path });
-    expect(uploads[0].size).toBe(3);
+    const up = uploads[0]!; expect(up instanceof Uint8Array ? up.byteLength : up.size).toBe(3);
   });
 
   it("meldet klar ‚neu aufnehmen‘, wenn nur der kaputte gespeicherte Blob vorhanden ist", async () => {

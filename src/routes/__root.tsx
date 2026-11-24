@@ -12,6 +12,7 @@ import {
 import appCss from "../styles.css?url";
 import { InstallBanner } from "@/components/InstallBanner";
 import { HelpBubble } from "@/components/HelpBubble";
+import { STORAGE_GUARD_SCRIPT } from "@/lib/storage-guard";
 import { CookieConsent } from "@/components/CookieConsent";
 import { Toaster } from "@/components/ui/sonner";
 import { ActiveTripBanner } from "@/components/ActiveTripBanner";
@@ -51,10 +52,10 @@ function ErrorComponent({ error, reset }: { error: unknown; reset: () => void })
       <BrandHomeLink className="absolute left-4 top-3" imageClassName="h-7 w-auto" />
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+          Die Seite konnte nicht geladen werden
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          Bitte versuche es erneut. Hilft das nicht, öffne die Seite in Safari oder Chrome.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -64,13 +65,13 @@ function ErrorComponent({ error, reset }: { error: unknown; reset: () => void })
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            Erneut versuchen
           </button>
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            Zur Startseite
           </a>
         </div>
       </div>
@@ -107,7 +108,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16.png" },
       { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
     ],
-    scripts: [{ type: "application/ld+json", children: safeJsonLd(siteJsonLd()) }],
+    scripts: [{ children: STORAGE_GUARD_SCRIPT }, { type: "application/ld+json", children: safeJsonLd(siteJsonLd()) }],
   }),
   shellComponent: RootShell,
   component: RootComponent,

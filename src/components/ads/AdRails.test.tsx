@@ -16,7 +16,8 @@ function findContentPath(node: ReactNode, path: string[] = []): string[] | null 
   if (!isValidElement(node)) return null;
   const el = node as Node;
   const typeName = typeof el.type === "string" ? el.type : "component";
-  const here = [...path, `${typeName}#${el.key ?? "-"}`];
+  // Unkeyed Übersetzungs-Hüllen (Localized) sind für React-Identität neutral.
+  const here = typeName === "component" && el.key == null ? path : [...path, `${typeName}#${el.key ?? "-"}`];
   if (el.key === AD_RAILS_CONTENT_KEY) return here;
   const kids = (el.props as { children?: ReactNode }).children;
   const list = Array.isArray(kids) ? kids : [kids];

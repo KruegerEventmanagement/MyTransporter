@@ -81,7 +81,7 @@ describe("vehicleSpecRows", () => {
     expect(rows.some((r) => /Baujahr/.test(r.label))).toBe(false);
     expect(JSON.stringify(rows)).not.toMatch(/WV1|Krüger|Neu-Isenburg/);
     expect(get("Tankgröße")).toBeUndefined();
-    expect(vehicleSpecRows({ id: "x" })).toEqual([]);
+    expect(vehicleSpecRows({ id: "x" }).map((r) => r.label)).toEqual(["Transporter-Abholort", "Schlüsselabholort"]);
   });
 });
 

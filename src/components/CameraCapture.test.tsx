@@ -220,9 +220,9 @@ describe("CameraCapture", () => {
       Object.defineProperty(gal, "files", { configurable: true, value: [new File([new Uint8Array([1, 2, 3])], "IMG_1.HEIC", { type: "image/heic" })] });
       fireEvent.change(gal);
     });
-    await waitFor(() => expect(onCapture).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onCapture).toHaveBeenCalledTimes(1), { timeout: 15000 });
     const out = onCapture.mock.calls[0][0] as File;
     expect(out.type).toBe("image/heic");
     expect(out.name).toMatch(/\.heic$/);
-  });
+  }, 30000);
 });

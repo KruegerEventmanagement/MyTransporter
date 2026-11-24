@@ -14,7 +14,7 @@ vi.mock("@tanstack/react-router", async (orig) => ({
 }));
 const requireLogin = vi.fn();
 vi.mock("@/lib/login-redirect", () => ({ requireLogin: (...a: unknown[]) => requireLogin(...a) }));
-vi.mock("@/lib/native/platform", () => ({ IS_NATIVE_BUILD: false }));
+vi.mock("@/lib/native/platform", async (orig) => ({ ...(await orig<object>()), IS_NATIVE_BUILD: false, isNativeApp: () => false }));
 vi.mock("@/components/BrandHomeLink", () => ({ BrandHomeLink: () => <a>logo</a> }));
 vi.mock("@/components/PreDriveFlow", () => ({ PreDriveFlow: () => <div>pre</div> }));
 vi.mock("@/components/ScheduledTripView", () => ({ ScheduledTripView: () => <div>scheduled</div> }));

@@ -237,7 +237,9 @@ export async function normalizeImageFile(
         ]);
         return await decodeToJpeg(new File([converted], "converted.jpg", { type: "image/jpeg" }), maxDimension, decodeTimeoutMs);
       } catch {
-        throw new CaptureError("Dieses HEIC-Foto konnte nicht gelesen werden. Bitte ein JPEG-Foto wählen oder mit der Geräte-Kamera neu aufnehmen.", "decode_failed");
+        // iPhone-Fotos nie abweisen: Original unverändert als HEIC hochladen,
+        // damit der Kunde seinen Nachweis abgeben kann (Admin sieht es per Download).
+        return file.type ? file : new Blob([file], { type: "image/heic" });
       } finally {
         if (timer) clearTimeout(timer);
       }
