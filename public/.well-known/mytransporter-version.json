@@ -1,1 +1,1 @@
-{"app":"mytransporter","release":"2026-11-11-key-videos-2","includes":["mail-bounce-alert-retry-136a3e7","key-videos-confirmation-sms"]}
+{"app":"mytransporter","release":"2026-11-24-cookie-overlay-fix","includes":["mail-bounce-alert-retry-136a3e7","key-videos-confirmation-sms","id-scanner-above-cookie-b227fe7","trip-camera-above-cookie-7add0df"]}
