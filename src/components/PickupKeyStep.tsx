@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { ChevronRight, Key } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getPickupKeyCode, type PickupKeyState } from "@/lib/pickup-key.functions";
-import { KEY_HANDOVER_HINTS } from "@/lib/key-handover";
+import { keyHandoverHintsFor } from "@/lib/key-handover";
 
 /** Abholschritt: echter Schlüsselcode ab 15 Minuten vor Abholung, vorher Hinweis. */
-export function PickupKeyStep({ bookingId, onDone }: { bookingId: string; onDone: () => void }) {
+export function PickupKeyStep({ bookingId, onDone, vehiclePlate }: { bookingId: string; onDone: () => void; vehiclePlate?: string | null }) {
   const fetchCode = useServerFn(getPickupKeyCode);
   const [info, setInfo] = useState<PickupKeyState | null>(null);
   const [failed, setFailed] = useState(false);
@@ -65,7 +65,7 @@ export function PickupKeyStep({ bookingId, onDone }: { bookingId: string; onDone
       </div>
 
       <div className="text-left text-sm text-muted-foreground space-y-3 mb-8">
-        {KEY_HANDOVER_HINTS.map((h) => (
+        {keyHandoverHintsFor(vehiclePlate).map((h) => (
           <p key={h}>{h}</p>
         ))}
       </div>

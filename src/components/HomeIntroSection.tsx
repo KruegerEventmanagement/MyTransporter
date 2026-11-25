@@ -37,8 +37,8 @@ export function HomeIntroSection() {
           <li>Kaution {DEPOSIT_EUR} €, Rückgabe vollgetankt</li>
         </ul>
         <p className="mt-5 text-muted-foreground leading-relaxed">
-          Für besonders lange Ladung gibt es zusätzlich einen extra langen VW Crafter – ebenfalls
-          mit Abholung in Leonberg (24 Stunden {CRAFTER_24.price} €).
+          Für besonders lange Ladung gibt es zusätzlich einen extra langen VW Crafter – Abholung in
+          der Calwer Straße 29, 75331 Engelsbrand-Grunbach (24 Stunden {CRAFTER_24.price} €).
         </p>
         <nav aria-label="Mehr zur Transporter-Miete" className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm">
           <Link to="/preise" className="underline underline-offset-2 text-foreground">Alle Preise</Link>

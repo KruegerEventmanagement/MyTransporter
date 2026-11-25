@@ -26,6 +26,11 @@ describe("Schlüsseltresor-Zuordnung", () => {
     expect(keySafeFor("LEO-MY 104")).toBeNull();
   });
   it("nennt den Tresor in der Code-Mail", () => {
-    expect(rowsWithSafe("123", "OF-DK 1234")[0]).toEqual({ label: "Schlüsseltresor", value: "Tresor 4 (für OF-DK 1234)" });
+    expect(rowsWithSafe("123", "PF-MY 1003")[0]).toEqual({ label: "Schlüsseltresor", value: "Tresor 3 (für PF-MY 1003)" });
+  });
+  it("Crafter: Abholort Grunbach, kein Kastencode", () => {
+    const rows = rowsWithSafe("123", "OF-DK 1234");
+    expect(rows[0]).toEqual({ label: "Abholort", value: "Calwer Straße 29, 75331 Engelsbrand-Grunbach" });
+    expect(rows.some((r) => r.value.includes("123"))).toBe(false);
   });
 });

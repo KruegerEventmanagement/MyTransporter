@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { renderEmail } from "@/lib/email-template";
-import { isKeyCodeDue, keyHandoverRows, KEY_HANDOVER_HINTS } from "@/lib/key-handover";
+import { isKeyCodeDue, keyHandoverRows, keyHandoverHintsFor } from "@/lib/key-handover";
 
 /** Fester Schlüsselkasten-Code des Fahrzeugs (nur serverseitig, nie geloggt). */
 async function keyCodeFor(plate: string): Promise<string | null> {
@@ -125,7 +125,7 @@ function buildEmail(
       rowsTitle: "Schlüssel & Abholung",
       rows: [...keyHandoverRows(keyCode, b.vehicle_plate), ...rows],
       button: { label: "Zur Buchung", url: tripUrl },
-      outro: [...KEY_HANDOVER_HINTS, "Bitte prüfe das Fahrzeug vor der Fahrt und lade die Fotos direkt in der App hoch."],
+      outro: [...keyHandoverHintsFor(b.vehicle_plate), "Bitte prüfe das Fahrzeug vor der Fahrt und lade die Fotos direkt in der App hoch."],
     }),
   };
 }
@@ -259,7 +259,7 @@ async function processManualBatch(kind: ReminderKind) {
           heading: kind === "24h" ? "Erinnerung an deinen Termin morgen" : "Dein Schlüsselcode",
           intro: [kind === "24h" ? "hier noch einmal die Daten zu deinem Termin bei MyTransporter:" : "dein Termin startet gleich. Hier ist dein Schlüsselcode und wo du alles findest:"],
           rowsTitle: kind === "24h" ? "Deine Mietdaten" : "Schlüssel & Abholung",
-          ...(kind === "24h" ? { outro: ["Deinen Schlüsselcode bekommst du automatisch 15 Minuten vor Beginn per E-Mail."] } : { outro: KEY_HANDOVER_HINTS }),
+          ...(kind === "24h" ? { outro: ["Deinen Schlüsselcode bekommst du automatisch 15 Minuten vor Beginn per E-Mail."] } : { outro: keyHandoverHintsFor(m.vehicle_plate) }),
           rows: [
             ...(kind === "30min" ? keyHandoverRows(code, m.vehicle_plate) : []),
             { label: "Fahrzeug", value: vehicle || "Transporter" },

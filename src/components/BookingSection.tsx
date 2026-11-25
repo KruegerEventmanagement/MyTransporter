@@ -1,5 +1,6 @@
 import { platesForDuration } from "@/lib/availability-logic";
 import { MIN_DAYS_BY_CLASS } from "@/lib/booking-rules";
+import { RemotePickupNotice } from "@/components/RemotePickupNotice";
 import { normalizeEmail, authErrorMessage, emailInputProps, suggestsPasswordReset } from "@/lib/auth-input";
 import { ForgotPassword } from "@/components/ForgotPassword";
 import { publicOrigin } from "@/lib/native/platform";
@@ -1687,6 +1688,7 @@ export function BookingSection() {
                       return { label: "verfügbar" };
                     }}
                   >
+                  <RemotePickupNotice plate={currentVehicle?.plate} className="mt-4" />
                   {currentVehicle && !currentVehicle.is_active && (
                     <div className="mt-4 rounded-xl border border-border bg-secondary p-3 text-sm">
                       <p className="font-semibold text-foreground">Aktuell nicht verfügbar</p>

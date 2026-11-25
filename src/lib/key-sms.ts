@@ -1,5 +1,5 @@
 /** Schlüsselcode-SMS: reiner Textbaukasten + Telefonnummernprüfung (ohne Serverzugriff). */
-import { keySafeFor } from "./key-handover";
+import { keySafeFor, remotePickupAddress } from "./key-handover";
 import { KEY_VIDEOS_SHORT_LINK } from "./key-videos";
 
 export const KEY_SMS_SENDER = "MyTransport"; // max. 11 Zeichen
@@ -23,7 +23,7 @@ export function normalizePhone(raw: string | null | undefined): string | null {
 
 export function buildKeySms(plate: string, code: string): string | null {
   const safe = keySafeFor(plate);
-  if (!safe || !code) return null;
+  if (!safe || !code || remotePickupAddress(plate)) return null;
   return [
     `MyTransporter: Dein Schlüsselcode für den Transporter ${plate}.`,
     `Dein Schlüssel liegt in Box ${safe} am OBI Leonberg (Eingang, Fahrradständer). Code: ${code}`,

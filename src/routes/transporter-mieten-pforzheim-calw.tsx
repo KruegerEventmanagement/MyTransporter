@@ -70,8 +70,8 @@ function PforzheimCalwPage() {
         </h1>
         <p className="mt-4 text-muted-foreground leading-relaxed">
           Auch aus Pforzheim, Calw und Umgebung mieten Kunden bei uns – vor allem den extra langen
-          VW Crafter (Klasse L5H2). In Pforzheim oder Calw selbst haben wir keinen Standort: Alle
-          Transporter, auch der Crafter, werden in Leonberg abgeholt und dort zurückgegeben.
+          VW Crafter (Klasse L5H2). Der Crafter wird in der Calwer Straße 29, 75331 Engelsbrand-Grunbach
+          abgeholt und dort zurückgegeben. Alle anderen Transporter stehen in Leonberg.
         </p>
 
         <section className="mt-8 rounded-2xl border border-border p-6">

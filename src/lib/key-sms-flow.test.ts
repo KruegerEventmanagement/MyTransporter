@@ -47,8 +47,11 @@ describe("Versandpfad mit Leases", () => {
     expect(await processKeySms(store(), okSender(log), job())).toBe("skipped");
     expect(log).toHaveLength(1);
   });
-  it("Fahrzeugzuordnung 102→2, 1003→3, OF-DK→4; unbekanntes Fahrzeug ohne Versand", async () => {
-    for (const [plate, box, id] of [["LEO MY 102", 2, "a"], ["PF MY 1003", 3, "b"], ["OF DK 1234", 4, "c"]] as const) {
+  it("Fahrzeugzuordnung 102→2, 1003→3; Crafter und unbekanntes Fahrzeug ohne Versand", async () => {
+    const crafterLog: Sent[] = [];
+    await processKeySms(store(), okSender(crafterLog), job({ plate: "OF DK 1234", id: "00000000-0000-0000-0000-00000000000c" }));
+    expect(crafterLog).toHaveLength(0);
+    for (const [plate, box, id] of [["LEO MY 102", 2, "a"], ["PF MY 1003", 3, "b"]] as const) {
       const log: Sent[] = [];
       await processKeySms(store(), okSender(log), job({ plate, id: `00000000-0000-0000-0000-00000000000${id}` }));
       expect(log[0]!.text).toContain(`Box ${box}`);

@@ -5,6 +5,7 @@ Subdirectories (android/, src/test/) have their own AGENTS.md to read before cha
 - UI-Übersetzungen nur über src/lib/i18n (useI18n, MESSAGES mit de als Schlüsselquelle, Test prüft Vollständigkeit); SSR immer Deutsch, Sprache erst nach Hydration, damit keine Hydration-Fehler entstehen; Rechtstexte bleiben deutsch.
 - Shared JSX localization is applied by scripts/localize-jsx.ts through React-owned Localized trees and validated static catalogs in src/lib/i18n; never mutate rendered DOM or transmit customer content for translation, preserving form state and German legal documents.
 - Kamera/Foto nur über src/lib/image-capture.ts.
+- Vehicles picked up outside Leonberg are listed only in REMOTE_PICKUP_BY_PLATE (src/lib/key-handover.ts); mails, key SMS and trip pages read it so no OBI code is sent for them.
 - Fahrtfotos speichern via src/lib/trip-photo-store.ts (Upload + bestätigter DB-Eintrag); trip-photos.ts nur für Leser.
 - Page headers: one BrandHomeLink logo.
 - Plan-aware availability, price classes and vehicle auto-selection share plan-availability.ts with the plan ID, so class minimum durations cannot disagree between booking steps.

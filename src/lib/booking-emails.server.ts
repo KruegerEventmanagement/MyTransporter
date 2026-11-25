@@ -1,3 +1,4 @@
+import { remotePickupAddress, remotePickupNotice, REMOTE_PICKUP_KEY_HINT } from "@/lib/key-handover";
 import { PRE_TRIP_PHOTO_NOTICE, RETURN_NOTICE_TITLE, RETURN_NOTICE_FAST, RETURN_NOTICE_SLOW, DEPOSIT_BANK_NOTE } from "@/lib/return-notice";
 import { isPhysicalAddon } from "@/lib/custom-km";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -232,6 +233,7 @@ export async function sendBookingConfirmationImpl(data: {
           `Summe Zubehör: <strong>${(physical.reduce((s, a) => s + a.price_cents, 0) / 100).toFixed(2)} €</strong>. Bitte vollständig &amp; unbeschädigt zurückgeben.`,
         ));
 
+  const remotePickup = remotePickupAddress(booking.vehicle_plate);
   const html = renderEmail({
     firstName: profile?.first_name,
     heading: "Deine Buchung ist bestätigt",
@@ -250,9 +252,14 @@ export async function sendBookingConfirmationImpl(data: {
       noteBlock(`<strong>Vorher- und Nachher-Foto vom Kilometerstand – nicht vergessen!</strong><br />${PRE_TRIP_PHOTO_NOTICE.join(" ")}<br /><a href="${tripUrl}" style="color:#000;font-weight:bold;">Jetzt zur Fahrt und Fotos machen</a>`) +
       keyVideosHtml() +
       addonsHtmlBlock +
+      (remotePickup
+        ? noteBlock(`<strong style="color:#dc2626;">${remotePickupNotice(remotePickup)}</strong>`)
+        : "") +
       listBlock("So geht es weiter", [
+        ...(remotePickup ? [REMOTE_PICKUP_KEY_HINT] : [
         "Deinen Schlüsselcode bekommst du automatisch 15 Minuten vor der Abholung per E-Mail.",
         "Schlüssel: OBI Leonberg, vor dem Eingang an den Fahrradständern. Transporter: an der Poststraße 63, 71229 Leonberg (ca. 500 m entfernt), neben dem Othalo-Gebäude an der Straße – bitte nicht bei Othalo klingeln.",
+        ]),
         "Du bekommst außerdem eine Erinnerung 24 Stunden vorher.",
         "Über den Button oben kommst du jederzeit zu deiner Buchung.",
       ]) +
@@ -275,8 +282,10 @@ export async function sendBookingConfirmationImpl(data: {
     "",
     ...keyVideosText(),
     "",
+    ...(remotePickup ? [remotePickupNotice(remotePickup), REMOTE_PICKUP_KEY_HINT] : [
     "Deinen Schlüsselcode bekommst du automatisch 15 Minuten vor der Abholung per E-Mail.",
     "Schlüssel: OBI Leonberg, vor dem Eingang an den Fahrradständern. Transporter: an der Poststraße 63, 71229 Leonberg, an der Straße – bitte nicht bei Othalo klingeln.",
+    ]),
     "Bitte vor und nach der Fahrt Fotos vom Kilometerstand machen.",
     `Stornieren: ${profilUrl} (bis 13 Stunden vor Abfahrt kostenlos).`,
     "",

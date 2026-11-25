@@ -44,9 +44,10 @@ interface PreDriveFlowProps {
   bookingId: string;
   pickupCode: string;
   onComplete: (startKm: number) => void;
+  vehiclePlate?: string | null;
 }
 
-export function PreDriveFlow({ bookingId, onComplete }: PreDriveFlowProps) {
+export function PreDriveFlow({ bookingId, onComplete, vehiclePlate }: PreDriveFlowProps) {
   const uploadLock = useRef(false);
   const capturePath = useRef<string | null>(null);
   const [photos, setPhotos] = useState<Record<string, StoredTripPhoto>>({});
@@ -282,7 +283,7 @@ export function PreDriveFlow({ bookingId, onComplete }: PreDriveFlowProps) {
 
       {/* Step 1: Pickup Code */}
       {!codeShown ? (
-        <PickupKeyStep bookingId={bookingId} onDone={() => setCodeShown(true)} />
+        <PickupKeyStep bookingId={bookingId} vehiclePlate={vehiclePlate} onDone={() => setCodeShown(true)} />
       ) : (
         <>
           {/* Step 2: Vehicle Photos */}

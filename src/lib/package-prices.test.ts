@@ -20,11 +20,11 @@ describe("24h-Paketpreise 01.11.2026", () => {
     expect(9900 + (800 - 200) * 49 - p800.price * 100).toBe(4400);
   });
 
-  it("Grundtarif und Crafter-Mindestdauer bleiben unverändert", () => {
+  it("Grundtarif unverändert, Crafter ohne Mindestdauer", () => {
     expect(getPlanById("24h_300")?.price).toBe(99);
     expect(getPlanById("24h_300")?.freeKm).toBe(150);
     expect(getPlanById("24h_300")?.extraKmCents).toBe(49);
-    expect(planAllowedForClass("24h_500", "l5h2")).toBe(false);
-    expect(planAllowedForClass("24h_800", "l5h2")).toBe(false);
+    expect(planAllowedForClass("24h_500", "l5h2")).toBe(true);
+    expect(planAllowedForClass("24h_800", "l5h2")).toBe(true);
   });
 });

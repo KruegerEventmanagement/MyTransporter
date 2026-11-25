@@ -4,6 +4,7 @@ import { privateHead } from "@/lib/seo";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PreDriveFlow } from "@/components/PreDriveFlow";
+import { RemotePickupNotice } from "@/components/RemotePickupNotice";
 import { ReturnFlow } from "@/components/ReturnFlow";
 import { ActiveTripDashboard } from "@/components/ActiveTripDashboard";
 import { ScheduledTripView } from "@/components/ScheduledTripView";
@@ -413,6 +414,8 @@ function TripView({ bookingId }: { bookingId: string }) {
 
   if (phase === "pre" && !isUnlocked) {
     return (
+      <>
+      <div className="px-4 pt-4 max-w-xl mx-auto"><RemotePickupNotice plate={booking.vehicle_plate} /></div>
       <ScheduledTripView
         startDate={startDate}
         startHour={booking.start_hour}
@@ -422,6 +425,7 @@ function TripView({ bookingId }: { bookingId: string }) {
         unlockAt={unlockAt}
         addons={booking.addons ?? undefined}
       />
+      </>
     );
   }
 
@@ -440,7 +444,9 @@ function TripView({ bookingId }: { bookingId: string }) {
       {phase === "pre" && (
         <main className="min-h-screen bg-background pb-12 px-4">
           <TripLogoBar />
+          <RemotePickupNotice plate={booking.vehicle_plate} className="mb-4 max-w-xl mx-auto" />
           <PreDriveFlow
+            vehiclePlate={booking.vehicle_plate}
             key={`${userId ?? "anon"}:${booking.id}`}
             bookingId={booking.id}
             pickupCode={booking.pickup_code}
@@ -465,6 +471,9 @@ function TripView({ bookingId }: { bookingId: string }) {
         </main>
       )}
 
+      {phase === "active" && (
+        <div className="px-4 pt-4 max-w-xl mx-auto"><RemotePickupNotice plate={booking.vehicle_plate} /></div>
+      )}
       {phase === "active" && (
         <ActiveTripDashboard
           bookingId={booking.id}

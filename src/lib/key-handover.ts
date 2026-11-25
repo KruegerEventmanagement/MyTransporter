@@ -9,6 +9,28 @@ export const KEY_CODE_GRACE_MS = 10 * 60_000;
 export const KEY_PICKUP_PLACE = "OBI Leonberg – vor dem Eingang an den Fahrradständern";
 export const VEHICLE_PICKUP_PLACE = "Poststraße 63, 71229 Leonberg";
 
+/** Fahrzeuge mit abweichendem Abholort (nicht Leonberg). Kennzeichen normalisiert. */
+export const REMOTE_PICKUP_BY_PLATE: Record<string, string> = {
+  OFDK1234: "Calwer Straße 29, 75331 Engelsbrand-Grunbach",
+};
+export const REMOTE_PICKUP_KEY_HINT =
+  "Die Schlüsselübergabe stimmen wir persönlich mit dir ab – bitte melde dich vorher unter 0152 3623 0118.";
+
+/** Abweichender Abholort des Fahrzeugs oder null (dann gilt Leonberg). */
+export function remotePickupAddress(plate: string | null | undefined): string | null {
+  const k = (plate ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return REMOTE_PICKUP_BY_PLATE[k] ?? null;
+}
+
+export function remotePickupNotice(address: string): string {
+  return `Achtung: Abholort dieses Fahrzeugs ist ${address} – nicht Leonberg.`;
+}
+
+export function keyHandoverHintsFor(plate: string | null | undefined): string[] {
+  const remote = remotePickupAddress(plate);
+  return remote ? [remotePickupNotice(remote), REMOTE_PICKUP_KEY_HINT] : KEY_HANDOVER_HINTS;
+}
+
 export function isKeyCodeDue(startMs: number, nowMs: number): boolean {
   return nowMs >= startMs - KEY_CODE_LEAD_MS && nowMs <= startMs + KEY_CODE_GRACE_MS;
 }
@@ -22,6 +44,11 @@ export function keySafeFor(plate: string | null | undefined): number | null {
 }
 
 export function keyHandoverRows(code: string | null, plate?: string | null): { label: string; value: string }[] {
+  const remote = remotePickupAddress(plate);
+  if (remote) return [
+    { label: "Abholort", value: remote },
+    { label: "Schlüssel", value: REMOTE_PICKUP_KEY_HINT },
+  ];
   const safe = keySafeFor(plate);
   return [
     ...(safe ? [{ label: "Schlüsseltresor", value: `Tresor ${safe}${plate ? ` (für ${plate})` : ""}` }] : []),
