@@ -61,6 +61,7 @@ const de = {
   "common.close": "Schließen",
   "footer.rights": "© 2026 MyTransporter. Alle Rechte vorbehalten.",
   "legal.germanBinding": "Rechtlich verbindlich ist die deutsche Fassung.",
+  "legal.withdrawalNotice": "Hinweis zum Widerrufsrecht: Bei Verträgen über die Vermietung von Kraftfahrzeugen für einen bestimmten Termin oder Zeitraum besteht gemäß § 312g Abs. 2 Nr. 9 BGB kein gesetzliches Widerrufsrecht. Die nachfolgenden vertraglichen Stornierungsmöglichkeiten sowie zwingende gesetzliche Rechte bleiben unberührt.",
 } as const;
 
 export type MsgKey = keyof typeof de;
@@ -111,6 +112,7 @@ const en: Dict = {
   "common.close": "Close",
   "footer.rights": "© 2026 MyTransporter. All rights reserved.",
   "legal.germanBinding": "Only the German version is legally binding.",
+  "legal.withdrawalNotice": "Note on the right of withdrawal: For contracts for the rental of motor vehicles for a specific date or period, there is no statutory right of withdrawal pursuant to Section 312g (2) No. 9 BGB (German Civil Code). The contractual cancellation options set out in our terms as well as mandatory statutory rights remain unaffected.",
 };
 
 const ru: Dict = {
@@ -158,6 +160,7 @@ const ru: Dict = {
   "common.close": "Закрыть",
   "footer.rights": "© 2026 MyTransporter. Все права защищены.",
   "legal.germanBinding": "Юридически обязательной является немецкая версия.",
+  "legal.withdrawalNotice": "Информация о праве на отказ: для договоров аренды автомобилей на определённую дату или период согласно § 312g абз. 2 п. 9 Гражданского кодекса Германии (BGB) законное право на отказ не предусмотрено. Договорные возможности отмены, указанные в наших условиях, а также императивные законные права остаются в силе.",
 };
 
 const ar: Dict = {
@@ -205,6 +208,7 @@ const ar: Dict = {
   "common.close": "إغلاق",
   "footer.rights": "© 2026 MyTransporter. جميع الحقوق محفوظة.",
   "legal.germanBinding": "النسخة الألمانية هي النسخة الملزمة قانونيًا.",
+  "legal.withdrawalNotice": "ملاحظة حول حق الانسحاب: في عقود تأجير المركبات لموعد أو فترة محددة لا يوجد حق انسحاب قانوني وفقًا للمادة 312g الفقرة 2 البند 9 من القانون المدني الألماني (BGB). تبقى إمكانيات الإلغاء التعاقدية الواردة في شروطنا والحقوق القانونية الإلزامية سارية دون تغيير.",
 };
 
 const tr: Dict = {
@@ -252,6 +256,7 @@ const tr: Dict = {
   "common.close": "Kapat",
   "footer.rights": "© 2026 MyTransporter. Tüm hakları saklıdır.",
   "legal.germanBinding": "Yalnızca Almanca sürüm hukuken bağlayıcıdır.",
+  "legal.withdrawalNotice": "Cayma hakkına ilişkin bilgi: Belirli bir tarih veya süre için motorlu taşıt kiralama sözleşmelerinde, Alman Medeni Kanunu (BGB) § 312g fıkra 2 no. 9 uyarınca yasal cayma hakkı bulunmamaktadır. Koşullarımızdaki sözleşmesel iptal imkânları ile emredici yasal haklar saklıdır.",
 };
 
 const it: Dict = {
@@ -299,6 +304,7 @@ const it: Dict = {
   "common.close": "Chiudi",
   "footer.rights": "© 2026 MyTransporter. Tutti i diritti riservati.",
   "legal.germanBinding": "Solo la versione tedesca è giuridicamente vincolante.",
+  "legal.withdrawalNotice": "Nota sul diritto di recesso: per i contratti di noleggio di veicoli a motore per una data o un periodo determinati non sussiste alcun diritto di recesso legale ai sensi del § 312g comma 2 n. 9 BGB (codice civile tedesco). Restano salve le possibilità contrattuali di cancellazione previste nelle nostre condizioni e i diritti di legge inderogabili.",
 };
 
 const el: Dict = {
@@ -346,6 +352,7 @@ const el: Dict = {
   "common.close": "Κλείσιμο",
   "footer.rights": "© 2026 MyTransporter. Με επιφύλαξη παντός δικαιώματος.",
   "legal.germanBinding": "Νομικά δεσμευτική είναι μόνο η γερμανική έκδοση.",
+  "legal.withdrawalNotice": "Σημείωση για το δικαίωμα υπαναχώρησης: Στις συμβάσεις μίσθωσης μηχανοκίνητων οχημάτων για συγκεκριμένη ημερομηνία ή περίοδο δεν υφίσταται νόμιμο δικαίωμα υπαναχώρησης σύμφωνα με την § 312g παρ. 2 αρ. 9 BGB (Γερμανικός Αστικός Κώδικας). Οι συμβατικές δυνατότητες ακύρωσης των όρων μας καθώς και τα αναγκαστικά νόμιμα δικαιώματα παραμένουν ανεπηρέαστα.",
 };
 
 export const MESSAGES: Record<Lang, Dict> = { de, en, ru, ar, tr, it, el };

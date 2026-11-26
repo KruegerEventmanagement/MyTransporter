@@ -1,4 +1,5 @@
 import { withPartnerRef } from "@/lib/partner-signup-client";
+import { useI18n } from "@/lib/i18n";
 import { platesForDuration } from "@/lib/availability-logic";
 import { MIN_DAYS_BY_CLASS } from "@/lib/booking-rules";
 import { RemotePickupNotice } from "@/components/RemotePickupNotice";
@@ -178,6 +179,7 @@ export async function withRetryTimeout<T>(fn: () => Promise<T>, ms = AVAILABILIT
 }
 
 export function BookingSection() {
+  const { t: tI18n } = useI18n();
   const [step, setStep] = useState(0);
   const [liabilityAccepted, setLiabilityAccepted] = useState(false);
   const [reviewConsent, setReviewConsent] = useState(false);
@@ -2474,6 +2476,7 @@ export function BookingSection() {
               >
                 Sicher bezahlen
               </button>
+              <p className="mt-3 text-xs text-muted-foreground leading-relaxed">{tI18n("legal.withdrawalNotice")}</p>
               </>
             )}
 

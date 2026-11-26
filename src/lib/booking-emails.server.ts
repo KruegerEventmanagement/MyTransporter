@@ -266,7 +266,8 @@ export async function sendBookingConfirmationImpl(data: {
       noteBlock(`<strong>${RETURN_NOTICE_TITLE}:</strong> ${RETURN_NOTICE_FAST} ${RETURN_NOTICE_SLOW} ${DEPOSIT_BANK_NOTE} Wir erinnern dich vor Mietende per E-Mail.`) +
       noteBlock(
         `<strong>Stornierung:</strong> Du kannst deine Fahrt jederzeit im <a href="${profilUrl}" style="color:#000;">Profil</a> stornieren. Bis 13 Stunden vor Abfahrt ist das kostenlos.${cancellationTable()}<br />Die Kaution wird in jedem Fall vollständig zurückerstattet.`,
-      ),
+      ) +
+      noteBlock(`Hinweis zum Widerrufsrecht: Bei Verträgen über die Vermietung von Kraftfahrzeugen für einen bestimmten Termin oder Zeitraum besteht gemäß § 312g Abs. 2 Nr. 9 BGB kein gesetzliches Widerrufsrecht. Die nachfolgenden vertraglichen Stornierungsmöglichkeiten sowie zwingende gesetzliche Rechte bleiben unberührt.`),
   });
 
   const text = [
@@ -288,6 +289,7 @@ export async function sendBookingConfirmationImpl(data: {
     ]),
     "Bitte vor und nach der Fahrt Fotos vom Kilometerstand machen.",
     `Stornieren: ${profilUrl} (bis 13 Stunden vor Abfahrt kostenlos).`,
+    "Hinweis zum Widerrufsrecht: Bei Verträgen über die Vermietung von Kraftfahrzeugen für einen bestimmten Termin oder Zeitraum besteht gemäß § 312g Abs. 2 Nr. 9 BGB kein gesetzliches Widerrufsrecht. Die nachfolgenden vertraglichen Stornierungsmöglichkeiten sowie zwingende gesetzliche Rechte bleiben unberührt.",
     "",
     "Herzliche Grüße",
     "Dein MyTransporter-Team",

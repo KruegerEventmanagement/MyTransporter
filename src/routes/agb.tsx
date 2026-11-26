@@ -122,6 +122,7 @@ function AgbPage() {
 
           <div>
             <h2 className="font-bold text-lg text-foreground mb-2">§ 10 Stornierung und vorzeitige Beendigung</h2>
+            <p className="mb-2"><strong>Hinweis zum Widerrufsrecht:</strong> Bei Verträgen über die Vermietung von Kraftfahrzeugen für einen bestimmten Termin oder Zeitraum besteht gemäß §&nbsp;312g Abs.&nbsp;2 Nr.&nbsp;9 BGB kein gesetzliches Widerrufsrecht. Die nachfolgenden vertraglichen Stornierungsmöglichkeiten sowie zwingende gesetzliche Rechte bleiben unberührt.</p>
             <p className="mb-2"><strong>Stornierung vor Mietbeginn:</strong> Der Mieter kann den Mietvertrag jederzeit vor dem vereinbarten Mietbeginn stornieren. Bei einer Stornierung innerhalb von 24 Stunden vor dem vereinbarten Mietbeginn wird eine pauschale Stornierungsgebühr in Höhe von 100,00&nbsp;€ erhoben. Bei einer Stornierung mehr als 24 Stunden vor dem vereinbarten Mietbeginn wird keine Stornierungsgebühr erhoben.</p>
             <p className="mb-2"><strong>Vorzeitige Beendigung einer begonnenen Miete:</strong> Wird eine bereits angetretene Miete während des vereinbarten Mietzeitraums vorzeitig beendet oder storniert, beträgt die pauschale Stornierungsgebühr 150,00&nbsp;€.</p>
             <p className="mb-2"><strong>Verrechnung bereits gezahlter Mietentgelte:</strong> Bereits gezahlte Mietentgelte werden auf die gegebenenfalls anfallende Stornierungsgebühr angerechnet, um eine unzulässige Doppelbelastung des Mieters auszuschließen. Übersteigt der bereits gezahlte Betrag die Stornierungsgebühr, wird der überschießende Teilbetrag erstattet. Liegt der bereits gezahlte Betrag unter der Stornierungsgebühr oder wurde noch nicht gezahlt, kann die Differenz bis zur Höhe der Stornierungsgebühr nachgefordert werden. Die Kaution bleibt hiervon unberührt; sie wird nach Abzug gegebenenfalls berechtigter Beträge entsprechend § 3 erstattet.</p>
@@ -134,7 +135,7 @@ function AgbPage() {
             <p>Es gilt das Recht der Bundesrepublik Deutschland. Gerichtsstand ist Leonberg. Sollten einzelne Bestimmungen unwirksam sein, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.</p>
           </div>
 
-          <p className="text-xs text-muted-foreground mt-8">Stand: 1. November 2026. Für bereits abgeschlossene Buchungen gelten unverändert die bei der Buchung bestätigten Freikilometer und Mehrkilometersätze.</p>
+          <p className="text-xs text-muted-foreground mt-8">Stand: 26. November 2026. Diese Fassung gilt für ab diesem Datum abgeschlossene Buchungen; für zuvor geschlossene Verträge gilt die jeweils bei Buchung gültige Fassung. Für bereits abgeschlossene Buchungen gelten unverändert die bei der Buchung bestätigten Freikilometer und Mehrkilometersätze.</p>
         </div>
       </div>
     </main>
