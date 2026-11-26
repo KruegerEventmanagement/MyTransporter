@@ -31,7 +31,7 @@ export const claimPartnerSignupFn = createServerFn({ method: "POST" })
       const { claimPartnerSignup } = await import("@/lib/partner-notifications.server");
       return { result: await claimPartnerSignup(supabaseAdmin as any, (context as any).userId, data.ref) };
     } catch {
-      return { result: "skipped" as const };
+      return { error: "temporary" as const };
     }
   });
 

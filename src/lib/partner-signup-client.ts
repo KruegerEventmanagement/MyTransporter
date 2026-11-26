@@ -12,8 +12,9 @@ export async function maybeClaimPartnerSignup(): Promise<void> {
     const { data } = await supabase.auth.getSession();
     const uid = data.session?.user.id;
     if (!uid || tried.has(`${uid}:${ref}`)) return;
-    tried.add(`${uid}:${ref}`);
-    await claimPartnerSignupFn({ data: { ref } });
+    const r = await claimPartnerSignupFn({ data: { ref } });
+    // Nur bestätigte Endergebnisse merken; Netz-/Serverfehler ⇒ nächster Aufruf versucht erneut.
+    if (r && typeof r === "object" && "result" in r && (r.result === "attached" || r.result === "exists")) tried.add(`${uid}:${ref}`);
   } catch { /* nie blockierend */ }
 }
 

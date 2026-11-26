@@ -102,17 +102,23 @@ export async function claimPartnerSignup(db: Db & { auth: any }, userId: string,
   const { data: u } = await db.auth.admin.getUserById(userId);
   const user = u?.user;
   if (!user?.created_at || !(user.email_confirmed_at || user.confirmed_at)) return "skipped";
-  if (new Date(user.created_at).getTime() < new Date(v.visitedAt).getTime() - 5 * 60_000) return "skipped";
+  // Strenge Reihenfolge (beides Serverzeit): Konto muss NACH dem Scan entstanden sein.
+  if (!(new Date(user.created_at).getTime() > new Date(v.visitedAt).getTime())) return "skipped";
   const { data, error } = await db.from("partner_signups")
     .upsert({ user_id: userId, partner_id: v.partnerId, visit_id: v.visitId, partner_slug: v.slug, visited_at: v.visitedAt, user_created_at: user.created_at }, { onConflict: "user_id", ignoreDuplicates: true })
     .select("user_id");
   if (error) return "skipped";
-  if (!(data ?? []).length) return "exists";
-  await safe("signup", async () => {
-    const { data: p } = await db.from("partners").select("name").eq("id", v.partnerId).single();
-    const id = await insertNotification(db, "signup", userId, v.partnerId, { partnerName: p?.name ?? v.slug, slug: v.slug, occurredAt: new Date().toISOString(), ref: `Benutzer ${userId} · Aufruf ${v.visitId}` });
-    if (id) await runPartnerNotifications({ id, limit: 1 });
-  });
+  const inserted = (data ?? []).length > 0;
+  if (!inserted) {
+    // Bereits gespeichert: nur nachholen, wenn genau diese Zuordnung existiert (Outbox evtl. fehlgeschlagen).
+    const { data: ex } = await db.from("partner_signups").select("visit_id, partner_id").eq("user_id", userId).maybeSingle();
+    if (!ex || ex.visit_id !== v.visitId) return "exists";
+  }
+  // Fehlende Outbox-Zeile wird idempotent per event_key nachgeholt; Fehler ⇒ Client darf erneut versuchen.
+  const { data: p } = await db.from("partners").select("name").eq("id", v.partnerId).single();
+  const id = await insertNotification(db, "signup", userId, v.partnerId, { partnerName: p?.name ?? v.slug, slug: v.slug, occurredAt: new Date().toISOString(), ref: `Benutzer ${userId} · Aufruf ${v.visitId}` });
+  if (id) await safe("signup", () => runPartnerNotifications({ id, limit: 1 }));
+  if (!inserted) return "exists";
   return "attached";
 }
 
@@ -124,11 +130,13 @@ export async function notifyPaidPartnerBooking(db: Db, bookingId: string) {
     const { data: b } = await db.from("bookings").select("pickup_code, status, plan_price, addons_total_cents").eq("id", bookingId).single();
     if (!b || !(COMMISSIONABLE_STATUSES as readonly string[]).includes(b.status)) return;
     const { data: p } = await db.from("partners").select("name").eq("id", a.partner_id).single();
-    const c = computePartnerCommission(b, [], a.commission_rate_bp);
+    const { data: rs, error: re } = await db.from("stripe_refunds").select("refund_id, amount_cents, status, allocation").eq("booking_id", bookingId).order("refund_id", { ascending: true });
+    if (re) throw new Error(`refunds: ${re.message}`);
+    const c = computePartnerCommission(b, (rs ?? []) as any, a.commission_rate_bp);
     const id = await insertNotification(db, "booking_paid", bookingId, a.partner_id, {
       partnerName: p?.name ?? a.partner_slug, slug: a.partner_slug, occurredAt: new Date().toISOString(),
       ref: `Buchung ${bookingId} · Aufruf ${a.visit_id}`, bookingReference: b.pickup_code, status: b.status,
-      rentCents: c.rentCents, commissionCents: c.commissionCents, ratePercent: a.commission_rate_bp / 100,
+      rentCents: c.rentCents, refundedCents: c.refundedCents, baseCents: c.baseCents, commissionCents: c.commissionCents, ratePercent: a.commission_rate_bp / 100,
     });
     if (id) await runPartnerNotifications({ id, limit: 1 });
   });

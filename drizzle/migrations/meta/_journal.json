@@ -253,6 +253,13 @@
       "when": 1795689714736,
       "tag": "0035_partner_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1795690156807,
+      "tag": "0036_partner_notify_exhausted_review",
+      "breakpoints": true
     }
   ]
 }

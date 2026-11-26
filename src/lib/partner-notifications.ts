@@ -14,7 +14,7 @@ export const MAX_NOTIFY_ATTEMPTS = 8;
 export type PartnerNotifyKind = "scan" | "signup" | "booking_paid" | "test";
 export type PartnerNotifyPayload = {
   partnerName: string; slug: string; occurredAt: string; ref: string;
-  bookingReference?: string; rentCents?: number; commissionCents?: number; ratePercent?: number; status?: string;
+  bookingReference?: string; rentCents?: number; refundedCents?: number; baseCents?: number; commissionCents?: number; ratePercent?: number; status?: string;
 };
 
 export const partnerEventKey = (kind: PartnerNotifyKind, id: string) => `${kind}:${id}`;
@@ -47,6 +47,8 @@ export function buildPartnerNotification(kind: PartnerNotifyKind, p: PartnerNoti
     if (p.bookingReference) rows.push({ label: "Buchungsreferenz", value: p.bookingReference });
     if (p.status) rows.push({ label: "Zahlungsstatus", value: p.status === "paid" ? "bezahlt" : p.status });
     if (typeof p.rentCents === "number") rows.push({ label: "Mieterlös ohne Kaution", value: formatEuro(p.rentCents) });
+    if (typeof p.refundedCents === "number" && p.refundedCents > 0) rows.push({ label: "Abzüglich Mieterstattungen", value: formatEuro(p.refundedCents) });
+    if (typeof p.baseCents === "number") rows.push({ label: "Provisionsgrundlage (nach Erstattungen)", value: formatEuro(p.baseCents) });
     if (typeof p.commissionCents === "number") rows.push({ label: `Provision${p.ratePercent != null ? ` (${p.ratePercent} %)` : ""}`, value: formatEuro(p.commissionCents) });
   }
   const intro: string[] = [];
