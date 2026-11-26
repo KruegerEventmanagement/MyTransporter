@@ -1850,6 +1850,110 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_notifications: {
+        Row: {
+          attempts: number
+          created_at: string
+          event_key: string
+          id: string
+          kind: string
+          last_error: string | null
+          lease_token: string | null
+          lease_until: string | null
+          next_attempt_at: string
+          partner_id: string | null
+          payload: Json
+          provider_id: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          event_key: string
+          id?: string
+          kind: string
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          next_attempt_at?: string
+          partner_id?: string | null
+          payload?: Json
+          provider_id?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          event_key?: string
+          id?: string
+          kind?: string
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          next_attempt_at?: string
+          partner_id?: string | null
+          payload?: Json
+          provider_id?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_notifications_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_signups: {
+        Row: {
+          attributed_at: string
+          partner_id: string
+          partner_slug: string
+          user_created_at: string
+          user_id: string
+          visit_id: string
+          visited_at: string
+        }
+        Insert: {
+          attributed_at?: string
+          partner_id: string
+          partner_slug: string
+          user_created_at: string
+          user_id: string
+          visit_id: string
+          visited_at: string
+        }
+        Update: {
+          attributed_at?: string
+          partner_id?: string
+          partner_slug?: string
+          user_created_at?: string
+          user_id?: string
+          visit_id?: string
+          visited_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_signups_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_signups_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "partner_visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_visits: {
         Row: {
           id: string
@@ -2664,6 +2768,31 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      claim_partner_notifications: {
+        Args: { _id?: string; _lease_seconds: number; _limit: number }
+        Returns: {
+          attempts: number
+          created_at: string
+          event_key: string
+          id: string
+          kind: string
+          last_error: string | null
+          lease_token: string | null
+          lease_until: string | null
+          next_attempt_at: string
+          partner_id: string | null
+          payload: Json
+          provider_id: string | null
+          sent_at: string | null
+          status: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "partner_notifications"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       claim_reminder: {
         Args: { _id: string; _kind: string; _table: string }
         Returns: boolean
@@ -2772,6 +2901,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      enqueue_partner_scan_notification: {
+        Args: { _payload: Json; _visit_id: string }
+        Returns: string
+      }
       fail_account_deletion_lease: {
         Args: { _error: string; _token: string; _uid: string }
         Returns: boolean
@@ -2862,6 +2995,17 @@ export type Database = {
           _total: number
         }
         Returns: Json
+      }
+      finish_partner_notification: {
+        Args: {
+          _error: string
+          _id: string
+          _lease_token: string
+          _provider_id: string
+          _retry_seconds: number
+          _status: string
+        }
+        Returns: boolean
       }
       has_role: {
         Args: {

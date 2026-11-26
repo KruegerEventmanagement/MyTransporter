@@ -5,6 +5,8 @@ import { getConsent, setConsent, ensureGoogleTag, hasMarketingConsent, onConsent
 import { ensureMetaPixel } from "@/lib/meta-pixel";
 import { captureAttribution } from "@/lib/attribution";
 import { applyPartnerConsent, capturePartnerRef } from "@/lib/partner-tracking";
+import { maybeClaimPartnerSignup } from "@/lib/partner-signup-client";
+import { supabase } from "@/integrations/supabase/client";
 
 export const OPEN_CONSENT_EVENT = "mt:open-consent";
 
@@ -23,6 +25,11 @@ export function CookieConsent() {
     // QR-Partnerkontakt: dauerhaft nur mit Einwilligung, sonst nur für diese Seite.
     capturePartnerRef();
     const offPartner = onConsentChange((c) => applyPartnerConsent(c));
+    // QR-Registrierung: Aufruf außerhalb des Auth-Callbacks (keine Auth-Lock-Blockade).
+    void maybeClaimPartnerSignup();
+    const { data: authSub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") window.setTimeout(() => void maybeClaimPartnerSignup(), 0);
+    });
     const choice = getConsent();
     if (choice === null) setOpen(true);
     // Bei bereits erteilter Einwilligung Tags laden und Consent anwenden.
@@ -37,6 +44,7 @@ export function CookieConsent() {
     return () => {
       window.removeEventListener(OPEN_CONSENT_EVENT, reopen);
       offPartner();
+      authSub.subscription.unsubscribe();
     };
   }, []);
 

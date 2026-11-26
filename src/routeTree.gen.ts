@@ -46,6 +46,7 @@ import { Route as ApiPublicHooksProcessBookingEmailsRouteImport } from './routes
 import { Route as ApiPublicHooksProcessCalendarSyncRouteImport } from './routes/api/public/hooks/process-calendar-sync'
 import { Route as ApiPublicHooksProcessCustomerMailsRouteImport } from './routes/api/public/hooks/process-customer-mails'
 import { Route as ApiPublicHooksProcessManualNotificationsRouteImport } from './routes/api/public/hooks/process-manual-notifications'
+import { Route as ApiPublicHooksProcessPartnerNotificationsRouteImport } from './routes/api/public/hooks/process-partner-notifications'
 import { Route as ApiPublicHooksPurgeDocumentArchiveRouteImport } from './routes/api/public/hooks/purge-document-archive'
 import { Route as ApiPublicHooksReturnRemindersRouteImport } from './routes/api/public/hooks/return-reminders'
 import { Route as ApiPublicHooksSendBirthdayEmailsRouteImport } from './routes/api/public/hooks/send-birthday-emails'
@@ -247,6 +248,12 @@ const ApiPublicHooksProcessManualNotificationsRoute =
     path: '/api/public/hooks/process-manual-notifications',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksProcessPartnerNotificationsRoute =
+  ApiPublicHooksProcessPartnerNotificationsRouteImport.update({
+    id: '/api/public/hooks/process-partner-notifications',
+    path: '/api/public/hooks/process-partner-notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksPurgeDocumentArchiveRoute =
   ApiPublicHooksPurgeDocumentArchiveRouteImport.update({
     id: '/api/public/hooks/purge-document-archive',
@@ -322,6 +329,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
   '/api/public/hooks/process-customer-mails': typeof ApiPublicHooksProcessCustomerMailsRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
+  '/api/public/hooks/process-partner-notifications': typeof ApiPublicHooksProcessPartnerNotificationsRoute
   '/api/public/hooks/purge-document-archive': typeof ApiPublicHooksPurgeDocumentArchiveRoute
   '/api/public/hooks/return-reminders': typeof ApiPublicHooksReturnRemindersRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
@@ -367,6 +375,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
   '/api/public/hooks/process-customer-mails': typeof ApiPublicHooksProcessCustomerMailsRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
+  '/api/public/hooks/process-partner-notifications': typeof ApiPublicHooksProcessPartnerNotificationsRoute
   '/api/public/hooks/purge-document-archive': typeof ApiPublicHooksPurgeDocumentArchiveRoute
   '/api/public/hooks/return-reminders': typeof ApiPublicHooksReturnRemindersRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
@@ -413,6 +422,7 @@ export interface FileRoutesById {
   '/api/public/hooks/process-calendar-sync': typeof ApiPublicHooksProcessCalendarSyncRoute
   '/api/public/hooks/process-customer-mails': typeof ApiPublicHooksProcessCustomerMailsRoute
   '/api/public/hooks/process-manual-notifications': typeof ApiPublicHooksProcessManualNotificationsRoute
+  '/api/public/hooks/process-partner-notifications': typeof ApiPublicHooksProcessPartnerNotificationsRoute
   '/api/public/hooks/purge-document-archive': typeof ApiPublicHooksPurgeDocumentArchiveRoute
   '/api/public/hooks/return-reminders': typeof ApiPublicHooksReturnRemindersRoute
   '/api/public/hooks/send-birthday-emails': typeof ApiPublicHooksSendBirthdayEmailsRoute
@@ -460,6 +470,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-calendar-sync'
     | '/api/public/hooks/process-customer-mails'
     | '/api/public/hooks/process-manual-notifications'
+    | '/api/public/hooks/process-partner-notifications'
     | '/api/public/hooks/purge-document-archive'
     | '/api/public/hooks/return-reminders'
     | '/api/public/hooks/send-birthday-emails'
@@ -505,6 +516,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-calendar-sync'
     | '/api/public/hooks/process-customer-mails'
     | '/api/public/hooks/process-manual-notifications'
+    | '/api/public/hooks/process-partner-notifications'
     | '/api/public/hooks/purge-document-archive'
     | '/api/public/hooks/return-reminders'
     | '/api/public/hooks/send-birthday-emails'
@@ -550,6 +562,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-calendar-sync'
     | '/api/public/hooks/process-customer-mails'
     | '/api/public/hooks/process-manual-notifications'
+    | '/api/public/hooks/process-partner-notifications'
     | '/api/public/hooks/purge-document-archive'
     | '/api/public/hooks/return-reminders'
     | '/api/public/hooks/send-birthday-emails'
@@ -596,6 +609,7 @@ export interface RootRouteChildren {
   ApiPublicHooksProcessCalendarSyncRoute: typeof ApiPublicHooksProcessCalendarSyncRoute
   ApiPublicHooksProcessCustomerMailsRoute: typeof ApiPublicHooksProcessCustomerMailsRoute
   ApiPublicHooksProcessManualNotificationsRoute: typeof ApiPublicHooksProcessManualNotificationsRoute
+  ApiPublicHooksProcessPartnerNotificationsRoute: typeof ApiPublicHooksProcessPartnerNotificationsRoute
   ApiPublicHooksPurgeDocumentArchiveRoute: typeof ApiPublicHooksPurgeDocumentArchiveRoute
   ApiPublicHooksReturnRemindersRoute: typeof ApiPublicHooksReturnRemindersRoute
   ApiPublicHooksSendBirthdayEmailsRoute: typeof ApiPublicHooksSendBirthdayEmailsRoute
@@ -865,6 +879,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProcessManualNotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-partner-notifications': {
+      id: '/api/public/hooks/process-partner-notifications'
+      path: '/api/public/hooks/process-partner-notifications'
+      fullPath: '/api/public/hooks/process-partner-notifications'
+      preLoaderRoute: typeof ApiPublicHooksProcessPartnerNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/purge-document-archive': {
       id: '/api/public/hooks/purge-document-archive'
       path: '/api/public/hooks/purge-document-archive'
@@ -952,6 +973,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksProcessCustomerMailsRoute,
   ApiPublicHooksProcessManualNotificationsRoute:
     ApiPublicHooksProcessManualNotificationsRoute,
+  ApiPublicHooksProcessPartnerNotificationsRoute:
+    ApiPublicHooksProcessPartnerNotificationsRoute,
   ApiPublicHooksPurgeDocumentArchiveRoute:
     ApiPublicHooksPurgeDocumentArchiveRoute,
   ApiPublicHooksReturnRemindersRoute: ApiPublicHooksReturnRemindersRoute,

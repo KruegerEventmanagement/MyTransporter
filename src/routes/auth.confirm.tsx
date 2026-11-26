@@ -4,6 +4,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandHomeLink } from "@/components/BrandHomeLink";
+import { capturePartnerRef } from "@/lib/partner-tracking";
+import { maybeClaimPartnerSignup } from "@/lib/partner-signup-client";
 
 const PROFILE_URL = "/profil";
 const FALLBACK_URL = "/?email_confirmed=1#booking";
@@ -47,6 +49,12 @@ function AuthConfirmPage() {
 
       const { data: userData } = await supabase.auth.getUser();
       const isLoggedIn = !!userData.user;
+      // QR-Herkunft aus dem Bestätigungslink übernehmen und vor der Weiterleitung melden (max. 3 s).
+      if (isLoggedIn) {
+        capturePartnerRef();
+        await Promise.race([maybeClaimPartnerSignup(), new Promise((r) => setTimeout(r, 3000))]);
+        if (!active) return;
+      }
       setMessage(
         isLoggedIn
           ? "E-Mail bestätigt – du bist eingeloggt. Weiterleitung …"

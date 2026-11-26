@@ -186,6 +186,17 @@ export async function runBookingCheckout(data: BookingCheckoutInput, context: Ct
       const { validatePartnerVisit } = await import("@/lib/partner-attribution.server");
       partnerVisitId = (await validatePartnerVisit(supabaseAdmin, data.partnerRef))?.visitId ?? null;
     }
+    // Fallback: serverseitig verifizierte QR-Registrierung dieses Benutzers
+    // (Referenz übersteht Bestätigung in anderem Browser ohne Browser-Speicher).
+    if (!partnerVisitId) {
+      try {
+        const { data: su } = await supabaseAdmin.from("partner_signups").select("visit_id").eq("user_id", context.userId).maybeSingle();
+        if (su?.visit_id) {
+          const { validatePartnerVisit } = await import("@/lib/partner-attribution.server");
+          partnerVisitId = (await validatePartnerVisit(supabaseAdmin, su.visit_id))?.visitId ?? null;
+        }
+      } catch { partnerVisitId = null; }
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",

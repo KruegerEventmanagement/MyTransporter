@@ -1,3 +1,4 @@
+import { withPartnerRef } from "@/lib/partner-signup-client";
 import { normalizeEmail, authErrorMessage, suggestsPasswordReset, runAuthCall } from "@/lib/auth-input";
 import { ForgotPassword } from "@/components/ForgotPassword";
 import { publicOrigin } from "@/lib/native/platform";
@@ -158,7 +159,7 @@ export function Navbar() {
       email: normalizeEmail(form.email),
       password: form.password,
       options: {
-        emailRedirectTo: AUTH_CONFIRM_URL,
+        emailRedirectTo: withPartnerRef(AUTH_CONFIRM_URL),
         data: {
           first_name: form.firstName,
           last_name: form.lastName,

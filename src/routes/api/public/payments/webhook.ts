@@ -115,7 +115,11 @@ async function attachPartnerSafe(bookingId: string, session: StripeCheckoutSessi
   try {
     const { attachPartnerAttribution } = await import("@/lib/partner-attribution.server");
     const created = typeof session.created === "number" ? new Date(session.created * 1000) : new Date();
-    await attachPartnerAttribution(supabaseAdmin, bookingId, visitId, created);
+    const r = await attachPartnerAttribution(supabaseAdmin, bookingId, visitId, created);
+    if (r === "attached") {
+      const { notifyPaidPartnerBooking } = await import("@/lib/partner-notifications.server");
+      await notifyPaidPartnerBooking(supabaseAdmin as any, bookingId);
+    }
   } catch (e) {
     console.error("[webhook] Partner-Zuordnung fehlgeschlagen", String((e as Error)?.message ?? e).slice(0, 200));
   }

@@ -5,7 +5,8 @@ import { Copy, Download, Loader2, Plus, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getPartnerStats, savePartnerFn } from "@/lib/partners.functions";
+import { getPartnerStats, savePartnerFn, sendPartnerTestMailFn } from "@/lib/partners.functions";
+import { SCAN_MAIL_LIMIT } from "@/lib/partner-notifications";
 import type { PartnerStats } from "@/lib/partners-admin";
 import { PARTNER_ATTRIBUTION_DAYS, formatEuro, partnerTrackingUrl, PUBLIC_SITE_ORIGIN } from "@/lib/partner-tracking";
 
@@ -61,6 +62,15 @@ const EMPTY: Form = { id: null, slug: "", name: "", commissionPercent: "10", tar
 export function PartnersAdmin() {
   const load = useServerFn(getPartnerStats);
   const save = useServerFn(savePartnerFn);
+  const testMail = useServerFn(sendPartnerTestMailFn);
+  const sendTest = async (id: string) => {
+    try {
+      const r = await testMail({ data: { partnerId: id } });
+      if (r.sent) toast.success("TEST-Mail an info@mytransporter.org gesendet");
+      else toast.error("TEST-Mail nicht bestätigt – wird ggf. wiederholt");
+      void refresh();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "TEST-Mail fehlgeschlagen"); }
+  };
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [data, setData] = useState<PartnerStats[] | null>(null);
@@ -167,11 +177,17 @@ export function PartnersAdmin() {
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-2 sm:grid-cols-4">
                   <Stat label="QR-Aufrufe" value={String(p.visits)} hint="Scans, keine eindeutigen Personen" />
+                  <Stat label="Registrierungen" value={String(p.signups)} hint="neue, bestätigte Konten nach Scan" />
                   <Stat label="Zugeordnete Buchungen" value={`${p.bookings}`} hint={`davon bezahlt: ${p.paidBookings}`} />
                   <Stat label="Bezahlte Mieteinnahmen" value={formatEuro(p.baseCents)} hint="ohne Kaution, nach Erstattungen" />
                   <Stat label="Provision" value={formatEuro(p.commissionCents)} hint="berechnet, nicht ausgezahlt" />
                 </div>
+                <p className="pt-2 text-xs text-muted-foreground">
+                  Interne Mails an info@mytransporter.org: {p.notify.sent} gesendet, {p.notify.open} offen/Wiederholung, {p.notify.review} manuell prüfen.
+                  {" "}Scan-Mails: {p.notify.scanMails} – {p.notify.scanWithoutMail} Aufrufe ohne Mail (Limit oder vor Einführung der Mails; {SCAN_MAIL_LIMIT.perHour}/Stunde, {SCAN_MAIL_LIMIT.perDay}/Tag). Gezählt werden trotzdem alle Aufrufe.
+                </p>
                 <div className="flex flex-wrap gap-2 pt-2">
+                  <Button size="sm" variant="outline" onClick={() => sendTest(p.id)}>TEST-Mail</Button>
                   <Button size="sm" variant="outline" onClick={() => setForm({ id: p.id, slug: p.slug, name: p.name, commissionPercent: String(p.ratePercent), targetPath: p.targetPath, active: p.active, notes: p.notes ?? "" })}>Bearbeiten</Button>
                   <Button size="sm" variant="outline" onClick={() => toggle(p)}>{p.active ? "Deaktivieren" : "Aktivieren"}</Button>
                   <Button size="sm" variant="outline" onClick={() => exportCsv(p, from, to)}><Download className="h-4 w-4" /> CSV</Button>

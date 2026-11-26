@@ -1,3 +1,4 @@
+import { withPartnerRef } from "@/lib/partner-signup-client";
 import { platesForDuration } from "@/lib/availability-logic";
 import { MIN_DAYS_BY_CLASS } from "@/lib/booking-rules";
 import { RemotePickupNotice } from "@/components/RemotePickupNotice";
@@ -763,7 +764,7 @@ export function BookingSection() {
           email: regForm.email,
           password: regPassword,
           options: {
-            emailRedirectTo: AUTH_CONFIRM_URL,
+            emailRedirectTo: withPartnerRef(AUTH_CONFIRM_URL),
             data: {
               first_name: regBasics.normalized.first_name,
               last_name: regBasics.normalized.last_name,

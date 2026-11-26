@@ -136,6 +136,24 @@ export async function partnerStats(ctx: Ctx, range: StatsRange) {
     if (toIso) vq = vq.lt("visited_at", toIso);
     const { count, error: vErr } = await vq;
     if (vErr || typeof count !== "number") throw new Error("QR-Aufrufe konnten nicht gezählt werden.");
+    let sq = db.from("partner_signups").select("user_id", { count: "exact", head: true }).eq("partner_id", p.id);
+    if (fromIso) sq = sq.gte("attributed_at", fromIso);
+    if (toIso) sq = sq.lt("attributed_at", toIso);
+    const { count: signups, error: sErr } = await sq;
+    if (sErr || typeof signups !== "number") throw new Error("Registrierungen konnten nicht gezählt werden.");
+    const notes = await fetchAllPages<{ id: string; kind: string; status: string }>(() => {
+      let q = db.from("partner_notifications").select("id, kind, status").eq("partner_id", p.id).neq("kind", "test");
+      if (fromIso) q = q.gte("created_at", fromIso);
+      if (toIso) q = q.lt("created_at", toIso);
+      return q.order("id", { ascending: true });
+    }, "Benachrichtigungen");
+    const scanMails = notes.filter((n) => n.kind === "scan").length;
+    const notify = {
+      scanMails, scanWithoutMail: Math.max(0, count - scanMails),
+      sent: notes.filter((n) => n.status === "sent").length,
+      open: notes.filter((n) => n.status === "pending" || n.status === "sending" || n.status === "failed").length,
+      review: notes.filter((n) => n.status === "needs_review").length,
+    };
     const rows: PartnerBookingRow[] = [];
     for (const a of attrs.filter((x) => x.partner_id === p.id)) {
       const b = bookings.get(a.booking_id);
@@ -151,7 +169,7 @@ export async function partnerStats(ctx: Ctx, range: StatsRange) {
     out.push({
       id: p.id as string, slug: p.slug as string, name: p.name as string, ratePercent: p.commission_rate_bp / 100,
       targetPath: p.target_path as string, active: p.active as boolean, notes: (p.notes as string | null) ?? null,
-      visits: count, bookings: rows.length, paidBookings: rows.filter((r) => r.eligible).length,
+      visits: count, signups, notify, bookings: rows.length, paidBookings: rows.filter((r) => r.eligible).length,
       baseCents: rows.reduce((s, r) => s + r.baseCents, 0), commissionCents: rows.reduce((s, r) => s + r.commissionCents, 0), rows,
     });
   }
