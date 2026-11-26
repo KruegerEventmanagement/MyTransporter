@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { X } from "lucide-react";
-import { getConsent, setConsent, ensureGoogleTag, hasMarketingConsent } from "@/lib/analytics";
+import { getConsent, setConsent, ensureGoogleTag, hasMarketingConsent, onConsentChange } from "@/lib/analytics";
 import { ensureMetaPixel } from "@/lib/meta-pixel";
 import { captureAttribution } from "@/lib/attribution";
-import { capturePartnerRef } from "@/lib/partner-tracking";
+import { applyPartnerConsent, capturePartnerRef } from "@/lib/partner-tracking";
 
 export const OPEN_CONSENT_EVENT = "mt:open-consent";
 
@@ -20,8 +20,9 @@ export function CookieConsent() {
     // First-Touch-Attribution (UTM/gclid/fbclid) immer erfassen – rein lokal,
     // ohne Übertragung an Werbeplattformen.
     captureAttribution();
-    // QR-Partnerkontakt: technisch notwendig, nur lokal, ohne Dritte.
+    // QR-Partnerkontakt: dauerhaft nur mit Einwilligung, sonst nur für diese Seite.
     capturePartnerRef();
+    const offPartner = onConsentChange((c) => applyPartnerConsent(c));
     const choice = getConsent();
     if (choice === null) setOpen(true);
     // Bei bereits erteilter Einwilligung Tags laden und Consent anwenden.
@@ -33,7 +34,10 @@ export function CookieConsent() {
     }
     const reopen = () => setOpen(true);
     window.addEventListener(OPEN_CONSENT_EVENT, reopen);
-    return () => window.removeEventListener(OPEN_CONSENT_EVENT, reopen);
+    return () => {
+      window.removeEventListener(OPEN_CONSENT_EVENT, reopen);
+      offPartner();
+    };
   }, []);
 
   if (!open) return null;

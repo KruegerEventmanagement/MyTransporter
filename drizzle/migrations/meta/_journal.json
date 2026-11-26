@@ -239,6 +239,13 @@
       "when": 1795685354020,
       "tag": "0033_partner_qr_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1795685830417,
+      "tag": "0034_partner_slug_immutable_no_loop",
+      "breakpoints": true
     }
   ]
 }

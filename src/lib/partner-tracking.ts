@@ -5,12 +5,17 @@
  * - Ein Scan von /q/<slug> legt serverseitig genau einen anonymen Aufruf an
  *   (nur Partner + Zeitpunkt, keine IP, kein Gerät) und leitet IMMER auf die
  *   eigene Website weiter – auch wenn das Tracking fehlschlägt.
- * - Die Aufruf-ID wird nur lokal im Browser gemerkt (technisch notwendig,
- *   keine Weitergabe an Dritte). Letzter Partnerkontakt gewinnt.
+ * - Die Aufruf-ID wird nur mit Marketing-/Analyse-Einwilligung (bestehendes
+ *   Consent-Modell, mt_consent_v1 = "marketing") bis zu 30 Tage im Browser
+ *   gespeichert. Ohne Einwilligung nur im Arbeitsspeicher der offenen Seite
+ *   (geht beim Neuladen verloren); bei Ablehnung/Widerruf wird sie gelöscht.
+ *   Letzter Partnerkontakt gewinnt.
  * - Eine Buchung zählt für den Partner, wenn die Zahlung innerhalb von
  *   PARTNER_ATTRIBUTION_DAYS nach dem (serverseitig gespeicherten) Aufruf
- *   gestartet wird. Registrierung/Login ändern daran nichts.
+ *   gestartet wird.
  */
+import { getConsent, type ConsentChoice } from "@/lib/analytics";
+
 export const PARTNER_ATTRIBUTION_DAYS = 30;
 export const PARTNER_REF_PARAM = "mt_ref";
 export const PARTNER_REF_STORAGE_KEY = "mt_partner_ref_v1";
@@ -26,6 +31,8 @@ export const isUuid = (s: unknown): s is string => typeof s === "string" && UUID
 /** Nur interne Pfade; alles andere (//, http:, \, …) wird zu "/" (kein offener Redirect). */
 export function safeTargetPath(p: unknown): string {
   if (typeof p !== "string" || p.length > 120 || !TARGET_PATH_RE.test(p) || p.startsWith("//")) return "/";
+  // Kein Ziel auf den QR-Weiterleiter selbst (Schleife).
+  if (/^\/q(\/|$)/i.test(p)) return "/";
   return p;
 }
 
@@ -45,6 +52,16 @@ export function isWithinAttributionWindow(visitedAt: string | Date, now: Date = 
 }
 
 type StoredRef = { ref: string; seenAt: string };
+let pendingRef: StoredRef | null = null;
+const valid = (v: Partial<StoredRef> | null): v is StoredRef => !!v && isUuid(v.ref) && !!v.seenAt && isWithinAttributionWindow(v.seenAt);
+const consentAllowsPersist = (c: ConsentChoice | null = getConsent()) => c === "marketing";
+
+function persist(win: Window, v: StoredRef) {
+  try { win.localStorage.setItem(PARTNER_REF_STORAGE_KEY, JSON.stringify(v)); } catch { /* gesperrt */ }
+}
+function forget(win: Window) {
+  try { win.localStorage.removeItem(PARTNER_REF_STORAGE_KEY); } catch { /* gesperrt */ }
+}
 
 /** Übernimmt ?mt_ref=<uuid> (letzter Kontakt gewinnt) und entfernt den Parameter aus der Adresse. */
 export function capturePartnerRef(win: Window | undefined = typeof window === "undefined" ? undefined : window): string | null {
@@ -56,28 +73,38 @@ export function capturePartnerRef(win: Window | undefined = typeof window === "u
       url.searchParams.delete(PARTNER_REF_PARAM);
       try { win.history.replaceState(win.history.state, "", url.pathname + url.search + url.hash); } catch { /* egal */ }
       if (isUuid(ref)) {
-        const v: StoredRef = { ref: ref.toLowerCase(), seenAt: new Date().toISOString() };
-        win.localStorage.setItem(PARTNER_REF_STORAGE_KEY, JSON.stringify(v));
-        return v.ref;
+        pendingRef = { ref: ref.toLowerCase(), seenAt: new Date().toISOString() };
+        if (consentAllowsPersist()) persist(win, pendingRef);
+        else forget(win);
       }
     }
-  } catch { /* Speicher gesperrt: Website funktioniert trotzdem */ }
+  } catch { /* Website funktioniert trotzdem */ }
+  if (!consentAllowsPersist()) forget(win);
   return getPartnerRef(win);
 }
 
-/** Gemerkte Aufruf-ID, falls lokal noch innerhalb des Fensters (Server prüft erneut). */
+/** Bei Einwilligung speichern, bei Ablehnung/Widerruf löschen. */
+export function applyPartnerConsent(choice: ConsentChoice, win: Window | undefined = typeof window === "undefined" ? undefined : window) {
+  if (!win) return;
+  if (consentAllowsPersist(choice)) { if (valid(pendingRef)) persist(win, pendingRef); }
+  else forget(win);
+}
+
+/** Gemerkte Aufruf-ID, falls noch innerhalb des Fensters (Server prüft erneut). */
 export function getPartnerRef(win: Window | undefined = typeof window === "undefined" ? undefined : window): string | null {
   if (!win) return null;
-  try {
-    const raw = win.localStorage.getItem(PARTNER_REF_STORAGE_KEY);
-    if (!raw) return null;
-    const v = JSON.parse(raw) as Partial<StoredRef>;
-    if (!isUuid(v.ref) || !v.seenAt || !isWithinAttributionWindow(v.seenAt)) return null;
-    return v.ref;
-  } catch {
-    return null;
+  if (consentAllowsPersist()) {
+    try {
+      const raw = win.localStorage.getItem(PARTNER_REF_STORAGE_KEY);
+      const v = raw ? (JSON.parse(raw) as Partial<StoredRef>) : null;
+      if (valid(v)) return v.ref;
+    } catch { /* fällt auf Arbeitsspeicher zurück */ }
   }
+  return valid(pendingRef) ? pendingRef.ref : null;
 }
+
+/** Nur für Tests. */
+export function __resetPartnerRefMemory() { pendingRef = null; }
 
 // ---------------- Provision ----------------
 

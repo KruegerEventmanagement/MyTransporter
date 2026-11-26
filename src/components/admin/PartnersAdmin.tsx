@@ -106,6 +106,9 @@ export function PartnersAdmin() {
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Provisionsgrundlage: tatsächlich bezahlter Brutto-Mietpreis nach Rabatten inkl. Zusatzpakete, abzüglich Erstattungen auf die Miete – ohne Kaution, ohne Mehrkilometer/Abzüge aus der Kaution. Unbezahlte und stornierte Buchungen zählen 0 €. Zuordnung: letzter QR-Scan, wenn die Zahlung innerhalb von {PARTNER_ATTRIBUTION_DAYS} Tagen danach gestartet wird. Nur Abrechnungsübersicht, keine automatische Auszahlung.
           </p>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Hinweis: Aufrufe werden immer anonym gezählt. Die Kennung für die spätere Buchungszuordnung wird nur bei Cookie-Einwilligung bis zu 30 Tage gespeichert; ohne Zustimmung zählt eine Buchung nur, wenn sie ohne Neuladen der Seite direkt nach dem Scan erfolgt. Zugeordnete Buchungen sind daher eine Untergrenze.
+          </p>
         </div>
         <Button onClick={() => setForm({ ...EMPTY })}><Plus className="h-4 w-4" /> Partner anlegen</Button>
       </div>

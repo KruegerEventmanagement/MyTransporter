@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import { describe, expect, it, beforeEach } from "vitest";
 import {
-  buildPartnerRedirect, capturePartnerRef, computePartnerCommission, getPartnerRef, isWithinAttributionWindow,
+  applyPartnerConsent, __resetPartnerRefMemory, buildPartnerRedirect, capturePartnerRef, computePartnerCommission, getPartnerRef, isWithinAttributionWindow,
   partnerTrackingUrl, safeTargetPath, PARTNER_REF_STORAGE_KEY,
 } from "@/lib/partner-tracking";
 import { handlePartnerScan } from "@/lib/partner-scan";
 import { attachPartnerAttribution, validatePartnerVisit } from "@/lib/partner-attribution.server";
-import { assertPartnerAdmin, partnerStats, savePartner, validatePartnerInput } from "@/lib/partners-admin";
+import { assertPartnerAdmin, berlinDayEndIso, berlinDayStartIso, fetchAllPages, partnerStats, savePartner, validatePartnerInput, validateRange } from "@/lib/partners-admin";
+import { CONSENT_STORAGE_KEY } from "@/lib/analytics";
 
 const VISIT = "11111111-2222-4333-8444-555555555555";
 const NOW = new Date("2026-11-26T12:00:00Z");
@@ -38,8 +39,8 @@ describe("QR-Ziel und Weiterleitung", () => {
   });
 });
 
-describe("Attribution über Registrierung/Login hinweg", () => {
-  beforeEach(() => localStorage.clear());
+describe("Attribution über Registrierung/Login hinweg (mit Einwilligung)", () => {
+  beforeEach(() => { localStorage.clear(); __resetPartnerRefMemory(); localStorage.setItem(CONSENT_STORAGE_KEY, "marketing"); });
   it("merkt die Aufruf-ID, entfernt sie aus der Adresse und behält sie nach Seitenwechsel/Login", () => {
     history.replaceState(null, "", `/?mt_ref=${VISIT}&x=1`);
     expect(capturePartnerRef()).toBe(VISIT);
@@ -58,9 +59,40 @@ describe("Attribution über Registrierung/Login hinweg", () => {
     localStorage.setItem(PARTNER_REF_STORAGE_KEY, JSON.stringify({ ref: VISIT, seenAt: "2020-01-01T00:00:00Z" }));
     expect(getPartnerRef()).toBeNull();
   });
+  it("Widerruf löscht die gespeicherte Kennung", () => {
+    history.replaceState(null, "", `/?mt_ref=${VISIT}`); capturePartnerRef();
+    expect(localStorage.getItem(PARTNER_REF_STORAGE_KEY)).not.toBeNull();
+    localStorage.setItem(CONSENT_STORAGE_KEY, "necessary");
+    applyPartnerConsent("necessary");
+    expect(localStorage.getItem(PARTNER_REF_STORAGE_KEY)).toBeNull();
+  });
   it("Fenster: 30 Tage", () => {
     expect(isWithinAttributionWindow("2026-10-28T12:00:00Z", NOW)).toBe(true);
     expect(isWithinAttributionWindow("2026-10-26T11:59:00Z", NOW)).toBe(false);
+  });
+});
+
+describe("Ohne Einwilligung", () => {
+  beforeEach(() => { localStorage.clear(); __resetPartnerRefMemory(); });
+  it("speichert nichts dauerhaft, behält die Kennung nur auf der offenen Seite", () => {
+    history.replaceState(null, "", `/?mt_ref=${VISIT}`);
+    expect(capturePartnerRef()).toBe(VISIT);
+    expect(localStorage.getItem(PARTNER_REF_STORAGE_KEY)).toBeNull();
+    __resetPartnerRefMemory(); // Neuladen
+    expect(getPartnerRef()).toBeNull();
+  });
+  it("bei Ablehnung keine Speicherung, alte Kennung wird entfernt", () => {
+    localStorage.setItem(CONSENT_STORAGE_KEY, "necessary");
+    localStorage.setItem(PARTNER_REF_STORAGE_KEY, JSON.stringify({ ref: VISIT, seenAt: new Date().toISOString() }));
+    history.replaceState(null, "", "/");
+    expect(capturePartnerRef()).toBeNull();
+    expect(localStorage.getItem(PARTNER_REF_STORAGE_KEY)).toBeNull();
+  });
+  it("spätere Zustimmung speichert den aktuellen Kontakt", () => {
+    history.replaceState(null, "", `/?mt_ref=${VISIT}`); capturePartnerRef();
+    localStorage.setItem(CONSENT_STORAGE_KEY, "marketing");
+    applyPartnerConsent("marketing");
+    expect(JSON.parse(localStorage.getItem(PARTNER_REF_STORAGE_KEY)!).ref).toBe(VISIT);
   });
 });
 
@@ -106,6 +138,43 @@ describe("Adminzugriff", () => {
     await expect(assertPartnerAdmin(ctx(false))).rejects.toThrow("Nicht autorisiert");
     await expect(partnerStats(ctx(false), { from: null, to: null })).rejects.toThrow("Nicht autorisiert");
     await expect(savePartner(ctx(false), validatePartnerInput({ slug: "x", name: "X", commissionPercent: 10, targetPath: "/" }))).rejects.toThrow("Nicht autorisiert");
+  });
+  it("Zielseite darf keine QR-Weiterleitung sein (Schleife)", () => {
+    expect(safeTargetPath("/q/obi-leonberg")).toBe("/");
+    expect(safeTargetPath("/Q")).toBe("/");
+    expect(safeTargetPath("/qualitaet")).toBe("/qualitaet");
+    expect(() => validatePartnerInput({ slug: "a", name: "A", commissionPercent: 10, targetPath: "/q/a" })).toThrow();
+  });
+  it("Kurzname bleibt beim Bearbeiten unverändert", async () => {
+    let updated: any = null;
+    const q: any = { eq: () => q, select: () => q, single: async () => ({ data: { id: "p1" }, error: null }) };
+    const ctx = { userId: "u", supabase: { rpc: async () => ({ data: true, error: null }), from: () => ({ update: (row: any) => { updated = row; return q; } }) } };
+    await savePartner(ctx, validatePartnerInput({ id: "p1", slug: "neu", name: "X", commissionPercent: 10, targetPath: "/" }));
+    expect(updated).not.toHaveProperty("slug");
+  });
+  it("Zeitraum: echte Daten, von <= bis", () => {
+    expect(() => validateRange({ from: "2026-02-30" })).toThrow();
+    expect(() => validateRange({ from: "2026-11-10", to: "2026-11-01" })).toThrow();
+    expect(validateRange({ from: "2026-11-01", to: "2026-11-01" })).toEqual({ from: "2026-11-01", to: "2026-11-01" });
+  });
+  it("Tagesgrenzen Europe/Berlin mit Sommer- und Winterzeit", () => {
+    expect(berlinDayStartIso("2026-07-01")).toBe("2026-06-30T22:00:00.000Z");
+    expect(berlinDayStartIso("2026-12-01")).toBe("2026-11-30T23:00:00.000Z");
+    expect(berlinDayEndIso("2026-03-29")).toBe("2026-03-29T22:00:00.000Z");
+    expect(berlinDayEndIso("2026-10-25")).toBe("2026-10-25T23:00:00.000Z");
+  });
+  it("liest alle Seiten statt bei 1000 abzuschneiden, Fehler werden nicht versteckt", async () => {
+    const all = Array.from({ length: 2500 }, (_, i) => i);
+    const rows = await fetchAllPages<number>(() => ({ range: async (a: number, b: number) => ({ data: all.slice(a, b + 1), error: null }) }), "X");
+    expect(rows).toHaveLength(2500);
+    await expect(fetchAllPages(() => ({ range: async () => ({ data: null, error: { message: "x" } }) }), "Zuordnungen")).rejects.toThrow("Zuordnungen");
+  });
+  it("Fehler beim Zählen der Aufrufe wird gemeldet, nicht als 0 gezeigt", async () => {
+    const empty: any = { select: () => empty, order: () => empty, gte: () => empty, lt: () => empty, in: () => empty, range: async () => ({ data: [], error: null }) };
+    const partnersQ: any = { select: () => partnersQ, order: () => partnersQ, range: async () => ({ data: [{ id: "p1", slug: "a", name: "A", commission_rate_bp: 1000, target_path: "/", active: true }], error: null }) };
+    const visitsQ: any = { select: () => visitsQ, eq: () => visitsQ, then: (r: any) => r({ count: null, error: { message: "boom" } }) };
+    const ctx = { userId: "u", supabase: { rpc: async () => ({ data: true, error: null }), from: (t: string) => (t === "partners" ? partnersQ : t === "partner_visits" ? visitsQ : empty) } };
+    await expect(partnerStats(ctx, { from: null, to: null })).rejects.toThrow("QR-Aufrufe");
   });
   it("Zielseite muss intern sein", () => {
     expect(() => validatePartnerInput({ slug: "a", name: "A", commissionPercent: 10, targetPath: "https://evil.com" })).toThrow();
