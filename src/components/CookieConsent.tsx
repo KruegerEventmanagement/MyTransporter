@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { getConsent, setConsent, ensureGoogleTag, hasMarketingConsent } from "@/lib/analytics";
 import { ensureMetaPixel } from "@/lib/meta-pixel";
 import { captureAttribution } from "@/lib/attribution";
+import { capturePartnerRef } from "@/lib/partner-tracking";
 
 export const OPEN_CONSENT_EVENT = "mt:open-consent";
 
@@ -19,6 +20,8 @@ export function CookieConsent() {
     // First-Touch-Attribution (UTM/gclid/fbclid) immer erfassen – rein lokal,
     // ohne Übertragung an Werbeplattformen.
     captureAttribution();
+    // QR-Partnerkontakt: technisch notwendig, nur lokal, ohne Dritte.
+    capturePartnerRef();
     const choice = getConsent();
     if (choice === null) setOpen(true);
     // Bei bereits erteilter Einwilligung Tags laden und Consent anwenden.

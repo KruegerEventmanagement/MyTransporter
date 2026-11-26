@@ -47,6 +47,7 @@ export type BookingCheckoutInput = {
   customKm?: number | null;
   /** Freiwillige Einwilligung in genau eine Bewertungsmail (nicht vorausgewählt). */
   reviewConsent?: boolean;
+  partnerRef?: string | null;
 };
 
 type Ctx = { supabase: { from: (t: string) => any }; userId: string; claims?: { email?: string } };
@@ -178,6 +179,14 @@ export async function runBookingCheckout(data: BookingCheckoutInput, context: Ct
     }
     push("Kaution (wird nach Rückgabe erstattet)", DEPOSIT_CENTS);
 
+    // Partner-Herkunft: nur gültige, aktive Aufrufe innerhalb des Fensters.
+    // Fehler hier dürfen den Checkout nie blockieren.
+    let partnerVisitId: string | null = null;
+    if (data.partnerRef) {
+      const { validatePartnerVisit } = await import("@/lib/partner-attribution.server");
+      partnerVisitId = (await validatePartnerVisit(supabaseAdmin, data.partnerRef))?.visitId ?? null;
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       ui_mode: "embedded_page",
@@ -219,6 +228,7 @@ export async function runBookingCheckout(data: BookingCheckoutInput, context: Ct
           ...(data.vehicleName && { vehicleName: String(data.vehicleName).slice(0, 200) }),
           ...(data.vehiclePlate && { vehiclePlate: String(data.vehiclePlate).slice(0, 50) }),
           ...(addonIds.length > 0 && { addonIds: addonIds.join(",") }),
+          ...(partnerVisitId && { partnerVisitId }),
           ...(discountCents > 0 && { couponCode: coupon.code!, discountCents: String(discountCents) }),
         },
       }),

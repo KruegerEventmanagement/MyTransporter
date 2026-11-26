@@ -305,6 +305,58 @@ export type Database = {
           },
         ]
       }
+      booking_partner_attributions: {
+        Row: {
+          attributed_at: string
+          booking_id: string
+          commission_rate_bp: number
+          partner_id: string
+          partner_slug: string
+          visit_id: string
+          visited_at: string
+        }
+        Insert: {
+          attributed_at?: string
+          booking_id: string
+          commission_rate_bp: number
+          partner_id: string
+          partner_slug: string
+          visit_id: string
+          visited_at: string
+        }
+        Update: {
+          attributed_at?: string
+          booking_id?: string
+          commission_rate_bp?: number
+          partner_id?: string
+          partner_slug?: string
+          visit_id?: string
+          visited_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_partner_attributions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_partner_attributions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_partner_attributions_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "partner_visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           addons: Json
@@ -1795,6 +1847,68 @@ export type Database = {
           provider?: string
           token?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      partner_visits: {
+        Row: {
+          id: string
+          partner_id: string
+          visited_at: string
+        }
+        Insert: {
+          id?: string
+          partner_id: string
+          visited_at?: string
+        }
+        Update: {
+          id?: string
+          partner_id?: string
+          visited_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_visits_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partners: {
+        Row: {
+          active: boolean
+          commission_rate_bp: number
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          slug: string
+          target_path: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          commission_rate_bp?: number
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          slug: string
+          target_path?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          commission_rate_bp?: number
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          slug?: string
+          target_path?: string
+          updated_at?: string
         }
         Relationships: []
       }

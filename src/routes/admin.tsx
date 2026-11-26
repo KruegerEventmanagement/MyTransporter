@@ -30,6 +30,7 @@ import {
   VolumeX,
   Wallet,
   Gift,
+  QrCode,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -42,6 +43,7 @@ import { DocumentBuilder } from "@/components/admin/DocumentBuilder";
 import { IssuedDocumentsArchive } from "@/components/admin/IssuedDocumentsArchive";
 import { CustomerMailsAdmin, BookingMailStatus } from "@/components/admin/CustomerMailsAdmin";
 import { BirthdayAdmin } from "@/components/admin/BirthdayAdmin";
+import { PartnersAdmin } from "@/components/admin/PartnersAdmin";
 import { useServerFn } from "@tanstack/react-start";
 import { isSilentAdminNotification } from "@/lib/push-issue-log";
 import { chargeBookingExtra, settleDeposit } from "@/lib/payments.functions";
@@ -136,7 +138,7 @@ interface AdminNotification {
   created_at: string;
 }
 
-type Tab = "timeline" | "deposits" | "customers" | "bookings" | "calendar" | "vehicles" | "documents" | "birthdays" | "notifications" | "privacy";
+type Tab = "timeline" | "deposits" | "customers" | "bookings" | "calendar" | "vehicles" | "documents" | "birthdays" | "notifications" | "privacy" | "partners";
 
 function AdminDashboard() {
   const [authReady, setAuthReady] = useState(false);
@@ -657,6 +659,9 @@ function AdminDashboard() {
           <TabButton active={tab === "birthdays"} onClick={() => setTab("birthdays")}>
             <Gift className="w-4 h-4" /> Geburtstage
           </TabButton>
+          <TabButton active={tab === "partners"} onClick={() => setTab("partners")}>
+            <QrCode className="w-4 h-4" /> Partner & QR
+          </TabButton>
           <TabButton active={tab === "privacy"} onClick={() => setTab("privacy")}>
             <FileText className="w-4 h-4" /> Löschungen
           </TabButton>
@@ -839,6 +844,7 @@ function AdminDashboard() {
 
         {tab === "birthdays" && <BirthdayAdmin />}
         {tab === "privacy" && <AdminPrivacy />}
+        {tab === "partners" && <PartnersAdmin />}
       </div>
     </main>
       {alertNotification && (

@@ -23,6 +23,7 @@ type StripeCheckoutSession = {
   metadata?: Record<string, string> | null;
   amount_total?: number | null;
   currency?: string | null;
+  created?: number;
 };
 
 function extractId(x: unknown): string | null {
@@ -107,6 +108,19 @@ async function refundConflictingPayment(params: {
   });
 }
 
+/** Partner-Zuordnung (idempotent, darf die Buchung nie gefährden). */
+async function attachPartnerSafe(bookingId: string, session: StripeCheckoutSession) {
+  const visitId = (session.metadata as Record<string, string> | null)?.partnerVisitId;
+  if (!visitId) return;
+  try {
+    const { attachPartnerAttribution } = await import("@/lib/partner-attribution.server");
+    const created = typeof session.created === "number" ? new Date(session.created * 1000) : new Date();
+    await attachPartnerAttribution(supabaseAdmin, bookingId, visitId, created);
+  } catch (e) {
+    console.error("[webhook] Partner-Zuordnung fehlgeschlagen", String((e as Error)?.message ?? e).slice(0, 200));
+  }
+}
+
 /** true ⇒ mindestens eine Folgeaktion ist temporär fehlgeschlagen (Stripe darf retryen). */
 async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv): Promise<boolean> {
   const paymentIntentId = extractId(session.payment_intent ?? null);
@@ -129,6 +143,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
     .eq("stripe_payment_intent_id", paymentIntentId)
     .maybeSingle();
   if (existing?.id) {
+    await attachPartnerSafe(existing.id as string, session);
     const res = await reconcileBookingPostActions(existing.id as string);
     console.log("[webhook] bestehende Buchung reconciled", existing.id, res.results);
     return res.hasFailures;
@@ -342,6 +357,7 @@ async function reconcileBooking(session: StripeCheckoutSession, env: StripeEnv):
   }
 
   const bookingId = booking.id as string;
+  await attachPartnerSafe(bookingId, session);
 
   // Gutschein erst nach bestätigter Zahlung einlösen. Fehler dürfen die
   // bezahlte Buchung nie zurückrollen.

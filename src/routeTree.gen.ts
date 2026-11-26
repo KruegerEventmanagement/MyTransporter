@@ -35,6 +35,7 @@ import { Route as WerbungRouteImport } from './routes/werbung'
 import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
 import { Route as BuchungBookingIdRouteImport } from './routes/buchung.$bookingId'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as QSlugRouteImport } from './routes/q.$slug'
 import { Route as TripBookingIdRouteImport } from './routes/trip.$bookingId'
 import { Route as ApiPublicResendBookingMailsRouteImport } from './routes/api/public/resend-booking-mails'
 import { Route as ApiPublicReviewOptOutRouteImport } from './routes/api/public/review-opt-out'
@@ -183,6 +184,11 @@ const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   path: '/checkout/return',
   getParentRoute: () => rootRouteImport,
 } as any)
+const QSlugRoute = QSlugRouteImport.update({
+  id: '/q/$slug',
+  path: '/q/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TripBookingIdRoute = TripBookingIdRouteImport.update({
   id: '/trip/$bookingId',
   path: '/trip/$bookingId',
@@ -305,6 +311,7 @@ export interface FileRoutesByFullPath {
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/q/$slug': typeof QSlugRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/resend-booking-mails': typeof ApiPublicResendBookingMailsRoute
   '/api/public/review-opt-out': typeof ApiPublicReviewOptOutRoute
@@ -349,6 +356,7 @@ export interface FileRoutesByTo {
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/q/$slug': typeof QSlugRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/resend-booking-mails': typeof ApiPublicResendBookingMailsRoute
   '/api/public/review-opt-out': typeof ApiPublicReviewOptOutRoute
@@ -394,6 +402,7 @@ export interface FileRoutesById {
   '/auth/confirm': typeof AuthConfirmRoute
   '/buchung/$bookingId': typeof BuchungBookingIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/q/$slug': typeof QSlugRoute
   '/trip/$bookingId': typeof TripBookingIdRoute
   '/api/public/resend-booking-mails': typeof ApiPublicResendBookingMailsRoute
   '/api/public/review-opt-out': typeof ApiPublicReviewOptOutRoute
@@ -440,6 +449,7 @@ export interface FileRouteTypes {
     | '/auth/confirm'
     | '/buchung/$bookingId'
     | '/checkout/return'
+    | '/q/$slug'
     | '/trip/$bookingId'
     | '/api/public/resend-booking-mails'
     | '/api/public/review-opt-out'
@@ -484,6 +494,7 @@ export interface FileRouteTypes {
     | '/auth/confirm'
     | '/buchung/$bookingId'
     | '/checkout/return'
+    | '/q/$slug'
     | '/trip/$bookingId'
     | '/api/public/resend-booking-mails'
     | '/api/public/review-opt-out'
@@ -528,6 +539,7 @@ export interface FileRouteTypes {
     | '/auth/confirm'
     | '/buchung/$bookingId'
     | '/checkout/return'
+    | '/q/$slug'
     | '/trip/$bookingId'
     | '/api/public/resend-booking-mails'
     | '/api/public/review-opt-out'
@@ -573,6 +585,7 @@ export interface RootRouteChildren {
   AuthConfirmRoute: typeof AuthConfirmRoute
   BuchungBookingIdRoute: typeof BuchungBookingIdRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
+  QSlugRoute: typeof QSlugRoute
   TripBookingIdRoute: typeof TripBookingIdRoute
   ApiPublicResendBookingMailsRoute: typeof ApiPublicResendBookingMailsRoute
   ApiPublicReviewOptOutRoute: typeof ApiPublicReviewOptOutRoute
@@ -775,6 +788,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/q/$slug': {
+      id: '/q/$slug'
+      path: '/q/$slug'
+      fullPath: '/q/$slug'
+      preLoaderRoute: typeof QSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/trip/$bookingId': {
       id: '/trip/$bookingId'
       path: '/trip/$bookingId'
@@ -917,6 +937,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthConfirmRoute: AuthConfirmRoute,
   BuchungBookingIdRoute: BuchungBookingIdRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
+  QSlugRoute: QSlugRoute,
   TripBookingIdRoute: TripBookingIdRoute,
   ApiPublicResendBookingMailsRoute: ApiPublicResendBookingMailsRoute,
   ApiPublicReviewOptOutRoute: ApiPublicReviewOptOutRoute,

@@ -232,6 +232,13 @@
       "when": 1794835679632,
       "tag": "0032_cancellation_confirmation_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1795685354020,
+      "tag": "0033_partner_qr_tracking",
+      "breakpoints": true
     }
   ]
 }

@@ -16,6 +16,7 @@ import { de } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock, CreditCard, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { FuelInfoNote } from "./FuelInfoNote";
 import { createBookingCheckout } from "@/lib/payments.functions";
+import { getPartnerRef } from "@/lib/partner-tracking";
 import { KM_CATALOG_VERSION } from "@/lib/booking-rules";
 import { previewCoupon, type CouponPreview } from "@/lib/birthday.functions";
 import { ageOn, MIN_DRIVER_AGE } from "@/lib/birthday";
@@ -2436,6 +2437,7 @@ export function BookingSection() {
                          environment: getStripeEnvironment(),
                           addonIds: selectedAddonIds,
                           reviewConsent,
+                          partnerRef: getPartnerRef(),
                           vehiclePlate: displayVehicle.plate || null,
                           vehicleName: displayVehicle.name || null,
                           vehicleClass,
