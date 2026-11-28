@@ -138,3 +138,18 @@ describe("Stichtag für Pflicht-Abschluss", async () => {
     expect(dueReturnReminders([r], end - 5 * 60_000)).toHaveLength(0);
   });
 });
+
+import { canStartPreDrive as _csp } from "./active-trip";
+describe("canStartPreDrive", () => {
+  const now = Date.parse("2026-11-28T11:13:00Z");
+  const later = now + 3600_000;
+  it("bezahlte, nicht gestartete Buchung zeigt den Fotoweg", () => {
+    expect(_csp({ status: "paid", start_date: "2026-11-28", start_km: null }, later, now)).toBe(true);
+  });
+  it("nicht bei Storno, gestarteter Fahrt, Mietende vorbei oder Altbuchung", () => {
+    expect(_csp({ status: "cancelled", start_date: "2026-11-28", start_km: null }, later, now)).toBe(false);
+    expect(_csp({ status: "paid", start_date: "2026-11-28", start_km: 1000 }, later, now)).toBe(false);
+    expect(_csp({ status: "paid", start_date: "2026-11-28", start_km: null }, now - 1, now)).toBe(false);
+    expect(_csp({ status: "paid", start_date: "2026-09-01", start_km: null }, later, now)).toBe(false);
+  });
+});

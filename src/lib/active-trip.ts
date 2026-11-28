@@ -110,3 +110,12 @@ export function phaseFor(status: string | null | undefined, returnStarted: boole
   return "pre";
 }
 
+
+/** Bezahlte, noch nicht gestartete Buchung, deren Mietende noch nicht vorbei ist: Weg zu Fotos/Fahrtstart anbieten. */
+export function canStartPreDrive(
+  row: { status?: string | null; start_date?: string | null; start_km?: number | null },
+  endMs: number,
+  nowMs: number,
+): boolean {
+  return row.status === "paid" && (row.start_km ?? null) === null && !isLegacyOpenTrip(row) && endMs > nowMs;
+}

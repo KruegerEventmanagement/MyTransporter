@@ -8,7 +8,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { privateHead } from "@/lib/seo";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, Car, Wallet, Route as RouteIcon, Calendar, Hash, MapPin, X, Shield, FileText } from "lucide-react";
+import { ChevronLeft, Car, Wallet, Route as RouteIcon, Calendar, Hash, MapPin, X, Shield, FileText, Camera } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useServerFn } from "@tanstack/react-start";
@@ -18,7 +18,7 @@ import { computePlanReturn, type PlanId } from "@/lib/booking-rules";
 import { DocumentScanner, SCAN_DOC_LABELS, type ScanDocType } from "@/components/DocumentScanner";
 import { ageOn, MIN_DRIVER_AGE } from "@/lib/birthday";
 import { BrandHomeLink } from "@/components/BrandHomeLink";
-import { isLegacyOpenTrip } from "@/lib/active-trip";
+import { canStartPreDrive, isLegacyOpenTrip } from "@/lib/active-trip";
 
 export const Route = createFileRoute("/profil")({
   head: () => privateHead("MyTransporter · Profil"),
@@ -662,6 +662,17 @@ function BookingRow({ booking: b, onCancelled }: { booking: Booking; onCancelled
           className="mt-3 block text-center rounded-full bg-foreground text-background py-2 text-xs font-bold"
         >
           Zur Fahrt
+        </Link>
+      )}
+
+      {canStartPreDrive(b, bookingEnd(b).getTime(), Date.now()) && (
+        <Link
+          to="/trip/$bookingId"
+          params={{ bookingId: b.id }}
+          data-testid="start-predrive"
+          className="mt-3 flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-foreground text-background py-2.5 text-sm font-bold"
+        >
+          <Camera className="w-4 h-4" /> Fahrt starten & Fotos hochladen
         </Link>
       )}
 
